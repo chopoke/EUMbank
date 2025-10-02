@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
 import mainlogo from '../resources/img/eumonly.png'
 
@@ -116,10 +116,11 @@ const Header = ({ onLogin, isLoggedIn }) => {
             {/* absolute left-3 top-2.5 text-gray-500 */}
             <span className="search-icon"><Icon path={paths.search} /></span>
           </label>
+          <Link to='/signup'><button className="login-button">회원가입</button></Link>
           {!isLoggedIn ? (
             // rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600
             // <a href="/login" className="login-button">로그인/인증</a>
-        <button onClick={onLogin} className="login-button">로그인/인증</button>
+          <button onClick={onLogin} className="login-button">로그인</button>
           ) : (
             // flex items-center gap-2 text-sm text-gray-700
             <div className="logged-in-status">
@@ -540,35 +541,57 @@ function WealthHubSummary() {
 
   
 
-export default function BankHome() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const summary = mockSummary;
-  const focus = "wealth"; // 'fund' or 'wealth'
-  const navigate = useNavigate();
-  // 5. isLoggedIn 상태가 변경될 때마다 이 코드가 실행됩니다.
-  useEffect(() => {
-    // 만약 isLoggedIn이 true가 되면 /login 페이지로 이동합니다.
-    if (isLoggedIn) {
-      navigate('/login');
-    }
-  }, [isLoggedIn, navigate]);
-  return (
-    // min-h-dvh bg-white text-gray-900
-    <div className="bank-home-page">
-      {/* sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-blue-700 text-white px-3 py-2 rounded */}
-      <a href="#main" className="skip-nav-link">본문 바로가기</a>
-      <Header isLoggedIn={isLoggedIn} onLogin={() => setIsLoggedIn(true)} />
-      <main id="main">
-        <Hero isLoggedIn={isLoggedIn} name={summary.profile.name} />
-        <QuickActions />
-        {isLoggedIn && <AccountSnapshot summary={summary} />}
+// export default function BankHome() {
+//   const [isLoggedIn, setIsLoggedIn] = useState(false);
+//   const summary = mockSummary;
+//   const focus = "wealth"; // 'fund' or 'wealth'
+//   const navigate = useNavigate();
+//   // 5. isLoggedIn 상태가 변경될 때마다 이 코드가 실행됩니다.
+//   useEffect(() => {
+//     // 만약 isLoggedIn이 true가 되면 /login 페이지로 이동합니다.
+//     if (isLoggedIn) {
+//       navigate('/login');
+//     }
+//   }, [isLoggedIn, navigate]);
+//   return (
+//     // min-h-dvh bg-white text-gray-900
+//     <div className="bank-home-page">
+//       {/* sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-blue-700 text-white px-3 py-2 rounded */}
+//       <a href="#main" className="skip-nav-link">본문 바로가기</a>
+//       <Header isLoggedIn={isLoggedIn} onLogin={() => setIsLoggedIn(true)} />
+//       <main id="main">
+//         <Hero isLoggedIn={isLoggedIn} name={summary.profile.name} />
+//         <QuickActions />
+//         {isLoggedIn && <AccountSnapshot summary={summary} />}
         
-        {focus === "fund" && <FundSpotlight />}
-        {focus === "wealth" && <WealthHubSummary />}
-        <RateFxTicker fx={summary.fx} />
-        <SecurityBanner notices={summary.notices} />
+//         {focus === "fund" && <FundSpotlight />}
+//         {focus === "wealth" && <WealthHubSummary />}
+//         <RateFxTicker fx={summary.fx} />
+//         <SecurityBanner notices={summary.notices} />
+//       </main>
+//       <Footer />
+//     </div>
+//   );
+// }
+export default function BankHome({ user }) {
+  const summary = mockSummary;
+
+  const isLoggedIn = !!user;
+
+  return (
+    <div className="bank-home-page">
+      <a href="#main" className="skip-nav-link">본문 바로가기</a>
+      <main id="main">
+        <Hero name={user?.name || user?.id || user?.loginId} />
+        <QuickActions />
+        
+            <AccountSnapshot summary={summary} />
+            <FundSpotlight />
+            <WealthHubSummary />
+            <RateFxTicker fx={summary.fx} />
+            <SecurityBanner notices={summary.notices} />
+        
       </main>
-      <Footer />
     </div>
   );
 }
