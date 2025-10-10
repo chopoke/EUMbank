@@ -77,7 +77,7 @@ export default function PersonalInfoStep({ formData, updateFormData }) {
                 value={formData.username}
                 onChange={(e) => handleInputChange("username", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                placeholder="영문, 숫자 조합 6~20자"
+                placeholder="영문 4~20자"
                 required
               />
             </div>
