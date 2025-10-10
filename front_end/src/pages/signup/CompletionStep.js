@@ -25,7 +25,7 @@ export default function CompletionStep() {
       </div>
       
       <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-        <Link to='/'><button className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 whitespace-nowrap cursor-pointer">
+        <Link to='/login'><button className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 whitespace-nowrap cursor-pointer">
           로그인 페이지로
         </button></Link>
         <button className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 whitespace-nowrap cursor-pointer">
