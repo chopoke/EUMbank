@@ -1,10 +1,10 @@
-package com.boot.eumbank.controller;
+package com.boot.eumbank.customer.controller;
 
-import com.boot.eumbank.dto.AuthResponse;
-import com.boot.eumbank.dto.LoginRequest;
-import com.boot.eumbank.dto.RefreshRequest;
-import com.boot.eumbank.dto.SignupRequest;
-import com.boot.eumbank.service.AuthService;
+import com.boot.eumbank.customer.dto.AuthResponse;
+import com.boot.eumbank.customer.dto.LoginRequest;
+import com.boot.eumbank.customer.dto.RefreshRequest;
+import com.boot.eumbank.customer.dto.SignupRequest;
+import com.boot.eumbank.customer.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

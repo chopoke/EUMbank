@@ -1,7 +1,7 @@
 // src/main/java/com/boot/eumbank/security/JwtAuthenticationFilter.java
-package com.boot.eumbank.security;
+package com.boot.eumbank.customer.security;
 
-import com.boot.eumbank.repo.CustomerRepo;
+import com.boot.eumbank.customer.repo.CustomerRepo;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

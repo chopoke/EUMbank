@@ -1,4 +1,4 @@
-package com.boot.eumbank.entity;
+package com.boot.eumbank.customer.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,6 +42,7 @@ public class Customer {
     private String cGenderCd;
 
     @Column(name = "c_nationality_cd", nullable = false, length = 3)
+    @Builder.Default
     private String cNationalityCd = "KOR";
 
     @Column(name = "c_phone_mobile", nullable = false, length = 20)
@@ -63,30 +64,37 @@ public class Customer {
     private String cCiHash;
 
     @Column(name = "c_auth_level", nullable = false)
+    @Builder.Default
     private Integer cAuthLevel = 1;
 
     @Column(name = "c_risk_grade", nullable = false, length = 10)
+    @Builder.Default
     private String cRiskGrade = "LOW";
 
     @Column(name = "c_aml_risk_score", precision = 5, scale = 2)
     private BigDecimal cAmlRiskScore;
 
     @Column(name = "c_is_pep", nullable = false, length = 1)
+    @Builder.Default
     private String cIsPep = "N";
 
     @Column(name = "c_is_sanction_hit", nullable = false, length = 1)
+    @Builder.Default
     private String cIsSanctionHit = "N";
 
     @Column(name = "c_status", nullable = false, length = 20)
+    @Builder.Default
     private String cStatus = "ACTIVE";
 
     @Column(name = "c_remark", length = 4000)
     private String cRemark;
 
     @Column(name = "c_created_at", nullable = false)
+    @Builder.Default
     private Instant cCreatedAt = Instant.now();
 
     @Column(name = "c_created_by", nullable = false, length = 50)
+    @Builder.Default
     private String cCreatedBy = "SYSTEM";
 
     @Column(name = "c_updated_at")
@@ -105,6 +113,7 @@ public class Customer {
     private String cAgreeMarketing;                     // 마케팅정보수신동의 (Y/N)
 
     @Column(name = "c_login_type", nullable = false, length = 20)
-    private String cLoginType;
+    @Builder.Default
+    private String cLoginType = "EUM";
 }
 

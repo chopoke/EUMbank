@@ -1,6 +1,6 @@
-package com.boot.eumbank.repo;
+package com.boot.eumbank.customer.repo;
 
-import com.boot.eumbank.entity.Customer;
+import com.boot.eumbank.customer.entity.Customer;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

@@ -1,6 +1,6 @@
-package com.boot.eumbank.repo;
+package com.boot.eumbank.customer.repo;
 
-import com.boot.eumbank.entity.AuthRefreshToken;
+import com.boot.eumbank.customer.entity.AuthRefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;

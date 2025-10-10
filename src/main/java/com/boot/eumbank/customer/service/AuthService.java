@@ -1,8 +1,8 @@
-package com.boot.eumbank.service;
+package com.boot.eumbank.customer.service;
 
-import com.boot.eumbank.dto.AuthResponse;
-import com.boot.eumbank.dto.LoginRequest;
-import com.boot.eumbank.dto.SignupRequest;
+import com.boot.eumbank.customer.dto.AuthResponse;
+import com.boot.eumbank.customer.dto.LoginRequest;
+import com.boot.eumbank.customer.dto.SignupRequest;
 
 public interface AuthService {
     void signup(SignupRequest req);

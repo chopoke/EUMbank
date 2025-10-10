@@ -1,5 +1,5 @@
 // src/main/java/com/boot/eumbank/security/SecurityConfig.java
-package com.boot.eumbank.security;
+package com.boot.eumbank.customer.security;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

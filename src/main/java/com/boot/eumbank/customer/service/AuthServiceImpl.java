@@ -1,13 +1,13 @@
-package com.boot.eumbank.service;
+package com.boot.eumbank.customer.service;
 
-import com.boot.eumbank.dto.AuthResponse;
-import com.boot.eumbank.dto.LoginRequest;
-import com.boot.eumbank.dto.SignupRequest;
-import com.boot.eumbank.entity.AuthRefreshToken;
-import com.boot.eumbank.entity.Customer;
-import com.boot.eumbank.repo.AuthRefreshTokenRepo;
-import com.boot.eumbank.repo.CustomerRepo;
-import com.boot.eumbank.security.JwtTokenProvider;
+import com.boot.eumbank.customer.dto.AuthResponse;
+import com.boot.eumbank.customer.dto.LoginRequest;
+import com.boot.eumbank.customer.dto.SignupRequest;
+import com.boot.eumbank.customer.entity.AuthRefreshToken;
+import com.boot.eumbank.customer.entity.Customer;
+import com.boot.eumbank.customer.repo.AuthRefreshTokenRepo;
+import com.boot.eumbank.customer.repo.CustomerRepo;
+import com.boot.eumbank.customer.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -40,6 +40,16 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
         }
 
+        // 약관 값 정규화 (대소문자/널 방지)
+        String agreeTerms     = yn(req.getC_agree_terms(), "N");    // 미전송 시 N
+        String agreePrivacy   = yn(req.getC_agree_privacy(), "N");  // 미전송 시 N
+        String agreeMarketing = ynOrNull(req.getC_agree_marketing()); // 선택: null 허용
+
+        // 필수 약관 미동의 시 차단 (선택)
+        if (!"Y".equals(agreeTerms) || !"Y".equals(agreePrivacy)) {
+            throw new IllegalArgumentException("필수 약관(이용약관/개인정보)에 동의해야 가입 가능합니다.");
+        }
+
         Customer customer = Customer.builder()
                 .userId(userId)                 // c_user_id
                 .cId(userId)                    // 필요하면 임시 동일
@@ -55,12 +65,23 @@ public class AuthServiceImpl implements AuthService {
                 .cStatus("ACTIVE")
                 .cCreatedAt(Instant.now())
                 .cCreatedBy("SYSTEM")
-                .cAgreeTerms("Y")
-                .cAgreePrivacy("Y")
+                .cAgreeTerms(agreeTerms)
+                .cAgreePrivacy(agreePrivacy)
+                .cAgreeMarketing(agreeMarketing)
                 .cLoginType("EUM")
                 .build();
 
         customers.save(customer);
+    }
+
+    private String yn(String v, String def) {
+        if (v == null || v.isBlank()) return def;
+        return "Y".equalsIgnoreCase(v) ? "Y" : "N";
+    }
+
+    private String ynOrNull(String v) {
+        if (v == null || v.isBlank()) return null;     // 선택 동의: 미체크면 NULL
+        return "Y".equalsIgnoreCase(v) ? "Y" : "N";
     }
 
     @Transactional

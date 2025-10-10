@@ -1,4 +1,4 @@
-package com.boot.eumbank.dto;
+package com.boot.eumbank.customer.dto;
 
 import jakarta.validation.constraints.*;
 import lombok.Getter;
@@ -20,4 +20,10 @@ public class SignupRequest {
 
     @NotBlank
     private String c_phone_mobile;
+
+    private String c_agree_terms;
+    private String c_agree_privacy;
+    private String c_agree_marketing;
+
+    private String c_login_type;
 }

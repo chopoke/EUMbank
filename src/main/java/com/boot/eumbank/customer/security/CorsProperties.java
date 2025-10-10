@@ -1,4 +1,4 @@
-package com.boot.eumbank.security;
+package com.boot.eumbank.customer.security;
 
 import lombok.Getter;
 import lombok.Setter;

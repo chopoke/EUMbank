@@ -1,4 +1,4 @@
-package com.boot.eumbank.web;
+package com.boot.eumbank.customer.web;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
