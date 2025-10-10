@@ -39,7 +39,7 @@ export default function Login() {
       localStorage.setItem("access", data.accessToken);
       if (data.refreshToken) localStorage.setItem("refresh", data.refreshToken);
 
-      window.location.href = "/accounts";
+      window.location.href = "/";
     } catch (ex) {
       const t =
         ex?.response?.data?.error ||

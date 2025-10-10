@@ -9,7 +9,13 @@ import java.time.Instant;
 @Getter
 @Setter
 @Entity
-@Table(name = "AUTH_REFRESH_TOKEN")
+@Table(
+        name = "AUTH_REFRESH_TOKEN",
+        indexes = {
+                @Index(name = "idx_art_cno", columnList = "c_no"),
+                @Index(name = "idx_art_expires", columnList = "expires_at")
+        }
+)
 public class AuthRefreshToken {
 
     @Id
@@ -18,10 +24,10 @@ public class AuthRefreshToken {
     private Long rtId;
 
     @Column(name = "c_no", nullable = false)
-    private Integer cNo;
+    private Integer customerNo;                  // CUSTOMER_TBL.c_no
 
     @Column(name = "rt_hash", nullable = false, length = 64, unique = true)
-    private String rtHash;
+    private String rtHash;                // refreshToken의 SHA-256
 
     @Column(name = "device_id")
     private String deviceId;
@@ -33,13 +39,13 @@ public class AuthRefreshToken {
     private Instant expiresAt;
 
     @Column(name = "t_from", length = 64)
-    private String tFrom;
+    private String tFrom;                 // 발급 사유(로그인/갱신)
 
     @Column(name = "t_next", length = 64)
-    private String tNext;
+    private String tNext;                 // 다음 단계(회전 등)
 
     @Column(name = "delete_at")
-    private Instant deleteAt;
+    private Instant deleteAt;             // 회수(로그아웃/강제만료) 시각
 
     @Column(name = "delete_reason", length = 100)
     private String deleteReason;

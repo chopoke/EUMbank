@@ -4,7 +4,8 @@ package com.boot.eumbank.security;
 import com.boot.eumbank.repo.CustomerRepo;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,14 +19,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtTokenProvider jwt;     // validate(String), getUserId(String)
+    private final JwtTokenProvider jwt;     // validateAccessToken(...), getUserIdFromAccess(...)
     private final CustomerRepo customers;   // findByUserId(String)
 
     /** 회원가입/로그인/헬스체크/프리플라이트는 전부 인증 검사 스킵 */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        if (request.getMethod().equalsIgnoreCase("OPTIONS")) return true;
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
         if (path == null) return false;
 
         // 가장 넓게: "/api/auth/**", "/auth/**", "/**/auth/**", "/**/signup", "/**/login", "/actuator/health"
@@ -51,11 +52,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
 
-            if (jwt.validate(token)) {
-                String userId = jwt.getUserId(token); // 토큰에서 userId 추출
+            if (jwt.validateAccessToken(token)) {
+                String userId = jwt.getUserIdFromAccess(token); // 토큰에서 userId(subject) 추출
 
                 customers.findByUserId(userId).ifPresent(c -> {
-                    var auth = new UsernamePasswordAuthenticationToken(c, null, List.of());
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            c,                       // Principal (원하면 UserDetails로 교체 가능)
+                            null,                    // Credentials
+                            List.of()                // 권한(필요 시 매핑)
+                    );
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 });
             }

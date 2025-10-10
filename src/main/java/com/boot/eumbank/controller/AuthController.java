@@ -2,6 +2,7 @@ package com.boot.eumbank.controller;
 
 import com.boot.eumbank.dto.AuthResponse;
 import com.boot.eumbank.dto.LoginRequest;
+import com.boot.eumbank.dto.RefreshRequest;
 import com.boot.eumbank.dto.SignupRequest;
 import com.boot.eumbank.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,11 +27,31 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest req, HttpServletRequest httpReq) {
         String ua = httpReq.getHeader("User-Agent");
-        return authService.login(req, ua);
+        String ip = clientIp(httpReq);
+        return authService.login(req, ua, ip);
+    }
+
+    @PostMapping("/refresh")
+    public AuthResponse refresh(@Valid @RequestBody RefreshRequest req, HttpServletRequest httpReq) {
+        String ua = httpReq.getHeader("User-Agent");
+        String ip = clientIp(httpReq);
+        return authService.refresh(req.getRefreshToken(), ua, ip);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@Valid @RequestBody RefreshRequest req) {
+        authService.logout(req.getRefreshToken());
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/health")
-    public String health() {
-        return "OK";
+    public String health() { return "OK"; }
+
+    private String clientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

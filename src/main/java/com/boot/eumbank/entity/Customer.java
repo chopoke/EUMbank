@@ -18,7 +18,7 @@ public class Customer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "c_no")
-    private Integer cNo;
+    private Integer customerNo;
 
     @Column(name = "c_id", nullable = false, length = 20)
     private String cId;
@@ -94,5 +94,17 @@ public class Customer {
 
     @Column(name = "c_updated_by", length = 50)
     private String cUpdatedBy;
+
+    @Column(name = "c_agree_terms", nullable = false, length = 1)
+    private String cAgreeTerms;                         // 서비스이용약관동의 (Y/N)
+
+    @Column(name = "c_agree_privacy", nullable = false, length = 1)
+    private String cAgreePrivacy;                       // 개인정보처리방침동의 (Y/N)
+
+    @Column(name = "c_agree_marketing", length = 1)
+    private String cAgreeMarketing;                     // 마케팅정보수신동의 (Y/N)
+
+    @Column(name = "c_login_type", nullable = false, length = 20)
+    private String cLoginType;
 }
 
