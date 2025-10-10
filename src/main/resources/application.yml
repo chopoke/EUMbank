@@ -1,0 +1,32 @@
+server:
+  port: 1283
+
+spring:
+  application:
+    name: eumbank
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://localhost:3306/eum_bank
+    username: eum_bank
+    password: bank
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+clova:
+  ocr:
+    url: "https://7e2dyyyye9.apigw.ntruss.com/custom/v1/46612/fbb8b7deafa4ef7f44f4682d45401977daf9c8d98c68697b314e728c68d02774/general"
+    secret: "bUxvenZWbEVCckxsU0daV3J5cmt1RWxDUG1aTFhIeUE="
+
+mybatis:
+  mapper-locations: classpath*:mapper/**/*.xml   # 하위폴더까지 스캔(권장)
+  type-aliases-package: com.boot.eumbank.dto
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true          # c_user_id -> userId 자동 매핑
+
+logging:
+  level:
+    com.boot.eumbank.mapper: DEBUG
+    org.mybatis: DEBUG
