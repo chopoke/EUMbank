@@ -21,6 +21,10 @@ public class SignupRequest {
     @NotBlank
     private String c_phone_mobile;
 
+    // 이메일 인증 코드 - 검증에만 사용
+    @NotBlank
+    private String emailCode;
+
     private String c_agree_terms;
     private String c_agree_privacy;
     private String c_agree_marketing;

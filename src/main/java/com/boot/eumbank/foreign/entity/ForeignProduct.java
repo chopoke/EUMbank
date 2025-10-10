@@ -1,5 +1,5 @@
 // com.boot.eumbank.foreign.domain.ForeignProduct.java
-package com.boot.eumbank.foreign.domain;
+package com.boot.eumbank.foreign.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;

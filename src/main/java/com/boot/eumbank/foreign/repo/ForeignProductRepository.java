@@ -1,7 +1,7 @@
 // com.boot.eumbank.foreign.repo.ForeignProductRepository.java
 package com.boot.eumbank.foreign.repo;
 
-import com.boot.eumbank.foreign.domain.ForeignProduct;
+import com.boot.eumbank.foreign.entity.ForeignProduct;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;

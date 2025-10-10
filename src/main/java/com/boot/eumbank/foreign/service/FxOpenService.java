@@ -1,7 +1,7 @@
 package com.boot.eumbank.foreign.service;
 
-import com.boot.eumbank.account.domain.Account;
-import com.boot.eumbank.foreign.domain.ForeignProduct;
+import com.boot.eumbank.account.entity.Account;
+import com.boot.eumbank.foreign.entity.ForeignProduct;
 import com.boot.eumbank.foreign.dto.FxOpenReqDto;
 import com.boot.eumbank.foreign.dto.FxOpenRespDto;
 import com.boot.eumbank.foreign.repo.ForeignProductRepository;

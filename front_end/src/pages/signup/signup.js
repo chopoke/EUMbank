@@ -11,7 +11,8 @@ export default function SignUp() {
     name: "",
     phone: "",
     email: "",
-    emailVerified: false,       // ← 이메일 인증 여부 추가
+    emailVerified: false,       //  이메일 인증 여부
+    emailCode: "",          // 인증코드 6자리
 
     // 계정정보
     username: "",
@@ -31,7 +32,7 @@ export default function SignUp() {
   const totalSteps = 3; // 1: 개인정보, 2: 약관동의, 3: 완료
   const updateFormData = (data) => setFormData((prev) => ({ ...prev, ...data }));
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const f = formData;
 
     // 1단계: 개인정보/계정 + 이메일 인증 검증
@@ -56,6 +57,36 @@ export default function SignUp() {
       }
       // 실제 회원가입 API 호출이 필요하면 여기서 처리 (KYR 코드가 api.post 쓰면 그대로 사용)
       // try { await api.post('/api/auth/signup', payload) ... } catch (e) { ... }
+      // 최종 회원가입 API 호출
+      const baseUrl = "";
+      try {
+       const res = await fetch(`${baseUrl}/api/auth/signup`, {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+           c_user_id: f.username,
+           c_password: f.password,
+           c_name_kr: f.name,
+           c_email: f.email,
+           c_phone_mobile: f.phone,
+           emailCode: f.emailCode,                 // 6자리 코드
+           c_agree_terms: agreeTerms ? "Y" : "N",
+           c_agree_privacy: agreePrivacy ? "Y" : "N",
+           c_agree_marketing: (f.terms?.agreeMarketing ? "Y" : "N"),
+           c_login_type: "EUM",
+         }),
+       });
+
+       if (!res.ok) {
+         if (res.status === 409) return alert("이미 가입된 이메일입니다.");
+         const msg = await res.text().catch(()=> "");
+         return alert("가입 실패: " + (msg || `HTTP ${res.status}`));
+       }
+       alert("회원가입이 완료되었습니다.");
+     } catch (e) {
+       console.error(e);
+       return alert("가입 실패: " + (e.message ?? "알 수 없는 오류"));
+     }
     }
 
     if (currentStep < totalSteps) setCurrentStep((s) => s + 1);

@@ -55,8 +55,12 @@ export default function PersonalInfoStep({ formData, updateFormData }) {
           <div className="sm:col-span-2">
             <EmailVerifyBox
               value={formData.email}
-              onChange={(v) => handleInputChange('email', v)}
-              onVerified={() => updateFormData({ emailVerified: true })}
+              onChange={(v) => {
+                 handleInputChange('email', v);
+                 // 이메일을 바꾸면 인증 상태/코드 초기화
+                 updateFormData({ emailVerified: false, emailCode: "" });
+               }}
+               onVerified={(ok, code) => updateFormData({ emailVerified: ok, emailCode: code })}
             />
           </div>
         </div>

@@ -1,7 +1,7 @@
 // com.boot.eumbank.foreign.service.ForeignProductService.java
 package com.boot.eumbank.foreign.service;
 
-import com.boot.eumbank.foreign.domain.ForeignProduct;
+import com.boot.eumbank.foreign.entity.ForeignProduct;
 import com.boot.eumbank.foreign.dto.ForeignProductDto;
 import com.boot.eumbank.foreign.repo.ForeignProductRepository;
 import lombok.RequiredArgsConstructor;
