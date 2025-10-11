@@ -1,4 +1,4 @@
-package com.boot.eumbank.util;
+package com.boot.eumbank.accountCreate.util;
 
 public final class ImageFormats {
     public static String sniff(byte[] b) {

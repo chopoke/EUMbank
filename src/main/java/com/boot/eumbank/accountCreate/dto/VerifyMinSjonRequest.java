@@ -1,4 +1,4 @@
-package com.boot.eumbank.dto;
+package com.boot.eumbank.accountCreate.dto;
 
 import lombok.Getter;
 import lombok.Setter;

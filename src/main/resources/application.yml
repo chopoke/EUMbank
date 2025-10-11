@@ -14,9 +14,9 @@ spring:
   # --- DB CONNECTION ---
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
-    url: ${DB_URL:jdbc:mariadb://localhost:3306/eum_bank}
-    username: ${DB_USER:eum_bank}
-    password: ${DB_PASS:bank}
+    url: jdbc:mariadb://localhost:3306/eum_bank
+    username: ${DB_USER}
+    password: ${DB_PASS}
     # 필요 시 Hikari 기본값 튜닝
     hikari:
       maximum-pool-size: ${DB_POOL_MAX:10}
@@ -49,10 +49,10 @@ spring:
 # =======================
 # NAVER CLOVA OCR (비밀은 환경변수 권장)
 # =======================
-clova:
+clove:
   ocr:
-    url: ${CLOVA_OCR_URL:https://7e2dyyyye9.apigw.ntruss.com/custom/v1/46612/fbb8b7deafa4ef7f44f4682d45401977daf9c8d98c68697b314e728c68d02774/general}
-    secret: ${CLOVA_OCR_SECRET:bUxvenZWbEVCckxsU0daV3J5cmt1RWxDUG1aTFhIeUE=}
+    url: ${CLOVA_OCR_URL}
+    secret: ${CLOVA_OCR_SECRET}
 
 # =======================
 # MyBatis

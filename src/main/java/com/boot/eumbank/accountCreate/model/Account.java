@@ -1,4 +1,4 @@
-package com.boot.eumbank.model;
+package com.boot.eumbank.accountCreate.model;
 
 import jakarta.persistence.*;
 import lombok.*;

@@ -1,6 +1,6 @@
-package com.boot.eumbank.repository.custom;
+package com.boot.eumbank.accountCreate.repository.custom;
 
-import com.boot.eumbank.dto.CustomerDTO;
+import com.boot.eumbank.accountCreate.dto.CustomerDTO;
 
 import java.util.Map;
 

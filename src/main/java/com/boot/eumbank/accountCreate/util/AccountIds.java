@@ -1,4 +1,4 @@
-package com.boot.eumbank.util;
+package com.boot.eumbank.accountCreate.util;
 
 import java.security.SecureRandom;
 

@@ -1,12 +1,12 @@
-package com.boot.eumbank.controller;
+package com.boot.eumbank.accountCreate.controller;
 
-import com.boot.eumbank.dto.CustomerDTO;
-import com.boot.eumbank.dto.VerifyMinSjonRequest;
-import com.boot.eumbank.dto.VerifyMinSjonResponse;
-import com.boot.eumbank.service.account.Impl.AccountRepositoryImpl;
-import com.boot.eumbank.service.account.AccountService;
-import com.boot.eumbank.service.account.KycVerifyService;
-import com.boot.eumbank.util.ImageFormats;
+import com.boot.eumbank.accountCreate.dto.CustomerDTO;
+import com.boot.eumbank.accountCreate.dto.VerifyMinSjonRequest;
+import com.boot.eumbank.accountCreate.dto.VerifyMinSjonResponse;
+import com.boot.eumbank.accountCreate.service.account.Impl.AccountRepositoryImpl;
+import com.boot.eumbank.accountCreate.service.account.AccountService;
+import com.boot.eumbank.accountCreate.service.account.KycVerifyService;
+import com.boot.eumbank.accountCreate.util.ImageFormats;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -34,10 +34,10 @@ public class UserController {
 
     private Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    @Value("${clova.ocr.url}")
+    @Value("${clove.ocr.url}")
     private String clovaUrl;
 
-    @Value("${clova.ocr.secret}")
+    @Value("${clove.ocr.secret}")
     private String clovaSecret;
 
     private final RestTemplate rest = new RestTemplate();

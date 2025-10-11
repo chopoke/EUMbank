@@ -1,9 +1,10 @@
-package com.boot.eumbank.service.account;
+package com.boot.eumbank.accountCreate.service.account;
 
-import com.boot.eumbank.controller.UserController;
-import com.boot.eumbank.dto.VerifyMinSjonRequest;
-import com.boot.eumbank.dto.VerifyMinSjonResponse;
-import com.boot.eumbank.model.QCustomer;
+import com.boot.eumbank.accountCreate.controller.UserController;
+import com.boot.eumbank.customer.entity.QCustomer;
+import com.boot.eumbank.accountCreate.dto.VerifyMinSjonRequest;
+import com.boot.eumbank.accountCreate.dto.VerifyMinSjonResponse;
+
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPQLQueryFactory;
@@ -24,23 +25,27 @@ public class KycVerifyService {
         String reqName = normalizeName(req.getName());
         String reqRrn6 = digits(req.getRrn6());
 
+
+        System.out.println("reqRrn6 = " + reqRrn6);
+        System.out.println("reqName = " + reqName);
+
         QCustomer qCustomer = QCustomer.customer;
 
 
         // birthDt(LocalDateTime) → 'yyMMdd' 로 변환해서 6자리 비교
         BooleanExpression rrnMatches =
-                Expressions.stringTemplate("DATE_FORMAT({0}, '%y%m%d')", qCustomer.birthDt).eq(reqRrn6);
+                Expressions.stringTemplate("DATE_FORMAT({0}, '%y%m%d')", qCustomer.cBirthDt).eq(reqRrn6);
 
         // 같은 레코드에 (이름, rrn6)에 둘다 일치하는 것이 존재 유무 판단
         boolean bothOk = jpqlQueryFactory.selectOne()
                 .from(qCustomer)
                 .where(
-                        qCustomer.nameKr.eq(reqName).and(rrnMatches)
+                        qCustomer.cNameKr.eq(reqName).and(rrnMatches)
                 )
                 .fetchFirst() != null;
 
         // 2) 부분 일치(디버깅/UX용): 이름만, rrn6만 일치 여부
-        boolean nameOk = bothOk || jpqlQueryFactory.selectOne().from(qCustomer).where(qCustomer.nameKr.eq(reqName)).fetchFirst() != null;
+        boolean nameOk = bothOk || jpqlQueryFactory.selectOne().from(qCustomer).where(qCustomer.cNameKr.eq(reqName)).fetchFirst() != null;
         boolean rrnOk  = bothOk || jpqlQueryFactory.selectOne().from(qCustomer).where(rrnMatches).fetchFirst() != null;
 
         double score = (nameOk ? 0.5 : 0) + (rrnOk ? 0.5 : 0);
