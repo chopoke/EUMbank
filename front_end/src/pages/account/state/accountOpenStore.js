@@ -10,7 +10,7 @@ export const useAccountOpenStore = create((set, get) => ({
     setStep1: (agreements) => set({ step1: { ...agreements } }),
 
     // 2단계 (OCR 검증/추출)
-    step2: { verified: false, name: "", rrn6: "", address: "" },
+    step2: { verified: false, name: "", rrn6: "", address: "", pinNumber: "" },
     setStep2: (payload) => set({ step2: { ...get().step2, ...payload } }),
 
     // 3단계 (정보입력)
@@ -33,7 +33,7 @@ export const useAccountOpenStore = create((set, get) => ({
                 all: s1.all, eContract: s1.eContract, privacy: s1.privacy, marketing: s1.marketing
             },
             verification: {
-                verified: s2.verified, nameFromId: s2.name, rrn6FromId: s2.rrn6, addressFromId: s2.address
+                verified: s2.verified, nameFromId: s2.name, rrn6FromId: s2.rrn6, addressFromId: s2.address, pinNumber: s2.pinNumber
             },
             customer: {
                 name: s3.name, rrn: s3.rrn, phone: s3.phone, email: s3.email, address: s3.address
@@ -50,7 +50,7 @@ export const useAccountOpenStore = create((set, get) => ({
 
     resetAll: () => set({
         step1: { all: false, eContract: false, privacy: false, marketing: false },
-        step2: { verified: false, name: "", rrn6: "", address: "" },
+        step2: { verified: false, name: "", rrn6: "", address: "", pinNumber: "" },
         step3: { name: "", rrn: "", phone: "", email: "", address: "" },
         step4: { product: "saving", fromAccount: "", mPin: "", newAccountNo: genAccountNo() },
         submitted: false,

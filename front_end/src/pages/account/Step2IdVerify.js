@@ -5,22 +5,22 @@ import { useNavigate } from "react-router-dom";
 import { Frame, Header, Stepper, AsideHelp, Checkbox } from "./commom/ui";
 import { ocrCheck, verifyMinSjon } from "./api/accountApi"; // 경로는 프로젝트 구조에 맞게
 import { useAccountOpenStore } from './state/accountOpenStore';
-import Modal from "./component/Modal";
-import { PinPadModal } from "./component/PinPadModal";
+import Modal from "./component/pinConponent/Modal";
+import { PinPadModal } from "./component/pinConponent/PinPadModal";
 
 const NEXT_PATH = "/account/open/step3";
 
 export default function Step2IdVerify() {
     const nav = useNavigate();
     const setStep2 = useAccountOpenStore(s => s.setStep2);
-
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
     const [checked, setChecked] = useState(false);
-
     const [loading, setLoading] = useState(false);
     const [verified, setVerified] = useState(false);
     const [pinNumber, setPinNumber] = useState('');
+    const [pinReNumber, setRePinNumber] = useState('');
+    const [pinStep, setPinStep] = useState('enter');
     const [msg, setMsg] = useState("");
     const [error, setError] = useState("");
 
@@ -34,6 +34,7 @@ export default function Step2IdVerify() {
         setError("");
     };
 
+    // ocr 이미지 분석
     const handleOcr = async () => {
         if (!file || !checked || loading) return;
 
@@ -70,7 +71,7 @@ export default function Step2IdVerify() {
 
             if (verifyRes?.ok) {
                 setVerified(true);
-                setStep2({ verified: true, name, rrn6, address });
+                setStep2({ verified: true, name, rrn6, address, pinNumber });
                 setMsg("본인 확인 완료. 다음 단계로 진행할 수 있습니다.");
             } else {
                 setVerified(false);
@@ -88,18 +89,29 @@ export default function Step2IdVerify() {
     const canStart = !!file && checked && !loading;
     const primaryLabel = verified ? "다음" : loading ? "검증 중…" : "OCR 시작";
 
+    // 최종 버튼 입력버튼
     function finalButton() {
-        if (pinNumber === '') {
-            alert("PIN번호를 등록해주세요.")
+
+        if(verified) {
+            if (pinNumber === '' && pinReNumber === '') {
+                alert("PIN번호를 등록해주세요.");
+                return false;
+            }
+
+            if (pinNumber !== pinReNumber) {
+                alert("pin 일치하지 않습니다.");
+                setPinNumber('');
+                setRePinNumber('');
+                return false;
+            }
+
+            nav(NEXT_PATH);
         } else {
-            onPrimaryClick();
+            handleOcr();
         }
+      
+        
     }
-
-
-    const onPrimaryClick = () => (
-        verified ? pinNumber ? nav(NEXT_PATH) : null : handleOcr()
-    );
 
     // 모달 작업창 부분 시작 ------
     // 참고사이트 : https://velog.io/@phrygia/2021-09-21-react-modal
@@ -107,13 +119,13 @@ export default function Step2IdVerify() {
 
     const primaryDisabled = useMemo(() => (verified), [verified]);
 
-    console.log(primaryDisabled);
-
     const openModal = () => {
         setModalOpen(true);
     };
+
     const closeModal = () => {
         setModalOpen(false);
+        setPinStep('enter');
     };
     // 모달 작업창 부분 끝...
 
@@ -201,12 +213,21 @@ export default function Step2IdVerify() {
                                         >PIN 등록
                                         </button>
                                     }
-                                    <Modal open={modalOpen} close={closeModal} header="Modal heading">
+                                    {/* ✅ 3. 모달 제목을 pinStep에 따라 동적으로 변경합니다. */}
+                                    <Modal open={modalOpen} close={closeModal} header={pinStep === 'enter' ? "PIN 6자리 입력" : "PIN 6자리 확인"}>
                                         <PinPadModal
+                                            // ✅ 4. pinStep이 바뀔 때마다 PinPadModal을 새로 렌더링하여 초기화합니다. (key prop 사용)
+                                            key={pinStep} 
                                             length={6}
+                                            // ✅ 5. onSubmit 로직을 단계에 따라 다르게 처리합니다.
                                             onSubmit={async (pin) => {
-                                                setPinNumber(pin);
-                                                closeModal();
+                                                if (pinStep === 'enter') {
+                                                    setPinNumber(pin);   // 첫 번째 입력값 저장
+                                                    setPinStep('confirm'); // 확인 단계로 변경
+                                                } else { // pinStep === 'confirm'
+                                                    setRePinNumber(pin); // 두 번째 입력값 저장
+                                                    closeModal();         // 모달 닫기
+                                                }
                                             }}
                                             onCancel={closeModal}
                                         />
