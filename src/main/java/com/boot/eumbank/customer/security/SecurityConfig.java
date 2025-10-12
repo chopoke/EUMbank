@@ -1,6 +1,7 @@
 // src/main/java/com/boot/eumbank/security/SecurityConfig.java
 package com.boot.eumbank.customer.security;
 
+import com.boot.eumbank.customer.Handler.SocialSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.*;
 
@@ -26,6 +28,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtFilter;
     private final JwtAuthenticationEntryPoint entryPoint;
     private final CorsProperties corsProps;
+    private final AuthenticationSuccessHandler socialSuccessHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -49,6 +52,9 @@ public class SecurityConfig {
                 )
                 // ✅ JWT 필터는 UsernamePasswordAuthenticationFilter 앞에
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        http
+                .oauth2Login(oauth2 -> oauth2.successHandler(socialSuccessHandler));
 
         return http.build();
     }
@@ -79,7 +85,7 @@ public class SecurityConfig {
         ));
 
         // 응답에서 브라우저에 노출할 헤더(필요 시)
-        config.setExposedHeaders(Arrays.asList("Authorization"));
+        config.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie"));
 
         // 쿠키/자격증명 허용 (HttpOnly 쿠키 등)
         config.setAllowCredentials(true);
