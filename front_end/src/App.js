@@ -5,6 +5,8 @@ import SignUp from "./pages/signup/signup";
 import { Header } from './common/header';
 import { Footer } from './common/footer';
 import { useState } from "react";
+import { AccountListPage } from "./pages/accounts/AccountListPage";
+import { AccountHistoryPage } from "./pages/accounts/AccountHistoryPage";
 
 // App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
 // 이렇게 하면 App 컴포넌트 내에서 useNavigate를 정상적으로 사용할 수 있습니다.
@@ -43,6 +45,10 @@ function App() {
           element={<LoginPage onLoginSuccess={handleLoginSuccess} />}
         />
         <Route path="/signup" element={<SignUp />} />
+        {/* 계좌목록 */}
+        <Route path="/accounts" element={<AccountListPage/>} />
+        {/* 이체내역 */}
+        <Route path="/accounts/:a_no" element={<AccountHistoryPage/>} />
       </Routes>
       <Footer />
     </div>

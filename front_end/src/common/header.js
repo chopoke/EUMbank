@@ -90,6 +90,8 @@ export function Header({ isLoggedIn, user, onLogout }) {
             {/* absolute left-3 top-2.5 text-gray-500 */}
             <span className="search-icon"><Icon path={paths.search} /></span>
           </label>
+          <Link to="/accounts"><button className="login-button">계좌목록</button></Link>
+          
           <Link to='/signup'><button className="login-button">회원가입</button></Link>
           {!isLoggedIn ? (
             // rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600
