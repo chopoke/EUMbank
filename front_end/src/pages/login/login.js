@@ -54,7 +54,8 @@ export default function Login() {
   };
 
   const naverLogin = (e) => {
-    window.location.href = `http://localhost:8081/oauth2/authorization/naver`;
+    //window.location.href = `http://localhost:8081/oauth2/authorization/naver`;
+    window.location.href = `http://localhost:8081/oauth2/authorization/google`;
   }
 
   return h("div", { className: "min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100" }, [

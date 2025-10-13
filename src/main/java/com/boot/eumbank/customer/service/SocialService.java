@@ -70,19 +70,34 @@ public class SocialService extends DefaultOAuth2UserService {
             email = attributes.get("email").toString();
             phone = attributes.get("mobile").toString();
 
+        } else if(registrationId.equals("GOOGLE")) {
+            attributes = (Map<String, Object>) oAuth2User.getAttributes();
+
+            System.out.println("attributes: " + attributes);
+
+            String idValue = attributes.get("sub").toString();
+            userId = idValue.length() > 20 ? idValue.substring(0, 20) : idValue;
+            //rawPw = attributes.get("password").toString();
+            rawPw = "password";
+            nameKr = attributes.get("name").toString();
+            email = attributes.get("email").toString();
+            phone = "000-0000-0000";
+
         } else {
             throw new OAuth2AuthenticationException("지원하지 않은 소셜 로그인입니다.");
         }
 
         // DB에 있는지 확인 -> 없으면 추가, 있으면 업데이트
-        Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "NAVER");
+        //Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "NAVER");
+        Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "GOOGLE");
         if(customer.isPresent()) {
             // 기존 정보 업데이트
             SignupRequest signupRequest = new SignupRequest();
             signupRequest.setC_password(rawPw);
             signupRequest.setC_name_kr(nameKr);
             signupRequest.setC_email(email);
-            signupRequest.setC_phone_mobile(phone);
+            //signupRequest.setC_phone_mobile(phone);
+            signupRequest.setC_phone_mobile(customer.get().getCPhoneMobile());
 
             customer.get().updateCustomer(signupRequest);
 
@@ -107,7 +122,7 @@ public class SocialService extends DefaultOAuth2UserService {
                     .cAgreeTerms("Y")
                     .cAgreePrivacy("Y")
                     .cAgreeMarketing("Y")
-                    .loginType("NAVER")
+                    .loginType("GOOGLE")
                     .build();
 
             customers.save(newCustomer);
@@ -154,7 +169,9 @@ public class SocialService extends DefaultOAuth2UserService {
         }
 
         String userId = jwt.getSubjectFromRefresh(refreshToken);
-        Customer customer = customers.findByUserIdAndLoginType(userId, "NAVER")
+        //Customer customer = customers.findByUserIdAndLoginType(userId, "NAVER")
+        //        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        Customer customer = customers.findByUserIdAndLoginType(userId, "GOOGLE")
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         String userAgent = request.getHeader("User-Agent");
