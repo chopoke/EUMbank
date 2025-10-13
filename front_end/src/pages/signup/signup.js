@@ -3,6 +3,7 @@ import PersonalInfoStep from "./PersonalInfoStep";
 import TermsStep from "./TermsStep";      // ← KYR 구조 유지 (2단계 = 약관동의)
 import CompletionStep from "./CompletionStep";
 import { validEmail, validPassword, validPhone, validUsername } from './validators';
+import maintxt from '../../resources/img/e-um.png'
 
 export default function SignUp() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -125,7 +126,7 @@ export default function SignUp() {
             className="text-2xl sm:text-3xl font-bold text-gray-800"
             style={{ fontFamily: "Pacifico, serif" }}
           >
-            logo
+            <img src={maintxt} className="mx-auto block w-38 h-auto" />
           </h1>
           <h2 className="text-lg sm:text-xl font-semibold text-blue-600 mt-1">회원가입</h2>
           <p className="text-sm text-gray-600 mt-1">

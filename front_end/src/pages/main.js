@@ -148,15 +148,17 @@ const Hero = ({ isLoggedIn, name }) => {
 };
 
 const QuickActions = () => {
+  const navigate = useNavigate();
+
   const items = [
     { id: "transfer", label: "계좌이체", icon: paths.send },
     { id: "bill", label: "공과금", icon: paths.bill },
-    { id: "wealth", label: "자산관리", icon: paths.chart },
-    { id: "fund", label: "대출", icon: paths.loan },
+    { id: "asset", label: "자산관리", icon: paths.chart },
+    { id: "loan", label: "대출", icon: paths.loan },
     { id: "fx", label: "외화", icon: paths.fx },
-    { id: "overseas", label: "현물", icon: paths.card },
+    { id: "spot", label: "현물", icon: paths.card },
     { id: "deposit", label: "예적금가입", icon: paths.bank },
-    { id: "atm", label: "마이페이지", icon: paths.arrowR },
+    { id: "mypage", label: "마이페이지", icon: paths.arrowR },
   ];
   return (
     // aria-labelledby="quick-actions" className="bg-gray-50"
@@ -169,7 +171,17 @@ const QuickActions = () => {
         <div className="quick-actions-grid">
           {items.map((it) => (
             // group rounded-xl border bg-white px-3 py-4 text-sm text-gray-700 hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-600
-            <button key={it.id} className="quick-actions-item">
+            <button key={it.id} className="quick-actions-item" 
+              onClick={() => {             
+                  if (it.id === "transfer") navigate("/");
+                  if (it.id === "bill") navigate("/");
+                  if (it.id === "asset") navigate("/");
+                  if (it.id === "loan") navigate("/");
+                  if (it.id === "fx") navigate("/foreign/rate");
+                  if (it.id === "spot") navigate("/");
+                  if (it.id === "deposit") navigate("/");
+                  if (it.id === "mypage") navigate("/");
+                }}>
               {/* flex flex-col items-center gap-2 */}
               <div className="quick-actions-content">
                 {/* text-gray-900 */}
