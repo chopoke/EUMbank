@@ -65,15 +65,14 @@ export function Header({ isLoggedIn, user, onLogout }) {
           {/* font-semibold text-xl text-blue-700 tracking-tight */}
           <img src={mainlogo} className="mainlogo"/>
           {/* <FlowingInfinityIcon size={50} /> */}
-          <a href="/" className="logo">이음은행</a>
+          <Link to="/" className="logo">이음은행</Link>
           {/* hidden lg:flex items-center gap-6 text-sm text-gray-700 */}
           <nav className="main-nav-links">
-            <a href="#personal" className="nav-link">개인</a>
-            <a href="#products" className="nav-link">상품</a>
-            {/* <a href="#fund" className="nav-link nav-link-active">펀드</a> */}
-            <a href="#wealth" className="nav-link nav-link-active">자산관리</a>
-            <a href="#fx" className="nav-link">외환/환율</a>
-            <a href="#event" className="nav-link">이벤트</a>
+            <Link to="/personal" className="nav-link">개인</Link>
+            <Link to="/products" className="nav-link">상품</Link>
+            <Link to="/wealth" className="nav-link nav-link-active">자산관리</Link>
+            <Link to="/foreign/rate" className="nav-link">외환/환율</Link>
+            <Link to="/events" className="nav-link">이벤트</Link>
             <button className="notification-button" aria-label="알림">
             <Icon path={paths.bell} />
             {/* absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 */}

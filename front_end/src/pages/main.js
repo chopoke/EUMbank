@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
 import mainlogo from '../resources/img/eumonly.png'
+//import { goToAccountOpenPage } from "./account/utils/navigations";
 
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
@@ -30,6 +31,8 @@ const paths = {
 
 // 목업 데이터 (생략)
 const mockSummary = {
+
+
   profile: { name: "현빈" },
   accounts: [
     { id: "acc-1", name: "입출금통장", balance: 18203450, currency: "KRW" },
@@ -61,6 +64,8 @@ function formatWon(n) {
   }
 }
 
+
+
 const Header = ({ onLogin, isLoggedIn }) => {
   return (
     // sticky top-0 z-40 w-full bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b
@@ -89,7 +94,7 @@ const Header = ({ onLogin, isLoggedIn }) => {
         {/* flex items-center gap-8 */}
         <div className="main-nav-left">
           {/* font-semibold text-xl text-blue-700 tracking-tight */}
-          <img src={mainlogo} className="mainlogo"/>
+          <img src={mainlogo} className="mainlogo" />
           {/* <FlowingInfinityIcon size={50} /> */}
           <a href="#home" className="logo">이음은행</a>
           {/* hidden lg:flex items-center gap-6 text-sm text-gray-700 */}
@@ -101,9 +106,9 @@ const Header = ({ onLogin, isLoggedIn }) => {
             <a href="#fx" className="nav-link">외환/환율</a>
             <a href="#event" className="nav-link">이벤트</a>
             <button className="notification-button" aria-label="알림">
-            <Icon path={paths.bell} />
-            {/* absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 */}
-            <span className="notification-count">3</span>
+              <Icon path={paths.bell} />
+              {/* absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 */}
+              <span className="notification-count">3</span>
             </button>
           </nav>
         </div>
@@ -120,7 +125,7 @@ const Header = ({ onLogin, isLoggedIn }) => {
           {!isLoggedIn ? (
             // rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600
             // <a href="/login" className="login-button">로그인/인증</a>
-          <button onClick={onLogin} className="login-button">로그인</button>
+            <button onClick={onLogin} className="login-button">로그인</button>
           ) : (
             // flex items-center gap-2 text-sm text-gray-700
             <div className="logged-in-status">
@@ -137,6 +142,8 @@ const Header = ({ onLogin, isLoggedIn }) => {
 };
 
 const Hero = ({ isLoggedIn, name }) => {
+  const navigate = useNavigate();
+
   return (
     // relative overflow-hidden
     <section className="hero-section">
@@ -156,7 +163,7 @@ const Hero = ({ isLoggedIn, name }) => {
               {/* flex flex-wrap gap-3 pt-2 */}
               <div className="hero-actions">
                 {/* rounded-full bg-blue-700 text-white px-6 py-3 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
-                <button className="primary-button-lg">지금 개설하기</button>
+                {/* <button className="primary-button-lg" onClick={() => goToAccountOpenPage(navigate)}>지금 개설하기</button> */}
                 {/* rounded-full border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
                 <button className="secondary-button-lg">금리 보기</button>
               </div>
@@ -539,7 +546,7 @@ function WealthHubSummary() {
   );
 }
 
-  
+
 
 // export default function BankHome() {
 //   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -563,7 +570,7 @@ function WealthHubSummary() {
 //         <Hero isLoggedIn={isLoggedIn} name={summary.profile.name} />
 //         <QuickActions />
 //         {isLoggedIn && <AccountSnapshot summary={summary} />}
-        
+
 //         {focus === "fund" && <FundSpotlight />}
 //         {focus === "wealth" && <WealthHubSummary />}
 //         <RateFxTicker fx={summary.fx} />
@@ -584,13 +591,13 @@ export default function BankHome({ user }) {
       <main id="main">
         <Hero name={user?.name || user?.id || user?.loginId} />
         <QuickActions />
-        
-            <AccountSnapshot summary={summary} />
-            <FundSpotlight />
-            <WealthHubSummary />
-            <RateFxTicker fx={summary.fx} />
-            <SecurityBanner notices={summary.notices} />
-        
+
+        <AccountSnapshot summary={summary} />
+        <FundSpotlight />
+        <WealthHubSummary />
+        <RateFxTicker fx={summary.fx} />
+        <SecurityBanner notices={summary.notices} />
+
       </main>
     </div>
   );
