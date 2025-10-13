@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { fetchAccounts } from "../../api/accounts";
 import { Link } from "react-router-dom";
 
@@ -44,9 +44,8 @@ function AccountListPage(){
   const [maxBal, setMaxBal] = React.useState("");
   const [statuses, setStatuses] = React.useState(new Set());
   const [sortKey, setSortKey] = React.useState("recent");
-  const [showalert, setShowalert] = React.useState(false);
 
-  const bankOptions = ["MyBank","신한","KB국민","우리","하나","NH농협"];
+  const bankOptions = ["EumBank","신한","KB국민","우리","하나","NH농협"];
   const typeOptions = ["전체","입출금","예금","적금", "대출","외화"];
 
   // 원화 스케일링
@@ -67,16 +66,7 @@ function AccountListPage(){
   function toggleStatus(s) { const next = new Set(statuses); next.has(s) ? next.delete(s) : next.add(s); setStatuses(next); }
   // 필터 초기화
   function resetFilters() { setSearch(""); setType("전체"); setSelectedBanks(new Set()); setMinBal(""); setMaxBal(""); setStatuses(new Set()); setSortKey("recent"); }
-  // 복사시 알럿을 토스트형식으로
-  useEffect(()=>{
-    let timer;
-    if(showalert){
-      timer = setTimeout(()=>{
-        setShowalert(false);
-      }, 3000);
-    }
-    return ()=>clearTimeout(timer);
-  }, [showalert]);
+
 
   // 복사
   function copyText(t) { 

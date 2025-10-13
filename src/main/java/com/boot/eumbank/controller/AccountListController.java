@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -43,10 +44,12 @@ public class AccountListController {
         return accountService.listpage(c_no, pageable);
     }
 
-    // 계좌 상세
+    // 계좌 상세 --> 단건조회
     @GetMapping("/{a_no}")
-    public AccountDetailDTO detail(@PathVariable int a_no){
-        return accountService.detail(a_no);
+    public ResponseEntity<AccountDetailDTO> detail(@PathVariable int a_no) {
+        return accountService.detail(a_no).map(ResponseEntity::ok)
+                .orElseGet(()-> ResponseEntity.notFound().build());
+
     }
 
      // 거래내역 목록

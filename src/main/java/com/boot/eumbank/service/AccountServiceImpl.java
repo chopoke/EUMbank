@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,10 +35,9 @@ public class AccountServiceImpl implements AccountService{
     }
 
     @Override
-    public AccountDetailDTO detail(int a_no) {
-        Account a = accountRepository.findById(a_no)
-                .orElseThrow(() -> new IllegalArgumentException("계좌 없음: a_no=" + a_no));
-        return toDetailDTO(a);
+    public Optional<AccountDetailDTO> detail(int a_no) {
+        return accountRepository.findById(a_no)
+                .map(this::toDetailDTO);
     }
 
     // --------- mapping ---------
