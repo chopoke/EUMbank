@@ -1,7 +1,7 @@
-package com.boot.eumbank.account.service;
+package com.boot.eumbank.account.select.service;
 
 
-import com.boot.eumbank.account.dto.TransactionDTO;
+import com.boot.eumbank.account.select.dto.TransactionDTO;
 import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;

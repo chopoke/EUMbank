@@ -1,10 +1,9 @@
-import axios from "axios";
+import api from "../api/axios";
 
 
-const api = axios.create({ baseURL: 'http://localhost:8081' });
 
-export const fetchAccounts = (c_no) =>
-  api.get('/api/accounts', { params: { c_no } }); 
+export const fetchAccounts = () =>
+  api.get('/api/accounts'); 
 
 export const fetchAccountDetail = (a_no) =>
   api.get(`/api/accounts/${a_no}`);

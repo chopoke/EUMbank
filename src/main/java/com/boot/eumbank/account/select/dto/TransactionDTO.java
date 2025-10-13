@@ -1,4 +1,4 @@
-package com.boot.eumbank.account.dto;
+package com.boot.eumbank.account.select.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

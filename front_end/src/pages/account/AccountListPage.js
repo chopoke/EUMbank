@@ -1,19 +1,38 @@
 
 import React from "react";
 import { fetchAccounts } from "../../api/accounts";
-import { Link } from "react-router-dom";
+import { Link} from "react-router-dom";
 
 
-function AccountListPage(){
+function AccountListPage({user}){
   const[accounts, setAccounts] = React.useState([]);
+  const[loading, setLoading] = React.useState(false);
+  const[error, setError] = React.useState(null);
 
-  // 임시 고객 번호
-  const c_no = 1;
+  const [search, setSearch] = React.useState("");
+  const [type, setType] = React.useState("전체");
+  const [selectedBanks, setSelectedBanks] = React.useState(new Set());
+  const [minBal, setMinBal] = React.useState("");
+  const [maxBal, setMaxBal] = React.useState("");
+  const [statuses, setStatuses] = React.useState(new Set());
+  const [sortKey, setSortKey] = React.useState("recent");
+
+
+  // 고객 번호 받기위한 토큰
+  const token = localStorage.getItem("access");
+  console.log('[AccountListPage] token =', token);
+
 
   React.useEffect(()=>{
+
+    let alive = true;
+    setLoading(true);
+    setError(null);
+
     // accounts.js -> axios
-    fetchAccounts(c_no)
+    fetchAccounts()
       .then(res=>{
+        if (!alive) return;
         // 서버 : AccountSummaryDTO 
         const rows = res.data || [];
 
@@ -33,17 +52,22 @@ function AccountListPage(){
           lastActivity: ""
         }));
         setAccounts(mapped);
-      }).catch(console.error);
-  }, [c_no]
+      }).catch((e) =>{
+        if (!alive) return;
+        setError(e);
+      }
+    )
+      .finally(() =>{
+        if (!alive) return;
+        setLoading(false)
+      });
+
+      return () => {
+      alive = false;
+    };
+  }, []
 );  
 
-  const [search, setSearch] = React.useState("");
-  const [type, setType] = React.useState("전체");
-  const [selectedBanks, setSelectedBanks] = React.useState(new Set());
-  const [minBal, setMinBal] = React.useState("");
-  const [maxBal, setMaxBal] = React.useState("");
-  const [statuses, setStatuses] = React.useState(new Set());
-  const [sortKey, setSortKey] = React.useState("recent");
 
   const bankOptions = ["EumBank","신한","KB국민","우리","하나","NH농협"];
   const typeOptions = ["전체","입출금","예금","적금", "대출","외화"];
@@ -89,8 +113,13 @@ function AccountListPage(){
     URL.revokeObjectURL(url);
   }
 
+  // 로그인 안되어있으면 리턴 (( 훅 다음에 호출하는 것 주의!))
+  // if (!user) return <Navigate to="/login" replace />;
+
+
   // 필터
   const filtered = React.useMemo(() => {    // Memoization 훅 활용  (계산값을 메모리에 저장해 재사용)
+    if (!accounts) return [];
     return accounts
       .filter((a) => {
         const q = search.trim().toLowerCase();
@@ -121,6 +150,9 @@ function AccountListPage(){
   const Chip = ({ active, children, onClick }) => (
     <button onClick={onClick} className={"px-3 py-1.5 rounded-full text-xs border transition " + (active ? "bg-blue-50 text-blue-700 border-blue-300" : "hover:bg-gray-50")}>{children}</button>
   );
+
+  if (loading) return <div className="p-6">불러오는 중…</div>;
+  if (error) return <div className="p-6 text-red-600">계좌 조회 실패: {String(error)}</div>;
 
   return (
     <div className="bg-gray-50">

@@ -1,4 +1,4 @@
-package com.boot.eumbank.account.entity;
+package com.boot.eumbank.account.select.entity;
 
 
 import jakarta.persistence.*;

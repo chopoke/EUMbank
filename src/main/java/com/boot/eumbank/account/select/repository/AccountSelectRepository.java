@@ -1,9 +1,9 @@
-package com.boot.eumbank.account.repository;
+package com.boot.eumbank.account.select.repository;
 
-import com.boot.eumbank.account.entity.Account;
+import com.boot.eumbank.account.Open.model.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface AccountRepository extends JpaRepository<Account, Integer>, AccountRepositoryCustom {
+public interface AccountSelectRepository extends JpaRepository<Account, Integer>, AccountRepositoryCustom {
 
     // JPQL 버전 --> Query DSL로 변경중
 //    // 고객 보유 계좌 (customer.c_no 기준, 최신순)

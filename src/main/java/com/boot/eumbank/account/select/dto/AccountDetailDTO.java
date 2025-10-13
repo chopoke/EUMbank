@@ -1,11 +1,11 @@
-package com.boot.eumbank.account.dto;
+package com.boot.eumbank.account.select.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -21,7 +21,7 @@ public class AccountDetailDTO {
     private BigDecimal a_balance;
     private String a_status;
     private String a_nickname;
-    private Timestamp a_opened_at;
-    private Timestamp a_closed_at;
-    private Timestamp a_last_tx_at;
+    private LocalDateTime a_opened_at;
+    private LocalDateTime a_closed_at;
+    private LocalDateTime a_last_tx_at;
 }

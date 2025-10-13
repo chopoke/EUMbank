@@ -1,6 +1,6 @@
-package com.boot.eumbank.account.repository;
+package com.boot.eumbank.account.select.repository;
 
-import com.boot.eumbank.account.entity.TransferHistory;
+import com.boot.eumbank.account.select.entity.TransferHistory;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

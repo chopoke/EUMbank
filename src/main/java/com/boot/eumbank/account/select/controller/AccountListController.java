@@ -1,10 +1,11 @@
-package com.boot.eumbank.account.controller;
+package com.boot.eumbank.account.select.controller;
 
-import com.boot.eumbank.account.entity.TransferHistory;
-import com.boot.eumbank.account.dto.AccountDetailDTO;
-import com.boot.eumbank.account.dto.AccountSummaryDTO;
-import com.boot.eumbank.account.repository.TransferHistoryRepository;
-import com.boot.eumbank.account.service.AccountService;
+import com.boot.eumbank.account.select.entity.TransferHistory;
+import com.boot.eumbank.account.select.dto.AccountDetailDTO;
+import com.boot.eumbank.account.select.dto.AccountSummaryDTO;
+import com.boot.eumbank.account.select.repository.TransferHistoryRepository;
+import com.boot.eumbank.account.select.service.AccountSelectService;
+import com.boot.eumbank.customer.entity.Customer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -25,13 +27,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountListController {
 
-    private final AccountService accountService;
+    private final AccountSelectService accountService;
     private final TransferHistoryRepository transferHistoryRepository;
 
     // 보유 계좌 목록
     @GetMapping
-    public List<AccountSummaryDTO> list(@RequestParam int c_no){
-        return accountService.list(c_no);
+    public List<AccountSummaryDTO> list(@AuthenticationPrincipal Customer customer){
+        int cNo = customer.getCustomerNo();
+        var result = accountService.list(cNo);
+        System.out.printf("[/api/accounts] cNo=%d, resultSize=%d%n", cNo, result.size());
+        return accountService.list(cNo);
     }
 
     // 페이지버전 -- 현재 프론트 미적용
