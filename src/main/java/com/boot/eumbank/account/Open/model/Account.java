@@ -13,13 +13,13 @@ public class Account {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "a_no")
-    private Long aNo;
+    private Integer aNo;
 
     @Column(name = "a_id", length = 20)
     private String aId;
 
     @Column(name = "c_no")
-    private Long cNo;                 // FK(정규화하려면 @ManyToOne로 바꿀 수 있음)
+    private Integer cNo;                 // FK(정규화하려면 @ManyToOne로 바꿀 수 있음)
 
     @Column(name = "a_account_no", length = 30, nullable = false, unique = true)
     private String accountNo;

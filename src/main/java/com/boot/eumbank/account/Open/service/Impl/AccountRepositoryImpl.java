@@ -2,7 +2,7 @@ package com.boot.eumbank.account.Open.service.Impl;
 
 import com.boot.eumbank.account.Open.dto.CustomerDTO;
 import com.boot.eumbank.account.Open.model.Account;
-import com.boot.eumbank.account.accountCreate.model.QAccount;
+import com.boot.eumbank.account.Open.model.QAccount;
 import com.boot.eumbank.account.Open.repository.custom.AccountCustom;
 import com.boot.eumbank.account.Open.service.AccountService;
 import com.boot.eumbank.account.Open.util.AccountIds;
@@ -56,7 +56,7 @@ public class AccountRepositoryImpl implements AccountCustom {
         // 3) 엔티티 생성 (INSERT 대상)
         Account entity = Account.builder()
                 .aId(AccountIds.newId())
-                .cNo(customer.getCNo())                   // FK 연결: CUSTOMER_TBL.c_no
+                .cNo(Math.toIntExact(customer.getCNo()))                   // FK 연결: CUSTOMER_TBL.c_no
                 .accountNo(newAccountNo)
                 .appId(1)
                 .productCode(type)                        // 필요시 매핑 테이블 두세요
