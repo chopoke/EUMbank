@@ -6,10 +6,10 @@ import lombok.Setter;
 
 @Getter @Setter
 public class SignupRequest {
-    @NotBlank @Size(min = 4, max = 50)
+    @NotBlank @Size(min = 6, max = 20)
     private String c_user_id;
 
-    @NotBlank @Size(min = 8, max = 100)
+    @NotBlank @Size(min = 8, max = 32)
     private String c_password;
 
     @NotBlank
