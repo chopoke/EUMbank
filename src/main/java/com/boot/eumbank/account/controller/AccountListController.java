@@ -8,6 +8,7 @@ import com.boot.eumbank.account.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -39,7 +40,7 @@ public class AccountListController {
             @RequestParam int c_no,
             @PageableDefault(
                     size = 20, sort = "a_no",
-                    direction = org.springframework.data.domain.Sort.Direction.DESC
+                    direction = Sort.Direction.DESC
             ) Pageable pageable
     ) {
         return accountService.listpage(c_no, pageable);
