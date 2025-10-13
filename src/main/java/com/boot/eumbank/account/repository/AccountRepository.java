@@ -1,13 +1,7 @@
-package com.boot.eumbank.repository;
+package com.boot.eumbank.account.repository;
 
-import com.boot.eumbank.entity.Account;
-import com.boot.eumbank.service.AccountService;
-import org.springframework.data.repository.query.Param;
+import com.boot.eumbank.account.entity.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-
-import java.util.List;
-import java.util.Optional;
 
 public interface AccountRepository extends JpaRepository<Account, Integer>, AccountRepositoryCustom {
 

@@ -1,13 +1,14 @@
-package com.boot.eumbank.controller;
+package com.boot.eumbank.account.controller;
 
-import com.boot.eumbank.entity.TransferHistory;
-import com.boot.eumbank.dto.AccountDetailDTO;
-import com.boot.eumbank.dto.AccountSummaryDTO;
-import com.boot.eumbank.repository.TransferHistoryRepository;
-import com.boot.eumbank.service.AccountService;
+import com.boot.eumbank.account.entity.TransferHistory;
+import com.boot.eumbank.account.dto.AccountDetailDTO;
+import com.boot.eumbank.account.dto.AccountSummaryDTO;
+import com.boot.eumbank.account.repository.TransferHistoryRepository;
+import com.boot.eumbank.account.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,7 +37,7 @@ public class AccountListController {
     @GetMapping("/paged")
     public Page<AccountSummaryDTO> listPaged(
             @RequestParam int c_no,
-            @org.springframework.data.web.PageableDefault(
+            @PageableDefault(
                     size = 20, sort = "a_no",
                     direction = org.springframework.data.domain.Sort.Direction.DESC
             ) Pageable pageable

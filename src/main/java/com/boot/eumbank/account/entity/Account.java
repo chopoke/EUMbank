@@ -1,4 +1,4 @@
-package com.boot.eumbank.entity;
+package com.boot.eumbank.account.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;

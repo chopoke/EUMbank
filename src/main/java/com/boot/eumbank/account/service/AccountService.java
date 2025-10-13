@@ -1,8 +1,8 @@
-package com.boot.eumbank.service;
+package com.boot.eumbank.account.service;
 
 
-import com.boot.eumbank.dto.AccountDetailDTO;
-import com.boot.eumbank.dto.AccountSummaryDTO;
+import com.boot.eumbank.account.dto.AccountDetailDTO;
+import com.boot.eumbank.account.dto.AccountSummaryDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

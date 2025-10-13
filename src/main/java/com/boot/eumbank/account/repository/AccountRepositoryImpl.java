@@ -1,6 +1,6 @@
-package com.boot.eumbank.repository;
+package com.boot.eumbank.account.repository;
 
-import com.boot.eumbank.entity.Account;
+import com.boot.eumbank.account.entity.Account;
 import com.boot.eumbank.entity.QAccount;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;

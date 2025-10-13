@@ -1,9 +1,9 @@
-package com.boot.eumbank.service;
+package com.boot.eumbank.account.service;
 
-import com.boot.eumbank.entity.Account;
-import com.boot.eumbank.dto.AccountDetailDTO;
-import com.boot.eumbank.dto.AccountSummaryDTO;
-import com.boot.eumbank.repository.AccountRepository;
+import com.boot.eumbank.account.entity.Account;
+import com.boot.eumbank.account.dto.AccountDetailDTO;
+import com.boot.eumbank.account.dto.AccountSummaryDTO;
+import com.boot.eumbank.account.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
