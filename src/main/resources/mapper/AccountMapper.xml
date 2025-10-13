@@ -2,10 +2,10 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.boot.eumbank.accountCreate.mapper.AccountMapper">
+<mapper namespace="com.boot.eumbank.account.Open.mapper.AccountMapper">
 
     <!--  오로지 고객 아이디를 가져오기 위해서..  -->
-    <select id="getCustomerByACustomerId" parameterType="string" resultType="com.boot.eumbank.accountCreate.dto.CustomerDTO">
+    <select id="getCustomerByACustomerId" parameterType="string" resultType="com.boot.eumbank.account.Open.dto.CustomerDTO">
         SELECT
             *
         FROM CUSTOMER_TBL

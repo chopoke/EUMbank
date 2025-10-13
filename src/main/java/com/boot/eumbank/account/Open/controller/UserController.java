@@ -1,12 +1,12 @@
-package com.boot.eumbank.accountCreate.controller;
+package com.boot.eumbank.account.Open.controller;
 
-import com.boot.eumbank.accountCreate.dto.CustomerDTO;
-import com.boot.eumbank.accountCreate.dto.VerifyMinSjonRequest;
-import com.boot.eumbank.accountCreate.dto.VerifyMinSjonResponse;
-import com.boot.eumbank.accountCreate.service.account.Impl.AccountRepositoryImpl;
-import com.boot.eumbank.accountCreate.service.account.AccountService;
-import com.boot.eumbank.accountCreate.service.account.KycVerifyService;
-import com.boot.eumbank.accountCreate.util.ImageFormats;
+import com.boot.eumbank.account.Open.dto.CustomerDTO;
+import com.boot.eumbank.account.Open.dto.VerifyMinSjonRequest;
+import com.boot.eumbank.account.Open.dto.VerifyMinSjonResponse;
+import com.boot.eumbank.account.Open.service.Impl.AccountRepositoryImpl;
+import com.boot.eumbank.account.Open.service.AccountService;
+import com.boot.eumbank.account.Open.service.KycVerifyService;
+import com.boot.eumbank.account.Open.util.ImageFormats;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;

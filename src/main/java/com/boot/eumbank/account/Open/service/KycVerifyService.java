@@ -1,9 +1,9 @@
-package com.boot.eumbank.accountCreate.service.account;
+package com.boot.eumbank.account.Open.service;
 
-import com.boot.eumbank.accountCreate.controller.UserController;
+import com.boot.eumbank.account.Open.controller.UserController;
 import com.boot.eumbank.customer.entity.QCustomer;
-import com.boot.eumbank.accountCreate.dto.VerifyMinSjonRequest;
-import com.boot.eumbank.accountCreate.dto.VerifyMinSjonResponse;
+import com.boot.eumbank.account.Open.dto.VerifyMinSjonRequest;
+import com.boot.eumbank.account.Open.dto.VerifyMinSjonResponse;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;

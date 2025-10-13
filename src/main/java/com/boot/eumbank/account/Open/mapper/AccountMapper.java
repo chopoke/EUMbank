@@ -1,6 +1,6 @@
-package com.boot.eumbank.accountCreate.mapper;
+package com.boot.eumbank.account.Open.mapper;
 
-import com.boot.eumbank.accountCreate.dto.CustomerDTO;
+import com.boot.eumbank.account.Open.dto.CustomerDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

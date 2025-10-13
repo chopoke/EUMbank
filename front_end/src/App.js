@@ -14,7 +14,7 @@ import Step4Product from "./pages/account/Step4Product";
 import Step5Done from "./pages/account/Step5Done";
 
 // 앞단에서 로그인 유무 판단하여 페이지 보호하기
-import ProtectedRoute from "./pages/account/component/ProtectedRoute";
+//import ProtectedRoute from "./pages/account/component/ProtectedRoute";
 
 
 // App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
@@ -57,11 +57,11 @@ function App() {
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
         <Route path="/account/open" element={
-           <ProtectedRoute>
-            <Navigate to="/account/open/step1" replace />
-           </ProtectedRoute>
+          //<ProtectedRoute>
+          <Navigate to="/account/open/step1" replace />
+          //</ProtectedRoute>
         } />
-           
+
         <Route path="/account/open/step1" element={<Step1Consent />} />
         <Route path="/account/open/step2" element={<Step2IdVerify />} />
         <Route path="/account/open/step3" element={<Step3Info />} />

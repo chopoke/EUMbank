@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
 import mainlogo from '../resources/img/eumonly.png'
-import { goToAccountOpenPage } from "./account/utils/navigations";
+//import { goToAccountOpenPage } from "./account/utils/navigations";
 
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
@@ -163,7 +163,7 @@ const Hero = ({ isLoggedIn, name }) => {
               {/* flex flex-wrap gap-3 pt-2 */}
               <div className="hero-actions">
                 {/* rounded-full bg-blue-700 text-white px-6 py-3 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
-                <button className="primary-button-lg" onClick={()=> goToAccountOpenPage(navigate)}>지금 개설하기</button>
+                {/* <button className="primary-button-lg" onClick={() => goToAccountOpenPage(navigate)}>지금 개설하기</button> */}
                 {/* rounded-full border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
                 <button className="secondary-button-lg">금리 보기</button>
               </div>

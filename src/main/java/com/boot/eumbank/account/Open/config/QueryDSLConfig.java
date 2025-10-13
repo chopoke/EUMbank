@@ -1,4 +1,4 @@
-package com.boot.eumbank.accountCreate.config;
+package com.boot.eumbank.account.Open.config;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;

@@ -5,8 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { Frame, Header, Stepper, AsideHelp, Checkbox } from "./commom/ui";
 import { ocrCheck, verifyMinSjon } from "./api/accountApi"; // 경로는 프로젝트 구조에 맞게
 import { useAccountOpenStore } from './state/accountOpenStore';
-import Modal from "./component/pinConponent/Modal";
-import { PinPadModal } from "./component/pinConponent/PinPadModal";
+//import Modal from "./component/pinConponent/Modal";
+//import { PinPadModal } from "./component/pinConponent/PinPadModal";
 
 const NEXT_PATH = "/account/open/step3";
 
@@ -92,7 +92,7 @@ export default function Step2IdVerify() {
     // 최종 버튼 입력버튼
     function finalButton() {
 
-        if(verified) {
+        if (verified) {
             if (pinNumber === '' && pinReNumber === '') {
                 alert("PIN번호를 등록해주세요.");
                 return false;
@@ -109,8 +109,8 @@ export default function Step2IdVerify() {
         } else {
             handleOcr();
         }
-      
-        
+
+
     }
 
     // 모달 작업창 부분 시작 ------
@@ -214,10 +214,10 @@ export default function Step2IdVerify() {
                                         </button>
                                     }
                                     {/* ✅ 3. 모달 제목을 pinStep에 따라 동적으로 변경합니다. */}
-                                    <Modal open={modalOpen} close={closeModal} header={pinStep === 'enter' ? "PIN 6자리 입력" : "PIN 6자리 확인"}>
+                                    {/* <Modal open={modalOpen} close={closeModal} header={pinStep === 'enter' ? "PIN 6자리 입력" : "PIN 6자리 확인"}>
                                         <PinPadModal
                                             // ✅ 4. pinStep이 바뀔 때마다 PinPadModal을 새로 렌더링하여 초기화합니다. (key prop 사용)
-                                            key={pinStep} 
+                                            key={pinStep}
                                             length={6}
                                             // ✅ 5. onSubmit 로직을 단계에 따라 다르게 처리합니다.
                                             onSubmit={async (pin) => {
@@ -231,7 +231,7 @@ export default function Step2IdVerify() {
                                             }}
                                             onCancel={closeModal}
                                         />
-                                    </Modal>
+                                    </Modal> */}
 
 
 
