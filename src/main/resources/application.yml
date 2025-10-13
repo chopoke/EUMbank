@@ -1,0 +1,95 @@
+# =======================
+# SERVER
+# =======================
+server:
+  port: 1283
+
+# =======================
+# SPRING (단일 블록로 병합!)
+# =======================
+spring:
+  application:
+    name: eumbank
+
+  # --- DB CONNECTION ---
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://localhost:3306/eum_bank
+    username: ${DB_USER}
+    password: ${DB_PASS}
+    # 필요 시 Hikari 기본값 튜닝
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+
+  # --- Multipart Upload ---
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  # --- JPA / Hibernate ---
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false                 # 권장: 영속성 컨텍스트 요청 범위 외 사용 방지
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC                # DB 저장은 UTC
+
+  # --- JSON / Time ---
+  jackson:
+    time-zone: Asia/Seoul
+    serialization:
+      write-dates-as-timestamps: false
+
+# =======================
+# NAVER CLOVA OCR (비밀은 환경변수 권장)
+# =======================
+clove:
+  ocr:
+    url: ${CLOVA_OCR_URL}
+    secret: ${CLOVA_OCR_SECRET}
+
+# =======================
+# MyBatis
+# =======================
+mybatis:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.boot.eumbank.dto
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+
+# =======================
+# Logging
+#  - mybatis stdout 로거가 이미 SQL을 찍습니다.
+#    (중복 로그 원치 않으면 아래 DEBUG는 낮추세요)
+# =======================
+logging:
+  level:
+    com.boot.eumbank.mapper: DEBUG
+    org.apache.ibatis: DEBUG
+    org.mybatis.spring: DEBUG
+
+# =======================
+# CORS (커스텀 프로퍼티; @ConfigurationProperties 또는 @Value로 주입해서 사용)
+# =======================
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+
+# =======================
+# JWT (환경변수로 비밀키 주입 권장)
+# =======================
+jwt:
+  access:
+    secret: ${JWT_ACCESS_SECRET:change-this-to-a-very-long-random-access-secret-at-least-64-bytes}
+    ttl-seconds: 1800
+  refresh:
+    secret: ${JWT_REFRESH_SECRET:change-this-to-a-very-long-random-refresh-secret-at-least-64-bytes}
+    ttl-seconds: 604800

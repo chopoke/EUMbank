@@ -1,10 +1,21 @@
-import {  Route, Routes, useNavigate } from "react-router-dom";
+import { Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import BankHome from './pages/main';
 import LoginPage from "./pages/login/login";
 import SignUp from "./pages/signup/signup";
 import { Header } from './common/header';
 import { Footer } from './common/footer';
 import { useState } from "react";
+
+// 단계별 화면
+import Step1Consent from "./pages/account/Step1Consent";
+import Step2IdVerify from "./pages/account/Step2IdVerify";
+import Step3Info from "./pages/account/Step3Info";
+import Step4Product from "./pages/account/Step4Product";
+import Step5Done from "./pages/account/Step5Done";
+
+// 앞단에서 로그인 유무 판단하여 페이지 보호하기
+//import ProtectedRoute from "./pages/account/component/ProtectedRoute";
+
 
 // App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
 // 이렇게 하면 App 컴포넌트 내에서 useNavigate를 정상적으로 사용할 수 있습니다.
@@ -43,6 +54,21 @@ function App() {
           element={<LoginPage onLoginSuccess={handleLoginSuccess} />}
         />
         <Route path="/signup" element={<SignUp />} />
+
+        {/* 계좌 개설: 각 단계 독립 경로 */}
+        <Route path="/account/open" element={
+           //<ProtectedRoute>
+            <Navigate to="/account/open/step1" replace />
+           //</ProtectedRoute>
+        } />
+           
+        <Route path="/account/open/step1" element={<Step1Consent />} />
+        <Route path="/account/open/step2" element={<Step2IdVerify />} />
+        <Route path="/account/open/step3" element={<Step3Info />} />
+        <Route path="/account/open/step4" element={<Step4Product />} />
+        <Route path="/account/open/step5" element={<Step5Done />} />
+
+
       </Routes>
       <Footer />
     </div>

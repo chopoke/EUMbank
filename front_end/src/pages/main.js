@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
-import mainlogo from '../resources/img/eumonly.png'
+import mainacc from '../resources/img/acc_fin.png'
+//import { goToAccountOpenPage } from "./account/utils/navigations";
 
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
@@ -30,6 +31,8 @@ const paths = {
 
 // 목업 데이터 (생략)
 const mockSummary = {
+
+
   profile: { name: "현빈" },
   accounts: [
     { id: "acc-1", name: "입출금통장", balance: 18203450, currency: "KRW" },
@@ -62,6 +65,8 @@ function formatWon(n) {
 }
 
 const Hero = ({ isLoggedIn, name }) => {
+  const navigate = useNavigate();
+
   return (
     // relative overflow-hidden
     <section className="hero-section">
@@ -81,7 +86,7 @@ const Hero = ({ isLoggedIn, name }) => {
               {/* flex flex-wrap gap-3 pt-2 */}
               <div className="hero-actions">
                 {/* rounded-full bg-blue-700 text-white px-6 py-3 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
-                <button className="primary-button-lg">지금 개설하기</button>
+                {/* <button className="primary-button-lg" onClick={()=> goToAccountOpenPage(navigate)}>지금 개설하기</button> */}
                 {/* rounded-full border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
                 <button className="secondary-button-lg">금리 보기</button>
               </div>
@@ -90,7 +95,8 @@ const Hero = ({ isLoggedIn, name }) => {
             <div className="hero-image-col">
               {/* aspect-[4/3] rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center */}
               <div className="hero-image-placeholder">
-                <Icon path={paths.bank} />
+                {/* <Icon path={paths.bank} /> */}
+                <img src={mainacc} className="mainacc" />
               </div>
             </div>
           </div>
@@ -424,7 +430,7 @@ function WealthHubSummary() {
   );
 }
 
-  
+
 
 // export default function BankHome() {
 //   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -448,7 +454,7 @@ function WealthHubSummary() {
 //         <Hero isLoggedIn={isLoggedIn} name={summary.profile.name} />
 //         <QuickActions />
 //         {isLoggedIn && <AccountSnapshot summary={summary} />}
-        
+
 //         {focus === "fund" && <FundSpotlight />}
 //         {focus === "wealth" && <WealthHubSummary />}
 //         <RateFxTicker fx={summary.fx} />
@@ -469,13 +475,13 @@ export default function BankHome({ user }) {
       <main id="main">
         <Hero name={user?.name || user?.id || user?.loginId} />
         <QuickActions />
-        
-            <AccountSnapshot summary={summary} />
-            <FundSpotlight />
-            <WealthHubSummary />
-            <RateFxTicker fx={summary.fx} />
-            <SecurityBanner notices={summary.notices} />
-        
+
+        <AccountSnapshot summary={summary} />
+        <FundSpotlight />
+        <WealthHubSummary />
+        <RateFxTicker fx={summary.fx} />
+        <SecurityBanner notices={summary.notices} />
+
       </main>
     </div>
   );
