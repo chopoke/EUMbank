@@ -61,81 +61,6 @@ function formatWon(n) {
   }
 }
 
-const Header = ({ onLogin, isLoggedIn }) => {
-  return (
-    // sticky top-0 z-40 w-full bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b
-    <header className="main-header">
-      {/* Top Utility Bar */}
-      {/* hidden md:flex h-10 items-center justify-between px-6 text-sm text-gray-600 */}
-      {/* <div className="utility-bar">
-        flex items-center gap-4
-        <div className="utility-menu">
-          <a href="#notice" className="hover-underline">공지</a>
-          <a href="#a11y" className="hover-underline">접근성</a>
-          <a href="#help" className="hover-underline">고객센터</a>
-        </div>
-        <div className="utility-menu">
-          <button className="hover-underline" aria-label="언어 전환">KO/EN</button>
-          <button className="notification-button" aria-label="알림">
-            <Icon path={paths.bell} />
-            absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1
-            <span className="notification-count">3</span>
-          </button>
-        </div>
-      </div> */}
-      {/* Main Nav */}
-      {/* h-16 flex items-center justify-between px-6 */}
-      <div className="main-nav-bar">
-        {/* flex items-center gap-8 */}
-        <div className="main-nav-left">
-          {/* font-semibold text-xl text-blue-700 tracking-tight */}
-          <img src={mainlogo} className="mainlogo"/>
-          {/* <FlowingInfinityIcon size={50} /> */}
-          <a href="#home" className="logo">이음은행</a>
-          {/* hidden lg:flex items-center gap-6 text-sm text-gray-700 */}
-          <nav className="main-nav-links">
-            <a href="#personal" className="nav-link">개인</a>
-            <a href="#products" className="nav-link">상품</a>
-            {/* <a href="#fund" className="nav-link nav-link-active">펀드</a> */}
-            <a href="#wealth" className="nav-link nav-link-active">자산관리</a>
-            <a href="#fx" className="nav-link">외환/환율</a>
-            <a href="#event" className="nav-link">이벤트</a>
-            <button className="notification-button" aria-label="알림">
-            <Icon path={paths.bell} />
-            {/* absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 */}
-            <span className="notification-count">3</span>
-            </button>
-          </nav>
-        </div>
-        {/* flex items-center gap-3 */}
-        <div className="main-nav-right">
-          {/* relative hidden md:block */}
-          <label className="search-label">
-            {/* peer w-64 rounded-full border border-gray-300 pl-10 pr-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
-            <input className="search-input" placeholder="메뉴나 기능 검색" />
-            {/* absolute left-3 top-2.5 text-gray-500 */}
-            <span className="search-icon"><Icon path={paths.search} /></span>
-          </label>
-          <Link to='/signup'><button className="login-button">회원가입</button></Link>
-          {!isLoggedIn ? (
-            // rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600
-            // <a href="/login" className="login-button">로그인/인증</a>
-          <button onClick={onLogin} className="login-button">로그인</button>
-          ) : (
-            // flex items-center gap-2 text-sm text-gray-700
-            <div className="logged-in-status">
-              <span className="hidden-sm">안전한 접속중</span>
-              {/* inline-flex items-center gap-1 rounded-full border px-2 py-1 */}
-              <span className="security-tag"><Icon path={paths.shield} />
-                <span className="text-gray-700">보안</span></span>
-            </div>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-};
-
 const Hero = ({ isLoggedIn, name }) => {
   return (
     // relative overflow-hidden
@@ -220,12 +145,12 @@ const QuickActions = () => {
   const items = [
     { id: "transfer", label: "계좌이체", icon: paths.send },
     { id: "bill", label: "공과금", icon: paths.bill },
-    { id: "wealth", label: "자산진단", icon: paths.chart },
-    { id: "fund", label: "펀드가입", icon: paths.card },
-    { id: "fx", label: "환전", icon: paths.fx },
-    { id: "overseas", label: "해외송금", icon: paths.arrowR },
+    { id: "wealth", label: "자산관리", icon: paths.chart },
+    { id: "fund", label: "대출", icon: paths.loan },
+    { id: "fx", label: "외화", icon: paths.fx },
+    { id: "overseas", label: "현물", icon: paths.card },
     { id: "deposit", label: "예적금가입", icon: paths.bank },
-    { id: "atm", label: "ATM찾기", icon: paths.arrowR },
+    { id: "atm", label: "마이페이지", icon: paths.arrowR },
   ];
   return (
     // aria-labelledby="quick-actions" className="bg-gray-50"
@@ -424,46 +349,6 @@ const SecurityBanner = ({ notices }) => (
   </section>
 );
 
-const Footer = () => (
-  // bg-gray-50 border-t
-  <footer className="main-footer">
-    {/* mx-auto max-w-screen-xl px-6 py-10 text-sm text-gray-600 */}
-    <div className="content-container py-10 footer-content">
-      {/* grid grid-cols-1 md:grid-cols-4 gap-6 */}
-      <div className="footer-grid">
-        <div className="footer-col">
-          {/* font-medium text-gray-900 mb-2 */}
-          <div className="footer-title">NeoBank</div>
-          <p>사업자등록번호 123-45-67890</p>
-          <p>대표 ㈜네오뱅크</p>
-        </div>
-        <div className="footer-col">
-          <div className="footer-title">약관</div>
-          <ul className="footer-list">
-            <li><a href="#tos" className="hover-underline">전자금융거래약관</a></li>
-            <li><a href="#privacy" className="hover-underline">개인정보 처리방침</a></li>
-            <li><a href="#disclosure" className="hover-underline">경영공시</a></li>
-          </ul>
-        </div>
-        <div className="footer-col">
-          <div className="footer-title">고객지원</div>
-          <ul className="footer-list">
-            <li><a href="#faq" className="hover-underline">FAQ</a></li>
-            <li><a href="#branch" className="hover-underline">지점/ATM 찾기</a></li>
-            <li><a href="#contact" className="hover:underline">문의하기</a></li>
-          </ul>
-        </div>
-        <div className="footer-col">
-          <div className="footer-title">인증</div>
-          <p>ISMS · 개인정보보호 인증</p>
-          {/* mt-2 text-gray-500 */}
-          <p className="copyright">© 2025 NeoBank</p>
-        </div>
-      </div>
-    </div>
-  </footer>
-);
-
 // 펀드 중심/자산관리 중심 전환 플래그
 function FundSpotlight() {
   return (
@@ -472,8 +357,8 @@ function FundSpotlight() {
       <div className="content-container py-10">
         {/* flex items-center justify-between */}
         <div className="section-header">
-          <h4 className="card-title">펀드 스포트라이트</h4>
-          <a href="#" className="text-link">모든 펀드 보기</a>
+          <h4 className="card-title">예/적금 스포트라이트</h4>
+          <a href="#" className="text-link">모든 예/적금 보기</a>
         </div>
         {/* mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 */}
         <div className="fund-grid">
@@ -483,7 +368,7 @@ function FundSpotlight() {
               {/* text-sm text-gray-500 */}
               <div className="fund-type">액티브 주식형</div>
               {/* mt-1 text-lg font-semibold */}
-              <div className="fund-name">Neo 성장주 펀드 {i}호</div>
+              <div className="fund-name">Neo 성장주 적금 {i}호</div>
               {/* mt-2 text-sm text-gray-600 */}
               <div className="fund-return">1년 수익률 <b className="fund-return-positive">+8.4%</b></div>
               {/* mt-3 inline-flex items-center gap-1 text-sm text-blue-700 hover:underline */}
