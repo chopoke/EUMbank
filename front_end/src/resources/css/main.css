@@ -1092,3 +1092,7 @@ body {
   margin-top: var(--spacing-2);
   color: var(--color-gray-500);
 }
+
+.mainacc {
+  height: 270px;
+}

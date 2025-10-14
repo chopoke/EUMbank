@@ -5,7 +5,9 @@ import com.boot.eumbank.customer.dto.LoginRequest;
 import com.boot.eumbank.customer.dto.RefreshRequest;
 import com.boot.eumbank.customer.dto.SignupRequest;
 import com.boot.eumbank.customer.service.AuthService;
+import com.boot.eumbank.customer.service.SocialService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final SocialService socialService;
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest req) {
@@ -53,5 +56,13 @@ public class AuthController {
             return xff.split(",")[0].trim();
         }
         return request.getRemoteAddr();
+    }
+
+    @PostMapping("/exchange")
+    public AuthResponse exchange(HttpServletRequest request, HttpServletResponse response) {
+        AuthResponse auth = socialService.refreshRotate(request, response);
+        System.out.println(auth.getRefreshToken());
+        System.out.println(auth.getAccessToken());
+        return auth;
     }
 }

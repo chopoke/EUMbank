@@ -10,6 +10,10 @@ import com.boot.eumbank.customer.repo.CustomerRepo;
 import com.boot.eumbank.customer.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -68,7 +73,7 @@ public class AuthServiceImpl implements AuthService {
                 .cAgreeTerms(agreeTerms)
                 .cAgreePrivacy(agreePrivacy)
                 .cAgreeMarketing(agreeMarketing)
-                .cLoginType("EUM")
+                .loginType("EUM")
                 .build();
 
         customers.save(customer);
@@ -116,8 +121,9 @@ public class AuthServiceImpl implements AuthService {
         row.setUserAgent(userAgent);
 
         // 같은 사용자 오래된 토큰 정리 정책(선택): 10개 이상이면 전체 삭제
-        if (refreshTokens.countByCustomerNoAndExpiresAtAfterAndDeleteAtIsNull(customer.getCustomerNo(), now) >= 10) {
-            refreshTokens.deleteByCustomerNo(customer.getCustomerNo());
+        long alive = refreshTokens.countByCustomerNoAndExpiresAtAfterAndDeleteAtIsNull(customer.getCustomerNo(), now);
+        if (alive >= 10) {
+            refreshTokens.markAllDeletedByCustomer(customer.getCustomerNo(), now, "TOO_MANY_TOKENS");
         }
 
         refreshTokens.save(row);
@@ -183,12 +189,10 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     @Override
     public void logout(String refreshToken) {
+        // 단일 토큰 소프트 삭제(폐기)
         String hash = sha256(refreshToken);
-        refreshTokens.findByRtHashAndDeleteAtIsNull(hash).ifPresent(row -> {
-            row.setDeleteAt(Instant.now());
-            row.setDeleteReason("LOGOUT");
-            refreshTokens.save(row);
-        });
+        refreshTokens.markDeleted(hash, Instant.now(), "LOGOUT");
+        // 존재하지 않거나 이미 폐기된 경우에도 조용히 통과하도록 설계
     }
 
     private String sha256(String value) {
