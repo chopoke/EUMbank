@@ -62,16 +62,12 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
-        <Route path="/account/open" element={
-          <ProtectedRoute>
-            <Navigate to="/account/open/step1" replace />
-          </ProtectedRoute>
-        } />
-        <Route path="/account/open/step1" element={<Step1Consent />} />
-        <Route path="/account/open/step2" element={<Step2IdVerify />} />
-        <Route path="/account/open/step3" element={<Step3Info />} />
-        <Route path="/account/open/step4" element={<Step4Product />} />
-        <Route path="/account/open/step5" element={<Step5Done />} />
+        <Route path="/account/open" element={<ProtectedRoute><Navigate to="/account/open/step1" replace /></ProtectedRoute>} />
+        <Route path="/account/open/step1" element={<ProtectedRoute><Step1Consent /></ProtectedRoute>} />
+        <Route path="/account/open/step2" element={<ProtectedRoute><Step2IdVerify /></ProtectedRoute>} />
+        <Route path="/account/open/step3" element={<ProtectedRoute><Step3Info /></ProtectedRoute>} />
+        <Route path="/account/open/step4" element={<ProtectedRoute><Step4Product /></ProtectedRoute>} />
+        <Route path="/account/open/step5" element={<ProtectedRoute><Step5Done /></ProtectedRoute>} />
 
         {/* ✅ 외환 라우팅 */}
         <Route path="/foreign" element={<Navigate to="/foreign/rate" replace />} />
