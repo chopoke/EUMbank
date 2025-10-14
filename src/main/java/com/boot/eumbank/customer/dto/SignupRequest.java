@@ -6,10 +6,10 @@ import lombok.Setter;
 
 @Getter @Setter
 public class SignupRequest {
-    @NotBlank @Size(min = 4, max = 50)
+    @NotBlank @Size(min = 6, max = 20)
     private String c_user_id;
 
-    @NotBlank @Size(min = 8, max = 100)
+    @NotBlank @Size(min = 8, max = 32)
     private String c_password;
 
     @NotBlank
@@ -20,6 +20,10 @@ public class SignupRequest {
 
     @NotBlank
     private String c_phone_mobile;
+
+    // 이메일 인증 코드 - 검증에만 사용
+    @NotBlank
+    private String emailCode;
 
     private String c_agree_terms;
     private String c_agree_privacy;

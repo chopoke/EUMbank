@@ -1,7 +1,6 @@
-// src/main/java/com/boot/eumbank/security/SecurityConfig.java
+// src/main/java/com/boot/eumbank/customer/security/SecurityConfig.java
 package com.boot.eumbank.customer.security;
 
-import com.boot.eumbank.customer.Handler.SocialSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,8 +26,8 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
     private final JwtAuthenticationEntryPoint entryPoint;
-    private final CorsProperties corsProps;
     private final AuthenticationSuccessHandler socialSuccessHandler;
+    private final CorsProperties corsProps; // app.cors.allowed-origins 사용
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -38,19 +37,26 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint))
                 .authorizeHttpRequests(reg -> reg
-                        // ✅ 인증 무시(permitAll) 영역
+                        // ✅ 인증 없이 허용할 엔드포인트(두 설정의 합집합)
                         .requestMatchers(
-                                "/api/auth/**",          // signup, login, refresh, logout, health 등
+                                "/api/auth/**",        // 로그인/회원가입/리프레시 등
+                                "/api/address/**",     // 주소 API
+                                "/api/email/**",       // 이메일 API(사용 시)
                                 "/actuator/health",
                                 "/", "/index.html", "/favicon.ico",
-                                "/assets/**", "/static/**", "/public/**"
+                                "/assets/**", "/static/**", "/public/**",
+                                "/api/v1/auth/**",
+                                "/api/v1/join/**",
+                                "/api/v1/email/**",
+                                "/api/v1/customers/exists-email"
+
                         ).permitAll()
-                        // (선택) 특정 POST 경로 별도 허용이 필요하면 유지
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // ✅ 그 외 보호 API
+                        .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
+                        // ✅ 그 외는 보호
                         .anyRequest().authenticated()
                 )
-                // ✅ JWT 필터는 UsernamePasswordAuthenticationFilter 앞에
+                // ✅ JWT 필터는 UsernamePasswordAuthenticationFilter 앞
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         http
@@ -59,38 +65,30 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean public BCryptPasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
         return cfg.getAuthenticationManager();
     }
 
-    /** app.cors.allowed-origins 에서 CORS 허용 */
+    /** CORS: app.cors.allowed-origins 에 정의된 도메인 허용(쉼표 구분) */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();
 
-        // origins from properties (comma separated)
         List<String> origins = Arrays.stream(corsProps.getAllowedOrigins().split(","))
-                .map(String::trim).toList();
+                .map(String::trim)
+                .toList();
         config.setAllowedOrigins(origins);
-
-        // 요청 메서드
         config.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
 
-        // 요청 헤더(프론트가 보낼 수 있는 헤더)
-        config.setAllowedHeaders(Arrays.asList(
-                "Authorization", "Content-Type", "X-Requested-With", "Origin", "Accept"
-        ));
-
-        // 응답에서 브라우저에 노출할 헤더(필요 시)
+        config.setAllowedHeaders(Arrays.asList("Authorization","Content-Type","X-Requested-With","Origin","Accept"));
         config.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie"));
-
-        // 쿠키/자격증명 허용 (HttpOnly 쿠키 등)
         config.setAllowCredentials(true);
-
-        // 프리플라이트 캐시
         config.setMaxAge(Duration.ofHours(1));
 
         var source = new UrlBasedCorsConfigurationSource();

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import api from "../../api/axios";
 import naverlogo from "../../resources/img/네이버로고.png";
+import maintxt from '../../resources/img/e-um.png'
 
 const h = React.createElement;
 
@@ -67,7 +68,7 @@ export default function Login() {
             className: "text-3xl font-bold text-gray-800 mb-2",
             style: { fontFamily: "Pacifico, serif" },
           },
-          "logo"
+          <img src={maintxt} className="mx-auto block w-38 h-auto" />
         ),
         h("h2", { className: "text-2xl font-semibold text-blue-600 mb-2" }, "로그인"),
         h("p", { className: "text-gray-600" }, "아이디와 비밀번호를 입력해주세요"),

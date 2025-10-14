@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import TermsStep from "./TermsStep";            // ★ New
 import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
+import maintxt from '../../resources/img/e-um.png'
 
 export default function SocialAgree() {
   const [formData, setFormData] = useState({
@@ -62,12 +63,7 @@ export default function SocialAgree() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-4 sm:py-8">
         <div className="text-center mb-6 sm:mb-8">
-          <h1
-            className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2"
-            style={{ fontFamily: "Pacifico, serif" }}
-          >
-            logo
-          </h1>
+          <img src={maintxt} className="mx-auto block w-38 h-auto" />
           <h2 className="text-xl sm:text-2xl font-semibold text-blue-600 mb-2 sm:mb-4">
             소셜로그인
           </h2>

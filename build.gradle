@@ -25,30 +25,45 @@ repositories {
 }
 
 dependencies {
-    // --- Web / Validation / Security / JPA ---
+    // --- Spring Boot Starters ---
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 
-    // --- JWT / OAuth2---
+    // --- MyBatis ---
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.5'
+
+    // --- QueryDSL ---
+    implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+    annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
+    // --- JWT (JSON Web Token) ---
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
-    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-    runtimeOnly  'io.jsonwebtoken:jjwt-impl:0.11.5'
-    runtimeOnly  'io.jsonwebtoken:jjwt-jackson:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
-    // --- DB Driver ---
+    // --- oauth2 ---
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // --- mariadb ---
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 
-    // --- Lombok / DevTools / Config metadata ---
+    // --- Developer Tools ---
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
     // --- Test ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.5'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // 참고: 'spring-security-crypto'는 'spring-boot-starter-security'에 포함되어 있어 별도 추가가 필요 없습니다.
 }
 
 tasks.named('test') {
