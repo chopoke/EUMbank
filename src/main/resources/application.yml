@@ -1,0 +1,128 @@
+# ===================================================================
+# SERVER CONFIGURATION
+# ===================================================================
+server:
+  port: 8081 # .properties 파일의 설정 적용
+
+# ===================================================================
+# SPRING FRAMEWORK CONFIGURATION
+# ===================================================================
+spring:
+  application:
+    name: eum_bank # .properties 파일의 설정 적용
+
+  # --- Database Connection (MariaDB) ---
+  # 기존 .yml 파일의 MariaDB 설정을 유지합니다.
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://localhost:3306/eum_bank
+    username: ${DB_USER} # 환경 변수에서 주입
+    password: ${DB_PASS} # 환경 변수에서 주입
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+
+  # --- JPA & Hibernate ---
+  # .properties 파일의 설정 기준으로 병합되었습니다.
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: validate # none -> validate로 변경
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  # --- Mail Sender (Gmail SMTP) ---
+  # .properties 파일에서 가져온 새로운 설정입니다.
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: amumu7700@gmail.com
+    password: rkiixxqyoaqiqdyp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+    default-encoding: UTF-8
+
+  # --- File Upload ---
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  # --- JSON & Timezone ---
+  jackson:
+    time-zone: Asia/Seoul
+    serialization:
+      write-dates-as-timestamps: false
+
+# ===================================================================
+# MYBATIS CONFIGURATION
+# ===================================================================
+mybatis:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.boot.eumbank.dto
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+
+# ===================================================================
+# CUSTOM APPLICATION PROPERTIES
+# ===================================================================
+app:
+  # --- CORS ---
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+  # --- Email Verification ---
+  email:
+    verify:
+      expire-minutes: 15
+    code:
+      secret: K7k6x7w4Y7xV1X7y0i3o9kq2PqZB1k4mQ9l2s6u8v0w3x5y7z9A==
+      exp-min: 15
+      period-seconds: 60
+      clock-skew: 1
+
+# ===================================================================
+# EXTERNAL API CONFIGURATION
+# ===================================================================
+# --- Naver Clova OCR ---
+clove:
+  ocr:
+    url: ${CLOVA_OCR_URL}
+    secret: ${CLOVA_OCR_SECRET}
+
+# --- Korea EXIM API ---
+exim:
+  api:
+    base: https://www.koreaexim.go.kr/site/program/financial/exchangeJSON
+    key: GWHvpofCSHfJ4eumZdAavLgNkl8J4qme
+
+# ===================================================================
+# JWT (JSON Web Token) CONFIGURATION
+# ===================================================================
+# .properties 파일의 하드코딩된 값으로 교체되었습니다.
+jwt:
+  access:
+    secret: change-this-to-a-very-long-random-access-secret-at-least-64-bytes
+    ttl-seconds: 1800
+  refresh:
+    secret: change-this-to-a-very-long-random-refresh-secret-at-least-64-bytes
+    ttl-seconds: 604800
+
+# ===================================================================
+# LOGGING CONFIGURATION
+# ===================================================================
+logging:
+  level:
+    com.boot.eumbank.mapper: DEBUG
+    org.apache.ibatis: DEBUG
+    org.mybatis.spring: DEBUG

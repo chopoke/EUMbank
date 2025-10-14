@@ -1,6 +1,7 @@
 package com.boot.eumbank.foreign.service;
 
-import com.boot.eumbank.account.entity.Account;
+
+import com.boot.eumbank.account.Open.model.Account;
 import com.boot.eumbank.foreign.entity.ForeignProduct;
 import com.boot.eumbank.foreign.dto.FxOpenReqDto;
 import com.boot.eumbank.foreign.dto.FxOpenRespDto;
@@ -37,8 +38,8 @@ public class FxOpenService {
 
         // 4) 계좌 생성
         Account acc = new Account();
-        acc.setId(newAccId);
-        acc.setCustomerId(req.getCustomerId());
+        acc.setAId(newAccId);
+        acc.setCNo(req.getCustomerId());
         acc.setAccountNo(newAccNo);
         acc.setProductCode(String.valueOf(product.getId()));
         acc.setAccountType("FX_DEPOSIT");
