@@ -4,10 +4,25 @@ import LoginPage from "./pages/login/login";
 import SignUp from "./pages/signup/signup";
 import { Header } from './common/header';
 import { Footer } from './common/footer';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ForeignProductsPage from "./pages/foreign/ForeignProductsPage";
 import ForeignRatePage from "./pages/foreign/ForeignRatePage";
 
+
+// 계좌 개설 단계별 화면
+import Step1Consent from "./pages/account/Step1Consent";
+import Step2IdVerify from "./pages/account/Step2IdVerify";
+import Step3Info from "./pages/account/Step3Info";
+import Step4Product from "./pages/account/Step4Product";
+import Step5Done from "./pages/account/Step5Done";
+import api from "./api/axios";
+
+// 앞단에서 로그인 유무 판단하여 페이지 보호하기
+//import ProtectedRoute from "./pages/account/component/ProtectedRoute";
+
+
+// App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
+// 이렇게 하면 App 컴포넌트 내에서 useNavigate를 정상적으로 사용할 수 있습니다.
 function AppWrapper() {
   return (
     <App />
@@ -19,15 +34,31 @@ function App() {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // 로그인 성공 시 호출될 콜백 함수
-  const handleLoginSuccess = (userData) => {
-    setIsLoggedIn(true);   // 로그인 상태를 true로 변경
-    setUser(userData);     // 사용자 정보 저장
-    navigate('/');         // 메인 페이지로 이동
-  };
+  // 새로고침 로그인 유지
+  useEffect(() => {
+    const token = localStorage.getItem("access");
+    setIsLoggedIn(!!token);
+  }, []);
+
+  // // 로그인 성공 시 호출될 콜백 함수
+  // const handleLoginSuccess = (userData) => {
+  //   localStorage.setItem("accessToken", userData.accessToken);
+  //   localStorage.setItem("user", JSON.stringify(userData.profile ?? {}));
+  //   setIsLoggedIn(true);   // 로그인 상태를 true로 변경
+  //   setUser(userData);     // 사용자 정보 저장
+  //   navigate('/');         // 메인 페이지로 이동
+  // };
 
   // 로그아웃 시 호출될 콜백 함수
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try{
+      const rt = localStorage.getItem("refresh");
+      if (rt) await api.post("/api/auth/logout", {refreshToken: rt });
+    } catch(e){
+      
+    }
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh"); // 완전한 로그아웃과 보안을 위해 같이 삭제
     setIsLoggedIn(false); // 로그아웃 상태를 false로 변경
     setUser(null);
     navigate('/');      // 메인 페이지로 이동
@@ -39,7 +70,8 @@ function App() {
 
       <Routes>
         <Route path="/" element={<BankHome user={user} />} />
-        <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
+        {/* <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} /> */}
+        <Route path="/login" element={<LoginPage/>} />
         <Route path="/signup" element={<SignUp />} />
 
         {/* ✅ 외환 라우팅 */}

@@ -32,7 +32,7 @@ export default function Login() {
     setLoading(true);
     setMsg("");
     try {
-      // ✅ 백엔드 snake_case DTO에 맞춰 전송
+      // 백엔드 snake_case DTO에 맞춰 전송
       const payload = { c_user_id: f.cUserId, c_password: f.cPassword };
       const { data } = await api.post("/api/auth/login", payload);
 
