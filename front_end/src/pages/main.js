@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
 import mainlogo from '../resources/img/eumonly.png'
-//import { goToAccountOpenPage } from "./account/utils/navigations";
+import { goToAccountOpenPage } from "./account/utils/navigations";
 
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
@@ -163,7 +163,7 @@ const Hero = ({ isLoggedIn, name }) => {
               {/* flex flex-wrap gap-3 pt-2 */}
               <div className="hero-actions">
                 {/* rounded-full bg-blue-700 text-white px-6 py-3 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
-                {/* <button className="primary-button-lg" onClick={() => goToAccountOpenPage(navigate)}>지금 개설하기</button> */}
+                <button className="primary-button-lg" onClick={() => goToAccountOpenPage(navigate)}>지금 개설하기</button>
                 {/* rounded-full border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
                 <button className="secondary-button-lg">금리 보기</button>
               </div>
@@ -224,33 +224,40 @@ const Hero = ({ isLoggedIn, name }) => {
 };
 
 const QuickActions = () => {
+  const navigate = useNavigate();
+
   const items = [
-    { id: "transfer", label: "계좌이체", icon: paths.send },
-    { id: "bill", label: "공과금", icon: paths.bill },
-    { id: "wealth", label: "자산진단", icon: paths.chart },
-    { id: "fund", label: "펀드가입", icon: paths.card },
-    { id: "fx", label: "환전", icon: paths.fx },
-    { id: "overseas", label: "해외송금", icon: paths.arrowR },
-    { id: "deposit", label: "예적금가입", icon: paths.bank },
-    { id: "atm", label: "ATM찾기", icon: paths.arrowR },
+    { id: "transfer", label: "계좌이체", icon: paths.send, href: "/transfer" },
+    { id: "bill", label: "공과금", icon: paths.bill, href: "/payment/bills" },
+    { id: "wealth", label: "자산진단", icon: paths.chart, href: "/wealth/diagnosis" },
+    { id: "fund", label: "펀드가입", icon: paths.card, href: "/products/funds" },
+    { id: "fx", label: "환전", icon: paths.fx, href: "/fx/exchange" },
+    { id: "overseas", label: "해외송금", icon: paths.arrowR, href: "/transfer/overseas" },
+    { id: "deposit", label: "예적금가입", icon: paths.bank, href: "/depositSavingProductList/open" },
+    { id: "atm", label: "ATM찾기", icon: paths.arrowR, href: "/support/atm-locator" },
   ];
+
+  const handleActionClick = (href) => {
+    if (href) {
+      navigate(href);
+    } else {
+      alert("이 기능은 현재 준비 중입니다.");
+    }
+  };
+
   return (
-    // aria-labelledby="quick-actions" className="bg-gray-50"
     <section aria-labelledby="quick-actions" className="quick-actions-section">
-      {/* mx-auto max-w-screen-xl px-6 py-8 */}
       <div className="content-container py-8">
-        <h3 id="quick-actions" className="sr-only">빠른 업무
-        </h3>
-        {/* grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 */}
+        <h3 id="quick-actions" className="sr-only">빠른 업무</h3>
         <div className="quick-actions-grid">
           {items.map((it) => (
-            // group rounded-xl border bg-white px-3 py-4 text-sm text-gray-700 hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-600
-            <button key={it.id} className="quick-actions-item">
-              {/* flex flex-col items-center gap-2 */}
+            <button
+              key={it.id}
+              className="quick-actions-item"
+              onClick={() => handleActionClick(it.href)}
+            >
               <div className="quick-actions-content">
-                {/* text-gray-900 */}
                 <span className="quick-actions-icon"><Icon path={it.icon} /></span>
-                {/* leading-none group-hover:text-blue-700 */}
                 <span className="quick-actions-label">{it.label}</span>
               </div>
             </button>
