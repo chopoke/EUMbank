@@ -52,8 +52,8 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
             throw new IllegalStateException("해시 계산 실패", e);
         }
 
-        //Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "NAVER");
-        Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "GOOGLE");
+        Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "NAVER");
+        //Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "GOOGLE");
 
         String userAgent = request.getHeader("User-Agent");
         String xff = request.getHeader("X-Forwarded-For");

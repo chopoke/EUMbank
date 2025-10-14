@@ -6,6 +6,7 @@ import { Header } from './common/header';
 import { Footer } from './common/footer';
 import { useState } from "react";
 import Cookie from "./pages/login/Cookie";
+import SocialAgree from "./pages/signup/SocialAgree";
 
 // App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
 // 이렇게 하면 App 컴포넌트 내에서 useNavigate를 정상적으로 사용할 수 있습니다.
@@ -45,6 +46,7 @@ function App() {
         />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/cookie" element={<Cookie />} />
+        <Route path="/socialAgree" element={<SocialAgree />} />
       </Routes>
       <Footer />
     </div>

@@ -1,5 +1,6 @@
 package com.boot.eumbank.customer.service;
 
+import com.boot.eumbank.customer.dto.AgreeRequest;
 import com.boot.eumbank.customer.dto.AuthResponse;
 import com.boot.eumbank.customer.dto.CustomOAuth2User;
 import com.boot.eumbank.customer.dto.SignupRequest;
@@ -13,7 +14,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -24,6 +27,9 @@ import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +60,11 @@ public class SocialService extends DefaultOAuth2UserService {
         String nameKr;
         String email;
         String phone;
+        String birthyear;
+        String birthday;
+        String fullDate;
+        LocalDate localDate;
+        Instant birthDt = null;
 
         // 네이버로그인이 맞는지 확인
         String registrationId = oAuth2UserRequest.getClientRegistration().getRegistrationId().toUpperCase();
@@ -64,11 +75,15 @@ public class SocialService extends DefaultOAuth2UserService {
 
             String idValue = attributes.get("id").toString();
             userId = idValue.length() > 20 ? idValue.substring(0, 20) : idValue;
-            //rawPw = attributes.get("password").toString();
-            rawPw = "password";
+            rawPw = idValue;
             nameKr = attributes.get("name").toString();
             email = attributes.get("email").toString();
             phone = attributes.get("mobile").toString();
+            birthyear = attributes.get("birthyear").toString();
+            birthday = attributes.get("birthday").toString();
+            fullDate = birthyear + "-" + birthday;
+            localDate = LocalDate.parse(fullDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            birthDt = localDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
 
         } else if(registrationId.equals("GOOGLE")) {
             attributes = (Map<String, Object>) oAuth2User.getAttributes();
@@ -88,16 +103,16 @@ public class SocialService extends DefaultOAuth2UserService {
         }
 
         // DB에 있는지 확인 -> 없으면 추가, 있으면 업데이트
-        //Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "NAVER");
-        Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "GOOGLE");
+        Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "NAVER");
+        //Optional<Customer> customer = customers.findByUserIdAndLoginType(userId, "GOOGLE");
         if(customer.isPresent()) {
             // 기존 정보 업데이트
             SignupRequest signupRequest = new SignupRequest();
-            signupRequest.setC_password(rawPw);
+            signupRequest.setC_password(encoder.encode(rawPw));
             signupRequest.setC_name_kr(nameKr);
             signupRequest.setC_email(email);
-            //signupRequest.setC_phone_mobile(phone);
-            signupRequest.setC_phone_mobile(customer.get().getCPhoneMobile());
+            signupRequest.setC_phone_mobile(phone);
+            //signupRequest.setC_phone_mobile(customer.get().getCPhoneMobile());
 
             customer.get().updateCustomer(signupRequest);
 
@@ -109,6 +124,7 @@ public class SocialService extends DefaultOAuth2UserService {
                     .cId(userId)
                     .cPassword(encoder.encode(rawPw))
                     .cNameKr(nameKr)
+                    .cBirthDt(birthDt)
                     .cEmail(email)
                     .cPhoneMobile(phone)
                     .cNationalityCd("KOR")
@@ -119,10 +135,10 @@ public class SocialService extends DefaultOAuth2UserService {
                     .cStatus("ACTIVE")
                     .cCreatedAt(Instant.now())
                     .cCreatedBy("SYSTEM")
-                    .cAgreeTerms("Y")
-                    .cAgreePrivacy("Y")
-                    .cAgreeMarketing("Y")
-                    .loginType("GOOGLE")
+                    .cAgreeTerms("N")
+                    .cAgreePrivacy("N")
+                    .cAgreeMarketing("N")
+                    .loginType("NAVER")
                     .build();
 
             customers.save(newCustomer);
@@ -169,10 +185,10 @@ public class SocialService extends DefaultOAuth2UserService {
         }
 
         String userId = jwt.getSubjectFromRefresh(refreshToken);
-        //Customer customer = customers.findByUserIdAndLoginType(userId, "NAVER")
-        //        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        Customer customer = customers.findByUserIdAndLoginType(userId, "GOOGLE")
+        Customer customer = customers.findByUserIdAndLoginType(userId, "NAVER")
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+//        Customer customer = customers.findByUserIdAndLoginType(userId, "GOOGLE")
+//                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         String userAgent = request.getHeader("User-Agent");
         String xff = request.getHeader("X-Forwarded-For");
@@ -240,5 +256,34 @@ public class SocialService extends DefaultOAuth2UserService {
         } catch (Exception e) {
             throw new IllegalStateException("해시 계산 실패", e);
         }
+    }
+
+    // 약관 동의
+    public void agree(AgreeRequest req) {
+        System.out.println("<<< SocialService agree >>>");
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Customer customer = (Customer) authentication.getPrincipal();
+
+       customer.setCAgreeTerms(req.getC_agree_terms());
+       customer.setCAgreePrivacy(req.getC_agree_privacy());
+       customer.setCAgreeMarketing(req.getC_agree_marketing());
+
+       customers.save(customer);
+
+    }
+
+    // 약관 동의 여부 확인
+    public AgreeRequest getAgree() {
+        System.out.println("<<< SocialService getAgree >>>");
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Customer customer = (Customer) authentication.getPrincipal();
+
+        AgreeRequest agree = new AgreeRequest();
+        agree.setC_agree_terms(customer.getCAgreeTerms());
+        agree.setC_agree_privacy(customer.getCAgreePrivacy());
+
+        return agree;
     }
 }

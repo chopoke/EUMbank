@@ -17,10 +17,28 @@ export default function Cookie() {
                 localStorage.setItem("access", data.accessToken);
                 localStorage.setItem("refresh", data.refreshToken);
 
-                navigate("/");
+                const agreed = await checkAgree();
+
+                if(agreed) {
+                    alert("네이버 로그인 성공했습니다.");
+                    navigate("/");
+                } else {
+                    navigate("/socialAgree");
+                }
+                
             } catch(ex) {
                 alert("소셜 로그인 실패");
                 navigate("/login");
+            }
+        };
+
+         const checkAgree = async () => {
+            try{
+                const res = await api.get("/api/secure/agree/check");
+                return res.data.c_agree_terms === "Y" && res.data.c_agree_privacy === "Y";
+            } catch(ex) {
+                console.error("약관 동의 여부 조회 실패", ex);
+                return false;
             }
         };
 
@@ -44,18 +62,30 @@ export default function Cookie() {
         h("div", { className: "max-w-md mx-auto", key: "card" }, [
             h("div", { className: "bg-white rounded-xl shadow-lg p-6 sm:p-8" }, [
             h("div", { className: "space-y-5" }, [
-                h("span", {
-                key: "id",
-                label: "아이디",
-                name: "cUserId",
-                placeholder: "eumbank_user",
-                }),
-                h("span", {
-                key: "pw",
-                label: "비밀번호",
-                name: "cPassword",
-                placeholder: "********",
-                }),
+                 h("div", { key: "id", className: "flex flex-col" }, [
+                h("label", { className: "text-gray-700 text-sm mb-1" }, "아이디"),
+                h(
+                "div",
+                {
+                    className:
+                    "w-full rounded-md border border-gray-300 text-gray-500 px-3 py-2 cursor-default select-none",
+                },
+                "eumbank_user"
+                ),
+            ]),
+
+            // 비밀번호
+            h("div", { key: "pw", className: "flex flex-col" }, [
+                h("label", { className: "text-gray-700 text-sm mb-1" }, "비밀번호"),
+                h(
+                "div",
+                {
+                    className:
+                    "w-full rounded-md border border-gray-300 ext-gray-500 px-3 py-2 cursor-default select-none tracking-widest",
+                },
+                "********"
+                ),
+            ]),
                 h(
                 "button",
                 {
