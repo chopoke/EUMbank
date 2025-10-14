@@ -10,6 +10,10 @@ import com.boot.eumbank.customer.repo.CustomerRepo;
 import com.boot.eumbank.customer.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -68,7 +73,7 @@ public class AuthServiceImpl implements AuthService {
                 .cAgreeTerms(agreeTerms)
                 .cAgreePrivacy(agreePrivacy)
                 .cAgreeMarketing(agreeMarketing)
-                .cLoginType("EUM")
+                .loginType("EUM")
                 .build();
 
         customers.save(customer);

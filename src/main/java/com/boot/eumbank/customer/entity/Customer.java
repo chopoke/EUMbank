@@ -1,5 +1,6 @@
 package com.boot.eumbank.customer.entity;
 
+import com.boot.eumbank.customer.dto.SignupRequest;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -114,6 +115,13 @@ public class Customer {
 
     @Column(name = "c_login_type", nullable = false, length = 20)
     @Builder.Default
-    private String cLoginType = "EUM";
+    private String loginType = "EUM";
+
+    public void updateCustomer(SignupRequest signupRequest) {
+        this.cPassword = signupRequest.getC_password();
+        this.cNameKr = signupRequest.getC_name_kr();
+        this.cEmail = signupRequest.getC_email();
+        this.cPhoneMobile = signupRequest.getC_phone_mobile();
+    }
 }
 

@@ -1,14 +1,14 @@
-import {  Route, Routes, useNavigate, Navigate } from "react-router-dom";
+import { Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import BankHome from './pages/main';
 import LoginPage from "./pages/login/login";
 import SignUp from "./pages/signup/signup";
 import { Header } from './common/header';
 import { Footer } from './common/footer';
 import { useEffect, useState } from "react";
+import Cookie from "./pages/login/Cookie";
+import SocialAgree from "./pages/signup/SocialAgree";
 import ForeignProductsPage from "./pages/foreign/ForeignProductsPage";
 import ForeignRatePage from "./pages/foreign/ForeignRatePage";
-
-
 // 계좌 개설 단계별 화면
 import Step1Consent from "./pages/account/Step1Consent";
 import Step2IdVerify from "./pages/account/Step2IdVerify";
@@ -73,15 +73,30 @@ function App() {
         {/* <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} /> */}
         <Route path="/login" element={<LoginPage/>} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/cookie" element={<Cookie />} />
+        <Route path="/socialAgree" element={<SocialAgree />} />
+
+        {/* 계좌 개설: 각 단계 독립 경로 */}
+        <Route path="/account/open" element={
+           //<ProtectedRoute>
+            <Navigate to="/account/open/step1" replace />
+           //</ProtectedRoute>
+        } />
+        <Route path="/account/open/step1" element={<Step1Consent />} />
+        <Route path="/account/open/step2" element={<Step2IdVerify />} />
+        <Route path="/account/open/step3" element={<Step3Info />} />
+        <Route path="/account/open/step4" element={<Step4Product />} />
+        <Route path="/account/open/step5" element={<Step5Done />} />
 
         {/* ✅ 외환 라우팅 */}
         <Route path="/foreign" element={<Navigate to="/foreign/rate" replace />} />
         <Route path="/foreign/rate" element={<ForeignRatePage />} />
         <Route path="/foreign/products" element={<ForeignProductsPage />} />
-      </Routes>
+
+      </Routes >
 
       <Footer />
-    </div>
+    </div >
   );
 }
 
