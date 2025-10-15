@@ -206,4 +206,53 @@
 .fr-link-btn:hover { background: #f9fafb; }
 .fr-link-btn--center { display:inline-flex; align-items:center; justify-content:center; }
 
+.notice-bar{
+  background:#FFFBE6;           /* 연노란 */
+  border:1px solid #FFE58F;     /* 톤 맞춘 테두리 */
+  color:#613400;                /* 가독성 좋은 브라운 */
+  border-radius:12px;
+  padding:12px 14px;
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  font-size:14px;
+  line-height:1.45;
+  margin-top:16px;              /* 위 내용과 간격 */
+}
+.notice-ico{ font-size:18px; line-height:1; }
+.notice-text{ flex:1; }
+
+/* 컨테이너 & 카드 */
+.fx-container{max-width:1100px;margin:0 auto;padding:16px 20px;}
+.fx-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;}
+.fx-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+.fx-title{margin:0 0 8px 0;font-size:20px;font-weight:700;}
+.fx-subtitle{margin:0 0 8px 0;font-size:16px;font-weight:700;}
+.fx-muted{color:#6b7280;margin:6px 0 12px 0;}
+.fx-list{list-style:none;padding:0;margin:0;line-height:28px;}
+
+.fx-steps span{margin-right:10px}
+.fx-steps .on{font-weight:700;text-decoration:underline}
+
+/* 폼 */
+.fx-field{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.fx-field>span{font-size:13px;color:#374151}
+.fx-check{display:flex;align-items:center;gap:8px;margin:10px 0}
+
+/* 버튼 */
+.fx-btn{border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}
+.fx-btn--primary{background:#2563eb;color:#fff;border-color:#2563eb}
+.fx-btn:disabled{opacity:.6;cursor:not-allowed}
+
+/* 아코디언 & 약관 박스 */
+.fx-acc{border:1px solid #e5e7eb;border-radius:10px;margin:10px 0;background:#fafafa}
+.fx-acc>summary{cursor:pointer;padding:10px 12px;font-weight:600}
+.fx-acc[open]>summary{border-bottom:1px solid #e5e7eb}
+.terms-box{max-height:180px;overflow:auto;padding:12px 12px;color:#374151;line-height:1.5}
+
+/* 반응형 */
+@media (max-width:1024px){
+  .fx-grid{grid-template-columns:1fr}
+}
+
 

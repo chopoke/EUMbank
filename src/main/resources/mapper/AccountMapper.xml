@@ -13,4 +13,31 @@
         AND DATE_FORMAT(c_birth_dt, '%y%m%d') = #{rrn6FromId}
     </select>
 
+    <!-- 계좌 INSERT -->
+    <insert id="insertAccount"
+            parameterType="com.boot.eumbank.account.Open.dto.AccountDTO"
+            useGeneratedKeys="true" keyProperty="aNo">
+        INSERT INTO ACCOUNT_TBL
+        (a_id, c_no, a_account_no, a_app_id, a_product_code,
+        a_account_type, a_opened_at, a_account_pwd, a_closed_at,
+        a_status, a_balance, a_currency, a_nickname, a_last_tx_at,
+        a_created_by, a_updated_at, a_agree_terms, a_agree_privacy,
+        a_agree_marketing, a_rate)
+        VALUES
+        (#{aId}, #{cNo}, #{accountNo}, #{appId}, #{productCode},
+        #{accountType}, #{openedAt}, #{accountPwd}, #{closedAt},
+        #{status}, #{balance}, #{currency}, #{nickname}, #{lastTxAt},
+        #{createdBy}, #{updatedAt}, #{agreeTerms}, #{agreePrivacy},
+        #{agreeMarketing}, #{rate})
+    </insert>
+
+    <!-- 중복 체크 -->
+    <select id="existsByAccountId" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM ACCOUNT_TBL WHERE a_id = #{aId})
+    </select>
+
+    <select id="existsByAccountNo" resultType="boolean">
+        SELECT EXISTS(SELECT 1 FROM ACCOUNT_TBL WHERE a_account_no = #{accountNo})
+    </select>
+
 </mapper>

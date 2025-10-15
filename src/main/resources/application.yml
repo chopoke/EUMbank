@@ -95,12 +95,12 @@ app:
 # EXTERNAL API CONFIGURATION
 # ===================================================================
 # --- Naver Clova OCR ---
-clove:
+clova:
   ocr:
     url: ${CLOVA_OCR_URL}
     secret: ${CLOVA_OCR_SECRET}
 
-# --- Korea EXIM API ---
+# --- Korea EXIM API : 한국수출입은행에서 환율(매매/기준환율) 데이터를 내려주는 공개 API ---
 exim:
   api:
     base: https://www.koreaexim.go.kr/site/program/financial/exchangeJSON

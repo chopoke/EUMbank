@@ -48,6 +48,10 @@ public class SecurityConfig {
                                 "/api/v1/email/**",
                                 "/api/v1/customers/exists-email"
                         ).permitAll()
+                        // 환율 조회/외화계좌 개설 개방
+                        .requestMatchers(HttpMethod.GET,  "/api/foreign/rates", "/api/foreign/rates/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/foreign/open").permitAll()
+
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // ✅ 그 외는 보호
                         .anyRequest().authenticated()

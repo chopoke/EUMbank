@@ -34,10 +34,10 @@ public class UserController {
 
     private Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    @Value("${clove.ocr.url}")
+    @Value("${clova.ocr.url}")
     private String clovaUrl;
 
-    @Value("${clove.ocr.secret}")
+    @Value("${clova.ocr.secret}")
     private String clovaSecret;
 
     private final RestTemplate rest = new RestTemplate();

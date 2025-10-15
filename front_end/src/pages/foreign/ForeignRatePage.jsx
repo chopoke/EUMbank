@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import "../../resources/css/foreign.css";
+import NoticeBar from "../../components/NoticeBar";
 
 // 숫자 포맷
 const fmt = (v) => (v == null || isNaN(v) ? "-" : Number(v).toLocaleString());
@@ -19,12 +20,12 @@ const fmtDateTime = (d) =>
       }).format(d);
 
 export default function ForeignRatePage() {
-  const [rows, setRows] = useState([]);           // /api/foreign/products 의 content
+  const [rows, setRows] = useState([]);           // ← 이제 rates 배열을 그대로 받음
   const [loading, setLoading] = useState(true);
   const [cur, setCur] = useState("USD");          // 선택 통화
   const [showCalc, setShowCalc] = useState(false);
 
-  // ⏱️ 마지막 갱신 시각 + 실시간 경과 초
+  // 마지막 갱신 시각 + 실시간 경과 초
   const [lastUpdated, setLastUpdated] = useState(null);
   const [elapsed, setElapsed] = useState(0);
 
@@ -37,9 +38,9 @@ export default function ForeignRatePage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/foreign/products?size=100&sort=curUnit,asc");
+      const res = await fetch("/api/foreign/rates");
       const data = await res.json();
-      setRows(Array.isArray(data?.content) ? data.content : []);
+      setRows(Array.isArray(data) ? data : []);
       setLastUpdated(new Date());
       setElapsed(0);
     } catch (e) {
@@ -98,7 +99,7 @@ export default function ForeignRatePage() {
             <div className="fr-val">
               <select value={cur} onChange={(e) => setCur(e.target.value)}>
                 {rows.map((r) => (
-                  <option key={r.id} value={r.curUnit}>
+                  <option key={r.curUnit} value={r.curUnit}>
                     {r.curUnit} · {r.curNm}
                   </option>
                 ))}
@@ -112,22 +113,21 @@ export default function ForeignRatePage() {
             <div className="fr-val fr-num">{fmt(curRow?.dealBasR)}</div>
           </div>
           <div className="fr-row">
-            <label className="fr-key">매입환율 (TTB)</label>
+            <label className="fr-key">파실 때</label>
             <div className="fr-val fr-num">{fmt(curRow?.ttb)}</div>
           </div>
           <div className="fr-row">
-            <label className="fr-key">매도환율 (TTS)</label>
+            <label className="fr-key">사실 때</label>
             <div className="fr-val fr-num">{fmt(curRow?.tts)}</div>
           </div>
 
           <footer className="fr-actions">
-            {/* 계산기는 버튼 그대로(모달 오픈) */}
+            {/* 계산기 */}
             <button className="fx-btn fx-btn--primary" onClick={() => setShowCalc(true)}>
               계산하기
             </button>
-            {/* 외화예금 목록은 Link(중앙정렬 유지용 클래스) */}
-            <Link to="/foreign/products" className="fr-link-btn fr-link-btn--center">
-              외화예금 상품 보기
+            <Link to="/foreign/open" className="fr-link-btn fr-link-btn--center">
+              외화계좌 개설
             </Link>
           </footer>
         </section>
@@ -144,13 +144,13 @@ export default function ForeignRatePage() {
                 <tr>
                   <th>통화</th>
                   <th className="text-right">기준</th>
-                  <th className="text-right">매입(TTB)</th>
-                  <th className="text-right">매도(TTS)</th>
+                  <th className="text-right">파실 때</th>
+                  <th className="text-right">사실 때</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.slice(0, 8).map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.curUnit}>
                     <td className="text-right">{r.curUnit}</td>
                     <td className="text-right">{fmt(r.dealBasR)}</td>
                     <td className="text-right">{fmt(r.ttb)}</td>
@@ -162,6 +162,15 @@ export default function ForeignRatePage() {
           </div>
         </section>
       </div>
+
+      {/* ====== 경고 바 삽입 ====== */}
+       <NoticeBar>
+          <div>
+            • 환율·수수료는 수시로 변동되며 실제 체결 환율과 다를 수 있습니다.<br/>
+            • 외화 상품은 환율 변동에 따라 <b>원금 손실</b>이 발생할 수 있습니다.<br/>
+            • 영업시간 외 신청은 <b>다음 영업일 처리</b>될 수 있습니다.
+          </div>
+        </NoticeBar>
 
       {/* ===== 계산기 모달 ===== */}
       {showCalc && (
@@ -207,8 +216,8 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
             <label className="fr-key">모드</label>
             <div className="fr-val">
               <select value={mode} onChange={(e) => setMode(e.target.value)}>
-                <option value="buy">원화 → {cur} (매입·TTB)</option>
-                <option value="sell">{cur} → 원화 (매도·TTS)</option>
+                <option value="buy">원화 → {cur} (사실 때)</option>
+                <option value="sell">{cur} → 원화 (파실 때)</option>
               </select>
             </div>
           </div>
@@ -234,12 +243,12 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
             <div className="fr-val fr-num">{fmt(base)}</div>
           </div>
           <div className="fr-row">
-            <label className="fr-key">매입환율 (TTB)</label>
-            <div className="fr-val fr-num">{fmt(ttb)}</div>
+             <label className="fr-key">파실 때</label>
+             <div className="fr-val fr-num">{fmt(ttb)}</div>
           </div>
           <div className="fr-row">
-            <label className="fr-key">매도환율 (TTS)</label>
-            <div className="fr-val fr-num">{fmt(tts)}</div>
+             <label className="fr-key">사실 때</label>
+             <div className="fr-val fr-num">{fmt(tts)}</div>
           </div>
 
           <div className="fr-result">

@@ -16,7 +16,6 @@ public class FxOpenController {
 
     @PostMapping
     public ResponseEntity<FxOpenRespDto> open(@RequestBody FxOpenReqDto req) {
-        return ResponseEntity.ok(service.openFxAccount(req));
+        return ResponseEntity.ok(service.openUsdAccount(req));
     }
 }
-

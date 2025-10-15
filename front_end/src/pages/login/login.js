@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import api from "../../api/axios";
+import maintxt from '../../resources/img/eum.png'
 
 const h = React.createElement;
 
@@ -32,7 +33,7 @@ export default function Login() {
     setLoading(true);
     setMsg("");
     try {
-      // ✅ 백엔드 snake_case DTO에 맞춰 전송
+      // 백엔드 snake_case DTO에 맞춰 전송
       const payload = { c_user_id: f.cUserId, c_password: f.cPassword };
       const { data } = await api.post("/api/auth/login", payload);
 
@@ -61,7 +62,7 @@ export default function Login() {
             className: "text-3xl font-bold text-gray-800 mb-2",
             style: { fontFamily: "Pacifico, serif" },
           },
-          "logo"
+          <img src={maintxt} className="mx-auto block w-38 h-auto" />
         ),
         h("h2", { className: "text-2xl font-semibold text-blue-600 mb-2" }, "로그인"),
         h("p", { className: "text-gray-600" }, "아이디와 비밀번호를 입력해주세요"),
