@@ -15,7 +15,7 @@ spring:
   # 기존 .yml 파일의 MariaDB 설정을 유지합니다.
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://localhost:3306/eum_bank
+    url: jdbc:mariadb://localhost:3306/eum_bank?sessionVariables=time_zone='+00:00'
     username: ${DB_USER} # 환경 변수에서 주입
     password: ${DB_PASS} # 환경 변수에서 주입
     hikari:
@@ -25,7 +25,7 @@ spring:
   # --- JPA & Hibernate ---
   # .properties 파일의 설정 기준으로 병합되었습니다.
   jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
+    database-platform: org.hibernate.dialect.MariaDBDialect
     hibernate:
       ddl-auto: validate # none -> validate로 변경
     open-in-view: false
