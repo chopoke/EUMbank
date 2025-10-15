@@ -124,7 +124,7 @@ public class SocialService extends DefaultOAuth2UserService {
                     .cId(userId)
                     .cPassword(encoder.encode(rawPw))
                     .cNameKr(nameKr)
-                    .cBirthDt(birthDt)
+                    .cBirthDt(LocalDate.from(birthDt))
                     .cEmail(email)
                     .cPhoneMobile(phone)
                     .cNationalityCd("KOR")

@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
@@ -35,7 +36,7 @@ public class CustomerDTO {
     private String nameEn;
 
     // 생년월일
-    private LocalDateTime birthDt;
+    private LocalDate birthDt;
 
     // 성별 코드
     private String genderCd;
@@ -101,7 +102,7 @@ public class CustomerDTO {
     public CustomerDTO(Integer customerNo, String cNameKr, Instant cBirthDt, String cEmail, String cPhoneMobile) {
         this.cNo = customerNo;
         this.nameKr = cNameKr;
-        this.birthDt = cBirthDt.atZone(ZoneId.systemDefault()).toLocalDateTime();
+        this.birthDt = cBirthDt.atZone(ZoneId.systemDefault()).toLocalDate();
         this.email = cEmail;
         this.phoneMobile = cPhoneMobile;
     }

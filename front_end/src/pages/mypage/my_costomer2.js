@@ -1358,6 +1358,19 @@ function Sidebar() {
   return (
     <aside className="w-80 bg-gray-50 border-l border-gray-200 p-6">
       <div className="space-y-6">
+        {/* 회원 확인 */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+            <i className="ri-user-line text-gray-600 mr-2"></i>
+            My
+          </h3>
+          <div className="space-y-2">
+            <div className="text-right">
+                <div className="text-sm opacity-90">안녕하세요</div>
+                <div className="font-semibold">조원빈 님</div>
+            </div>
+          </div>
+        </div>
         {/* 요약 섹션 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
