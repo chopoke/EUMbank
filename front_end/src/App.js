@@ -65,9 +65,9 @@ function App() {
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
         <Route path="/account/open" element={
-          //<ProtectedRoute>
-          <Navigate to="/account/open/step1" replace />
-          //</ProtectedRoute>
+           //<ProtectedRoute>
+            <Navigate to="/account/open/step1" replace />
+           //</ProtectedRoute>
         } />
         <Route path="/account/open/step1" element={<Step1Consent />} />
         <Route path="/account/open/step2" element={<Step2IdVerify />} />

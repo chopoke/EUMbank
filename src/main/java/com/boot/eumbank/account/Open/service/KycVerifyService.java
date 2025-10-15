@@ -27,7 +27,9 @@ public class KycVerifyService {
 
 
         System.out.println("reqRrn6 = " + reqRrn6);
+        logger.info("reqRrn6 = " + reqRrn6);
         System.out.println("reqName = " + reqName);
+        logger.info("reqName = " + reqName);
 
         QCustomer qCustomer = QCustomer.customer;
 

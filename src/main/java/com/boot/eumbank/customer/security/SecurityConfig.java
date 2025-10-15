@@ -47,8 +47,10 @@ public class SecurityConfig {
                                 "/api/v1/join/**",
                                 "/api/v1/email/**",
                                 "/api/v1/customers/exists-email"
+
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
                         // ✅ 그 외는 보호
                         .anyRequest().authenticated()
                 )

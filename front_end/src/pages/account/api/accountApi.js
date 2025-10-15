@@ -1,14 +1,13 @@
 import apiConfig from "../config/appConfig"
 
-
 /**
  * 최종적으로 저장하기
- * @param {*} payload 
+ * @param {*} params 
  * @returns 
  */
-export async function saveAccount(payload) {
+export async function saveAccount(params) {
   try {
-    const res = await apiConfig.post("/api/accountSave", payload);
+    const res = await apiConfig.post("/api/accountSave", params);
   } catch (error) {
     console.error("계좌 저장 실패:", error.response?.data || error.message);
     throw new Error(`계좌 저장 실패 (${error.response?.status})`);
@@ -25,7 +24,7 @@ export async function ocrCheck(file, message) {
   const form = new FormData();
   form.append("file", file);
   form.append("message", JSON.stringify(message));
-  
+
   try {
     const res = await apiConfig.post("/api/ocr-file", form);
     return res.data;
@@ -38,12 +37,12 @@ export async function ocrCheck(file, message) {
 
 /**
  * 본인정보 매칭 검증
- * @param {{name:string, rrn6:string, address:string}} payload
+ * @param {{name:string, rrn6:string, address:string}} params
  * @returns {Promise<{ok:boolean, message:string, matched:{name:boolean, rrn6:boolean, address:boolean}, score:number}>}
  */
-export async function verifyMinSjon(payload) {
+export async function verifyMinSjon(params) {
   try {
-    const res = await apiConfig.post("/api/verifyminsjon", payload);
+    const res = await apiConfig.post("/api/verifyminsjon", params);
     return res.data;
   } catch (error) {
     console.error("검증 요청 실패:", error.response?.data || error.message);
