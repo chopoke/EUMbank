@@ -1,4 +1,4 @@
-package com.boot.eumbank.account.Open.dto;
+package com.boot.eumbank.account.open.dto;
 
 import lombok.*;
 

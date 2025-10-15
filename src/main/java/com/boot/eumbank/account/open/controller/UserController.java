@@ -1,12 +1,12 @@
-package com.boot.eumbank.account.Open.controller;
+package com.boot.eumbank.account.open.controller;
 
-import com.boot.eumbank.account.Open.dto.CustomerDTO;
-import com.boot.eumbank.account.Open.dto.VerifyMinSjonRequest;
-import com.boot.eumbank.account.Open.dto.VerifyMinSjonResponse;
-import com.boot.eumbank.account.Open.service.Impl.AccountRepositoryImpl;
-import com.boot.eumbank.account.Open.service.Impl.CustomRepositoryImpl;
-import com.boot.eumbank.account.Open.service.KycVerifyService;
-import com.boot.eumbank.account.Open.util.ImageFormats;
+import com.boot.eumbank.account.open.dto.CustomerDTO;
+import com.boot.eumbank.account.open.dto.VerifyMinSjonRequest;
+import com.boot.eumbank.account.open.dto.VerifyMinSjonResponse;
+import com.boot.eumbank.account.open.service.Impl.AccountRepositoryImpl;
+import com.boot.eumbank.account.open.service.Impl.CustomRepositoryImpl;
+import com.boot.eumbank.account.open.util.KycVerify;
+import com.boot.eumbank.account.open.util.ImageFormats;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -42,7 +42,7 @@ public class UserController {
 
     private final RestTemplate rest = new RestTemplate();
 
-    private final KycVerifyService kycVerifyService;
+    private final KycVerify kycVerify;
 
     private final AccountRepositoryImpl registerAccountRepository;
 
@@ -158,7 +158,7 @@ public class UserController {
         // 로그에 주민번호 전체가 찍히지 않도록 마스킹
         logger.info("UserController => verifyMinSjon()");
 
-        VerifyMinSjonResponse result = kycVerifyService.verify(request);
+        VerifyMinSjonResponse result = kycVerify.verify(request);
 
         logger.info("UserController => verifyMinSjon(): {}", result);
 

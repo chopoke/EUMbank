@@ -64,15 +64,13 @@ export default function Step2IdVerify() {
                 throw new Error("신분증 정보 추출 실패");
             }
 
-            setMsg(`추출됨: ${name ?? ""} / ${rrn6 ? rrn6 + "-*******" : ""}`);
+            //setMsg(`추출됨: ${name ?? ""} / ${rrn6 ? rrn6 + "-*******" : ""}`);
 
             // 3) 백엔드 DB와 매칭 요청
             const verifyRes = await verifyMinSjon({ name, rrn6, address });
 
             if (verifyRes?.ok) {
                 setVerified(true);
-
-                console.log(verifyRes);
 
                 // ✅ 응답에서 email, phone 추출
                 const { email, phone } = verifyRes;
@@ -89,7 +87,6 @@ export default function Step2IdVerify() {
             setError(e?.response?.data?.message || e.message || "OCR 처리 중 오류가 발생했습니다.");
         } finally {
             setLoading(false);
-            setMsg("");
         }
     };
 
@@ -99,6 +96,10 @@ export default function Step2IdVerify() {
     // 최종 버튼 입력버튼
     function finalButton() {
 
+        // 핀번호 존재유무(처음 개설시에만 민증인증 진행함 / 그 후 핀번호로 대체함)
+        // 추가예정
+
+        // 민증 인증 유무
         if (verified) {
             if (pinNumber === '' && pinReNumber === '') {
                 alert("PIN번호를 등록해주세요.");

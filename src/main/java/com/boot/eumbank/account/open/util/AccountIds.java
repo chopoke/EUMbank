@@ -1,4 +1,4 @@
-package com.boot.eumbank.account.Open.util;
+package com.boot.eumbank.account.open.util;
 
 import java.security.SecureRandom;
 

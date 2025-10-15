@@ -1,23 +1,23 @@
-package com.boot.eumbank.account.Open.service.Impl;
+package com.boot.eumbank.account.open.service.Impl;
 
-import com.boot.eumbank.account.Open.dto.CustomerDTO;
-import com.boot.eumbank.account.Open.model.Account;
-import com.boot.eumbank.account.Open.model.QAccount;
-import com.boot.eumbank.account.Open.repository.custom.AccountCustom;
-import com.boot.eumbank.account.Open.util.AccountIds;
+import com.boot.eumbank.account.open.dto.CustomerDTO;
+import com.boot.eumbank.account.open.model.Account;
+import com.boot.eumbank.account.open.model.QAccount;
+import com.boot.eumbank.account.open.service.AccountCustom;
+import com.boot.eumbank.account.open.util.AccountIds;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-@Repository
+@Service
 @RequiredArgsConstructor
 public class AccountRepositoryImpl implements AccountCustom {
 
