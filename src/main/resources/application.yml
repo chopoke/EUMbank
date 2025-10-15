@@ -149,7 +149,7 @@ jwt:
     ttl-seconds: 1800
   refresh:
     secret: change-this-to-a-very-long-random-refresh-secret-at-least-64-bytes
-    ttl-seconds: 604800
+    ttl-seconds: 86400
 
 # ===================================================================
 # LOGGING CONFIGURATION

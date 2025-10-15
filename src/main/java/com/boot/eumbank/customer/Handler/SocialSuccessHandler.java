@@ -77,7 +77,7 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
 
         // 같은 사용자 오래된 토큰 정리 정책(선택): 10개 이상이면 전체 삭제
         if (refreshTokens.countByCustomerNoAndExpiresAtAfterAndDeleteAtIsNull(customer.get().getCustomerNo(), now) >= 10) {
-            refreshTokens.markAllDeletedByCustomer(customer.get().getCustomerNo(),Instant.now(),"TOO_MANY_TOKENS");
+            refreshTokens.markAllDeletedByCustomerWithQueryDsl(customer.get().getCustomerNo(),Instant.now(),"TOO_MANY_TOKENS");
         }
 
         // refresh 토큰 DB 저장

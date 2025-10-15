@@ -4,6 +4,8 @@ import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Getter @Setter
 public class SignupRequest {
     @NotBlank @Size(min = 6, max = 20)
@@ -24,6 +26,9 @@ public class SignupRequest {
     // 이메일 인증 코드 - 검증에만 사용
     @NotBlank
     private String emailCode;
+
+    @NotNull
+    private LocalDate c_birth_dt;
 
     private String c_agree_terms;
     private String c_agree_privacy;

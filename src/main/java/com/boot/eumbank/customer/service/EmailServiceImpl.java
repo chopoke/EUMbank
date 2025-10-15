@@ -39,7 +39,7 @@ class EmailServiceImpl implements EmailService {
         SimpleMailMessage msg = new SimpleMailMessage();
         msg.setTo(email);
         msg.setSubject("[EUMbank] 이메일 인증 코드");
-        msg.setText("인증 코드: " + code + "\n유효시간: 15분");
+        msg.setText("인증 코드: " + code + "\n유효시간: 3분");
         mailSender.send(msg);
     }
 

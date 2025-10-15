@@ -69,7 +69,7 @@ export function Header({ isLoggedIn, user, onLogout }) {
           <Link to="/" className="logo">이음은행</Link>
           {/* hidden lg:flex items-center gap-6 text-sm text-gray-700 */}
           <nav className="main-nav-links">
-            <Link to="/personal" className="nav-link">개인</Link>
+            <Link to="/accounts" className="nav-link">개인</Link>
             <Link to="/products" className="nav-link">상품</Link>
             <Link to="/wealth" className="nav-link nav-link-active">자산관리</Link>
             <Link to="/foreign/rate" className="nav-link">외환/환율</Link>
