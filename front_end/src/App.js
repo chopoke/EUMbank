@@ -19,7 +19,9 @@ import Step5Done from "./pages/account/Step5Done";
 import api from "./api/axios";
 
 // 앞단에서 로그인 유무 판단하여 페이지 보호하기
-//import ProtectedRoute from "./pages/account/component/ProtectedRoute";
+import ProtectedRoute from "./pages/account/component/ProtectedRoute";
+import { AccountListPage } from "./pages/account/AccountListPage";
+import { AccountHistoryPage } from "./pages/account/AccountHistoryPage";
 
 
 // App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
@@ -76,12 +78,23 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/cookie" element={<Cookie />} />
         <Route path="/socialAgree" element={<SocialAgree />} />
+        
+        {/* 계좌 목록 */}
+        <Route path="/accounts" element={
+          <ProtectedRoute>
+            <AccountListPage />
+            </ProtectedRoute>} />
+        {/* 이체 내역 */}
+        <Route path="/accounts/:a_no" element={
+          <ProtectedRoute>
+            <AccountHistoryPage />
+            </ProtectedRoute>} />
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
         <Route path="/account/open" element={
-           //<ProtectedRoute>
+           <ProtectedRoute>
             <Navigate to="/account/open/step1" replace />
-           //</ProtectedRoute>
+           </ProtectedRoute>
         } />
         <Route path="/account/open/step1" element={<Step1Consent />} />
         <Route path="/account/open/step2" element={<Step2IdVerify />} />
@@ -94,8 +107,8 @@ function App() {
         <Route path="/foreign/rate" element={<ForeignRatePage />} />
         <Route path="/foreign/products" element={<ForeignProductsPage />} />
 
+        {/* 마이페이지 진입 */}
         <Route path="/mypage" element={<MyPage />} />
-
       </Routes >
 
       <Footer />

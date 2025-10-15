@@ -5,8 +5,6 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 /**
  * 고객 정보(CUSTOMER_TBL)를 위한 DTO
@@ -84,13 +82,13 @@ public class CustomerDTO {
     private String remark;
 
     // 생성 일시
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     // 생성자
     private String createdBy;
 
     // 수정 일시
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 
     // 수정자
     private String updatedBy;
@@ -99,10 +97,10 @@ public class CustomerDTO {
      * QueryDSL의 Projections.constructor와 정확히 일치하는 생성자
      * 순서: cNo(Integer), nameKr(String), email(String), phoneMobile(String)
      */
-    public CustomerDTO(Integer customerNo, String cNameKr, Instant cBirthDt, String cEmail, String cPhoneMobile) {
+    public CustomerDTO(Integer customerNo, String cNameKr, LocalDate cBirthDt, String cEmail, String cPhoneMobile) {
         this.cNo = customerNo;
         this.nameKr = cNameKr;
-        this.birthDt = cBirthDt.atZone(ZoneId.systemDefault()).toLocalDate();
+        this.birthDt = cBirthDt;
         this.email = cEmail;
         this.phoneMobile = cPhoneMobile;
     }

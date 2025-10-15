@@ -17,7 +17,7 @@ public class EmailCodeServiceImpl implements EmailCodeService {
     @Value("${app.email.code.secret}")
     private String secretBase64;
 
-    @Value("${app.email.code.exp-min:15}")
+    @Value("${app.email.code.exp-min:3}")
     private long expMin;
 
     @Value("${app.email.code.period-seconds:60}")
