@@ -91,19 +91,22 @@ export function Header({ isLoggedIn, user, onLogout }) {
             {/* absolute left-3 top-2.5 text-gray-500 */}
             <span className="search-icon"><Icon path={paths.search} /></span>
           </label>
-          <Link to='/signup'><button className="login-button">회원가입</button></Link>
           {!isLoggedIn ? (
-            // rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600
-            // <a href="/login" className="login-button">로그인/인증</a>
-          <Link to="/login"><button className="login-button">로그인</button></Link>
+            <>
+              <Link to='/signup'><button className="login-button">회원가입</button></Link>
+              <Link to="/login"><button className="login-button">로그인</button></Link>
+            </>
           ) : (
-            // flex items-center gap-2 text-sm text-gray-700
-            <div className="logged-in-status">
-              <span className="hidden-sm">안전한 접속중</span>
-              {/* inline-flex items-center gap-1 rounded-full border px-2 py-1 */}
-              <span className="security-tag"><Icon path={paths.shield} />
-                <span className="text-gray-700">보안</span></span>
-            </div>
+            <>
+              <div className="logged-in-status">
+                <span className="hidden-sm">안전한 접속중</span>
+                <span className="security-tag">
+                  <Icon path={paths.shield} />
+                  <span className="text-gray-700">보안</span>
+                </span>
+              </div>
+              <button className="login-button" onClick={handleLogoutClick}>로그아웃</button>
+            </>
           )}
         </div>
       </div>

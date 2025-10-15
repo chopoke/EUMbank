@@ -74,4 +74,7 @@ public class Account {
 
     @Column(name = "a_rate", precision = 6, scale = 4)
     private BigDecimal rate;
+
+    @Column(name = "a_pin_number")
+    private Integer pinNumber;
 }

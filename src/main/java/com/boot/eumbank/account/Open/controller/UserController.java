@@ -4,7 +4,7 @@ import com.boot.eumbank.account.Open.dto.CustomerDTO;
 import com.boot.eumbank.account.Open.dto.VerifyMinSjonRequest;
 import com.boot.eumbank.account.Open.dto.VerifyMinSjonResponse;
 import com.boot.eumbank.account.Open.service.Impl.AccountRepositoryImpl;
-import com.boot.eumbank.account.Open.service.AccountService;
+import com.boot.eumbank.account.Open.service.Impl.CustomRepositoryImpl;
 import com.boot.eumbank.account.Open.service.KycVerifyService;
 import com.boot.eumbank.account.Open.util.ImageFormats;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,10 +34,10 @@ public class UserController {
 
     private Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    @Value("${clove.ocr.url}")
+    @Value("${clova.ocr.url}")
     private String clovaUrl;
 
-    @Value("${clove.ocr.secret}")
+    @Value("${clova.ocr.secret}")
     private String clovaSecret;
 
     private final RestTemplate rest = new RestTemplate();
@@ -46,7 +46,7 @@ public class UserController {
 
     private final AccountRepositoryImpl registerAccountRepository;
 
-    private final AccountService accountService;
+    private final CustomRepositoryImpl  customRepositoryImpl;
 
 
     @PostMapping(value = "/ocr-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -55,6 +55,8 @@ public class UserController {
             @RequestPart("message") String messageJson
     ) {
         logger.info("UserController => proxyToClova()");
+        logger.info("UserController => messageJson = " + messageJson);
+        logger.info("UserController => file = " + file.getOriginalFilename());
         try {
             byte[] bytes = file.getBytes();
 
@@ -102,7 +104,11 @@ public class UserController {
             msgHeaders.setContentType(MediaType.APPLICATION_JSON);
             body.add("message", new HttpEntity<>(om.writeValueAsString(msg), msgHeaders));
 
+            // NAVER CLOVA로부터 OCR 코드 응답받기
             ResponseEntity<String> res = rest.postForEntity(clovaUrl, new HttpEntity<>(body, headers), String.class);
+
+            logger.info("UserController => res = " + res.getBody());
+
             return ResponseEntity.status(res.getStatusCode()).body(res.getBody());
 
         } catch (org.springframework.web.client.HttpStatusCodeException ex) {
@@ -153,6 +159,9 @@ public class UserController {
         logger.info("UserController => verifyMinSjon()");
 
         VerifyMinSjonResponse result = kycVerifyService.verify(request);
+
+        logger.info("UserController => verifyMinSjon(): {}", result);
+
         return ResponseEntity.ok(result);
     }
 
@@ -170,7 +179,9 @@ public class UserController {
         //}
 
         // 넘어온 정보로 해당 고객의 ID 가져오기 참조(외래키 설정을 위해서)
-        CustomerDTO dto = accountService.getAccount(body);
+        CustomerDTO dto = customRepositoryImpl.getAccount(body);
+
+        logger.info("dto = " + dto);
 
         // 최종적으로 저장하는 곳
         registerAccountRepository.registerAccount(dto, body);

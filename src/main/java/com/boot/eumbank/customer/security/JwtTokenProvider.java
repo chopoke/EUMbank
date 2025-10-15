@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtTokenProvider {
@@ -48,6 +49,7 @@ public class JwtTokenProvider {
                 .setSubject(subject)
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(now.plusSeconds(refreshTtlSec)))
+                .claim("jwtid", UUID.randomUUID().toString())
                 .signWith(refreshKey, SignatureAlgorithm.HS256)
                 .compact();
     }
