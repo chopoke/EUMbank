@@ -4,7 +4,6 @@ import com.boot.eumbank.account.Open.dto.CustomerDTO;
 import com.boot.eumbank.account.Open.model.Account;
 import com.boot.eumbank.account.Open.model.QAccount;
 import com.boot.eumbank.account.Open.repository.custom.AccountCustom;
-import com.boot.eumbank.account.Open.service.AccountService;
 import com.boot.eumbank.account.Open.util.AccountIds;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -24,8 +23,6 @@ public class AccountRepositoryImpl implements AccountCustom {
 
     private final EntityManager em;
 
-    private final AccountService accountService;
-
     private final Logger logger = LoggerFactory.getLogger(AccountRepositoryImpl.class);
 
     private final JPAQueryFactory qf;          // QueryDSL 주입 (Config에서 빈 등록)
@@ -34,14 +31,21 @@ public class AccountRepositoryImpl implements AccountCustom {
     @Transactional
     public void registerAccount(CustomerDTO customer, Map<String, Object> body) {
 
+        logger.info("AccountRepositoryImpl => registerAccount()");
+
         // 1) payload 파싱
         Map<String, Object> consent = (Map<String, Object>) body.get("consent");
         Map<String, Object> product = (Map<String, Object>) body.get("product");
+        Map<String, Object> verification = (Map<String, Object>) body.get("verification");
 
         String newAccountNo = (String) product.get("newAccountNo");  // "110-xxx-xxxxxx"
         String type         = (String) product.get("type");          // "saving" 등
         String mPin         = (String) product.get("mPin");          // 6자리 등
         String nickname     = (String) product.getOrDefault("nickname", "");
+        String pinNumber   = (String) verification.get("pinNumber");
+
+        System.out.println("pinNumber = " + pinNumber);
+        logger.info("pinNumber => pinNumber()");
 
         // 2) 중복 체크 (QueryDSL)
         QAccount a = QAccount.account;
@@ -73,11 +77,11 @@ public class AccountRepositoryImpl implements AccountCustom {
                 .agreePrivacy(toYN(consent, "privacy"))
                 .agreeMarketing(toYN(consent, "marketing"))
                 .rate(BigDecimal.ZERO)
+                .pinNumber(Integer.valueOf(pinNumber))
                 .build();
 
         // 4) INSERT
         em.persist(entity);   // <-- 여기서 INSERT 예약
-        em.flush();           // 즉시 DB 반영이 필요하면 flush (트랜잭션 커밋 시점에도 반영됨)
     }
 
 

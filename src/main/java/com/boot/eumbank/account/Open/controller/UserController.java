@@ -4,7 +4,7 @@ import com.boot.eumbank.account.Open.dto.CustomerDTO;
 import com.boot.eumbank.account.Open.dto.VerifyMinSjonRequest;
 import com.boot.eumbank.account.Open.dto.VerifyMinSjonResponse;
 import com.boot.eumbank.account.Open.service.Impl.AccountRepositoryImpl;
-import com.boot.eumbank.account.Open.service.AccountService;
+import com.boot.eumbank.account.Open.service.Impl.CustomRepositoryImpl;
 import com.boot.eumbank.account.Open.service.KycVerifyService;
 import com.boot.eumbank.account.Open.util.ImageFormats;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,7 +46,7 @@ public class UserController {
 
     private final AccountRepositoryImpl registerAccountRepository;
 
-    private final AccountService accountService;
+    private final CustomRepositoryImpl  customRepositoryImpl;
 
 
     @PostMapping(value = "/ocr-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -170,7 +170,7 @@ public class UserController {
         //}
 
         // 넘어온 정보로 해당 고객의 ID 가져오기 참조(외래키 설정을 위해서)
-        CustomerDTO dto = accountService.getAccount(body);
+        CustomerDTO dto = customRepositoryImpl.getAccount(body);
 
         // 최종적으로 저장하는 곳
         registerAccountRepository.registerAccount(dto, body);

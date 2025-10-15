@@ -2,7 +2,8 @@
 package com.boot.eumbank.foreign.service;
 
 import com.boot.eumbank.account.Open.dto.AccountDTO;
-import com.boot.eumbank.account.Open.mapper.AccountMapper;
+import com.boot.eumbank.account.Open.repository.AccountRepo;
+import com.boot.eumbank.account.Open.model.Account;
 import com.boot.eumbank.foreign.dto.FxOpenReqDto;
 import com.boot.eumbank.foreign.dto.FxOpenRespDto;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 public class FxOpenService {
 
-    private final AccountMapper accountMapper;
+    private final AccountRepo accountRepo;
 
     @Transactional
     public FxOpenRespDto openUsdAccount(FxOpenReqDto req) {
@@ -38,45 +39,43 @@ public class FxOpenService {
 
         // 3) 고유값 생성 + 중복체크
         String aId = genAId();
-        while (accountMapper.existsByAccountId(aId)) aId = genAId();
+        while (accountRepo.existsByAId(aId)) aId = genAId();
 
         String acctNo = genDisplayAccountNo();
-        while (accountMapper.existsByAccountNo(acctNo)) acctNo = genDisplayAccountNo();
+        while (accountRepo.existsByAccountNo(acctNo)) acctNo = genDisplayAccountNo();
 
-        // 4) DTO 구성
-        AccountDTO dto = AccountDTO.builder()
+        // 4) 엔티티 생성
+        Account entity = Account.builder()
                 .aId(aId)
-                .cNo(req.getCustomerNo().longValue())
+                .cNo(req.getCustomerNo().intValue())
                 .accountNo(acctNo)
-                .appId(null)
+                .appId(1)
                 .productCode("FX_USD_001")
                 .accountType("FX")
                 .openedAt(LocalDateTime.now())
                 .accountPwd(req.getPin())
-                .closedAt(null)
                 .status("ACTIVE")
                 .balance(BigDecimal.ZERO)
                 .currency("USD")
                 .nickname(req.getNickname())
-                .lastTxAt(null)
                 .createdBy("SYSTEM")
-                .updatedAt(null)
+                .updatedAt(LocalDateTime.now())
                 .agreeTerms("Y")
                 .agreePrivacy("Y")
                 .agreeMarketing(req.getAgreeMarketing())
-                .rate(null)
+                .rate(BigDecimal.ZERO)
                 .build();
 
-        // 5) INSERT (useGeneratedKeys 로 aNo 세팅)
-        accountMapper.insertAccount(dto);
+        // 5) 저장
+        Account saved = accountRepo.save(entity);
 
         // 6) 응답
         return new FxOpenRespDto(
-                dto.getAccountNo(),
-                dto.getCurrency(),
-                dto.getProductCode(),
-                dto.getAccountType(),
-                dto.getOpenedAt()
+                saved.getAccountNo(),
+                saved.getCurrency(),
+                saved.getProductCode(),
+                saved.getAccountType(),
+                saved.getOpenedAt()
         );
     }
 

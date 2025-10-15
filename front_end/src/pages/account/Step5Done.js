@@ -32,7 +32,7 @@ export default function Step5Done() {
                 setSaving(true);
                 const payload = buildPayloadRef.current();
                 await saveAccount(payload);               // POST /api/account/save
-                markSubmittedRef.current();               // submitted=true (이펙트 종료)
+                //markSubmittedRef.current();               // submitted=true (이펙트 종료)
             } catch (e) {
                 console.error(e);
                 setSaveErr(e?.message || "계좌 저장 중 오류");

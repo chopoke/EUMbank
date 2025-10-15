@@ -59,7 +59,7 @@ export default function Step2IdVerify() {
             const ocr = await ocrCheck(file, message);
 
             // 2) OCR 응답에서 신분증 정보 추출
-            const { name, rrn6, address } = extractIdInfo(ocr);
+            const { name, rrn6, address, rrn13 } = extractIdInfo(ocr);
             if (!name && !rrn6 && !address) {
                 throw new Error("신분증 정보 추출 실패");
             }
@@ -71,7 +71,14 @@ export default function Step2IdVerify() {
 
             if (verifyRes?.ok) {
                 setVerified(true);
-                setStep2({ verified: true, name, rrn6, address, pinNumber });
+
+                console.log(verifyRes);
+
+                // ✅ 응답에서 email, phone 추출
+                const { email, phone } = verifyRes;
+
+                // ✅ Zustand 스토어에 모든 정보 저장
+                setStep2({ verified: true, name, rrn6, rrn13, address, email, phone });
                 setMsg("본인 확인 완료. 다음 단계로 진행할 수 있습니다.");
             } else {
                 setVerified(false);
@@ -104,6 +111,9 @@ export default function Step2IdVerify() {
                 setRePinNumber('');
                 return false;
             }
+            // 2025-10-14
+            // 핀 번호 추가하기
+            setStep2({ pinNumber });
 
             nav(NEXT_PATH);
         } else {
@@ -270,14 +280,12 @@ function maskRRN(s = "") {
 }
 
 // 공통 클린업
-const digits = (s = "") => s.replace(/\D/g, "");
 const cleanName = (s = "") =>
     s.replace(/\(.*?\)/g, "")           // 괄호 안 제거
         .replace(/\s+/g, "")               // 공백 제거
         .replace(/[^가-힣A-Za-z]/g, "");   // 한글/영문 외 제거
 
 const looksLikeDate = (s = "") => /\d{4}\.\d{1,2}\.\d{1,2}/.test(s);
-const looksLikeRRN = (s = "") => /(\d{6})[- ]?(\d{7})/.test(s);
 
 /** CLOVA 응답에서 이름/주민등록번호/주소 추출 (고정인덱스 우선 + 휴리스틱 폴백) */
 function extractIdInfo(ocrJson) {
@@ -293,12 +301,14 @@ function extractIdInfo(ocrJson) {
 
         let name = cleanName(nameRaw);
         let rrn6 = "";
-        let rrnFull = "";
+        let rrn13 = "";
 
         const m = rrnRaw.match(/(\d{6})[- ]?(\d{7})/);
+        console.log(m);
+
         if (m) {
             rrn6 = m[1];
-            rrnFull = `${m[1]}-${m[2]}`;
+            rrn13 = m[0];
         }
 
         // 주소는 3~6번 인덱스까지 이어붙이다가 날짜(발급일) 같은 패턴 만나면 중단
@@ -314,26 +324,28 @@ function extractIdInfo(ocrJson) {
         const address = addrParts.join(" ").replace(/\s+/g, " ").trim();
 
         // 최소 요건 충족 시 바로 반환
-        if (name || rrn6 || address) {
-            return { name, rrn6, address, rawRRN: rrnFull };
+        if (name || rrn6 || address || rrn13) {
+            return { name, rrn6, address, rrn13 };
         }
     }
 
-    // ---------- 2) 휴리스틱 폴백 (기존 방식) ----------
     let name = "";
     let rrn6 = "";
-    let rrnFull = "";
     let address = "";
     let bestName = { text: "", conf: 0 };
+    let email = "";
+    let phone = "";
 
     for (const f of fields) {
         const text = (f.inferText || f.text || "").trim();
         const conf = Number(f?.inferConfidence ?? f?.confidence ?? 0);
 
+        console.log(text);
+
         // 주민등록번호
         const m = text.match(/(\d{6})[- ]?(\d{7})/);
+        console.log("민증" + m);
         if (m) {
-            rrnFull = `${m[1]}-${m[2]}`;
             rrn6 = m[1];
         }
 
@@ -350,8 +362,20 @@ function extractIdInfo(ocrJson) {
         } else if (hangul.length >= 2 && hangul.length <= 4 && conf > bestName.conf) {
             bestName = { text: hangul, conf };
         }
+
+        // ✅ 이메일 후보 (정규식 사용)
+        const emailMatch = text.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i);
+        if (emailMatch) {
+            email = emailMatch[0];
+        }
+
+        // ✅ 전화번호 후보 (정규식 사용)
+        const phoneMatch = text.match(/010[-.\s]?\d{4}[-.\s]?\d{4}/);
+        if (phoneMatch) {
+            phone = phoneMatch[0].replace(/\D/g, ''); // 숫자만 추출
+        }
     }
     name = cleanName(bestName.text);
 
-    return { name, rrn6, address, rawRRN: rrnFull };
+    return { name, rrn6, address, email, phone };
 }

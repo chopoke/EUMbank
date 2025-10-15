@@ -39,7 +39,13 @@ export default function ForeignRatePage() {
     setLoading(true);
     try {
       const res = await fetch("/api/foreign/rates");
-      const data = await res.json();
+      if (!res.ok) {
+         const text = await res.text();
+         console.error("GET /api/foreign/rates FAILED:", res.status, text);
+         setRows([]);                // 화면은 비워두고
+         return;                     // 파싱 시도 금지
+       }
+       const data = await res.json();
       setRows(Array.isArray(data) ? data : []);
       setLastUpdated(new Date());
       setElapsed(0);

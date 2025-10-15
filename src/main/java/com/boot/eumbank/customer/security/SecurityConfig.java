@@ -1,4 +1,3 @@
-// src/main/java/com/boot/eumbank/customer/security/SecurityConfig.java
 package com.boot.eumbank.customer.security;
 
 import lombok.RequiredArgsConstructor;
@@ -12,6 +11,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.*;
 
@@ -21,10 +21,12 @@ import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
+/*확인용*/
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
     private final JwtAuthenticationEntryPoint entryPoint;
+    private final AuthenticationSuccessHandler socialSuccessHandler;
     private final CorsProperties corsProps; // app.cors.allowed-origins 사용
 
     @Bean
@@ -47,6 +49,7 @@ public class SecurityConfig {
                                 "/api/v1/join/**",
                                 "/api/v1/email/**",
                                 "/api/v1/customers/exists-email"
+
                         ).permitAll()
                         // 환율 조회/외화계좌 개설 개방
                         .requestMatchers(HttpMethod.GET,  "/api/foreign/rates", "/api/foreign/rates/**").permitAll()
@@ -58,6 +61,9 @@ public class SecurityConfig {
                 )
                 // ✅ JWT 필터는 UsernamePasswordAuthenticationFilter 앞
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        http
+                .oauth2Login(oauth2 -> oauth2.successHandler(socialSuccessHandler));
 
         return http.build();
     }
@@ -82,8 +88,9 @@ public class SecurityConfig {
                 .toList();
         config.setAllowedOrigins(origins);
         config.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+
         config.setAllowedHeaders(Arrays.asList("Authorization","Content-Type","X-Requested-With","Origin","Accept"));
-        config.setExposedHeaders(Arrays.asList("Authorization"));
+        config.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie"));
         config.setAllowCredentials(true);
         config.setMaxAge(Duration.ofHours(1));
 

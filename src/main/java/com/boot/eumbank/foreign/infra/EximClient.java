@@ -1,20 +1,31 @@
-// com.boot.eumbank.foreign.infra.EximClient.java
+// src/main/java/com/boot/eumbank/foreign/infra/EximClient.java
 package com.boot.eumbank.foreign.infra;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
+@Slf4j
 @Component
 public class EximClient {
 
-    private final RestTemplate rt = new RestTemplate(); // ← 오타/개행 수정
+    private final RestTemplate rt;
+
+    public EximClient() {
+        var f = new SimpleClientHttpRequestFactory();
+        f.setConnectTimeout(5000);
+        f.setReadTimeout(5000);
+        this.rt = new RestTemplate(f);
+    }
 
     @Value("${exim.api.base}")
     private String baseUrl;
@@ -23,54 +34,42 @@ public class EximClient {
     private String authKey;
 
     public List<Row> fetchToday() {
-        // 오늘(YYYYMMDD)
-        String yyyymmdd = java.time.LocalDate.now()
-                .format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+        String ymd = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+        String url = String.format("%s?authkey=%s&data=AP01&searchdate=%s", baseUrl, authKey, ymd);
+        log.info("[EXIM] GET {}", url.replace(authKey, "****"));
 
-        String url = String.format(
-                "%s?authkey=%s&data=AP01&searchdate=%s",
-                baseUrl, authKey, yyyymmdd
-        );
+        try {
+            ResponseEntity<Object> res = rt.getForEntity(url, Object.class);
+            Object body = res.getBody();
+            if (!(body instanceof List<?> list)) return List.of();
 
-        // Object로 받고 instanceof 로 안전하게 캐스팅
-        Object resp = rt.getForObject(url, Object.class);
-        if (!(resp instanceof List<?> list)) {
-            return List.of();
-        }
-
-        List<Row> out = new ArrayList<>();
-        for (Object o : list) {
-            if (o instanceof Map<?, ?> m) {
-                Row r = new Row();
-                r.curUnit   = Objects.toString(m.get("cur_unit"), null);
-                r.curNm     = Objects.toString(m.get("cur_nm"), null);
-                r.ttb       = toBd(m.get("ttb"));
-                r.tts       = toBd(m.get("tts"));
-                r.dealBasR  = toBd(m.get("deal_bas_r"));
-
-                if (r.curUnit != null && r.dealBasR != null) out.add(r);
+            List<Row> out = new ArrayList<>();
+            for (Object o : list) {
+                if (o instanceof Map<?, ?> m) {
+                    Row r = new Row();
+                    r.curUnit  = Objects.toString(m.get("cur_unit"), null);
+                    r.curNm    = Objects.toString(m.get("cur_nm"), null);
+                    r.ttb      = toBd(m.get("ttb"));
+                    r.tts      = toBd(m.get("tts"));
+                    r.dealBasR = toBd(m.get("deal_bas_r"));
+                    if (r.curUnit != null && r.dealBasR != null) out.add(r);
+                }
             }
+            return out;
+        } catch (HttpStatusCodeException e) {
+            log.error("[EXIM] upstream {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw e;
         }
-        return out;
     }
 
     private BigDecimal toBd(Object v) {
-        if (v == null) return null;
         String s = Objects.toString(v, "").replace(",", "").trim();
         if (s.isEmpty()) return null;
-        try {
-            return new BigDecimal(s);
-        } catch (Exception ignore) {
-            return null;
-        }
+        try { return new BigDecimal(s); } catch (Exception ignore) { return null; }
     }
 
-    /** 필요한 필드만 담는 간단 DTO */
     public static class Row {
-        public String curUnit;     // USD, JPY, …
-        public String curNm;       // 미국달러, 일본엔 …
-        public BigDecimal ttb;     // 사다
-        public BigDecimal tts;     // 팔때
-        public BigDecimal dealBasR;// 기준
+        public String curUnit, curNm;
+        public BigDecimal ttb, tts, dealBasR;
     }
 }

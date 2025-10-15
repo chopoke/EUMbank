@@ -8,6 +8,9 @@ import apiConfig from "../config/appConfig"
 export async function saveAccount(params) {
   try {
     const res = await apiConfig.post("/api/accountSave", params);
+
+    console.log(res);
+
   } catch (error) {
     console.error("계좌 저장 실패:", error.response?.data || error.message);
     throw new Error(`계좌 저장 실패 (${error.response?.status})`);

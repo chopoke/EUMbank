@@ -55,7 +55,7 @@ function App() {
       const rt = localStorage.getItem("refresh");
       if (rt) await api.post("/api/auth/logout", {refreshToken: rt });
     } catch(e){
-      
+
     }
     localStorage.removeItem("access");
     localStorage.removeItem("refresh"); // 완전한 로그아웃과 보안을 위해 같이 삭제

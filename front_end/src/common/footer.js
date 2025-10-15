@@ -31,9 +31,9 @@ export function Footer({ isLoggedIn, user, onLogout }) {
         <div className="footer-grid">
           <div className="footer-col">
             {/* font-medium text-gray-900 mb-2 */}
-            <div className="footer-title">NeoBank</div>
+            <div className="footer-title">E-UMBank</div>
             <p>사업자등록번호 123-45-67890</p>
-            <p>대표 ㈜네오뱅크</p>
+            <p>대표 ㈜이음은행</p>
           </div>
           <div className="footer-col">
             <div className="footer-title">약관</div>
@@ -55,7 +55,7 @@ export function Footer({ isLoggedIn, user, onLogout }) {
             <div className="footer-title">인증</div>
             <p>ISMS · 개인정보보호 인증</p>
             {/* mt-2 text-gray-500 */}
-            <p className="copyright">© 2025 NeoBank</p>
+            <p className="copyright">© 2025 E-UMBank</p>
           </div>
         </div>
       </div>
