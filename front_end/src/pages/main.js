@@ -159,7 +159,7 @@ const QuickActions = () => {
     { id: "fx", label: "외화", icon: paths.fx, href: "/foreign/rate" },
     { id: "spot", label: "현물", icon: paths.card, href: "/" },
     { id: "deposit", label: "예적금가입", icon: paths.bank, href: "/depositSavingProductList/open" },
-    { id: "mypage", label: "마이페이지", icon: paths.arrowR, href: "/" },
+    { id: "mypage", label: "마이페이지", icon: paths.arrowR, href: "/mypage" },
   ];
 
   const handleActionClick = (href) => {

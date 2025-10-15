@@ -2,6 +2,7 @@ import { Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import BankHome from './pages/main';
 import LoginPage from "./pages/login/login";
 import SignUp from "./pages/signup/signup";
+import MyPage from "./pages/mypage/my_costomer2";
 import { Header } from './common/header';
 import { Footer } from './common/footer';
 import { useEffect, useState } from "react";
@@ -92,6 +93,8 @@ function App() {
         <Route path="/foreign" element={<Navigate to="/foreign/rate" replace />} />
         <Route path="/foreign/rate" element={<ForeignRatePage />} />
         <Route path="/foreign/products" element={<ForeignProductsPage />} />
+
+        <Route path="/mypage" element={<MyPage />} />
 
       </Routes >
 
