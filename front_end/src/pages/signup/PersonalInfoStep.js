@@ -14,6 +14,16 @@ export default function PersonalInfoStep({ formData, updateFormData }) {
     updateFormData({ [field]: value });
   };
 
+  const formatPhoneNumber = (value) => {
+    // 숫자만 남김
+    const digits = value.replace(/\D/g, '');
+
+    // 010-XXXX-XXXX 형태로 포맷팅
+    if (digits.length < 4) return digits;
+    if (digits.length < 8) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+  }
+
   return (
     <div>
       <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 sm:mb-6">개인정보 입력</h3>
@@ -42,9 +52,11 @@ export default function PersonalInfoStep({ formData, updateFormData }) {
             <input
               type="tel"
               value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
+              onChange={(e) => { const formatted = formatPhoneNumber(e.target.value);
+                            handleInputChange('phone', formatted)}}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               placeholder="010-1234-5678"
+              maxLength={13}
               required
             />
           </div>

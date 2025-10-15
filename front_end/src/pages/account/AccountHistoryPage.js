@@ -132,8 +132,8 @@ function AccountHistoryPage(){
   
   // 필터 초기화
   function resetFilters() {
-    setDateFrom(toISODate(addDays(new Date(), -7)));
-    setDateTo(toISODate(new Date()));
+    setDateFrom();
+    setDateTo();
     setKinds(new Set());
     setMinAmt("");
     setMaxAmt("");
