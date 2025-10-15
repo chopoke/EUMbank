@@ -11,6 +11,7 @@ export default function SignUp() {
     // 개인정보
     name: "",
     phone: "",
+    birth: "",
     email: "",
     emailVerified: false,       //  이메일 인증 여부
     emailCode: "",          // 인증코드 6자리
@@ -40,6 +41,7 @@ export default function SignUp() {
     if (currentStep === 1) {
       if (!f.name.trim()) return alert("이름을 입력하세요.");
       if (!validPhone(f.phone)) return alert("휴대폰 번호를 정확히 입력하세요. 예) 010-1234-5678");
+      if (!f.birth) return alert("생년월일을 입력하세요.");
       if (!validEmail(f.email)) return alert("이메일을 정확히 입력하세요.");
       if (!f.emailVerified) return alert("이메일 인증을 완료해 주세요.");
       if (!validUsername(f.username)) return alert("아이디는 영문+숫자 조합 6~20자여야 합니다.");
@@ -71,6 +73,7 @@ export default function SignUp() {
            c_email: f.email,
            c_phone_mobile: f.phone,
            emailCode: f.emailCode,                 // 6자리 코드
+           c_birth_dt: f.birth,
            c_agree_terms: agreeTerms ? "Y" : "N",
            c_agree_privacy: agreePrivacy ? "Y" : "N",
            c_agree_marketing: (f.terms?.agreeMarketing ? "Y" : "N"),

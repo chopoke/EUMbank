@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "CUSTOMER_TBL")
@@ -37,7 +38,7 @@ public class Customer {
     private String cNameEn;
 
     @Column(name = "c_birth_dt")
-    private Instant cBirthDt;
+    private LocalDate cBirthDt;
 
     @Column(name = "c_gender_cd", length = 1)
     private String cGenderCd;
