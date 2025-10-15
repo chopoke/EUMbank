@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
 import mainlogo from '../resources/img/eumonly.png'
+import myp from '../resources/img/mypage.png'
 
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
@@ -68,11 +69,12 @@ export function Header({ isLoggedIn, user, onLogout }) {
           <Link to="/" className="logo">이음은행</Link>
           {/* hidden lg:flex items-center gap-6 text-sm text-gray-700 */}
           <nav className="main-nav-links">
-            <Link to="/personal" className="nav-link">개인</Link>
+            <Link to="/accounts" className="nav-link">개인</Link>
             <Link to="/products" className="nav-link">상품</Link>
             <Link to="/wealth" className="nav-link nav-link-active">자산관리</Link>
             <Link to="/foreign/rate" className="nav-link">외환/환율</Link>
-            <Link to="/events" className="nav-link">이벤트</Link>
+            <Link to="/mypage" className="nav-link"><img src={myp} className="mypage w-5"/></Link>
+            {/* <Link to="/events" className="nav-link">이벤트</Link> */}
             <button className="notification-button" aria-label="알림">
             <Icon path={paths.bell} />
             {/* absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 */}
@@ -89,21 +91,22 @@ export function Header({ isLoggedIn, user, onLogout }) {
             {/* absolute left-3 top-2.5 text-gray-500 */}
             <span className="search-icon"><Icon path={paths.search} /></span>
           </label>
-          <Link to="/accounts"><button className="login-button">계좌목록</button></Link>
-          
-          <Link to='/signup'><button className="login-button">회원가입</button></Link>
           {!isLoggedIn ? (
-            // rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600
-            // <a href="/login" className="login-button">로그인/인증</a>
-          <Link to="/login"><button className="login-button">로그인</button></Link>
+            <>
+              <Link to='/signup'><button className="login-button">회원가입</button></Link>
+              <Link to="/login"><button className="login-button">로그인</button></Link>
+            </>
           ) : (
-            // flex items-center gap-2 text-sm text-gray-700
-            <div className="logged-in-status">
-              <span className="hidden-sm">안전한 접속중</span>
-              {/* inline-flex items-center gap-1 rounded-full border px-2 py-1 */}
-              <span className="security-tag"><Icon path={paths.shield} />
-                <span className="text-gray-700">보안</span></span>
-            </div>
+            <>
+              <div className="logged-in-status">
+                <span className="hidden-sm">안전한 접속중</span>
+                <span className="security-tag">
+                  <Icon path={paths.shield} />
+                  <span className="text-gray-700">보안</span>
+                </span>
+              </div>
+              <button className="login-button" onClick={handleLogoutClick}>로그아웃</button>
+            </>
           )}
         </div>
       </div>

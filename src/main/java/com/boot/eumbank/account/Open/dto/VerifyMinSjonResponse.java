@@ -12,6 +12,8 @@ public class VerifyMinSjonResponse {
     private String message;
     private Match matched;
     private double score; // 0.0~1.0ß
+    private String email;
+    private String phone;
 
     @Getter
     @Builder

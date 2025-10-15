@@ -34,8 +34,6 @@ public class AccountListController {
     @GetMapping
     public List<AccountSummaryDTO> list(@AuthenticationPrincipal Customer customer){
         int cNo = customer.getCustomerNo();
-        var result = accountService.list(cNo);
-        System.out.printf("[/api/accounts] cNo=%d, resultSize=%d%n", cNo, result.size());
         return accountService.list(cNo);
     }
 

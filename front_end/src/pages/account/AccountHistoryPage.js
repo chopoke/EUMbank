@@ -12,7 +12,7 @@ const formatCur = (amt)=> {
 };
 
 // 계좌번호 마스킹
-const maskAcc = (s)=> s.replace(/(\\d{2,4})-(\\d{2,4})-(\\d{2,6})/, (_ ,a,b,c)=> `${a}-${b}-` + c.replace(/\\d/g,'•'));  
+const maskAcc = (s)=> s.replace(/(\d{2,4})-(\d{2,4})-(\d{2,6})/, (_ ,a,b,c)=> `${a}-${b}-` + c.replace(/\d/g,'•'));  
 
 // 날짜 추가
 function addDays(date, delta){
@@ -45,7 +45,9 @@ function AccountHistoryPage(){
   const [minAmt, setMinAmt] = React.useState("");
   const [maxAmt, setMaxAmt] = React.useState("");
   const [memoQuery, setMemoQuery] = React.useState("");
+  const [memoQv, setMemoQv] = React.useState(0);
   const [sortKey, setSortKey] = React.useState("latest");
+  
 
   // 페이지네이션
   const [page, setPage] = React.useState(0);          // 백엔드에서 넘긴 값
@@ -98,7 +100,7 @@ function AccountHistoryPage(){
         const mapped = (p.content || []).map(r=> ({
           id: r.th_transfer_no,
           ts: parseTs(r.th_transfer_at),
-          time: "", 
+          time: r.th_transfer_at ? new Date(r.th_transfer_at).toLocaleTimeString('ko-KR', { hour12:false }) : "", 
           type: r.th_transfer_type || "-",   // 서버가 어떤 문자열로 주는지에 맞춰 표기
           counterparty: r.th_other_bank || "-",
           memo: r.th_memo || "-",
@@ -120,12 +122,12 @@ function AccountHistoryPage(){
           clientFiltered = clientFiltered.sort((a, b) => b.ts - a.ts);
         }
 
-        setRows(mapped);
+        setRows(clientFiltered);
         setTotalElements(p.totalElements ?? clientFiltered.length);
-        setTotalPages(p.totalPages ?? 1);
+        setTotalPages(p.totalPages ?? (p.totalElements ? p.totalPages : 1));
       }).catch(console.error);
 
-  }, [a_no, kinds, dateFrom, dateTo, page, pageSize]);
+  }, [a_no, kinds, dateFrom, dateTo, page, pageSize, memoQv]);
 
   
   // 필터 초기화
@@ -271,7 +273,8 @@ function AccountHistoryPage(){
               </div>
 
               <div className="mt-5">
-                <button className="w-full rounded-lg bg-blue-700 text-white py-2.5 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
+                <button onClick={() => {setPage(0); setMemoQv(v => v+1); }}
+                  className="w-full rounded-lg bg-blue-700 text-white py-2.5 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600">
                   조회
                 </button>
               </div>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-function TermsModal({ open, title, onClose, onReadComplete, onConfirm, confirmLabel = "확인", confirmDisabled = false, children }) {
+function TermsModal({ open, title, onClose, onReadComplete, children }) {
   const boxRef = useRef(null);
 
   useEffect(() => {
@@ -41,11 +41,10 @@ function TermsModal({ open, title, onClose, onReadComplete, onConfirm, confirmLa
         <div className="mt-4 text-right">
           <button
             type="button"
-            onClick={() => { onConfirm?.(); onClose?.(); }}
-            disabled={confirmDisabled}
+            onClick={onClose}
             className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
           >
-            {confirmLabel}
+            확인
           </button>
         </div>
       </div>
@@ -210,8 +209,6 @@ export default function TermsStep({ terms, updateFormData }) {
         title="서비스 이용약관"
         onClose={() => setOpen((s) => ({ ...s, terms: false }))}
         onReadComplete={() => setTermsState({ hasReadTerms: true })}
-        onConfirm={() => setTermsState({ hasReadTerms: true, agreeTerms: true })}
-        confirmDisabled={!hasReadTerms}
       >
         <h5 className="font-semibold">제1조(목적)</h5>
         <p>
@@ -320,8 +317,6 @@ export default function TermsStep({ terms, updateFormData }) {
         title="개인정보처리방침"
         onClose={() => setOpen((s) => ({ ...s, privacy: false }))}
         onReadComplete={() => setTermsState({ hasReadPrivacy: true })}
-        onConfirm={() => setTermsState({ hasReadPrivacy: true, agreePrivacy: true })}
-        confirmDisabled={!hasReadPrivacy}
       >
         <h5 className="font-semibold">1. 총칙</h5>
         <p>
@@ -429,7 +424,6 @@ export default function TermsStep({ terms, updateFormData }) {
         open={open.marketing}
         title="마케팅 정보 수신 동의 안내(선택)"
         onClose={() => setOpen((s) => ({ ...s, marketing: false }))}
-        onConfirm={() => setTermsState({ agreeMarketing: true })}
       >
         <h5 className="font-semibold">1. 수집·이용 목적</h5>
         <p>

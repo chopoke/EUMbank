@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import api from "../../api/axios";
+import naverlogo from "../../resources/img/네이버로고.png";
 import maintxt from '../../resources/img/e-um.png'
 
 const h = React.createElement;
@@ -33,7 +34,7 @@ export default function Login() {
     setLoading(true);
     setMsg("");
     try {
-      // ✅ 백엔드 snake_case DTO에 맞춰 전송
+      // 백엔드 snake_case DTO에 맞춰 전송
       const payload = { c_user_id: f.cUserId, c_password: f.cPassword };
       const { data } = await api.post("/api/auth/login", payload);
 
@@ -52,6 +53,11 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  const naverLogin = (e) => {
+    window.location.href = `http://localhost:8081/oauth2/authorization/naver`;
+    //window.location.href = `http://localhost:8081/oauth2/authorization/google`;
+  }
 
   return h("div", { className: "min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100" }, [
     h("div", { className: "container mx-auto px-4 py-8", key: "wrap" }, [
@@ -106,6 +112,25 @@ export default function Login() {
                   "w-full inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60",
               },
               loading ? "처리중..." : "로그인"
+            ),
+             // ✅ 네이버 로그인 버튼 추가
+            h(
+              "button",
+              {
+                type: "button",
+                onClick: naverLogin, // 백엔드 네이버 OAuth URL로 이동
+                className:
+                  "w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#03C75A] px-4 py-3 font-medium text-white hover:bg-[#02b250] focus:outline-none focus:ring-2 focus:ring-green-500 mt-2",
+              },
+              //"네이버 로그인"
+              [
+                h("img", {
+                  src: naverlogo,
+                  alt: "Naver logo",
+                  className: "w-5 h-5",
+                }),
+                h("span", { className: "text-medium text-white" }, "네이버 로그인")
+              ]
             ),
           ]),
           h("div", { className: "text-center mt-6" }, [

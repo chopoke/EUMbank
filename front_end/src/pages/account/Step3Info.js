@@ -20,6 +20,13 @@ const isRRN = (v) => /^\d{6}-\d{7}$/.test(v);
 const isPhone = (v) => /^010-\d{4}-\d{4}$/.test(v);
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
+const formatChangePhone = (v) => {
+    // 이 함수가 이미 '000-0000-0000' 형식으로 만들어 줍니다.
+    const d = (v || "").replace(/[^0-9]/g, "").slice(0, 11);
+    const a = d.slice(0, 3), b = d.slice(3, 7), c = d.slice(7, 11);
+    return [a, b, c].filter(Boolean).join("-");
+};
+
 export default function Step3Info() {
     const nav = useNavigate();
 
@@ -30,9 +37,9 @@ export default function Step3Info() {
     // ✅ 초기값은 useState "초기화 함수"에서 한 번만 계산 (useEffect로 setForm 하지 말 것)
     const [form, setForm] = useState(() => ({
         name: step2?.name || "",
-        rrn: step2?.rrn6 ? `${step2.rrn6}-` : "",
-        phone: "",
-        email: "",
+        rrn: step2?.rrn13 ? `${step2.rrn13}` : "",
+        phone: formatChangePhone(step2?.phone || ""),
+        email: step2?.email || "", // 인증된 사람의 이메일 정보
         address: step2?.address || ""
     }));
 

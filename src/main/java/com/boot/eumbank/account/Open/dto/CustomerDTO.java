@@ -3,7 +3,9 @@ package com.boot.eumbank.account.Open.dto;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * 고객 정보(CUSTOMER_TBL)를 위한 DTO
@@ -12,12 +14,10 @@ import java.time.LocalDateTime;
 @Setter
 @ToString
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class CustomerDTO {
 
     // 고객 번호 (PK)
-    private Long cNo;
+    private Integer cNo;
 
     // 고객 ID
     private String cId;
@@ -93,5 +93,17 @@ public class CustomerDTO {
 
     // 수정자
     private String updatedBy;
+
+    /**
+     * QueryDSL의 Projections.constructor와 정확히 일치하는 생성자
+     * 순서: cNo(Integer), nameKr(String), email(String), phoneMobile(String)
+     */
+    public CustomerDTO(Integer customerNo, String cNameKr, Instant cBirthDt, String cEmail, String cPhoneMobile) {
+        this.cNo = customerNo;
+        this.nameKr = cNameKr;
+        this.birthDt = cBirthDt.atZone(ZoneId.systemDefault()).toLocalDateTime();
+        this.email = cEmail;
+        this.phoneMobile = cPhoneMobile;
+    }
 
 }
