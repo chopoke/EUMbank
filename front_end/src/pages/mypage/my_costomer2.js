@@ -1,5 +1,6 @@
-import { useState } from 'react';
-
+import { useEffect, useState } from 'react';
+import { testmypage } from '../../api/accounts';
+import React from "react";
 // Header Component
 function Header() {
   return (
@@ -1354,7 +1355,8 @@ function TaxTab() {
 }
 
 // Sidebar Component
-function Sidebar() {
+function Sidebar({ customerName }) {
+  
   return (
     <aside className="w-80 bg-gray-50 border-l border-gray-200 p-6">
       <div className="space-y-6">
@@ -1367,7 +1369,7 @@ function Sidebar() {
           <div className="space-y-2">
             <div className="text-right">
                 <div className="text-sm opacity-90">안녕하세요</div>
-                <div className="font-semibold">조원빈 님</div>
+                <div className="font-semibold">{customerName} 님</div>
             </div>
           </div>
         </div>
@@ -1523,6 +1525,9 @@ function Footer() {
 }
 
 function MyPage() {
+
+
+  const [customerName, setCustomerName] = useState('이름없음');
   const [activeTab, setActiveTab] = useState('overview');
 
   const renderTabContent = () => {
@@ -1543,6 +1548,29 @@ function MyPage() {
         return <OverviewTab />;
     }
   };
+  // 2. API 호출 및 상태 업데이트
+  useEffect(() => {
+    testmypage()
+        .then(res => {
+            console.log("API 응답 데이터 (res):", res); 
+            
+            const fetchedName = res?.data?.customerName; 
+
+            if (fetchedName) {
+                setCustomerName(fetchedName); 
+            } else {
+                console.error("응답 데이터 구조 문제: res.data.customerName 키를 찾을 수 없습니다.");
+                // 이 else 블록은 이제 res.data가 없거나 customerName이 비어있을 때만 실행됩니다.
+                setCustomerName('데이터 오류'); 
+            }
+        })
+        .catch(error => {
+            console.error("API 호출 중 예외 발생:", error);
+            setCustomerName('통신 오류');
+        });
+  }, []);
+
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50">
@@ -1554,7 +1582,7 @@ function MyPage() {
             <div className="flex-1 p-6">
               {renderTabContent()}
             </div>
-            <Sidebar />
+            <Sidebar customerName={customerName} /> 
           </div>
         </div>
       </div>
