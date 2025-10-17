@@ -65,7 +65,7 @@ export function AsideHelp() {
             </InfoCard>
             <InfoCard title="보안">
                 <p className="text-sm text-gray-700 leading-6">
-                    고객센터를 사칭한 연락에 주의하세요. OTP/비밀번호는 절대 공유하지 마세요.
+                    고객센터를 사칭한 연락에 주의하세요. <br/>OTP/비밀번호는 절대 공유하지 마세요.
                 </p>
             </InfoCard>
         </aside>

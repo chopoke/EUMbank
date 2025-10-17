@@ -39,7 +39,7 @@ export function PinPadModal({ length = 6, onSubmit, onCancel }) {
         <div className="w-full max-w-[320px] mx-auto">
 
             {/* PIN 점 표시 (개선된 디자인) */}
-            <div className="flex justify-center gap-3 mb-6 h-4 items-center">
+            {/* <div className="flex justify-center gap-3 mb-6 h-4 items-center">
                 {Array.from({ length }).map((_, i) => (
                     <div
                         key={i}
@@ -51,6 +51,25 @@ export function PinPadModal({ length = 6, onSubmit, onCancel }) {
                         ].join(" ")}
                     />
                 ))}
+            </div> */}
+            <div className="flex justify-center gap-3 mb-6 h-16 items-center">
+            {Array.from({ length }).map((_, i) => (
+                <div
+                key={i}
+                className={"w-12 h-12 flex items-center justify-center rounded-md bg-white"
+                    
+                }
+                style={{
+                    outline: "2px solid gray",
+                    outlineOffset: "0px"
+                }}
+                >
+                {/* 입력된 칸은 파란 점 표시 */}
+                {i < digits.length && (
+                    <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                )}
+                </div>
+            ))}
             </div>
 
             <input
