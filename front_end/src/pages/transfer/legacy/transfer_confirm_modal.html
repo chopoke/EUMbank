@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NeoBank — 이체 정보 확인(팝업)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+  body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  .sr-only:not(:focus):not(:active) { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+  .k-badge { display:inline-flex; align-items:center; gap:4px; border:1px solid rgb(203 213 225); border-radius:9999px; padding:2px 8px; font-size:12px; color:rgb(55 65 81); }
+  .mono { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' on, 'lnum' on; }
+</style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-900">
+  <!-- Dim + Centered Modal -->
+  <div class="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+    <section role="dialog" aria-modal="true" aria-labelledby="dlg-title"
+      class="w-full max-w-2xl rounded-2xl border bg-white shadow-xl">
+      <header class="flex items-center justify-between px-6 py-4 border-b">
+        <h1 id="dlg-title" class="text-lg font-semibold">이체 정보 확인</h1>
+        <span class="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs text-gray-700">
+          보안매체 필요
+        </span>
+      </header>
+
+      <div class="p-6">
+        <!-- Summary Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <div class="text-sm text-gray-500">보내는 계좌</div>
+            <div class="text-lg font-semibold">입출금통장 · 110-123-456789</div>
+            <div class="text-sm text-gray-500 mt-4">받는 분</div>
+            <div class="text-lg font-semibold">네오은행 · 100-222-333444</div>
+            <div class="text-sm text-gray-500">예금주</div>
+            <div class="font-medium">김가나</div>
+          </div>
+          <div class="space-y-2">
+            <div class="text-sm text-gray-500">금액</div>
+            <div class="text-2xl font-bold mono">₩100,000</div>
+            <div class="text-sm text-gray-500">수수료</div>
+            <div class="font-medium mono">₩500</div>
+            <div class="text-sm text-gray-500">메모</div>
+            <div class="font-medium">점심값</div>
+          </div>
+        </div>
+
+        <!-- OTP / 동의 -->
+        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label class="inline-flex items-center gap-2 text-sm">
+            <input type="checkbox" class="h-4 w-4">
+            이체 내역을 확인했으며, 전자금융거래 약관에 동의합니다.
+          </label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-600">OTP</span>
+            <input inputmode="numeric" class="rounded border px-2 py-1 text-sm w-36" placeholder="6자리" />
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        <div class="mt-6 rounded-xl border bg-amber-50 border-amber-200 p-4 text-sm text-amber-900">
+          스미싱/피싱이 의심되면 즉시 고객센터로 연락하세요.
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-6 flex justify-end gap-2">
+          <button class="rounded-full border px-5 py-2 text-sm hover:bg-gray-50">취소</button>
+          <button class="rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600">이전</button>
+          <button class="rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600">이체 실행</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

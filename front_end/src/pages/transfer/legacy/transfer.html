@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NeoBank — 계좌 이체 (Desktop)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    .sr-only:not(:focus):not(:active) { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-900">
+  <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-blue-700 text-white px-3 py-2 rounded">본문 바로가기</a>
+
+  <header class="sticky top-0 z-40 w-full bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b">
+    <div class="hidden md:flex h-10 items-center justify-between px-6 text-sm text-gray-600">
+      <div class="flex items-center gap-4">
+        <a href="#" class="hover:underline">공지</a>
+        <a href="#" class="hover:underline">접근성</a>
+        <a href="#" class="hover:underline">고객센터</a>
+      </div>
+      <div class="flex items-center gap-4">
+        <button class="hover:underline" aria-label="언어 전환">KO/EN</button>
+        <button class="relative" aria-label="알림">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="text-gray-700"><path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2Zm6-6V11a6 6 0 1 0-12 0v5l-2 2v1h16v-1l-2-2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1">3</span>
+        </button>
+      </div>
+    </div>
+    <div class="h-16 flex items-center justify-between px-6">
+      <div class="flex items-center gap-8">
+        <a href="#" class="font-semibold text-xl text-blue-700 tracking-tight">NeoBank</a>
+        <nav class="hidden lg:flex items-center gap-6 text-sm text-gray-700">
+          <a class="hover:text-blue-700" href="#">개인</a>
+          <a class="hover:text-blue-700" href="#">상품</a>
+          <a class="hover:text-blue-700" href="#">펀드</a>
+          <a class="hover:text-blue-700" href="#">자산관리</a>
+          <a class="hover:text-blue-700" href="#">외환/환율</a>
+          <a class="hover:text-blue-700" href="#">이벤트</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-3">
+        <label class="relative hidden md:block">
+          <input class="peer w-64 rounded-full border border-gray-300 pl-10 pr-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="메뉴나 기능 검색" />
+          <span class="absolute left-3 top-2.5 text-gray-500">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 21l-4.35-4.35M10 17a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </label>
+        <button class="rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600">로그인/인증</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="mx-auto max-w-screen-xl px-6 py-6">
+      <nav aria-label="Breadcrumb" class="text-sm text-gray-500">
+        <ol class="flex items-center gap-2">
+          <li class="hover:underline cursor-pointer">이체</li>
+          <li aria-hidden>›</li>
+          <li class="text-gray-900">계좌 이체</li>
+        </ol>
+      </nav>
+      <div class="mt-2 flex items-center justify-between">
+        <h1 class="text-2xl font-semibold tracking-tight">계좌 이체</h1>
+        <span class="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs text-gray-700">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          이체 전 보안 점검
+        </span>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-screen-xl px-6 pb-12 grid grid-cols-12 gap-6">
+      <div class="col-span-12 lg:col-span-8 space-y-6">
+        <section id="step-form" class="rounded-2xl border bg-white p-6 shadow-sm">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">이체 정보 입력</h2>
+            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs text-gray-700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 8h.01M12 12v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              이체 시 문자 알림
+            </span>
+          </div>
+
+          <div class="space-y-5">
+            <div class="grid grid-cols-12 gap-4 items-start">
+              <div class="col-span-12 md:col-span-6">
+                <label class="block text-sm font-medium text-gray-800">보내는 계좌</label>
+                <select id="from" class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                  <option>입출금통장 · 110-123-456789</option>
+                  <option>모으는저축 · 333-999-000111</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">잔액 ₩18,203,450</p>
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <label class="block text-sm font-medium text-gray-800">내 잔액</label>
+                <div class="rounded-lg border px-3 py-2 text-sm bg-gray-50">₩18,203,450</div>
+                <p class="text-xs text-gray-500 mt-1">수수료 제외 기준</p>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-center gap-2 mb-3">
+                <button data-tab="fav" class="rounded-full border px-3 py-1 text-sm bg-blue-600 text-white border-blue-600">자주 쓰는</button>
+                <button data-tab="new" class="rounded-full border px-3 py-1 text-sm hover:bg-gray-50">신규 입력</button>
+                <button data-tab="my" class="rounded-full border px-3 py-1 text-sm hover:bg-gray-50">내 계좌</button>
+              </div>
+
+              <div id="tab-fav" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <button class="rounded-xl border bg-white p-3 text-left hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-600">
+                  <div class="text-sm font-medium text-gray-800">김가나</div>
+                  <div class="text-xs text-gray-500">네오은행 · 100-222-333444</div>
+                </button>
+                <button class="rounded-xl border bg-white p-3 text-left hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-600">
+                  <div class="text-sm font-medium text-gray-800">이다라</div>
+                  <div class="text-xs text-gray-500">국민 · 777-888-999000</div>
+                </button>
+                <button class="rounded-xl border bg-white p-3 text-left hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-600">
+                  <div class="text-sm font-medium text-gray-800">박마바</div>
+                  <div class="text-xs text-gray-500">신한 · 110-555-666777</div>
+                </button>
+              </div>
+
+              <div id="tab-new" class="hidden">
+                <div class="grid grid-cols-12 gap-4 items-start">
+                  <div class="col-span-12 md:col-span-4">
+                    <label class="block text-sm font-medium text-gray-800">은행</label>
+                    <select class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                      <option>네오은행</option><option>국민</option><option>신한</option><option>우리</option><option>하나</option><option>기업</option><option>농협</option><option>카카오</option><option>토스</option>
+                    </select>
+                  </div>
+                  <div class="col-span-12 md:col-span-4">
+                    <label class="block text-sm font-medium text-gray-800">계좌번호</label>
+                    <input class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="123-456-789012" />
+                    <p class="text-xs text-gray-500 mt-1">하이픈 자동 제외</p>
+                  </div>
+                  <div class="col-span-12 md:col-span-4">
+                    <label class="block text-sm font-medium text-gray-800">예금주명</label>
+                    <input class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="홍길동" />
+                    <p class="text-xs text-gray-500 mt-1">실명 확인 필요</p>
+                  </div>
+                </div>
+              </div>
+
+              <div id="tab-my" class="hidden">
+                <label class="block text-sm font-medium text-gray-800">내 다른 계좌</label>
+                <select class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                  <option>모으는저축 · 333-999-000111</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-4 items-start">
+              <div class="col-span-12 md:col-span-6">
+                <label class="block text-sm font-medium text-gray-800">보낼 금액</label>
+                <div class="flex items-center gap-2">
+                  <input id="amount" inputmode="numeric" class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="0" />
+                  <div class="flex items-center gap-2">
+                    <button data-add="100000" class="rounded-full border px-3 py-1 text-sm hover:bg-gray-50">+10만</button>
+                    <button data-add="500000" class="rounded-full border px-3 py-1 text-sm hover:bg-gray-50">+50만</button>
+                    <button data-add="1000000" class="rounded-full border px-3 py-1 text-sm hover:bg-gray-50">+100만</button>
+                    <button id="fill-all" class="rounded-full border px-3 py-1 text-sm hover:bg-gray-50">전액</button>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">수수료 <b>₩500</b> (즉시이체 기준)</p>
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <label class="block text-sm font-medium text-gray-800">받는 분 메모</label>
+                <input maxlength="10" class="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="예: 점심값" />
+                <p class="text-xs text-gray-500 mt-1">통장표시 10자 내외</p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-4">
+              <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+                <input id="reserve" type="checkbox" class="peer sr-only" />
+                <span class="relative inline-flex h-5 w-9 items-center rounded-full bg-gray-300 peer-checked:bg-blue-600 transition">
+                  <span class="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition peer-checked:translate-x-4"></span>
+                </span>
+                <span class="text-sm text-gray-700">예약 이체</span>
+              </label>
+              <div id="reserve-fields" class="hidden items-center gap-2 text-sm">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 4v2m10-2v2M4 10h16M5 20h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <input type="date" class="rounded border px-2 py-1" />
+                <input type="time" class="rounded border px-2 py-1" />
+              </div>
+              <span class="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs text-gray-700">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 8h.01M12 12v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                이체 전 잘못된 계좌/금액 경고창 표시
+              </span>
+            </div>
+
+            <div class="rounded-xl border bg-gray-50 p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+              <div class="flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 7h18v10H3V7Zm0 3h18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                이체 후 예상 잔액
+              </div>
+              <div id="remain" class="font-semibold">₩18,203,450</div>
+            </div>
+
+            <div class="flex justify-end gap-2">
+              <button class="rounded-full border px-5 py-2 text-sm hover:bg-gray-50">취소</button>
+              <button id="go-confirm" class="rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600">다음</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="step-confirm" class="hidden rounded-2xl border bg-white p-6 shadow-sm">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">이체 정보 확인</h2>
+            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs text-gray-700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              보안매체 필요
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-3">
+              <div class="text-sm text-gray-500">보내는 계좌</div>
+              <div class="text-lg font-semibold">입출금통장 · 110-123-456789</div>
+              <div class="text-sm text-gray-500 mt-4">받는 분</div>
+              <div class="text-lg font-semibold" id="confirm-target">네오은행 · 100-222-333444</div>
+              <div class="text-sm text-gray-500">예금주</div>
+              <div class="font-medium" id="confirm-name">김가나</div>
+            </div>
+            <div class="space-y-3">
+              <div class="text-sm text-gray-500">금액</div>
+              <div class="text-2xl font-bold" id="confirm-amount">₩0</div>
+              <div class="text-sm text-gray-500">수수료</div>
+              <div class="font-medium" id="confirm-fee">₩500</div>
+              <div id="reserve-info" class="hidden">
+                <div class="text-sm text-gray-500">예약일시</div>
+                <div class="font-medium" id="reserve-datetime">2025-10-05 09:00</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label class="inline-flex items-center gap-2 text-sm">
+              <input id="agree" type="checkbox" class="h-4 w-4" />
+              이체 내역을 확인했으며, 전자금융거래 약관에 동의합니다.
+            </label>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-600">OTP</span>
+              <input id="otp" inputmode="numeric" class="rounded border px-2 py-1 text-sm w-36" placeholder="6자리" />
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-end gap-2">
+            <button id="back-form" class="rounded-full border px-5 py-2 text-sm hover:bg-gray-50">이전</button>
+            <button id="go-done" class="rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:opacity-50" disabled>이체 실행</button>
+          </div>
+        </section>
+
+        <section id="step-done" class="hidden rounded-2xl border bg-white p-6 shadow-sm">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">이체 완료</h2>
+            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs text-gray-700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              성공
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <div class="text-sm text-gray-500">받는 분</div>
+              <div class="text-lg font-semibold" id="done-target">네오은행 · 100-222-333444</div>
+              <div class="text-sm text-gray-500">예금주</div>
+              <div class="font-medium" id="done-name">김가나</div>
+            </div>
+            <div class="space-y-2">
+              <div class="text-sm text-gray-500">금액</div>
+              <div class="text-2xl font-bold" id="done-amount">₩0</div>
+              <div class="text-sm text-gray-500">수수료</div>
+              <div class="font-medium" id="done-fee">₩500</div>
+            </div>
+          </div>
+
+          <div class="mt-6 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+            <span>이체번호: TRX-2025-0925-001</span>
+            <span>처리시각: 09:41:22</span>
+            <span>알림: SMS 발송</span>
+          </div>
+
+          <div class="mt-6 flex flex-wrap gap-2">
+            <button class="rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600">영수증 저장</button>
+            <button class="rounded-full border px-5 py-2 text-sm hover:bg-gray-50">같은 대상 재이체</button>
+            <button class="rounded-full border px-5 py-2 text-sm hover:bg-gray-50">자주 쓰는 대상 등록</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-span-12 lg:col-span-4 space-y-6">
+        <section class="rounded-2xl border bg-white p-6 shadow-sm">
+          <h2 class="text-lg font-semibold text-gray-900 mb-4">이체 안내</h2>
+          <ul class="list-disc pl-5 text-sm text-gray-700 space-y-1">
+            <li>실시간 이체 가능 시간: 24시간 (시스템 점검 제외)</li>
+            <li>예약 이체 수수료는 면제됩니다.</li>
+            <li>이체 한도 변경은 마이페이지 &gt; 한도관리에서 가능합니다.</li>
+          </ul>
+        </section>
+
+        <section class="rounded-2xl border bg-white p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-lg font-semibold text-gray-900">보안 주의</h2>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 8h.01M12 12v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-3">
+            스미싱/피싱이 의심되면 즉시 고객센터로 연락하세요. 계좌번호/OTP를 절대 제3자에게 공유하지 마세요.
+          </div>
+        </section>
+
+        <section class="rounded-2xl border bg-white p-6 shadow-sm">
+          <h2 class="text-lg font-semibold text-gray-900 mb-4">최근 이체 대상</h2>
+          <div class="space-y-2 text-sm">
+            <button class="w-full rounded-lg border px-3 py-2 text-left hover:bg-gray-50">김가나 · 네오은행 · 100-222-333444</button>
+            <button class="w-full rounded-lg border px-3 py-2 text-left hover:bg-gray-50">이다라 · 국민 · 777-888-999000</button>
+            <button class="w-full rounded-lg border px-3 py-2 text-left hover:bg-gray-50">박마바 · 신한 · 110-555-666777</button>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const addBtns = document.querySelectorAll('[data-add]');
+    const amountInput = document.getElementById('amount');
+    const remainEl = document.getElementById('remain');
+    const fillAllBtn = document.getElementById('fill-all');
+    const balance = 18203450;
+    const fee = 500;
+
+    function formatKRW(n){ return '₩' + (n||0).toLocaleString('ko-KR'); }
+    function calcRemain(){
+      const n = parseInt((amountInput.value || '0').replace(/[^0-9]/g,'')) || 0;
+      const remain = Math.max(0, balance - (n + fee));
+      remainEl.textContent = formatKRW(remain);
+    }
+    amountInput.addEventListener('input', calcRemain);
+    addBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const add = parseInt(btn.getAttribute('data-add'),10);
+        const current = parseInt((amountInput.value || '0').replace(/[^0-9]/g,'')) || 0;
+        amountInput.value = String(current + add);
+        calcRemain();
+      });
+    });
+    fillAllBtn.addEventListener('click', () => {
+      amountInput.value = String(balance);
+      calcRemain();
+    });
+    calcRemain();
+
+    const tabBtns = document.querySelectorAll('[data-tab]');
+    const fav = document.getElementById('tab-fav');
+    const tabNew = document.getElementById('tab-new');
+    const tabMy = document.getElementById('tab-my');
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabBtns.forEach(b=>b.classList.remove('bg-blue-600','text-white','border-blue-600'));
+        btn.classList.add('bg-blue-600','text-white','border-blue-600');
+        fav.classList.add('hidden'); tabNew.classList.add('hidden'); tabMy.classList.add('hidden');
+        const k = btn.getAttribute('data-tab');
+        if(k==='fav') fav.classList.remove('hidden');
+        if(k==='new') tabNew.classList.remove('hidden');
+        if(k==='my') tabMy.classList.remove('hidden');
+      });
+    });
+
+    const stepForm = document.getElementById('step-form');
+    const stepConfirm = document.getElementById('step-confirm');
+    const stepDone = document.getElementById('step-done');
+    const goConfirm = document.getElementById('go-confirm');
+    const backForm = document.getElementById('back-form');
+    const goDone = document.getElementById('go-done');
+    const agree = document.getElementById('agree');
+    const otp = document.getElementById('otp');
+    const reserve = document.getElementById('reserve');
+    const reserveFields = document.getElementById('reserve-fields');
+    const reserveInfo = document.getElementById('reserve-info');
+    const confirmAmount = document.getElementById('confirm-amount');
+    const doneAmount = document.getElementById('done-amount');
+    const confirmFee = document.getElementById('confirm-fee');
+    const doneFee = document.getElementById('done-fee');
+
+    reserve.addEventListener('change', () => {
+      if(reserve.checked){
+        reserveFields.classList.remove('hidden');
+      } else {
+        reserveFields.classList.add('hidden');
+      }
+    });
+
+    goConfirm.addEventListener('click', () => {
+      const n = parseInt((amountInput.value || '0').replace(/[^0-9]/g,'')) || 0;
+      const feeKRW = formatKRW(fee);
+      document.getElementById('confirm-amount').textContent = formatKRW(n);
+      document.getElementById('confirm-fee').textContent = feeKRW;
+      if(reserve.checked){
+        reserveInfo.classList.remove('hidden');
+      } else {
+        reserveInfo.classList.add('hidden');
+      }
+      stepForm.classList.add('hidden');
+      stepConfirm.classList.remove('hidden');
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+
+    backForm && backForm.addEventListener('click', () => {
+      stepConfirm.classList.add('hidden');
+      stepForm.classList.remove('hidden');
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+
+    function checkGate(){
+      const ok = agree.checked && otp.value.replace(/\D/g,'').length >= 6;
+      goDone.disabled = !ok;
+    }
+    agree && agree.addEventListener('change', checkGate);
+    otp && otp.addEventListener('input', checkGate);
+
+    goDone && goDone.addEventListener('click', () => {
+      const n = parseInt((amountInput.value || '0').replace(/[^0-9]/g,'')) || 0;
+      document.getElementById('done-amount').textContent = formatKRW(n);
+      document.getElementById('done-fee').textContent = formatKRW(fee);
+      stepConfirm.classList.add('hidden');
+      stepDone.classList.remove('hidden');
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+  </script>
+</body>
+</html>
