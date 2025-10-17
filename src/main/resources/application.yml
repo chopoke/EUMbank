@@ -159,3 +159,10 @@ logging:
     com.boot.eumbank.mapper: DEBUG
     org.apache.ibatis: DEBUG
     org.mybatis.spring: DEBUG
+
+# ===================================================================
+# 금감원 대출API
+# ===================================================================
+finlife:
+  base-url: https://finlife.fss.or.kr/finlifeapi
+  api-key: ${FINLIFE_API_KEY}   # 운영/로컬 환경변수로 주입

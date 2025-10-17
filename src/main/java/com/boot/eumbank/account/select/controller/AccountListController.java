@@ -1,10 +1,12 @@
 package com.boot.eumbank.account.select.controller;
 
+import com.boot.eumbank.account.select.dto.TransactionDTO;
 import com.boot.eumbank.account.select.entity.TransferHistory;
 import com.boot.eumbank.account.select.dto.AccountDetailDTO;
 import com.boot.eumbank.account.select.dto.AccountSummaryDTO;
 import com.boot.eumbank.account.select.repository.TransferHistoryRepository;
 import com.boot.eumbank.account.select.service.AccountSelectService;
+import com.boot.eumbank.account.select.service.TransferService;
 import com.boot.eumbank.customer.entity.Customer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,7 +30,7 @@ import java.util.List;
 public class AccountListController {
 
     private final AccountSelectService accountService;
-    private final TransferHistoryRepository transferHistoryRepository;
+    private final TransferService transferService;
 
     // 보유 계좌 목록
     @GetMapping
@@ -57,9 +59,9 @@ public class AccountListController {
 
     }
 
-     // 거래내역 목록
-     @GetMapping("/{a_no}/transfers")
-    public Page<TransferHistory> search(
+    // 거래내역 목록
+    @GetMapping("/{a_no}/transfers")
+    public Page<TransactionDTO> search(
             @PathVariable("a_no") int a_no,
             @RequestParam(value = "type", required = false) String type,
             @RequestParam(value = "from", required = false)
@@ -68,8 +70,6 @@ public class AccountListController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             Pageable pageable
     ) {
-        Timestamp from_at = (from != null) ? Timestamp.valueOf(from) : null;
-        Timestamp to_at   = (to   != null) ? Timestamp.valueOf(to)   : null;
-        return transferHistoryRepository.search(a_no, type, from_at, to_at, pageable);
+        return transferService.transactions(a_no, type, from, to, pageable);
     }
 }

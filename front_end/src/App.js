@@ -23,6 +23,9 @@ import ProtectedRoute from "./pages/account/component/ProtectedRoute";
 import { AccountListPage } from "./pages/account/AccountListPage";
 import { AccountHistoryPage } from "./pages/account/AccountHistoryPage";
 
+// 주택담보대출
+import LoanMortgageProduct from "./pages/loan/products/LoanMortgageProducts"
+
 
 // App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
 // 이렇게 하면 App 컴포넌트 내에서 useNavigate를 정상적으로 사용할 수 있습니다.
@@ -90,6 +93,10 @@ function App() {
             <AccountHistoryPage />
             </ProtectedRoute>} />
 
+        {/* 주택담보대출 상품 목록 */}
+        <Route path="/fss/mortgage" element={<LoanMortgageProduct/>} />
+
+
         {/* 계좌 개설: 각 단계 독립 경로 */}
         <Route path="/account/open" element={
            <ProtectedRoute>
@@ -110,6 +117,8 @@ function App() {
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={<MyPage />} />
       </Routes >
+
+        
 
       <Footer />
     </div >

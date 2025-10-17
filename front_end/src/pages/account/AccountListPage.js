@@ -4,7 +4,7 @@ import { fetchAccounts } from "../../api/accounts";
 import { Link} from "react-router-dom";
 
 
-function AccountListPage({user}){
+function AccountListPage(){
   const[accounts, setAccounts] = React.useState([]);
   const[loading, setLoading] = React.useState(false);
   const[error, setError] = React.useState(null);
@@ -18,9 +18,9 @@ function AccountListPage({user}){
   const [sortKey, setSortKey] = React.useState("recent");
 
 
-  // 고객 번호 받기위한 토큰
-  const token = localStorage.getItem("access");
-  console.log('[AccountListPage] token =', token);
+  // // 고객 번호 받기위한 토큰
+  // const token = localStorage.getItem("access");
+  // console.log('[AccountListPage] token =', token);
 
 
   React.useEffect(()=>{
@@ -70,7 +70,7 @@ function AccountListPage({user}){
 
 
   const bankOptions = ["EumBank","신한","KB국민","우리","하나","NH농협"];
-  const typeOptions = ["전체","입출금","예금","적금", "대출","외화"];
+  const typeOptions = ["전체","입출금","자유적금", "예금","적금", "대출","외화"];
 
   // 원화 스케일링
   const won = (n)=> n.toLocaleString('ko-KR');

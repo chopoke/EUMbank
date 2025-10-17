@@ -1,14 +1,17 @@
 package com.boot.eumbank.account.select.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
+@Builder
 public class TransactionDTO {
     private int th_transfer_no;         // 이체번호
     private String th_transfer_id;      // 거래키
@@ -22,5 +25,5 @@ public class TransactionDTO {
     private int th_after_balance;       // 보낸뒤 잔액
     private Integer th_account_out;     // 출금금액
     private Integer th_account_in;      // 입금금액
-    private Timestamp th_transfer_at;   // 이체시간
+    private LocalDateTime th_transfer_at;   // 이체시간
 }
