@@ -1,5 +1,6 @@
 import React from "react";
 import { fetchMortgageProducts } from "../../../api/accounts";
+import { Link } from "react-router-dom";
 
 export default function LoanProductsListPage(){
 
@@ -135,7 +136,11 @@ export default function LoanProductsListPage(){
         </div>
 
         <div className="mt-4 flex gap-2">
-          <a href={p.link} className="px-3 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-sm">자세히 보기</a>
+          <Link
+          to={`/loans/${p.id}`}
+          state={{ product: p }}   // ★ 상세에 미리 전달
+          className="px-3 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-sm"
+        >자세히 보기</Link>
           <button onClick={()=>{ if(!selected.includes(p.id)) toggleSelected(p.id); setShowPrequal(true); }} className="px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm">간편조회</button>
         </div>
       </div>

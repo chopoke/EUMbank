@@ -1,7 +1,8 @@
 
 import React from "react";
 import { fetchAccounts } from "../../api/accounts";
-import { Link} from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { goToAccountOpenPage } from "./utils/navigations";
 
 
 function AccountListPage(){
@@ -16,6 +17,7 @@ function AccountListPage(){
   const [maxBal, setMaxBal] = React.useState("");
   const [statuses, setStatuses] = React.useState(new Set());
   const [sortKey, setSortKey] = React.useState("recent");
+  const navigate = useNavigate();
 
 
   // // 고객 번호 받기위한 토큰
@@ -24,7 +26,6 @@ function AccountListPage(){
 
 
   React.useEffect(()=>{
-
     let alive = true;
     setLoading(true);
     setError(null);
@@ -113,8 +114,6 @@ function AccountListPage(){
     URL.revokeObjectURL(url);
   }
 
-  // 로그인 안되어있으면 리턴 (( 훅 다음에 호출하는 것 주의!))
-  // if (!user) return <Navigate to="/login" replace />;
 
 
   // 필터
@@ -145,6 +144,7 @@ function AccountListPage(){
 
   // 갯수 세팅
   const totalCount = filtered.length;
+  
 
   // 상태 칩
   const Chip = ({ active, children, onClick }) => (
@@ -165,7 +165,8 @@ function AccountListPage(){
               <p className="text-sm text-gray-600 mt-1">보유 중인 계좌를 한눈에 확인하고, 빠르게 이체/관리하세요.</p>
             </div>
             <div className="flex items-center gap-2">
-              <button className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">계좌개설</button>
+              <button onClick={() => goToAccountOpenPage(navigate)} 
+                className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">계좌개설</button>
               <button className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">이체하기</button>
             </div>
           </div>

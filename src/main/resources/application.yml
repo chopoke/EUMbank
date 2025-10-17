@@ -164,5 +164,5 @@ logging:
 # 금감원 대출API
 # ===================================================================
 finlife:
-  base-url: https://finlife.fss.or.kr/finlifeapi
+  base-url: "https://finlife.fss.or.kr"
   api-key: ${FINLIFE_API_KEY}   # 운영/로컬 환경변수로 주입

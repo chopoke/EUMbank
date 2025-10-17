@@ -17,14 +17,7 @@ public class LoanController {
     // 대출 상품 목록
     private final FssFinlifeService fssFinlifeService;
 
-//    // 대출 상품 목록
-//    @GetMapping("/mortgage")
-//    public String mortgageProduct(@RequestParam(defaultValue = "020000") String topFinGrpNo,     // 은행권 예시
-//                                  @RequestParam(defaultValue = "1") int pageNo){
-//        return fssFinlifeService.getMortgageProducts(topFinGrpNo, pageNo);
-//    }
-
-    /** 1) 원본 JSON 그대로 반환 (디버그/검증용) */
+    // 주택담보대출 api json원본 결과
     @GetMapping(value = "/mortgage/raw", produces = MediaType.APPLICATION_JSON_VALUE)
     public String mortgageRaw(
             @RequestParam(defaultValue = "020000") String topFinGrpNo,
@@ -33,7 +26,7 @@ public class LoanController {
         return fssFinlifeService.getMortgageProductsRaw(topFinGrpNo, pageNo);
     }
 
-    /** 2) 화면에 바로 쓸 수 있게 가공된 리스트 반환 */
+    // 상품 목록으로 다듬기 (Json -> 가공)
     @GetMapping("/mortgage")
     public List<LoanProductDTO> mortgageList(
             @RequestParam(defaultValue = "020000") String topFinGrpNo,
@@ -42,4 +35,6 @@ public class LoanController {
         return fssFinlifeService.getMortgageProductsForList(topFinGrpNo, pageNo);
     }
 
+    @GetMapping("/mortgage/{lId}")
+    public
 }

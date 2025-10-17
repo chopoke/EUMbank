@@ -23,3 +23,7 @@ export const fetchMortgageProducts = ({ topFinGrpNo = "020000", pageNo = 1 } = {
 // (원본 JSON 확인용)
 export const fetchMortgageProductsRaw = ({ topFinGrpNo = "020000", pageNo = 1 } = {}) =>
   api.get("/api/loan/mortgage/raw", { params: { topFinGrpNo, pageNo } });
+
+// 대출 상품 상세
+export const fetchLoanProductDetail = (id) =>
+  api.get(`/api/loan/mortgage/${id}`);

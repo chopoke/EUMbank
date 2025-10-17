@@ -25,6 +25,8 @@ import { AccountHistoryPage } from "./pages/account/AccountHistoryPage";
 
 // 주택담보대출
 import LoanMortgageProduct from "./pages/loan/products/LoanMortgageProducts"
+// 대출상품상세
+import LoanProductDetail from "./pages/loan/products/LoanProductDetail"
 
 
 // App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
@@ -94,7 +96,9 @@ function App() {
             </ProtectedRoute>} />
 
         {/* 주택담보대출 상품 목록 */}
-        <Route path="/fss/mortgage" element={<LoanMortgageProduct/>} />
+        <Route path="/fss/mortgage" element={<LoanMortgageProduct/>} /> 
+        {/* 상품 상세 */}
+        <Route path="/fss/mortgage/:id" element={<LoanProductDetail/>} /> 
 
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
