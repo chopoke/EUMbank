@@ -94,7 +94,7 @@ export default function Step2IdVerify() {
     };
 
     const canStart = !!file && checked && !loading;
-    const primaryLabel = verified ? "다음" : loading ? "검증 중…" : "OCR 시작";
+    const primaryLabel = verified ? "다음" : loading ? "검증 중…" : "인증 시작";
 
     // 최종 버튼 입력버튼
     function finalButton() {

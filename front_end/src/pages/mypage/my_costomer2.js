@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { testmypage } from '../../api/accounts';
+import { updateProfile } from '../../api/accounts';
 import React from "react";
+import { Link } from 'react-router-dom';
 // Header Component
 function Header() {
   return (
@@ -62,51 +64,66 @@ function TabNavigation({ activeTab, onTabChange }) {
 }
 
 // OverviewTab Component
-function OverviewTab() {
+function OverviewTab({onTabSwitch}) {
   const services = [
     {
       title: '계좌 조회',
       description: '전체 계좌 현황 및 잔액 확인',
       icon: 'ri-bank-line',
-      color: 'from-blue-500 to-blue-600',
-      image: 'https://readdy.ai/api/search-image?query=modern%20banking%20account%20overview%20with%20elegant%20financial%20dashboard%2C%20clean%20white%20background%2C%20professional%20banking%20interface%2C%20digital%20account%20management%2C%20minimalist%20design%20style%2C%20soft%20lighting&width=400&height=300&seq=account_overview&orientation=landscape'
+      color: 'from-sky-400 to-sky-400',
+      image: 'https://readdy.ai/api/search-image?query=modern%20banking%20account%20overview%20with%20elegant%20financial%20dashboard%2C%20clean%20white%20background%2C%20professional%20banking%20interface%2C%20digital%20account%20management%2C%20minimalist%20design%20style%2C%20soft%20lighting&width=400&height=300&seq=account_overview&orientation=landscape',
+      href: "/accounts"
     },
     {
-      title: '카드/대출',
-      description: '카드 사용내역 및 대출 관리',
+      title: '대출',
+      description: '대출 관리',
       icon: 'ri-bank-card-line',
-      color: 'from-teal-500 to-teal-600',
+      color: 'from-teal-400 to-teal-400',
       image: 'https://readdy.ai/api/search-image?query=elegant%20credit%20cards%20and%20loan%20management%20interface%2C%20modern%20banking%20cards%20display%2C%20clean%20white%20background%2C%20professional%20financial%20services%2C%20minimalist%20design%2C%20soft%20professional%20lighting&width=400&height=300&seq=card_loan&orientation=landscape'
     },
     {
-      title: '투자/자산',
+      title: '자산관리',
       description: '투자 포트폴리오 및 자산 현황',
       icon: 'ri-line-chart-line',
-      color: 'from-green-500 to-green-600',
+      color: 'from-green-400 to-green-400',
       image: 'https://readdy.ai/api/search-image?query=investment%20portfolio%20dashboard%20with%20growing%20charts%20and%20financial%20assets%2C%20clean%20white%20background%2C%20professional%20wealth%20management%20interface%2C%20minimalist%20design%2C%20modern%20financial%20graphics&width=400&height=300&seq=investment_wealth&orientation=landscape'
     },
     {
       title: '보안 설정',
-      description: 'OTP, 비밀번호 및 보안 관리',
+      description: '비밀번호 및 보안 관리',
       icon: 'ri-shield-check-line',
-      color: 'from-indigo-500 to-indigo-600',
-      image: 'https://readdy.ai/api/search-image?query=digital%20security%20shield%20and%20lock%20interface%2C%20modern%20banking%20security%20system%2C%20clean%20white%20background%2C%20professional%20cybersecurity%20design%2C%20minimalist%20tech%20style%2C%20secure%20banking%20environment&width=400&height=300&seq=security_settings&orientation=landscape'
+      color: 'from-indigo-400 to-indigo-400',
+      image: 'https://readdy.ai/api/search-image?query=digital%20security%20shield%20and%20lock%20interface%2C%20modern%20banking%20security%20system%2C%20clean%20white%20background%2C%20professional%20cybersecurity%20design%2C%20minimalist%20tech%20style%2C%20secure%20banking%20environment&width=400&height=300&seq=security_settings&orientation=landscape',
+      href: "#",
+      targetTab: 'security'
     },
     {
       title: '개인정보 수정',
       description: '회원정보 및 연락처 변경',
       icon: 'ri-user-settings-line',
-      color: 'from-purple-500 to-purple-600',
-      image: 'https://readdy.ai/api/search-image?query=personal%20profile%20management%20interface%2C%20modern%20user%20settings%20dashboard%2C%20clean%20white%20background%2C%20professional%20account%20management%2C%20minimalist%20design%2C%20user-friendly%20interface&width=400&height=300&seq=personal_info&orientation=landscape'
+      color: 'from-purple-300 to-purple-200',
+      image: 'https://readdy.ai/api/search-image?query=personal%20profile%20management%20interface%2C%20modern%20user%20settings%20dashboard%2C%20clean%20white%20background%2C%20professional%20account%20management%2C%20minimalist%20design%2C%20user-friendly%20interface&width=400&height=300&seq=personal_info&orientation=landscape',
+      href: "#",
+      targetTab: 'profile'
     },
     {
       title: '빠른 이체',
       description: '자주 사용하는 계좌로 빠른 송금',
       icon: 'ri-exchange-line',
-      color: 'from-orange-500 to-orange-600',
-      image: 'https://readdy.ai/api/search-image?query=quick%20money%20transfer%20interface%20with%20arrows%20and%20banking%20symbols%2C%20modern%20digital%20payment%20system%2C%20clean%20white%20background%2C%20professional%20financial%20transfer%2C%20minimalist%20design&width=400&height=300&seq=quick_transfer&orientation=landscape'
+      color: 'from-orange-300 to-orange-300',
+      image: 'https://readdy.ai/api/search-image?query=quick%20money%20transfer%20interface%20with%20arrows%20and%20banking%20symbols%2C%20modern%20digital%20payment%20system%2C%20clean%20white%20background%2C%20professional%20financial%20transfer%2C%20minimalist%20design&width=400&height=300&seq=quick_transfer&orientation=landscape',
+      href: "#"
     }
   ];
+
+  // Link의 기본 동작을 막고 탭 전환 함수를 실행하는 범용 핸들러
+  const handleTabSwitch = (event, targetTabName) => {
+    // targetTabName이 있고 onTabSwitch 함수가 전달되었는지 확인
+    if (targetTabName && onTabSwitch) {
+      event.preventDefault(); // Link의 URL 이동 기본 동작 방지
+      onTabSwitch(targetTabName); // ★ 매개변수로 탭 이름(예: 'security' 또는 'profile') 전달
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -119,8 +136,12 @@ function OverviewTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {services.map((service, index) => (
-          <div
+          <Link
             key={index}
+            // '탭 전환' 항목(href가 #이거나 targetTab이 있는 항목)에만 핸들러 적용
+            onClick={service.targetTab ? (e) => handleTabSwitch(e, service.targetTab) : undefined}
+            // to는 href 값을 그대로 사용합니다. (일반 링크는 /accounts로, 프로필은 #로)
+            to={service.href || "#"}
             className="group bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-100 cursor-pointer"
           >
             <div className="relative h-48 overflow-hidden">
@@ -146,7 +167,7 @@ function OverviewTab() {
                 <i className="ri-arrow-right-line ml-1 group-hover:translate-x-1 transition-transform"></i>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -169,21 +190,94 @@ function OverviewTab() {
 }
 
 // ProfileTab Component
-function ProfileTab() {
+function ProfileTab({initialData}) {
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState({
-    name: '조원빈',
-    email: 'wonbin.cho@email.com',
-    phone: '010-1234-5678',
-    address: '서울특별시 강남구 테헤란로 123',
-    birthDate: '1990-05-15',
-    occupation: '소프트웨어 엔지니어'
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    birthDate: '',
+    occupation: ''
   });
 
+  useEffect(() => {
+    // initialData가 존재하고, DTO의 핵심 필드가 채워졌을 때만 실행
+    // cnameKr 대신 cnamekr로 접근하거나, 더 안전하게 cNameKr도 시도합니다.
+    if (initialData && (initialData.cnameKr || initialData.cnamekr)) { 
+        
+        console.log("ProfileTab: API 데이터 수신 및 상태 업데이트:", initialData);
+        
+        // ⭐ 핵심: 로그에 표시된 실제 키를 사용합니다.
+        // DTO 필드명 (cnameKr, cemail)이 소문자 시작으로 들어왔다면,
+        // JSON 키는 'cnamekr', 'cemail' 형태로 들어올 가능성이 높습니다.
+        
+        // 옵셔널 체이닝과 OR 연산자를 사용하여 가장 확실한 키를 찾습니다.
+        const nameKey = initialData.cnameKr; 
+        const emailKey = initialData.cemail;
+        const phoneKey = initialData.cphoneMobile;
+        const birthKey = initialData.cbirthDt;
+
+        setProfileData({
+            name: nameKey || '', 
+            email: emailKey || '', 
+            phone: phoneKey || '',
+            
+            // 날짜 형식 변환: T 뒤의 시간 부분 제거
+            birthDate: birthKey ? birthKey.split('T')[0] : '', 
+            
+            address: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
+            occupation: '정보 없음' // DTO에 해당 필드가 없으므로 기본값 유지
+        });
+    } else {
+        // 이 로그가 계속 찍히지 않는지 확인하세요. (API 호출이 두 번 성공해야 합니다.)
+        console.log("ProfileTab: initialData가 비어있거나 아직 로딩 중입니다."); 
+    }
+  }, [initialData]);
+
   const handleSave = () => {
-    setIsEditing(false);
-    // 저장 로직 추가
-  };
+        // 서버로 전송할 DTO 형식에 맞게 데이터를 매핑합니다.
+        // 현재 ProfileData 키(name, email, phone)를 DTO 키(cnameKr, cemail, cphoneMobile)로 다시 변환해야 합니다.
+        console.log("프론트 상태 (profileData.name):", profileData.name);
+
+        const updatedDto = {
+            ...initialData, 
+
+            // 2. 수정된 필드만 덮어씁니다.
+            //    (백엔드 DTO 필드명 cNameKr, cEmail 등과 일치시켜야 합니다.)
+            cnameKr: profileData.name, 
+            cEmail: profileData.email,
+            cPhoneMobile: profileData.phone,
+            cBirthDt: profileData.birthDate,
+
+            // 3. (옵션) 업데이트 시 갱신 정보를 추가합니다. (DB UpdatedAt, UpdatedBy 컬럼용)
+            // cUpdatedAt: new Date().toISOString(),
+            // cUpdatedBy: '현재 로그인 사용자 ID'
+        };
+        
+        console.log("전송될 최종 DTO:", updatedDto);
+
+        // 1. API 호출
+        updateProfile(updatedDto)
+            .then(res => {
+                // 2. 서버 응답 성공 (예: 200 OK)
+                console.log("프로필 업데이트 성공:", res.data);
+                alert('프로필 정보가 성공적으로 저장되었습니다.');
+                
+                // 3. 편집 모드 종료
+                setIsEditing(false);
+                
+                // 4. (선택 사항) 부모 컴포넌트(MyPage)의 상태도 갱신하도록 콜백 함수를 호출할 수 있습니다.
+            })
+            .catch(error => {
+                // 5. API 호출 실패
+                console.error("프로필 업데이트 실패:", error);
+                alert('프로필 업데이트에 실패했습니다. 다시 시도해 주세요.');
+                
+                // 에러 발생 시 편집 모드를 유지할지 결정할 수 있습니다.
+                // setIsEditing(false);
+            });
+    };
 
   return (
     <div className="space-y-6">
@@ -212,7 +306,7 @@ function ProfileTab() {
           <div className="flex items-center space-x-6">
             <div className="relative">
               <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                조
+                {profileData.name[0]}
               </div>
               {isEditing && (
                 <button className="absolute -bottom-1 -right-1 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
@@ -1416,7 +1510,7 @@ function Sidebar({ customerName }) {
               <i className="ri-mail-line text-gray-400"></i>
               <div>
                 <div className="text-xs text-gray-500">이메일</div>
-                <div className="text-sm">support@neobank.com</div>
+                <div className="text-sm">support@E-UMbank.com</div>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -1526,41 +1620,48 @@ function Footer() {
 
 function MyPage() {
 
-
+  const [customerProfile, setCustomerProfile] = useState({});
   const [customerName, setCustomerName] = useState('이름없음');
   const [activeTab, setActiveTab] = useState('overview');
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'overview':
-        return <OverviewTab />;
-      case 'profile':
-        return <ProfileTab />;
-      case 'security':
-        return <SecurityTab />;
-      case 'limit':
-        return <LimitTab />;
-      case 'document':
-        return <DocumentTab />;
-      case 'tax':
-        return <TaxTab />;
-      default:
-        return <OverviewTab />;
-    }
+  // ★ 범용 탭 전환 함수 정의
+  const goToTab = (tabName) => {
+      setActiveTab(tabName);
   };
+  // const renderTabContent = () => {
+  //   switch (activeTab) {
+  //     case 'overview':
+  //       return <OverviewTab />;
+  //     case 'profile':
+  //       return <ProfileTab />;
+  //     case 'security':
+  //       return <SecurityTab />;
+  //     case 'limit':
+  //       return <LimitTab />;
+  //     case 'document':
+  //       return <DocumentTab />;
+  //     case 'tax':
+  //       return <TaxTab />;
+  //     default:
+  //       return <OverviewTab />;
+  //   }
+  // };
   // 2. API 호출 및 상태 업데이트
   useEffect(() => {
     testmypage()
         .then(res => {
-            console.log("API 응답 데이터 (res):", res); 
+            const customerData = res.data; 
             
-            const fetchedName = res?.data?.customerName; 
+            setCustomerProfile(customerData); // DTO 객체 전체를 customerProfile 상태에 저장
 
+            // ⭐ 1. DTO 필드명과 일치하는 cNameKr이 있으면 사용 (우선순위 1)
+            // ⭐ 2. 없으면 Lower CamelCase인 cnameKr 사용 (우선순위 2)
+            const fetchedName = customerData?.cnameKr;
+            
             if (fetchedName) {
                 setCustomerName(fetchedName); 
             } else {
-                console.error("응답 데이터 구조 문제: res.data.customerName 키를 찾을 수 없습니다.");
-                // 이 else 블록은 이제 res.data가 없거나 customerName이 비어있을 때만 실행됩니다.
+                console.error("DTO에서 cnameKr 필드를 찾을 수 없거나 값이 비어있습니다.");
                 setCustomerName('데이터 오류'); 
             }
         })
@@ -1569,7 +1670,28 @@ function MyPage() {
             setCustomerName('통신 오류');
         });
   }, []);
+  
 
+  
+  const renderTabContent = () => {
+        switch (activeTab) {
+            case 'overview':
+                return <OverviewTab onTabSwitch={goToTab} />;
+            case 'profile':
+                // 3. ProfileTab에 customerProfile 데이터를 props로 전달
+                return <ProfileTab initialData={customerProfile} />; 
+            case 'security':
+                return <SecurityTab />;
+            case 'limit':
+                return <LimitTab />;
+            case 'document':
+                return <DocumentTab />;
+            case 'tax':
+                return <TaxTab />;
+            default:
+                return <OverviewTab />;
+        }
+    };
   
 
   return (

@@ -146,7 +146,7 @@ exim:
 jwt:
   access:
     secret: change-this-to-a-very-long-random-access-secret-at-least-64-bytes
-    ttl-seconds: 1800
+    ttl-seconds: 36000
   refresh:
     secret: change-this-to-a-very-long-random-refresh-secret-at-least-64-bytes
     ttl-seconds: 86400

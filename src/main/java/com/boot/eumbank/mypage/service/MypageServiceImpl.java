@@ -15,8 +15,17 @@ public class MypageServiceImpl {
     public MypageCustomer mypageCustomer(int i) {
 
         System.out.println("test1");
-        MypageCustomer test = mypageRepository.findById(i).orElseThrow(() -> new IllegalArgumentException("게시글 번호를 확인하세요!"));
-        System.out.println(test);
-        return null;
+        MypageCustomer myc = mypageRepository.findById(i).orElseThrow(() -> new IllegalArgumentException("게시글 번호를 확인하세요!"));
+        System.out.println(myc);
+        return myc;
+    }
+
+    @Transactional
+    public MypageCustomer updateMypage(MypageCustomer dto) {
+
+        System.out.println(dto);
+
+
+        return mypageRepository.save(dto);
     }
 }
