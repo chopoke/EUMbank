@@ -39,14 +39,6 @@ export default function BulkTransferComplete() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      {/* Header */}
-      <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur border-b">
-        <div className="h-16 flex items-center justify-between px-6">
-          <div className="flex items-center gap-8">
-            <a href="/" className="font-semibold text-xl text-blue-700 tracking-tight">이음은행</a>
-          </div>
-        </div>
-      </header>
 
       <main className="mx-auto max-w-screen-xl px-6 py-8">
         {/* 요약 카드 */}

@@ -66,57 +66,6 @@ export default function TransferComplete() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      {/* Header */}
-      <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b">
-        <div className="hidden md:flex h-10 items-center justify-between px-6 text-sm text-gray-600">
-          <div className="flex items-center gap-4">
-            <a href="#" className="hover:underline">공지</a>
-            <a href="#" className="hover:underline">접근성</a>
-            <a href="#" className="hover:underline">고객센터</a>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="hover:underline" aria-label="언어 전환">KO/EN</button>
-            <button className="relative" aria-label="알림">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-gray-700">
-                <path d="M12 22c1.1 0 2-.9 2-2h-4a2 2 0 0 0 2 2Zm6-6V11a6 6 0 1 0-12 0v5l-2 2v1h16v-1l-2-2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1">3</span>
-            </button>
-          </div>
-        </div>
-        <div className="h-16 flex items-center justify-between px-6">
-          <div className="flex items-center gap-8">
-            <a href="#" className="font-semibold text-xl text-blue-700 tracking-tight">NeoBank</a>
-            <nav className="hidden lg:flex items-center gap-6 text-sm text-gray-700">
-              <a className="hover:text-blue-700" href="#">개인</a>
-              <a className="hover:text-blue-700" href="#">상품</a>
-              <a className="hover:text-blue-700" href="#">펀드</a>
-              <a className="hover:text-blue-700" href="#">자산관리</a>
-              <a className="hover:text-blue-700" href="#">외환/환율</a>
-              <a className="hover:text-blue-700" href="#">이벤트</a>
-            </nav>
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="relative hidden md:block">
-              <input className="peer w-64 rounded-full border border-gray-300 pl-10 pr-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="메뉴나 기능 검색" />
-              <span className="absolute left-3 top-2.5 text-gray-500">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M21 21l-4.35-4.35M10 17a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </span>
-            </label>
-            <div className="flex items-center gap-2 text-sm text-gray-700">
-              <span className="hidden sm:inline">안전한 접속중</span>
-              <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span className="text-gray-700">보안</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
 
       <main id="main">
         {/* Breadcrumb & Title */}
@@ -251,39 +200,6 @@ export default function TransferComplete() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-50 border-t">
-        <div className="mx-auto max-w-screen-xl px-6 py-10 text-sm text-gray-600">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <div className="font-medium text-gray-900 mb-2">NeoBank</div>
-              <p>사업자등록번호 123-45-67890</p>
-              <p>대표 ㈜네오뱅크</p>
-            </div>
-            <div>
-              <div className="font-medium text-gray-900 mb-2">약관</div>
-              <ul className="space-y-1">
-                <li><a href="#tos" className="hover:underline">전자금융거래약관</a></li>
-                <li><a href="#privacy" className="hover:underline">개인정보 처리방침</a></li>
-                <li><a href="#disclosure" className="hover:underline">경영공시</a></li>
-              </ul>
-            </div>
-            <div>
-              <div className="font-medium text-gray-900 mb-2">고객지원</div>
-              <ul className="space-y-1">
-                <li><a href="#faq" className="hover:underline">FAQ</a></li>
-                <li><a href="#branch" className="hover:underline">지점/ATM 찾기</a></li>
-                <li><a href="#contact" className="hover:underline">문의하기</a></li>
-              </ul>
-            </div>
-            <div>
-              <div className="font-medium text-gray-900 mb-2">인증</div>
-              <p>ISMS · 개인정보보호 인증</p>
-              <p className="mt-2 text-gray-500">© 2025 NeoBank</p>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

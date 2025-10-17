@@ -31,7 +31,7 @@ import java.util.UUID;
  * - 이체 관련 모든 비즈니스 로직 구현
  * - 기존 Entity들을 사용하여 구성이 완전히 동일한 이체 로직 구현
  */
-@Service
+@Service("transferDomainService")
 @RequiredArgsConstructor
 @Slf4j
 @Transactional(readOnly = true)

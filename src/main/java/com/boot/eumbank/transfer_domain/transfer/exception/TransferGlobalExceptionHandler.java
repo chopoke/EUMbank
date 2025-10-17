@@ -15,9 +15,9 @@ import java.util.Map;
  * - @RestControllerAdvice를 사용하여 모든 Controller의 예외를 한 곳에서 처리
  * - 커스텀 예외들을 적절한 HTTP 상태 코드와 메시지로 변환
  */
-@RestControllerAdvice
+@RestControllerAdvice("com.boot.eumbank.transfer_domain")
 @Slf4j
-public class GlobalExceptionHandler {
+public class TransferGlobalExceptionHandler {
 
     /**
      * [이체 예외 공통 처리]
