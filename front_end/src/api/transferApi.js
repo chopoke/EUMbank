@@ -8,11 +8,18 @@ export const transferApi = {
   
   // 이체 관련
   createTransfer: (data) => api.post('/api/transfer', data),
-  createScheduledTransfer: (data) => api.post('/api/transfer/scheduled', data),
+  createReserveTransfer: (data) => api.post('/api/transfer/reserve', data),
   createBulkTransfer: (data) => api.post('/api/transfer/bulk', data),
   
   // 이체 내역
-  getTransferHistory: (params) => api.get('/api/transfer/history', { params }),
+  getTransferHistory: (accountNo, params) => api.get(`/api/transfer/history/${accountNo}`, { params }),
+  
+  // 예약 이체 관리
+  getReserveTransfers: (accountNo) => api.get(`/api/transfer/reserve/${accountNo}`),
+  cancelReserveTransfer: (orderId) => api.delete(`/api/transfer/reserve/${orderId}`),
+  
+  // 이체 확인
+  confirmTransfer: (data) => api.post('/api/transfer/confirm', data),
   
   // 은행/수취인 관련
   getBanks: () => api.get('/api/transfer/banks'),

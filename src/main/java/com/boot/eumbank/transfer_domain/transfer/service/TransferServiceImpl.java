@@ -551,4 +551,93 @@ public class TransferServiceImpl implements TransferService {
         
         return account.getBalance().longValue();
     }
+    
+    @Override
+    public Object getAccounts() {
+        log.info("계좌 목록 조회 (JWT 토큰 기반)");
+        
+        // TODO: JWT 토큰에서 고객 정보 추출
+        // 현재는 임시로 하드코딩된 데이터 반환
+        List<Map<String, Object>> accounts = List.of(
+            Map.of("aId", 1, "aNo", 1234567890, "aBalance", 1000000, "aType", "입출금", "aStatus", "ACTIVE"),
+            Map.of("aId", 2, "aNo", 1234567891, "aBalance", 2000000, "aType", "적금", "aStatus", "ACTIVE")
+        );
+        
+        return Map.of("accounts", accounts);
+    }
+    
+    @Override
+    public Integer getAccountBalance(Integer accountNo) {
+        log.info("계좌 잔액 조회 - 계좌: {}", accountNo);
+        
+        Optional<Account> accountOpt = accountRepository.findById(accountNo);
+        if (accountOpt.isEmpty()) {
+            throw new AccountNotFoundException("계좌를 찾을 수 없습니다: " + accountNo);
+        }
+        
+        Account account = accountOpt.get();
+        return account.getBalance().intValue();
+    }
+    
+    @Override
+    public List<Map<String, Object>> getRecentRecipients(Integer accountNo) {
+        log.info("최근 수취인 조회 - 계좌: {}", accountNo);
+        
+        // 최근 이체 내역에서 수취인 정보 추출
+        List<TransferHistory> recentTransfers = transferHistoryRepository
+            .findByAccountNoOrderByTransferAtDescList(accountNo, 
+                org.springframework.data.domain.PageRequest.of(0, 10));
+        
+        List<Map<String, Object>> recipients = new ArrayList<>();
+        for (TransferHistory transfer : recentTransfers) {
+            Map<String, Object> recipient = new HashMap<>();
+            recipient.put("accountNo", transfer.getOtherAccount());
+            recipient.put("bankCode", "001"); // 임시 하드코딩
+            recipient.put("bankName", "국민은행"); // 임시 하드코딩
+            recipient.put("lastTransferAt", transfer.getTransferAt());
+            recipient.put("lastAmount", transfer.getAmount());
+            recipients.add(recipient);
+        }
+        
+        return recipients;
+    }
+    
+    @Override
+    public List<Map<String, Object>> getFavoriteAccounts() {
+        log.info("즐겨찾기 계좌 조회");
+        
+        // TODO: 실제 즐겨찾기 테이블에서 조회
+        // 현재는 임시 하드코딩된 데이터 반환
+        return List.of(
+            Map.of("accountNo", "9876543210", "bankCode", "002", "bankName", "신한은행", "holderName", "김철수"),
+            Map.of("accountNo", "9876543211", "bankCode", "003", "bankName", "우리은행", "holderName", "이영희")
+        );
+    }
+    
+    @Override
+    public Map<String, Object> calculateTransferFee(TransferFeeRequestDto request) {
+        log.info("이체 수수료 계산 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
+                request.getFromAccountNo(), request.getToAccount(), request.getAmount());
+        
+        // 간단한 수수료 계산 로직
+        Integer amount = request.getAmount();
+        Integer fee = 0;
+        
+        // 금액에 따른 수수료 계산
+        if (amount <= 100000) {
+            fee = 0; // 10만원 이하는 무료
+        } else if (amount <= 1000000) {
+            fee = 500; // 100만원 이하는 500원
+        } else {
+            fee = 1000; // 100만원 초과는 1000원
+        }
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("amount", amount);
+        result.put("fee", fee);
+        result.put("totalAmount", amount + fee);
+        result.put("feeType", "일반이체");
+        
+        return result;
+    }
 }

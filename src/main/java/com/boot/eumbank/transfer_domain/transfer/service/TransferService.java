@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 
 public interface TransferService {
     
@@ -39,4 +40,19 @@ public interface TransferService {
     
     // 계좌 목록 조회
     List<Object> getAccounts(Customer customer);
+    
+    // 계좌 목록 조회 (JWT 토큰 기반)
+    Object getAccounts();
+    
+    // 계좌 잔액 조회 (JWT 토큰 기반)
+    Integer getAccountBalance(Integer accountNo);
+    
+    // 최근 수취인 조회
+    List<Map<String, Object>> getRecentRecipients(Integer accountNo);
+    
+    // 즐겨찾기 계좌 조회
+    List<Map<String, Object>> getFavoriteAccounts();
+    
+    // 이체 수수료 계산
+    Map<String, Object> calculateTransferFee(TransferFeeRequestDto request);
 }
