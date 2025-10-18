@@ -50,7 +50,7 @@ public class TransferSchedulerService {
         try {
             // === 1단계: 스케줄된 예약 이체 목록 조회 ===
             // SCHEDULED 상태의 예약 이체만 조회
-            List<TransferOrder> scheduledTransfers = transferOrderRepository.findByTo_statusAndTo_start_atLessThanEqual("SCHEDULED", LocalDateTime.now());
+            List<TransferOrder> scheduledTransfers = transferOrderRepository.findByStatusAndStartAtLessThanEqual("SCHEDULED", LocalDateTime.now());
             
             // 로그 기록 - 조회된 예약 이체 건수
             log.info("조회된 예약 이체 건수: {}", scheduledTransfers.size());

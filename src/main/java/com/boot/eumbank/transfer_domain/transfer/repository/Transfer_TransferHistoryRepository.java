@@ -4,6 +4,8 @@ import com.boot.eumbank.account.select.entity.TransferHistory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -53,8 +55,10 @@ public interface Transfer_TransferHistoryRepository extends JpaRepository<Transf
 
     /**
      * 오늘 거래 내역 조회
+     * @Query 사용으로 JPA 네이밍 규칙 문제 회피
      */
-    List<TransferHistory> findTodayTransfers(Integer accountNo);
+    @Query("SELECT t FROM TransferHistory t WHERE t.accountNo = :accountNo AND DATE(t.transferAt) = CURRENT_DATE")
+    List<TransferHistory> findTodayTransfers(@Param("accountNo") Integer accountNo);
 
     /**
      * 거래 타입별 조회
@@ -63,11 +67,15 @@ public interface Transfer_TransferHistoryRepository extends JpaRepository<Transf
 
     /**
      * 출금 거래 조회
+     * @Query 사용으로 JPA 네이밍 규칙 문제 회피
      */
-    List<TransferHistory> findWithdrawalsByAccountNo(Integer accountNo);
+    @Query("SELECT t FROM TransferHistory t WHERE t.accountNo = :accountNo AND t.transferType = '출금'")
+    List<TransferHistory> findWithdrawalsByAccountNo(@Param("accountNo") Integer accountNo);
 
     /**
      * 입금 거래 조회
+     * @Query 사용으로 JPA 네이밍 규칙 문제 회피
      */
-    List<TransferHistory> findDepositsByAccountNo(Integer accountNo);
+    @Query("SELECT t FROM TransferHistory t WHERE t.accountNo = :accountNo AND t.transferType = '입금'")
+    List<TransferHistory> findDepositsByAccountNo(@Param("accountNo") Integer accountNo);
 }

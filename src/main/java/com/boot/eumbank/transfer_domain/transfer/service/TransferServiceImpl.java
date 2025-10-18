@@ -2,6 +2,7 @@ package com.boot.eumbank.transfer_domain.transfer.service;
 
 import com.boot.eumbank.account.Open.model.Account;
 import com.boot.eumbank.account.select.entity.TransferHistory;
+import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.transfer_domain.account.entity.AccountLimit;
 import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountLimitRepository;
 import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountRepository;
@@ -22,7 +23,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -208,7 +211,7 @@ public class TransferServiceImpl implements TransferService {
     }
 
     @Override
-    public Page<TransferHistoryListDto> getTransferHistory(Integer accountNo, String type, 
+    public Page<TransferHistoryListDto> getTransferHistory(Integer accountNo, String type,
                                                          String fromDate, String toDate, Pageable pageable) {
         log.info("이체 내역 조회 - 계좌: {}, 유형: {}, 시작일: {}, 종료일: {}", 
                 accountNo, type, fromDate, toDate);
@@ -236,7 +239,7 @@ public class TransferServiceImpl implements TransferService {
     public List<TransferOrderDto> getReserveTransfers(Integer accountNo) {
         log.info("예약 이체 목록 조회 - 계좌: {}", accountNo);
 
-        List<TransferOrder> orders = transferOrderRepository.findByA_noOrderByTo_created_atDesc(accountNo);
+        List<TransferOrder> orders = transferOrderRepository.findByAccountNoOrderByCreatedAtDesc(accountNo);
         
         return orders.stream()
                 .map(this::convertToTransferOrderDto)
@@ -295,7 +298,6 @@ public class TransferServiceImpl implements TransferService {
                 .build();
     }
 
-    @Override
     @Transactional
     public TransferResultDto executeTransfer(Integer fromAccountNo, String toAccountNo, 
                                            String toBankName, String toName, Integer amount, 
@@ -349,7 +351,7 @@ public class TransferServiceImpl implements TransferService {
 
     @Override
     @Transactional
-    public TransferResultDto executeReserveTransfer(Integer orderId) {
+    public void executeReserveTransfer(Integer orderId) {
         log.info("예약 이체 실행 - 주문ID: {}", orderId);
 
         TransferOrder order = transferOrderRepository.findById(orderId)
@@ -361,7 +363,7 @@ public class TransferServiceImpl implements TransferService {
 
         try {
             // 이체 실행
-            TransferResultDto result = executeTransfer(
+            executeTransfer(
                     order.getA_no(),
                     order.getTo_dest_account_no(),
                     order.getTo_bank_code(),
@@ -375,8 +377,6 @@ public class TransferServiceImpl implements TransferService {
             order.complete();
             transferOrderRepository.save(order);
 
-            return result;
-
         } catch (Exception e) {
             // 실패 시 상태 업데이트
             order.updateStatus("FAILED");
@@ -385,7 +385,6 @@ public class TransferServiceImpl implements TransferService {
         }
     }
 
-    @Override
     public boolean checkTransferLimit(Integer accountNo, Integer amount) {
         // 계좌 한도 정보 조회
         Optional<AccountLimit> limitOpt = accountLimitRepository.findByAccountNo(accountNo);
@@ -411,7 +410,6 @@ public class TransferServiceImpl implements TransferService {
         return true;
     }
 
-    @Override
     public boolean validateAccountPassword(Integer accountNo, String password) {
         Account account = accountRepository.findByAccountNo(accountNo.toString())
                 .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
@@ -420,7 +418,6 @@ public class TransferServiceImpl implements TransferService {
         return password.equals(account.getAccountPwd());
     }
 
-    @Override
     public boolean checkAccountStatus(Integer accountNo) {
         Account account = accountRepository.findByAccountNo(accountNo.toString())
                 .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
@@ -518,5 +515,40 @@ public class TransferServiceImpl implements TransferService {
         return accountLimitRepository.findByAccountNo(accountNo)
                 .map(AccountLimit::getPerTransferLimit)
                 .orElse(BigDecimal.valueOf(10_000_000)); // 기본 한도
+    }
+
+    @Override
+    public List<Object> getAccounts(Customer customer) {
+        log.info("계좌 목록 조회 - 고객: {}", customer.getCId());
+        
+        // 고객의 계좌 목록 조회
+        List<Account> accounts = accountRepository.findByCNo(customer.getCustomerNo());
+        
+        return accounts.stream()
+                .map(account -> {
+                    Map<String, Object> accountInfo = new HashMap<>();
+                    accountInfo.put("accountNo", account.getAccountNo());
+                    accountInfo.put("accountId", account.getAId());
+                    accountInfo.put("balance", account.getBalance());
+                    accountInfo.put("accountType", account.getAccountType());
+                    accountInfo.put("status", account.getStatus());
+                    return (Object) accountInfo;
+                })
+                .toList();
+    }
+
+    @Override
+    public Long getAccountBalance(int accountNo, Customer customer) {
+        log.info("계좌 잔액 조회 - 계좌: {}, 고객: {}", accountNo, customer.getCId());
+        
+        Account account = accountRepository.findByAccountNo(String.valueOf(accountNo))
+                .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
+        
+        // 본인 계좌인지 확인
+        if (!account.getCNo().equals(customer.getCustomerNo())) {
+            throw new UnauthorizedException("본인 계좌가 아닙니다.");
+        }
+        
+        return account.getBalance().longValue();
     }
 }

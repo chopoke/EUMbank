@@ -155,11 +155,11 @@ public class TransferController {
      * - GET /api/transfer/reserve/{accountNo}
      */
     @GetMapping("/reserve/{accountNo}")
-    public ResponseEntity<Map<String, Object>> getReserveTransfers(@PathVariable Integer accountNo) {
+    public ResponseEntity<Map<String, Object>> getReserveTransfers(@PathVariable String accountNo) {
         log.info("예약 이체 목록 조회 - 계좌: {}", accountNo);
         
         try {
-            var reserves = transferService.getReserveTransfers(accountNo);
+            var reserves = transferService.getReserveTransfers(Integer.parseInt(accountNo));
             
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);

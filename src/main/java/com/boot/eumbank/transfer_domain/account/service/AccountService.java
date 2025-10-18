@@ -107,7 +107,7 @@ public class AccountService {
      * @param accountNo 계좌 번호
      * @return 계좌 잔액
      */
-    public BigDecimal getAccountBalance(Long accountNo) {
+    public BigDecimal getAccountBalance(Integer accountNo) {
         Account account = accountRepository.findById(accountNo)
                 .orElseThrow(() -> new IllegalArgumentException("계좌를 찾을 수 없습니다: " + accountNo));
         
@@ -228,7 +228,7 @@ public class AccountService {
             log.debug("고객 번호 (c_no): {}", customerNo);
             
             // 고객 번호(c_no)로 고객 정보 조회
-            Customer customer = customerRepository.findByCustomerNo(Long.valueOf(customerNo))
+            Customer customer = customerRepository.findByCustomerNo(customerNo)
                     .orElse(null);
             
             log.debug("조회된 고객 정보: {}", customer);

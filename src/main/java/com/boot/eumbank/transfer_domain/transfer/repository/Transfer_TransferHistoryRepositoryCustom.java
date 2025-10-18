@@ -30,11 +30,11 @@ public interface Transfer_TransferHistoryRepositoryCustom {
     /**
      * [계좌별 거래 내역 조회 - 페이징]
      * - 특정 계좌의 이체 내역을 최신순으로 페이징 처리하여 조회
-     * @param accountNo 계좌 번호 (a_no)
+     * @param accountNo 계좌 PK번호 (a_no)
      * @param pageable 페이징 정보 (페이지 번호, 크기)
      * @return 이체 내역 페이지 (Page)
      */
-    Page<TransferHistory> findByAccountNoOrderByTransferAtDesc(Long accountNo, Pageable pageable);
+    Page<TransferHistory> findByAccountNoOrderByTransferAtDescPage(Integer accountNo, Pageable pageable);
 
     /**
      * [계좌별 거래 내역 조회 - 리스트]
@@ -43,7 +43,7 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param pageable 페이징 정보 (limit 용도)
      * @return 이체 내역 리스트
      */
-    List<TransferHistory> findByAccountNoOrderByTransferAtDescList(Long accountNo, Pageable pageable);
+    List<TransferHistory> findByAccountNoOrderByTransferAtDescList(Integer accountNo, Pageable pageable);
 
     /**
      * [기간별 거래 내역 조회]
@@ -53,7 +53,7 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param endDate 종료 날짜
      * @return 기간 내 이체 내역 리스트
      */
-    List<TransferHistory> findByAccountNoAndTransferAtBetween(Long accountNo, LocalDateTime startDate, LocalDateTime endDate);
+    List<TransferHistory> findByAccountNoAndTransferAtBetween(Integer accountNo, LocalDateTime startDate, LocalDateTime endDate);
 
     /**
      * [거래 유형별 조회]
@@ -62,7 +62,7 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param transferType 거래 유형 (입금/출금/TRANSFER)
      * @return 거래 유형별 내역 리스트
      */
-    List<TransferHistory> findByAccountNoAndTransferType(Long accountNo, String transferType);
+    List<TransferHistory> findByAccountNoAndTransferType(Integer accountNo, String transferType);
 
     /**
      * [금액 이상 거래 조회]
@@ -71,7 +71,7 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param amount 최소 금액
      * @return 특정 금액 이상 거래 내역 리스트
      */
-    List<TransferHistory> findByAccountNoAndAmountGreaterThanEqual(Long accountNo, Integer amount);
+    List<TransferHistory> findByAccountNoAndAmountGreaterThanEqual(Integer accountNo, Integer amount);
 
     /**
      * [상대 계좌별 거래 조회]
@@ -80,7 +80,7 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param otherAccount 상대방 계좌번호
      * @return 상대방 계좌로의 거래 내역 리스트
      */
-    List<TransferHistory> findByAccountNoAndOtherAccount(Long accountNo, String otherAccount);
+    List<TransferHistory> findByAccountNoAndOtherAccount(Integer accountNo, String otherAccount);
 
     /**
      * [고객별 거래 내역 조회]
@@ -97,7 +97,7 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param accountNo 계좌 번호 (a_no)
      * @return 오늘 거래 내역 리스트
      */
-    List<TransferHistory> findTodayTransfers(Long accountNo);
+    List<TransferHistory> findTodayTransfers(Integer accountNo);
 
     /**
      * [거래 타입별 조회]
@@ -106,7 +106,7 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param transactionType 거래 타입 (DEPOSIT/WITHDRAW/INTERNAL_TRANSFER_IN/OUT)
      * @return 거래 타입별 내역 리스트
      */
-    List<TransferHistory> findByAccountNoAndTransactionType(Long accountNo, String transactionType);
+    List<TransferHistory> findByAccountNoAndTransactionType(Integer accountNo, String transactionType);
 
     /**
      * [출금 거래 조회]
@@ -114,7 +114,7 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param accountNo 계좌 번호 (a_no)
      * @return 출금 거래 내역 리스트
      */
-    List<TransferHistory> findWithdrawalsByAccountNo(Long accountNo);
+    List<TransferHistory> findWithdrawalsByAccountNo(Integer accountNo);
 
     /**
      * [입금 거래 조회]
@@ -122,7 +122,7 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param accountNo 계좌 번호 (a_no)
      * @return 입금 거래 내역 리스트
      */
-    List<TransferHistory> findDepositsByAccountNo(Long accountNo);
+    List<TransferHistory> findDepositsByAccountNo(Integer accountNo);
 
     /**
      * [일일 출금 합계 조회]
@@ -130,7 +130,7 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param accountNo 계좌 번호 (a_no)
      * @return 오늘 출금 합계 금액
      */
-    Integer getTodayWithdrawSum(Long accountNo);
+    Integer getTodayWithdrawSum(Integer accountNo);
 
     /**
      * [월간 출금 합계 조회]
@@ -138,5 +138,5 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @param accountNo 계좌 번호 (a_no)
      * @return 이번 달 출금 합계 금액
      */
-    Integer getMonthlyWithdrawSum(Long accountNo);
+    Integer getMonthlyWithdrawSum(Integer accountNo);
 }

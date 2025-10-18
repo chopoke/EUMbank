@@ -31,7 +31,7 @@ public interface Transfer_TransferOrderRepositoryCustom {
      * @param accountNo 계좌 번호 (a_no)
      * @return 예약 이체 목록
      */
-    List<TransferOrder> findByAccountNoOrderByCreatedAtDesc(Long accountNo);
+    List<TransferOrder> findByAccountNoOrderByCreatedAtDesc(Integer accountNo);
 
     /**
      * [계좌별 상태별 주문 조회]
@@ -40,7 +40,7 @@ public interface Transfer_TransferOrderRepositoryCustom {
      * @param status 주문 상태 (ACTIVE/SCHEDULED/COMPLETED/CANCELLED)
      * @return 상태별 예약 이체 목록
      */
-    List<TransferOrder> findByAccountNoAndStatus(Long accountNo, String status);
+    List<TransferOrder> findByAccountNoAndStatus(Integer accountNo, String status);
 
     /**
      * [활성 주문 조회]
@@ -48,7 +48,7 @@ public interface Transfer_TransferOrderRepositoryCustom {
      * @param accountNo 계좌 번호 (a_no)
      * @return 활성 예약 이체 목록
      */
-    List<TransferOrder> findActiveOrdersByAccountNo(Long accountNo);
+    List<TransferOrder> findActiveOrdersByAccountNo(Integer accountNo);
 
     /**
      * [스케줄 타입별 주문 조회]
@@ -57,7 +57,7 @@ public interface Transfer_TransferOrderRepositoryCustom {
      * @param scheduleType 스케줄 타입 (ONCE/RECURRING)
      * @return 스케줄 타입별 예약 이체 목록
      */
-    List<TransferOrder> findByAccountNoAndScheduleType(Long accountNo, String scheduleType);
+    List<TransferOrder> findByAccountNoAndScheduleType(Integer accountNo, String scheduleType);
 
     /**
      * [실행 대기 중인 주문 조회]
@@ -83,7 +83,7 @@ public interface Transfer_TransferOrderRepositoryCustom {
      * @param bankCode 은행 코드
      * @return 은행별 예약 이체 목록
      */
-    List<TransferOrder> findByAccountNoAndBankCode(Long accountNo, String bankCode);
+    List<TransferOrder> findByAccountNoAndBankCode(Integer accountNo, String bankCode);
 
     /**
      * [고객별 주문 조회]
@@ -115,7 +115,7 @@ public interface Transfer_TransferOrderRepositoryCustom {
      * @param endDate 종료 날짜
      * @return 기간 내 예약 이체 목록
      */
-    List<TransferOrder> findByAccountNoAndStartAtBetween(Long accountNo, LocalDateTime startDate, LocalDateTime endDate);
+    List<TransferOrder> findByAccountNoAndStartAtBetween(Integer accountNo, LocalDateTime startDate, LocalDateTime endDate);
 
     /**
      * [완료된 주문 조회 - 계좌별]
@@ -123,7 +123,7 @@ public interface Transfer_TransferOrderRepositoryCustom {
      * @param accountNo 계좌 번호 (a_no)
      * @return 완료된 예약 이체 목록
      */
-    List<TransferOrder> findCompletedOrdersByAccountNo(Long accountNo);
+    List<TransferOrder> findCompletedOrdersByAccountNo(Integer accountNo);
 
     /**
      * [취소된 주문 조회 - 계좌별]
@@ -131,5 +131,5 @@ public interface Transfer_TransferOrderRepositoryCustom {
      * @param accountNo 계좌 번호 (a_no)
      * @return 취소된 예약 이체 목록
      */
-    List<TransferOrder> findCancelledOrdersByAccountNo(Long accountNo);
+    List<TransferOrder> findCancelledOrdersByAccountNo(Integer accountNo);
 }

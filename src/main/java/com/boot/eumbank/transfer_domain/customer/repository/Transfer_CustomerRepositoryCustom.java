@@ -13,7 +13,7 @@ public interface Transfer_CustomerRepositoryCustom {
     /**
      * 고객 번호(c_no)로 고객 조회
      */
-    Optional<Customer> findByCustomerNo(Long customerNo);
+    Optional<Customer> findByCustomerNo(Integer customerNo);
 
     /**
      * 활성 고객만 조회

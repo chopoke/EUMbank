@@ -23,7 +23,7 @@ public class Transfer_CustomerRepositoryImpl implements Transfer_CustomerReposit
      * 고객 번호(c_no)로 고객 조회
      */
     @Override
-    public Optional<Customer> findByCustomerNo(Long customerNo) {
+    public Optional<Customer> findByCustomerNo(Integer customerNo) {
         Customer result = queryFactory
                 .selectFrom(customer)
                 .where(customer.customerNo.eq(customerNo.intValue()))
