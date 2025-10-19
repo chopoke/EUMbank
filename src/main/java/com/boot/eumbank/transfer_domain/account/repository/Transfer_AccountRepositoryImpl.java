@@ -10,7 +10,17 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * AccountRepository QueryDSL 구현체
+ * [이체 도메인 계좌 레포지토리 QueryDSL 구현체]
+ * - Transfer_AccountRepositoryCustom 인터페이스의 QueryDSL 구현
+ * - 복잡한 계좌 조회 쿼리를 QueryDSL로 구현
+ * - 주요 기능:
+ *   1) 동적 쿼리 생성 및 실행
+ *   2) 복잡한 조인 및 서브쿼리 처리
+ *   3) 정렬 및 필터링 로직 구현
+ *   4) 성능 최적화된 쿼리 작성
+ * 
+ * @author 임형욱
+ * @since 2025-10-20
  */
 @Repository
 @RequiredArgsConstructor

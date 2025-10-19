@@ -222,27 +222,28 @@ export default function TransferPage() {
       // API를 통해 계좌 목록 조회
       const accountsResponse = await transferApi.getAccounts();
       
-      if (accountsResponse.success && accountsResponse.data) {
-        setAccounts(accountsResponse.data);
+      if (accountsResponse.data && accountsResponse.data.success && accountsResponse.data.data) {
+        const accounts = accountsResponse.data.data.accounts || [];
+        setAccounts(accounts);
         
         // 내 계좌 목록 설정 (현재 선택된 계좌 제외)
-        setMyOtherAccounts(accountsResponse.data);
+        setMyOtherAccounts(accounts);
         
         // 첫 번째 계좌를 기본 선택으로 설정
-        if (accountsResponse.data.length > 0) {
-          const firstAccount = accountsResponse.data[0];
+        if (accounts.length > 0) {
+          const firstAccount = accounts[0];
           setSelectedAccount(firstAccount);
           
           // 선택된 계좌의 잔액 조회
-          const balanceResponse = await transferApi.getAccountBalance(firstAccount.accountNo);
-          if (balanceResponse.success) {
-            setBalance(balanceResponse.balance);
+          const balanceResponse = await transferApi.getAccountBalance(firstAccount.aNo);
+          if (balanceResponse.data && balanceResponse.data.success) {
+            setBalance(balanceResponse.data.data.balance);
           } else {
             setBalance(firstAccount.balance || 0);
           }
         }
       } else {
-        throw new Error(accountsResponse.error || '계좌 목록을 불러올 수 없습니다.');
+        throw new Error(accountsResponse.data?.message || '계좌 목록을 불러올 수 없습니다.');
       }
       
     } catch (error) {
@@ -257,10 +258,10 @@ export default function TransferPage() {
   const loadFavoriteAccounts = async () => {
     try {
       // 선택된 계좌가 있을 때만 조회
-      if (selectedAccount && selectedAccount.accountNo) {
-        const response = await transferApi.getRecentRecipients(selectedAccount.accountNo);
-        if (response.success && response.data) {
-          setFavoriteAccounts(response.data);
+      if (selectedAccount && selectedAccount.aNo) {
+        const response = await transferApi.getRecentRecipients(selectedAccount.aNo);
+        if (response.data && response.data.success && response.data.data) {
+          setFavoriteAccounts(response.data.data.recipients || []);
         }
       }
     } catch (error) {
@@ -284,13 +285,13 @@ export default function TransferPage() {
 
   // 최근 이체 대상 로드 (자주 쓰는 계좌 목록 활용)
   const loadRecentRecipients = async () => {
-    try {
-      const response = await transferApi.getFavoriteAccounts();
-      if (response.success && response.data) {
-        // 최근 3개만 표시
-        setRecentRecipients(response.data.slice(0, 3));
-      }
-    } catch (error) {
+      try {
+        const response = await transferApi.getFavoriteAccounts();
+        if (response.data && response.data.success) {
+          // 최근 3개만 표시
+          setRecentRecipients(response.data.data.slice(0, 3));
+        }
+      } catch (error) {
       console.error('최근 이체 대상 로딩 실패:', error.message || '알 수 없는 오류');
       // 에러 발생 시 빈 배열 유지
     }
@@ -299,13 +300,15 @@ export default function TransferPage() {
   // 수수료 조회 함수 - API 호출로 실제 수수료 조회
   const loadTransferFee = async () => {
     try {
-      if (numericAmount > 0 && selectedRecipient) {
+      if (numericAmount > 0 && selectedRecipient && selectedAccount) {
         const feeResponse = await transferApi.getTransferFee({
-          amount: numericAmount,
-          bank: selectedRecipient.bank
+          fromAccountNo: selectedAccount.aNo,                    // Integer (출금 계좌 번호)
+          toAccount: selectedRecipient.account || "0000000000", // String (수취 계좌번호)
+          amount: numericAmount,                                 // Integer (이체 금액)
+          bankCode: selectedRecipient.bankCode || "EUM"         // String (은행 코드)
         });
-        if (feeResponse.success) {
-          setFee(feeResponse.fee || 0);
+        if (feeResponse.data && feeResponse.data.success) {
+          setFee(feeResponse.data.data.fee || 0);
         } else {
           setFee(0); // 기본값으로 무료 설정
         }
@@ -327,10 +330,10 @@ export default function TransferPage() {
 
   // 선택된 계좌가 변경될 때마다 최근 이체 목록 새로고침
   useEffect(() => {
-    if (selectedAccount && selectedAccount.accountNo) {
+    if (selectedAccount && selectedAccount.aNo) {
       loadFavoriteAccounts();
     }
-  }, [selectedAccount?.accountNo]);
+  }, [selectedAccount?.aNo]);
 
   // 신규 입력 - 은행 선택과 계좌번호 입력이 모두 완료되면 자동 조회
   useEffect(() => {
@@ -366,7 +369,7 @@ export default function TransferPage() {
 
   // 내 계좌 선택 함수
   const handleSelectMyAccount = (account) => {
-    if (account.accountNo === selectedAccount?.accountNo) {
+    if (account.aNo === selectedAccount?.aNo) {
       alert('같은 계좌로는 이체할 수 없습니다.');
       return;
     }
@@ -374,7 +377,8 @@ export default function TransferPage() {
     setSelectedRecipient({
       name: '내 계좌',
       bank: '이음은행',
-      account: account.accountNumber
+      account: account.accountNo,  // accountNo는 String 타입
+      bankCode: 'EUM'  // 내 계좌는 이음은행 코드
     });
     setError(null);
   };
@@ -393,12 +397,14 @@ export default function TransferPage() {
       // 은행 + 계좌번호로 예금주명 조회
       const response = await transferApi.getAccountHolder(selectedBank, newAccountNumber);
       
-      if (response.success) {
-        setAccountHolder(response.accountHolder);
+      if (response.data && response.data.success) {
+        const holderData = response.data.data;
+        setAccountHolder(holderData.holderName);
         setSelectedRecipient({
-          name: response.accountHolder,
+          name: holderData.holderName,
           bank: banks.find(b => b.code === selectedBank)?.name || selectedBank,
-          account: newAccountNumber
+          account: newAccountNumber,
+          bankCode: selectedBank
         });
       } else {
         setAccountHolder('');
@@ -448,7 +454,8 @@ export default function TransferPage() {
 
       // 이체 요청 데이터 구성
       const requestData = {
-        fromAccountNo: selectedAccount.accountNo,
+        fromAccountNo: selectedAccount.aNo,
+        fromAccountId: selectedAccount.accountNo,  // 계좌번호 (String)
         toBank: selectedRecipient.bank,
         toAccount: selectedRecipient.account,
         toName: selectedRecipient.name,
@@ -457,28 +464,24 @@ export default function TransferPage() {
         password: transferData.password
       };
 
-      // 예약 이체인 경우
+      // 예약 이체인 경우 (TransferOrderDto 구조)
       if (isReserved && reserveDate && reserveTime) {
-        // 로컬 시간을 그대로 사용 (UTC 변환하지 않음)
-        const localDateTime = `${reserveDate}T${reserveTime}:00`;
-        
         const requestData = {
-          accountNo: selectedAccount.accountNo,
-          bankCode: selectedRecipient.bank === '이음은행' ? '004' : selectedRecipient.bank,
-          destAccountNo: selectedRecipient.account,
-          amount: numericAmount,
-          scheduleType: 'ONCE',
-          scheduleExpr: null,
-          startAt: localDateTime,
-          endAt: null,
-          memo: memo,
-          password: transferData.password
+          accountNo: selectedAccount.aNo,                    // Integer (출금 계좌 번호)
+          bankCode: selectedRecipient.bankCode || 'EUM',    // String (수취 은행 코드)
+          destAccountNo: selectedRecipient.account,          // String (수취 계좌번호)
+          amount: numericAmount,                             // Integer (이체 금액)
+          scheduleType: 'ONCE',                              // String (ONCE, RECURRING)
+          scheduleExpr: '0 0 9 * * ?',                      // String (cron 표현식)
+          startAt: `${reserveDate}T${reserveTime}:00`,       // String (시작 시간)
+          endAt: `${reserveDate}T${reserveTime}:00`,         // String (종료 시간)
+          memo: memo                                         // String (메모)
         };
         
         // 예약 이체 생성 API 호출
-        const scheduleResponse = await transferApi.createScheduledTransfer(requestData);
+        const scheduleResponse = await transferApi.createReserveTransfer(requestData);
 
-        if (scheduleResponse.success) {
+        if (scheduleResponse.data && scheduleResponse.data.success) {
           alert(`예약 이체가 성공적으로 등록되었습니다.\n예약 시간: ${reserveDate} ${reserveTime}`);
           setIsModalOpen(false);
           // 폼 초기화
@@ -494,14 +497,14 @@ export default function TransferPage() {
       // 즉시 이체 실행
       const response = await transferApi.createTransfer(requestData);
 
-      if (response.success) {
+      if (response.data && response.data.success) {
         // API 응답에서 새로운 잔액 사용
-        const newBalance = response.afterBalance || (balance - numericAmount);
+        const newBalance = response.data.data.afterBalance || (balance - numericAmount);
         setBalance(newBalance);
         
         // 계좌 목록도 업데이트
         const updatedAccounts = accounts.map(acc => 
-          acc.accountNo === selectedAccount.accountNo 
+          acc.aNo === selectedAccount.aNo 
             ? { ...acc, balance: newBalance }
             : acc
         );
@@ -510,8 +513,8 @@ export default function TransferPage() {
         
         // 이체 완료 정보 저장
         setCompletedTransfer({
-          transferId: response.transferId,
-          transferNo: response.transferNo,
+          transferId: response.data.data.transferId,
+          transferNo: response.data.data.transferNo,
           amount: numericAmount,
           recipient: selectedRecipient,
           timestamp: response.timestamp || new Date().toISOString()
@@ -544,18 +547,18 @@ export default function TransferPage() {
       setError(null);
       
       // API를 통해 선택된 계좌의 현재 잔액 조회
-      const balanceResponse = await transferApi.getAccountBalance(account.accountNo);
-      if (balanceResponse.success) {
-        setBalance(balanceResponse.balance);
+      const balanceResponse = await transferApi.getAccountBalance(account.aNo);
+      if (balanceResponse.data && balanceResponse.data.success) {
+        setBalance(balanceResponse.data.data.balance);
       } else {
         setBalance(account.balance || 0); // API 실패 시 계좌 객체의 잔액 사용
       }
       
       // 내 계좌 목록 업데이트 (선택된 계좌 제외)
-      setMyOtherAccounts(accounts.filter(acc => acc.accountNo !== account.accountNo));
+      setMyOtherAccounts(accounts.filter(acc => acc.aNo !== account.aNo));
       
       // 선택된 계좌의 최근 이체 내역 로드
-      loadRecentRecipientsForAccount(account.accountNo);
+      loadRecentRecipientsForAccount(account.aNo);
     } catch (error) {
       console.error('잔액 조회 실패:', error.message || '알 수 없는 오류');
       setBalance(account.balance || 0); // 에러 시 계좌 객체의 잔액 사용
@@ -566,8 +569,8 @@ export default function TransferPage() {
   const loadRecentRecipientsForAccount = async (accountNo) => {
     try {
       const response = await transferApi.getRecentRecipients(accountNo);
-      if (response.success && response.data) {
-        setFavoriteAccounts(response.data);
+      if (response.data && response.data.success && response.data.data) {
+        setFavoriteAccounts(response.data.data.recipients || []);
       }
     } catch (error) {
       console.error('최근 이체 대상 로딩 실패:', error.message || '알 수 없는 오류');
@@ -732,9 +735,9 @@ export default function TransferPage() {
                     <div className="col-span-12 md:col-span-6">
                       <label className="block text-sm font-medium text-gray-800 mb-1">보내는 계좌</label>
                       <select 
-                        value={selectedAccount?.accountNo || ''} 
+                        value={selectedAccount?.aNo || ''} 
                         onChange={(e) => {
-                          const account = accounts.find(acc => acc.accountNo === parseInt(e.target.value));
+                          const account = accounts.find(acc => acc.aNo === parseInt(e.target.value));
                           if (account) handleAccountChange(account);
                         }}
                         className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
@@ -742,8 +745,8 @@ export default function TransferPage() {
                       >
                         <option value="">계좌를 선택하세요</option>
                         {accounts.map(account => (
-                          <option key={account.accountNo} value={account.accountNo}>
-                            {account.accountType} · {account.accountNumber}
+                          <option key={account.aNo} value={account.aNo}>
+                            {account.accountType} · {account.accountNo}
                           </option>
                         ))}
                       </select>
@@ -887,13 +890,13 @@ export default function TransferPage() {
                         {myOtherAccounts.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {myOtherAccounts
-                              .filter(acc => acc.accountNo !== selectedAccount?.accountNo)
+                              .filter(acc => acc.aNo !== selectedAccount?.aNo)
                               .map(acc => (
                                 <button 
-                                  key={acc.accountNo} 
+                                  key={acc.aNo} 
                                   onClick={() => handleSelectMyAccount(acc)} 
                                   className={`rounded-xl border p-4 text-left hover:shadow transition-all ${
-                                    selectedRecipient?.account === acc.accountNumber 
+                                    selectedRecipient?.account === acc.accountNo 
                                       ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600' 
                                       : 'bg-white hover:border-blue-300'
                                   }`}
@@ -902,7 +905,7 @@ export default function TransferPage() {
                                     <div className="text-sm font-medium text-gray-800">{acc.accountType}</div>
                                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">내 계좌</span>
                                   </div>
-                                  <div className="text-xs text-gray-500 font-mono mb-1">{acc.accountNumber}</div>
+                                  <div className="text-xs text-gray-500 font-mono mb-1">{acc.accountNo}</div>
                                   <div className="text-sm font-semibold text-gray-900">{formatKRW(acc.balance)}</div>
                                 </button>
                               ))}

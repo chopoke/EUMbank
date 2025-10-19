@@ -11,7 +11,18 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 예약 이체 주문 레포지토리 - QueryDSL 사용
+ * [예약 이체 주문 레포지토리]
+ * - 예약 이체 주문 정보 조회 및 관리를 담당
+ * - 주요 기능:
+ *   1) 예약 이체 주문 기본 CRUD 작업
+ *   2) 계좌별 예약 이체 목록 조회
+ *   3) 실행 대기 중인 예약 이체 조회
+ *   4) 스케줄러를 통한 자동 실행 지원
+ *   5) 예약 이체 상태 관리 (SCHEDULED, EXECUTED, CANCELLED)
+ *   6) QueryDSL을 통한 복잡한 조회 쿼리 지원
+ * 
+ * @author 임형욱
+ * @since 2025-10-20
  */
 @Repository
 public interface Transfer_TransferOrderRepository extends JpaRepository<TransferOrder, Integer>, Transfer_TransferOrderRepositoryCustom {

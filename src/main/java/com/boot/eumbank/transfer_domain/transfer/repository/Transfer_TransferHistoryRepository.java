@@ -13,7 +13,18 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 이체 내역 레포지토리 - QueryDSL 사용
+ * [이체 내역 레포지토리]
+ * - 이체 내역 정보 조회 및 관리를 담당
+ * - 주요 기능:
+ *   1) 이체 내역 기본 CRUD 작업
+ *   2) 계좌별 이체 내역 조회 (페이징 지원)
+ *   3) 날짜별 이체 내역 필터링
+ *   4) 이체 유형별 조회 (입금/출금)
+ *   5) QueryDSL을 통한 복잡한 조회 쿼리 지원
+ *   6) 이체 한도 검증을 위한 금액 합계 조회
+ * 
+ * @author 임형욱
+ * @since 2025-10-20
  */
 @Repository
 public interface Transfer_TransferHistoryRepository extends JpaRepository<TransferHistory, Integer>, Transfer_TransferHistoryRepositoryCustom {

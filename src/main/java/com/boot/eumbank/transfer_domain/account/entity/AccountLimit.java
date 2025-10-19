@@ -9,7 +9,17 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 /**
- * 계좌 한도 도메인 엔티티
+ * [계좌 한도 엔티티]
+ * - 계좌별 이체 한도 정보를 저장하는 도메인 엔티티
+ * - 주요 기능:
+ *   1) 1회 이체 한도 관리
+ *   2) 일일 이체 한도 관리
+ *   3) 월간 이체 한도 관리
+ *   4) 이체 한도 검증을 위한 데이터 제공
+ *   5) 계좌별 개별 한도 설정 지원
+ * 
+ * @author 임형욱
+ * @since 2025-10-20
  */
 @Entity
 @Table(name = "ACCOUNT_LIMIT_TBL")

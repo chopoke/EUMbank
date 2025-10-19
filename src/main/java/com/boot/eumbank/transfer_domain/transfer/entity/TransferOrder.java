@@ -13,7 +13,16 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 예약 이체 도메인 엔티티
+ * [예약 이체 주문 엔티티]
+ * - 미래의 특정 시점에 자동으로 이체되도록 예약하는 정보를 저장
+ * - 주요 기능:
+ *   1) 일회성 예약 이체 (ONCE)
+ *   2) 반복 예약 이체 (RECURRING)
+ *   3) 스케줄 표현식 기반 실행 시간 관리
+ *   4) 이체 상태 추적 (SCHEDULED, EXECUTED, CANCELLED)
+ * 
+ * @author 임형욱
+ * @since 2025-10-20
  */
 @Entity
 @Table(name = "TRANSFER_ORDER_TBL")

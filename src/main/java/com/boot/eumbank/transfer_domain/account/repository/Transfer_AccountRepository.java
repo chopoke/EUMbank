@@ -2,15 +2,27 @@ package com.boot.eumbank.transfer_domain.account.repository;
 
 import com.boot.eumbank.account.Open.model.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * 계좌 레포지토리 - DB의 a_no (Integer)를 기본 키로 사용
+ * [이체 도메인 계좌 레포지토리]
+ * - 이체 관련 계좌 정보 조회 및 수정을 담당
+ * - 주요 기능:
+ *   1) 계좌 기본 CRUD 작업
+ *   2) 비관적 잠금을 통한 동시성 제어
+ *   3) 계좌번호 기반 조회
+ *   4) 고객별 계좌 목록 조회
+ *   5) 계좌 상태 및 타입별 필터링
+ * 
+ * @author 임형욱
+ * @since 2025-10-20
  */
 @Repository
 public interface Transfer_AccountRepository extends JpaRepository<Account, Integer>, Transfer_AccountRepositoryCustom {
@@ -23,6 +35,20 @@ public interface Transfer_AccountRepository extends JpaRepository<Account, Integ
      * 계좌번호로 계좌 조회
      */
     Optional<Account> findByAccountNo(String accountNo);
+
+    /**
+     * PK로 계좌 조회 (비관적 락 적용)
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM Account a WHERE a.aNo = :aNo")
+    Optional<Account> findByIdWithLock(@Param("aNo") Integer aNo);
+
+    /**
+     * 계좌번호로 계좌 조회 (비관적 락 적용)
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM Account a WHERE a.accountNo = :accountNo")
+    Optional<Account> findByAccountNoWithLock(@Param("accountNo") String accountNo);
 
     /**
      * 고객 번호로 계좌 목록 조회

@@ -18,7 +18,7 @@ import java.util.List;
 @Builder
 public class BulkTransferRequestDto {
     
-    private Long fromAccountNo;             // 출금 계좌 번호 (a_no)
+    private Integer fromAccountNo;          // 출금 계좌 번호 (a_no)
     private String password;                // 계좌 비밀번호 (1회만 검증)
     private List<RecipientDto> recipients;  // 수취인 목록
 }

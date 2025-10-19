@@ -10,7 +10,16 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 고객 레포지토리
+ * [이체 도메인 고객 레포지토리]
+ * - 이체 관련 고객 정보 조회 및 관리를 담당
+ * - 주요 기능:
+ *   1) 고객 기본 CRUD 작업
+ *   2) 고객 ID/이메일/전화번호 기반 조회
+ *   3) 이체 시 고객 정보 검증
+ *   4) QueryDSL을 통한 복잡한 고객 조회
+ * 
+ * @author 임형욱
+ * @since 2025-10-20
  */
 @Repository
 public interface Transfer_CustomerRepository extends JpaRepository<Customer, Integer>, Transfer_CustomerRepositoryCustom {

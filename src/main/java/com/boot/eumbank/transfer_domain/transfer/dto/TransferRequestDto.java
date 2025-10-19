@@ -18,15 +18,15 @@ import java.math.BigDecimal;
 @Builder
 public class TransferRequestDto {
     
-    private Long fromAccountNo;         // 출금 계좌 번호 (a_no)
-    private String fromAccountId;       // 출금 계좌 ID
+    private Integer fromAccountNo;      // 출금 계좌 번호 (a_no)
+    private String fromAccountId;       // 출금 계좌 ID (선택사항)
     private String toBank;              // 수취 은행명
     private String toAccount;           // 수취 계좌번호
     private String toName;              // 수취인명
     private Integer amount;             // 이체 금액
     private String memo;                // 이체 메모
     private String password;            // 계좌 비밀번호
-    private Boolean reserveTransfer;    // 예약 이체 여부
-    private String reserveDate;         // 예약 날짜
-    private String reserveTime;         // 예약 시간
+    private Boolean reserveTransfer;    // 예약 이체 여부 (선택사항)
+    private String reserveDate;         // 예약 날짜 (선택사항)
+    private String reserveTime;         // 예약 시간 (선택사항)
 }

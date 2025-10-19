@@ -12,6 +12,20 @@ import java.util.Optional;
 
 import static com.boot.eumbank.transfer_domain.transfer.entity.QTransferOrder.transferOrder;
 
+/**
+ * [예약 이체 주문 레포지토리 QueryDSL 구현체]
+ * - Transfer_TransferOrderRepositoryCustom 인터페이스의 QueryDSL 구현
+ * - 복잡한 예약 이체 조회 쿼리를 QueryDSL로 구현
+ * - 주요 기능:
+ *   1) 동적 쿼리 생성 및 실행
+ *   2) 복잡한 조인 및 서브쿼리 처리
+ *   3) 정렬 및 필터링 로직 구현
+ *   4) 스케줄러를 위한 실행 대기 주문 조회
+ *   5) 상태별 예약 이체 관리
+ * 
+ * @author 임형욱
+ * @since 2025-10-20
+ */
 @Repository
 @RequiredArgsConstructor
 public class Transfer_TransferOrderRepositoryImpl implements Transfer_TransferOrderRepositoryCustom {

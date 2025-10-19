@@ -42,11 +42,18 @@ public class TransferController {
      * - POST /api/transfer
      */
     @PostMapping
-    public ResponseEntity<Map<String, Object>> transfer(@Valid @RequestBody TransferRequestDto request) {
+    public ResponseEntity<Map<String, Object>> transfer(@Valid @RequestBody TransferRequestDto request, @AuthenticationPrincipal Customer customer) {
         log.info("일반 이체 요청 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
                 request.getFromAccountNo(), request.getToAccount(), request.getAmount());
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
             TransferResponseDto response = transferService.processTransfer(request);
             
             Map<String, Object> result = new HashMap<>();
@@ -69,11 +76,18 @@ public class TransferController {
      * - POST /api/transfer/reserve
      */
     @PostMapping("/reserve")
-    public ResponseEntity<Map<String, Object>> reserveTransfer(@Valid @RequestBody TransferOrderDto request) {
+    public ResponseEntity<Map<String, Object>> reserveTransfer(@Valid @RequestBody TransferOrderDto request, @AuthenticationPrincipal Customer customer) {
         log.info("예약 이체 요청 - 출금계좌: {}, 수취계좌: {}, 금액: {}, 예약시간: {}", 
                 request.getAccountNo(), request.getDestAccountNo(), request.getAmount(), request.getStartAt());
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
             TransferOrderDto response = transferService.createReserveTransfer(request);
             
             Map<String, Object> result = new HashMap<>();
@@ -96,11 +110,18 @@ public class TransferController {
      * - POST /api/transfer/bulk
      */
     @PostMapping("/bulk")
-    public ResponseEntity<Map<String, Object>> bulkTransfer(@Valid @RequestBody BulkTransferRequestDto request) {
+    public ResponseEntity<Map<String, Object>> bulkTransfer(@Valid @RequestBody BulkTransferRequestDto request, @AuthenticationPrincipal Customer customer) {
         log.info("다건 이체 요청 - 출금계좌: {}, 수취인 수: {}", 
                 request.getFromAccountNo(), request.getRecipients().size());
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
             BulkTransferResponseDto response = transferService.processBulkTransfer(request);
             
             Map<String, Object> result = new HashMap<>();
@@ -125,6 +146,7 @@ public class TransferController {
     @GetMapping("/history/{accountNo}")
     public ResponseEntity<Map<String, Object>> getTransferHistory(
             @PathVariable Integer accountNo,
+            @AuthenticationPrincipal Customer customer,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String type,
@@ -134,6 +156,13 @@ public class TransferController {
         log.info("이체 내역 조회 - 계좌: {}, 페이지: {}, 크기: {}", accountNo, page, size);
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
             Pageable pageable = PageRequest.of(page, size);
             Page<TransferHistoryListDto> history = transferService.getTransferHistory(
                     accountNo, type, fromDate, toDate, pageable);
@@ -158,11 +187,18 @@ public class TransferController {
      * - GET /api/transfer/reserve/{accountNo}
      */
     @GetMapping("/reserve/{accountNo}")
-    public ResponseEntity<Map<String, Object>> getReserveTransfers(@PathVariable String accountNo) {
+    public ResponseEntity<Map<String, Object>> getReserveTransfers(@PathVariable Integer accountNo, @AuthenticationPrincipal Customer customer) {
         log.info("예약 이체 목록 조회 - 계좌: {}", accountNo);
         
         try {
-            var reserves = transferService.getReserveTransfers(Integer.parseInt(accountNo));
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
+            var reserves = transferService.getReserveTransfers(accountNo);
             
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -184,10 +220,17 @@ public class TransferController {
      * - DELETE /api/transfer/reserve/{orderId}
      */
     @DeleteMapping("/reserve/{orderId}")
-    public ResponseEntity<Map<String, Object>> cancelReserveTransfer(@PathVariable Integer orderId) {
+    public ResponseEntity<Map<String, Object>> cancelReserveTransfer(@PathVariable Integer orderId, @AuthenticationPrincipal Customer customer) {
         log.info("예약 이체 취소 - 주문ID: {}", orderId);
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
             transferService.cancelReserveTransfer(orderId);
             
             Map<String, Object> result = new HashMap<>();
@@ -209,11 +252,18 @@ public class TransferController {
      * - POST /api/transfer/confirm
      */
     @PostMapping("/confirm")
-    public ResponseEntity<Map<String, Object>> confirmTransfer(@Valid @RequestBody TransferConfirmDto request) {
+    public ResponseEntity<Map<String, Object>> confirmTransfer(@Valid @RequestBody TransferConfirmDto request, @AuthenticationPrincipal Customer customer) {
         log.info("이체 확인 요청 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
                 request.getFromAccountNo(), request.getToAccount(), request.getAmount());
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
             TransferConfirmDto response = transferService.confirmTransfer(request);
             
             Map<String, Object> result = new HashMap<>();
@@ -240,6 +290,14 @@ public class TransferController {
         log.info("계좌 목록 조회 요청 - 고객: {}", customer != null ? customer.getCId() : "null");
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                result.put("data", Map.of("accounts", List.of()));
+                return ResponseEntity.status(401).body(result);
+            }
+            
             Object accounts = transferService.getAccounts();
             
             Map<String, Object> result = new HashMap<>();
@@ -252,7 +310,11 @@ public class TransferController {
             
         } catch (Exception e) {
             log.error("계좌 목록 조회 중 오류 발생", e);
-            throw e; // GlobalExceptionHandler에서 처리
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "계좌 목록 조회 중 오류가 발생했습니다: " + e.getMessage());
+            result.put("data", Map.of("accounts", List.of()));
+            return ResponseEntity.status(500).body(result);
         }
     }
 
@@ -262,10 +324,19 @@ public class TransferController {
      * - GET /api/transfer/accounts/{accountNo}/balance
      */
     @GetMapping("/accounts/{accountNo}/balance")
-    public ResponseEntity<Map<String, Object>> getAccountBalance(@PathVariable Integer accountNo) {
-        log.info("계좌 잔액 조회 요청 - 계좌: {}", accountNo);
+    public ResponseEntity<Map<String, Object>> getAccountBalance(
+            @PathVariable Integer accountNo,
+            @AuthenticationPrincipal Customer customer) {
+        log.info("계좌 잔액 조회 요청 - 계좌: {}, 고객: {}", accountNo, customer != null ? customer.getCId() : "null");
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
             Integer balance = transferService.getAccountBalance(accountNo);
             
             Map<String, Object> result = new HashMap<>();
@@ -278,7 +349,10 @@ public class TransferController {
             
         } catch (Exception e) {
             log.error("계좌 잔액 조회 중 오류 발생", e);
-            throw e; // GlobalExceptionHandler에서 처리
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "계좌 잔액 조회 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(500).body(result);
         }
     }
 
@@ -357,17 +431,23 @@ public class TransferController {
      * - GET /api/transfer/recipients/{accountNo}
      */
     @GetMapping("/recipients/{accountNo}")
-    public ResponseEntity<Map<String, Object>> getRecentRecipients(@PathVariable Integer accountNo) {
+    public ResponseEntity<Map<String, Object>> getRecentRecipients(@PathVariable Integer accountNo, @AuthenticationPrincipal Customer customer) {
         log.info("최근 수취인 조회 요청 - 계좌: {}", accountNo);
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
             List<Map<String, Object>> recipients = transferService.getRecentRecipients(accountNo);
             
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
-            result.put("data", Map.of("recipients", recipients));
-            result.put("message", "최근 수취인 목록을 조회했습니다.");
-            result.put("timestamp", LocalDateTime.now().toString());
+            result.put("data", recipients);
+            result.put("count", recipients.size());
             
             return ResponseEntity.ok(result);
             
@@ -383,10 +463,17 @@ public class TransferController {
      * - GET /api/transfer/favorites
      */
     @GetMapping("/favorites")
-    public ResponseEntity<Map<String, Object>> getFavoriteAccounts() {
+    public ResponseEntity<Map<String, Object>> getFavoriteAccounts(@AuthenticationPrincipal Customer customer) {
         log.info("즐겨찾기 계좌 조회 요청");
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
             List<Map<String, Object>> favorites = transferService.getFavoriteAccounts();
             
             Map<String, Object> result = new HashMap<>();
@@ -409,11 +496,18 @@ public class TransferController {
      * - POST /api/transfer/fee
      */
     @PostMapping("/fee")
-    public ResponseEntity<Map<String, Object>> getTransferFee(@Valid @RequestBody TransferFeeRequestDto request) {
+    public ResponseEntity<Map<String, Object>> getTransferFee(@Valid @RequestBody TransferFeeRequestDto request, @AuthenticationPrincipal Customer customer) {
         log.info("이체 수수료 조회 요청 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
                 request.getFromAccountNo(), request.getToAccount(), request.getAmount());
         
         try {
+            if (customer == null) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            
             Map<String, Object> fee = transferService.calculateTransferFee(request);
             
             Map<String, Object> result = new HashMap<>();

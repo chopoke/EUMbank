@@ -6,6 +6,7 @@ import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.transfer_domain.account.entity.AccountLimit;
 import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountLimitRepository;
 import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountRepository;
+import com.boot.eumbank.transfer_domain.customer.repository.Transfer_CustomerRepository;
 import com.boot.eumbank.transfer_domain.transfer.dto.*;
 import com.boot.eumbank.transfer_domain.transfer.entity.TransferOrder;
 import com.boot.eumbank.transfer_domain.transfer.exception.*;
@@ -18,10 +19,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,6 +47,7 @@ public class TransferServiceImpl implements TransferService {
     private final Transfer_AccountLimitRepository accountLimitRepository;
     private final Transfer_TransferHistoryRepository transferHistoryRepository;
     private final Transfer_TransferOrderRepository transferOrderRepository;
+    private final Transfer_CustomerRepository transferCustomerRepository;
 
     @Override
     @Transactional
@@ -55,23 +59,23 @@ public class TransferServiceImpl implements TransferService {
         validateTransferRequest(request);
 
         // 2. 계좌 상태 확인
-        if (!checkAccountStatus(request.getFromAccountNo().intValue())) {
+        if (!checkAccountStatus(request.getFromAccountNo())) {
             throw new AccountStatusException("계좌가 이체 불가능한 상태입니다.");
         }
 
         // 3. 비밀번호 검증
-        if (!validateAccountPassword(request.getFromAccountNo().intValue(), request.getPassword())) {
+        if (!validateAccountPassword(request.getFromAccountNo(), request.getPassword())) {
             throw new PasswordMismatchException();
         }
 
         // 4. 이체 한도 확인
-        if (!checkTransferLimit(request.getFromAccountNo().intValue(), request.getAmount())) {
+        if (!checkTransferLimit(request.getFromAccountNo(), request.getAmount())) {
             throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), request.getAmount());
         }
 
         // 5. 이체 실행
         TransferResultDto result = executeTransfer(
-                request.getFromAccountNo().intValue(),
+                request.getFromAccountNo(),
                 request.getToAccount(),
                 request.getToBank(),
                 request.getToName(),
@@ -157,12 +161,12 @@ public class TransferServiceImpl implements TransferService {
         validateBulkTransferRequest(request);
 
         // 2. 계좌 상태 확인
-        if (!checkAccountStatus(request.getFromAccountNo().intValue())) {
+        if (!checkAccountStatus(request.getFromAccountNo())) {
             throw new AccountStatusException("계좌가 이체 불가능한 상태입니다.");
         }
 
         // 3. 비밀번호 검증
-        if (!validateAccountPassword(request.getFromAccountNo().intValue(), request.getPassword())) {
+        if (!validateAccountPassword(request.getFromAccountNo(), request.getPassword())) {
             throw new PasswordMismatchException();
         }
 
@@ -172,7 +176,7 @@ public class TransferServiceImpl implements TransferService {
                 .sum();
 
         // 5. 총 이체 한도 확인
-        if (!checkTransferLimit(request.getFromAccountNo().intValue(), totalAmount)) {
+        if (!checkTransferLimit(request.getFromAccountNo(), totalAmount)) {
             throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), totalAmount);
         }
 
@@ -183,7 +187,7 @@ public class TransferServiceImpl implements TransferService {
         for (RecipientDto recipient : request.getRecipients()) {
             try {
                 TransferResultDto result = executeTransfer(
-                        request.getFromAccountNo().intValue(),
+                        request.getFromAccountNo(),
                         recipient.getAccountNo(),
                         recipient.getBankName(),
                         recipient.getName(),
@@ -268,12 +272,12 @@ public class TransferServiceImpl implements TransferService {
                 request.getFromAccountNo(), request.getToAccount(), request.getAmount());
 
         // 1. 계좌 상태 확인
-        if (!checkAccountStatus(request.getFromAccountNo().intValue())) {
+        if (!checkAccountStatus(request.getFromAccountNo())) {
             throw new AccountStatusException("계좌가 이체 불가능한 상태입니다.");
         }
 
         // 2. 잔액 확인
-        Account account = accountRepository.findByAccountNo(request.getFromAccountNo().toString())
+        Account account = accountRepository.findById(request.getFromAccountNo())
                 .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
 
         if (!account.hasSufficientBalance(BigDecimal.valueOf(request.getAmount()))) {
@@ -281,7 +285,7 @@ public class TransferServiceImpl implements TransferService {
         }
 
         // 3. 이체 한도 확인
-        if (!checkTransferLimit(request.getFromAccountNo().intValue(), request.getAmount())) {
+        if (!checkTransferLimit(request.getFromAccountNo(), request.getAmount())) {
             throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), request.getAmount());
         }
 
@@ -299,43 +303,136 @@ public class TransferServiceImpl implements TransferService {
     }
 
     @Transactional
-    public TransferResultDto executeTransfer(Integer fromAccountNo, String toAccountNo, 
-                                           String toBankName, String toName, Integer amount, 
+    public TransferResultDto executeTransfer(Integer fromAccountNo, String toAccountNo,
+                                           String toBankName, String toName, Integer amount,
                                            String memo, String password) {
-        log.info("이체 실행 - 출금계좌: {}, 수취계좌: {}, 금액: {}", fromAccountNo, toAccountNo, amount);
-
-        // 1. 출금 계좌 조회
-        Account fromAccount = accountRepository.findByAccountNo(fromAccountNo.toString())
+        
+        log.info("이체 실행 시작 - 출금계좌: {}, 수취은행: {}, 수취계좌: {}, 금액: {}", 
+                fromAccountNo, toBankName, toAccountNo, amount);
+        
+        // === 1단계: 이체 금액 검증 ===
+        if (amount == null || amount <= 0) {
+            log.warn("이체 금액이 음수이거나 0입니다 - 금액: {}", amount);
+            throw new InvalidAmountException(amount);
+        }
+        
+        BigDecimal transferAmount = BigDecimal.valueOf(amount);
+        
+        // === 1-1단계: 자기 계좌 이체 방지 (이음은행 내부 이체만) ===
+        if ("이음은행".equals(toBankName) || "EUM".equals(toBankName)) {
+            Account tempFromAccount = accountRepository.findById(fromAccountNo).orElse(null);
+            if (tempFromAccount != null && tempFromAccount.getAccountNo().equals(toAccountNo)) {
+                log.warn("자기 계좌 이체 시도 - 계좌: {}", toAccountNo);
+                throw new SameAccountTransferException(toAccountNo);
+            }
+        }
+        
+        // === 2단계: 출금 계좌 조회 및 존재 여부 확인 ===
+        Account fromAccount = accountRepository.findByIdWithLock(fromAccountNo)
                 .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
 
-        // 2. 잔액 확인
-        if (!fromAccount.hasSufficientBalance(BigDecimal.valueOf(amount))) {
+        log.info("출금 계좌 조회 완료 - 계좌ID: {}, 현재 잔액: {}", fromAccount.getANo(), fromAccount.getBalance());
+        
+        // === 2-1단계: 계좌 상태 검증 ===
+        if (!"ACTIVE".equals(fromAccount.getStatus())) {
+            log.warn("계좌 상태 이상 - 계좌: {}, 상태: {}", fromAccount.getAccountNo(), fromAccount.getStatus());
+            throw new AccountStatusException(fromAccount.getAccountNo(), fromAccount.getStatus());
+        }
+
+        // === 3단계: 계좌 비밀번호 검증 ===
+        if (!fromAccount.getAccountPwd().equals(password)) {
+            log.warn("계좌 비밀번호 불일치 - 계좌: {}", fromAccountNo);
+            throw new PasswordMismatchException(fromAccount.getAccountNo());
+        }
+
+        // === 4단계: 잔액 검증 ===
+        if (fromAccount.getBalance().compareTo(transferAmount) < 0) {
+            log.warn("잔액 부족 - 현재 잔액: {}, 이체 금액: {}", fromAccount.getBalance(), transferAmount);
             throw new InsufficientBalanceException(fromAccount.getBalance(), amount);
         }
 
-        // 3. 이체 실행 (잔액 차감)
-        fromAccount.withdraw(BigDecimal.valueOf(amount));
-        accountRepository.save(fromAccount);
+        // === 5단계: 계좌 한도 조회 및 검증 ===
+        // TODO: AccountService를 통한 한도 검증 구현 필요
+        // 현재는 기본적인 검증만 수행
+        
+        // === 6단계: 출금 처리 (잔액 차감) ===
+        fromAccount.withdraw(transferAmount);
+        BigDecimal afterBalance = fromAccount.getBalance();
+        
+        log.info("출금 처리 완료 - 차감 금액: {}, 이체 후 잔액: {}", transferAmount, afterBalance);
 
-        // 4. 이체 내역 저장
+        // === 7단계: 입금 처리 (이음은행 내부 계좌인 경우만) ===
+        Account toAccount = null;
+        if ("이음은행".equals(toBankName) || "EUM".equals(toBankName)) {
+            // 계좌번호로 입금 계좌 조회
+            toAccount = accountRepository.findByAccountNoWithLock(toAccountNo).orElse(null);
+            
+            // 입금 계좌가 존재하는 경우에만 입금 처리
+            if (toAccount != null) {
+                BigDecimal currentBalance = toAccount.getBalance();
+                BigDecimal newBalance = currentBalance.add(transferAmount);
+                
+                // 오버플로우 방지
+                if (newBalance.compareTo(new BigDecimal("999999999999999999.99")) > 0) {
+                    log.error("입금 계좌 잔액 오버플로우 위험 - 현재: {}, 입금액: {}", currentBalance, transferAmount);
+                    throw new IllegalArgumentException("입금 후 잔액이 시스템 최대값을 초과합니다.");
+                }
+                
+                toAccount.deposit(transferAmount);
+                
+                log.info("입금 처리 완료 - 계좌: {}, 입금액: {}, 입금 후 잔액: {}", 
+                    toAccountNo, transferAmount, toAccount.getBalance());
+            } else {
+                log.warn("입금 계좌를 찾을 수 없음 - 계좌번호: {}", toAccountNo);
+            }
+        }
+
+        // === 8단계: 출금 이체 내역 저장 ===
         String transferId = generateTransferId();
+        
         TransferHistory transferHistory = TransferHistory.builder()
                 .transferId(transferId)
                 .accountNo(fromAccountNo)
-                .amount(BigDecimal.valueOf(amount))
+                .amount(transferAmount)
                 .memo(memo)
                 .otherBank(toBankName)
                 .otherAccount(toAccountNo)
-                .transferType("TRANSFER")
-                .afterBalance(fromAccount.getBalance())
-                .transactionType("OUT")
-                .accountOut(BigDecimal.valueOf(amount))
+                .transferType("출금")
+                .afterBalance(afterBalance)
+                .transactionType("WITHDRAW")
+                .accountOut(transferAmount)
                 .accountIn(BigDecimal.ZERO)
                 .build();
 
         TransferHistory savedHistory = transferHistoryRepository.save(transferHistory);
-
-        // 5. 결과 반환
+        
+        // === 9단계: 입금 내역 저장 (이음은행 내부 계좌인 경우만) ===
+        if (toAccount != null) {
+            String depositTransferId = generateTransferId();
+            
+            TransferHistory depositHistory = TransferHistory.builder()
+                    .transferId(depositTransferId)
+                    .accountNo(toAccount.getANo())
+                    .amount(transferAmount)
+                    .memo(memo)
+                    .otherBank("이음은행")
+                    .otherAccount(fromAccount.getAccountNo())
+                    .transferType("입금")
+                    .afterBalance(toAccount.getBalance())
+                    .transactionType("DEPOSIT")
+                    .accountOut(BigDecimal.ZERO)
+                    .accountIn(transferAmount)
+                    .build();
+            
+            transferHistoryRepository.save(depositHistory);
+            
+            log.info("입금 내역 저장 완료 - 이체ID: {}", depositTransferId);
+        }
+        
+        log.info("이체 완료 - 이체ID: {}, 출금계좌: {}, 금액: {}, 수취은행: {}, 수취계좌: {}", 
+                transferId, fromAccountNo, amount, toBankName, toAccountNo);
+        
+        // === 10단계: 결과 반환 ===
         return TransferResultDto.builder()
                 .transferId(transferId)
                 .transferNo(savedHistory.getTransferNo())
@@ -411,7 +508,7 @@ public class TransferServiceImpl implements TransferService {
     }
 
     public boolean validateAccountPassword(Integer accountNo, String password) {
-        Account account = accountRepository.findByAccountNo(accountNo.toString())
+        Account account = accountRepository.findById(accountNo)
                 .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
 
         // 실제로는 BCrypt 등으로 암호화된 비밀번호를 비교해야 함
@@ -419,7 +516,7 @@ public class TransferServiceImpl implements TransferService {
     }
 
     public boolean checkAccountStatus(Integer accountNo) {
-        Account account = accountRepository.findByAccountNo(accountNo.toString())
+        Account account = accountRepository.findById(accountNo)
                 .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
 
         return account.isActive();
@@ -431,7 +528,8 @@ public class TransferServiceImpl implements TransferService {
         if (request.getAmount() <= 0) {
             throw new InvalidAmountException("이체 금액은 0보다 커야 합니다.");
         }
-        if (request.getFromAccountNo().equals(request.getToAccount())) {
+        // 같은 계좌 이체 방지 (Integer와 String 비교)
+        if (request.getFromAccountNo().toString().equals(request.getToAccount())) {
             throw new SameAccountTransferException("자기 계좌로는 이체할 수 없습니다.");
         }
     }
@@ -449,8 +547,12 @@ public class TransferServiceImpl implements TransferService {
     }
 
     private String generateTransferId() {
-        return "T" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 8);
+        // TRX(3자) + 타임스탬프(13자) + 랜덤(3자) = 19자
+        long timestamp = System.currentTimeMillis();
+        String random = UUID.randomUUID().toString().substring(0, 3).toUpperCase();
+        return "TRX" + timestamp + random;
     }
+
 
     private Integer generateOrderId() {
         return (int) System.currentTimeMillis() % 1000000;
@@ -460,7 +562,13 @@ public class TransferServiceImpl implements TransferService {
         if (!StringUtils.hasText(dateTimeStr)) {
             return null;
         }
-        return LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        // ISO 8601 형식 (2025-10-18T16:56:00) 또는 일반 형식 (2025-10-18 16:56:00) 모두 지원
+        try {
+            return LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        } catch (DateTimeParseException e) {
+            // ISO 형식이 실패하면 일반 형식으로 시도
+            return LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        }
     }
 
     private String formatDateTime(LocalDateTime dateTime) {
@@ -556,50 +664,143 @@ public class TransferServiceImpl implements TransferService {
     public Object getAccounts() {
         log.info("계좌 목록 조회 (JWT 토큰 기반)");
         
-        // TODO: JWT 토큰에서 고객 정보 추출
-        // 현재는 임시로 하드코딩된 데이터 반환
-        List<Map<String, Object>> accounts = List.of(
-            Map.of("aId", 1, "aNo", 1234567890, "aBalance", 1000000, "aType", "입출금", "aStatus", "ACTIVE"),
-            Map.of("aId", 2, "aNo", 1234567891, "aBalance", 2000000, "aType", "적금", "aStatus", "ACTIVE")
-        );
-        
-        return Map.of("accounts", accounts);
+        try {
+            // SecurityContext에서 현재 인증된 사용자 정보 가져오기
+            org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            
+            if (authentication == null || !(authentication.getPrincipal() instanceof Customer)) {
+                log.warn("인증된 사용자 정보를 찾을 수 없습니다.");
+                return Map.of("accounts", List.of());
+            }
+            
+            Customer customer = (Customer) authentication.getPrincipal();
+            log.info("인증된 고객: {}", customer.getCId());
+            
+            // 고객의 실제 계좌 목록 조회
+            List<Account> accounts = accountRepository.findByCNo(customer.getCustomerNo());
+            log.info("조회된 계좌 수: {}", accounts.size());
+            
+            List<Map<String, Object>> accountList = accounts.stream()
+                .map(account -> {
+                    Map<String, Object> accountInfo = new HashMap<>();
+                    accountInfo.put("aId", account.getAId());
+                    accountInfo.put("aNo", account.getANo());
+                    accountInfo.put("accountNo", account.getAccountNo());
+                    accountInfo.put("balance", account.getBalance());
+                    accountInfo.put("accountType", account.getAccountType());
+                    accountInfo.put("status", account.getStatus());
+                    accountInfo.put("cNo", account.getCNo());
+                    return accountInfo;
+                })
+                .toList();
+            
+            return Map.of("accounts", accountList);
+            
+        } catch (Exception e) {
+            log.error("계좌 목록 조회 중 오류 발생", e);
+            return Map.of("accounts", List.of());
+        }
     }
     
     @Override
     public Integer getAccountBalance(Integer accountNo) {
         log.info("계좌 잔액 조회 - 계좌: {}", accountNo);
         
-        Optional<Account> accountOpt = accountRepository.findById(accountNo);
-        if (accountOpt.isEmpty()) {
-            throw new AccountNotFoundException("계좌를 찾을 수 없습니다: " + accountNo);
+        try {
+            // SecurityContext에서 현재 인증된 사용자 정보 가져오기
+            org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            
+            if (authentication == null || !(authentication.getPrincipal() instanceof Customer)) {
+                log.warn("인증된 사용자 정보를 찾을 수 없습니다.");
+                throw new UnauthorizedException("인증이 필요합니다.");
+            }
+            
+            Customer customer = (Customer) authentication.getPrincipal();
+            log.info("인증된 고객: {}", customer.getCId());
+            
+            // 계좌 조회
+            Optional<Account> accountOpt = accountRepository.findById(accountNo);
+            if (accountOpt.isEmpty()) {
+                throw new AccountNotFoundException("계좌를 찾을 수 없습니다: " + accountNo);
+            }
+            
+            Account account = accountOpt.get();
+            
+            // 본인 계좌인지 확인
+            if (!account.getCNo().equals(customer.getCustomerNo())) {
+                throw new UnauthorizedException("본인 계좌가 아닙니다.");
+            }
+            
+            return account.getBalance().intValue();
+            
+        } catch (Exception e) {
+            log.error("계좌 잔액 조회 중 오류 발생", e);
+            throw e;
         }
-        
-        Account account = accountOpt.get();
-        return account.getBalance().intValue();
     }
     
     @Override
     public List<Map<String, Object>> getRecentRecipients(Integer accountNo) {
         log.info("최근 수취인 조회 - 계좌: {}", accountNo);
         
-        // 최근 이체 내역에서 수취인 정보 추출
+        // 최근 이체 내역에서 수취인 정보 추출 (출금 내역만)
         List<TransferHistory> recentTransfers = transferHistoryRepository
             .findByAccountNoOrderByTransferAtDescList(accountNo, 
-                org.springframework.data.domain.PageRequest.of(0, 10));
+                org.springframework.data.domain.PageRequest.of(0, 50));
         
-        List<Map<String, Object>> recipients = new ArrayList<>();
+        // 중복 제거를 위한 LinkedHashMap (순서 유지)
+        java.util.LinkedHashMap<String, Map<String, Object>> uniqueRecipients = new java.util.LinkedHashMap<>();
+        
         for (TransferHistory transfer : recentTransfers) {
-            Map<String, Object> recipient = new HashMap<>();
-            recipient.put("accountNo", transfer.getOtherAccount());
-            recipient.put("bankCode", "001"); // 임시 하드코딩
-            recipient.put("bankName", "국민은행"); // 임시 하드코딩
-            recipient.put("lastTransferAt", transfer.getTransferAt());
-            recipient.put("lastAmount", transfer.getAmount());
-            recipients.add(recipient);
+            // 출금(송금) 내역만 처리
+            if ("WITHDRAW".equals(transfer.getTransactionType())) {
+                String accountKey = transfer.getOtherAccount();
+                
+                // 중복이 아닌 경우만 추가 (최근 순서 유지, 최대 10개)
+                if (!uniqueRecipients.containsKey(accountKey) && uniqueRecipients.size() < 10) {
+                    Map<String, Object> recipient = new HashMap<>();
+                    
+                    // 실제 예금주명 조회
+                    String accountHolderName = getActualAccountHolderName(transfer.getOtherAccount(), transfer.getOtherBank());
+                    
+                    recipient.put("name", accountHolderName);
+                    recipient.put("bank", transfer.getOtherBank() != null ? transfer.getOtherBank() : "이음은행");
+                    recipient.put("account", transfer.getOtherAccount());
+                    recipient.put("memo", transfer.getMemo());
+                    recipient.put("amount", transfer.getAmount().intValue());
+                    recipient.put("lastTransferDate", transfer.getTransferAt().toString());
+                    uniqueRecipients.put(accountKey, recipient);
+                }
+            }
         }
         
-        return recipients;
+        return new ArrayList<>(uniqueRecipients.values());
+    }
+    
+    /**
+     * 실제 예금주명 조회 (DB에서 실제 고객 정보 조회)
+     */
+    private String getActualAccountHolderName(String accountNumber, String bank) {
+        try {
+            // 이음은행 내부 계좌인 경우 실제 DB에서 조회
+            if ("이음은행".equals(bank) || bank == null) {
+                Optional<Account> account = accountRepository.findByAccountNo(accountNumber);
+                if (account.isPresent()) {
+                    return transferCustomerRepository.findById(account.get().getCNo())
+                        .map(Customer::getCNameKr)
+                        .orElse("이음은행 고객");
+                }
+            }
+            
+            // 타행 계좌이거나 조회 실패한 경우
+            return "타행 계좌";
+            
+        } catch (Exception e) {
+            log.error("예금주명 조회 중 오류 발생 - 계좌: {}, 은행: {}", accountNumber, bank, e);
+            return "타행 계좌";
+        }
     }
     
     @Override

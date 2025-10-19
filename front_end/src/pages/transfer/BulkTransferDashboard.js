@@ -210,21 +210,30 @@ export default function BulkTransferPage() {
     try {
       setIsLoading(true);
       setError(null);
+      
+      // RecipientDto 구조에 맞춰 수취인 목록 생성
       const recipients = rows.filter(r => r.account && r.holder && parseInt(String(r.amount).replace(/,/g, '')) > 0)
         .map(r => ({
-          bank: r.bankName, account: r.account, name: r.holder,
-          amount: parseInt(String(r.amount).replace(/,/g, '')),
-          memo: r.memo || globalMemo
+          bank: r.bankName,           // String (수취 은행명)
+          account: r.account,         // String (수취 계좌번호)
+          name: r.holder,             // String (수취인명)
+          amount: parseInt(String(r.amount).replace(/,/g, '')), // Integer (이체 금액)
+          memo: r.memo || globalMemo  // String (메모)
         }));
 
-      const response = await transferApi.createBulkTransfer({
-        fromAccountNo: selectedAccount.accountNo, password, recipients
-      });
+      // BulkTransferRequestDto 구조에 맞춰 요청 데이터 생성
+      const requestData = {
+        fromAccountNo: selectedAccount.aNo,  // Integer (출금 계좌 번호)
+        password: password,                  // String (계좌 비밀번호)
+        recipients: recipients               // List<RecipientDto> (수취인 목록)
+      };
 
-      if (response.success) {
-        navigate('/transfer/bulk/complete', { state: { bulkTransferResults: response.data } });
+      const response = await transferApi.createBulkTransfer(requestData);
+
+      if (response.data && response.data.success) {
+        navigate('/transfer/bulk/complete', { state: { bulkTransferResults: response.data.data } });
       } else {
-        throw new Error(response.error || '다건이체에 실패했습니다.');
+        throw new Error(response.data?.message || '다건이체에 실패했습니다.');
       }
     } catch (err) {
       setError(err.message);
@@ -241,7 +250,7 @@ export default function BulkTransferPage() {
       <BulkTransferConfirmModal
           isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onConfirm={handleConfirmTransfer}
           data={{
-            fromAccountDisplay: selectedAccount ? `${selectedAccount.accountType} · ${selectedAccount.accountNumber}`: '',
+            fromAccountDisplay: selectedAccount ? `${selectedAccount.accountType} · ${selectedAccount.accountNo}`: '',
             count: totals.count, totalAmount: totals.totalAmount, fee: totals.fee
           }}
       />

@@ -1,6 +1,7 @@
 package com.boot.eumbank.transfer_domain.transfer.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,6 +17,7 @@ import java.util.Map;
  * - 커스텀 예외들을 적절한 HTTP 상태 코드와 메시지로 변환
  */
 @RestControllerAdvice("com.boot.eumbank.transfer_domain")
+@Order(1)
 @Slf4j
 public class TransferGlobalExceptionHandler {
 

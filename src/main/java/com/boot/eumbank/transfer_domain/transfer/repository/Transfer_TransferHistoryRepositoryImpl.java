@@ -17,6 +17,20 @@ import java.util.Optional;
 
 import static com.boot.eumbank.account.select.entity.QTransferHistory.transferHistory;
 
+/**
+ * [이체 내역 레포지토리 QueryDSL 구현체]
+ * - Transfer_TransferHistoryRepositoryCustom 인터페이스의 QueryDSL 구현
+ * - 복잡한 이체 내역 조회 쿼리를 QueryDSL로 구현
+ * - 주요 기능:
+ *   1) 동적 쿼리 생성 및 실행
+ *   2) 복잡한 조인 및 서브쿼리 처리
+ *   3) 정렬 및 필터링 로직 구현
+ *   4) 통계 데이터 조회 (일일/월간 출금 합계)
+ *   5) 페이징 처리된 조회
+ * 
+ * @author 임형욱
+ * @since 2025-10-20
+ */
 @Repository
 @RequiredArgsConstructor
 public class Transfer_TransferHistoryRepositoryImpl implements Transfer_TransferHistoryRepositoryCustom {

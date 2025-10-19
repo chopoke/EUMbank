@@ -27,7 +27,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.MariaDBDialect
     hibernate:
-      ddl-auto: create # none -> validate로 변경
+      ddl-auto: validate # none -> validate로 변경
     open-in-view: false
     show-sql: true
     properties:
