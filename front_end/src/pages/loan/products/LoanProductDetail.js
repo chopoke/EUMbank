@@ -1,12 +1,13 @@
 import React from "react";
 import { useParams, useLocation } from "react-router-dom";
 // 백엔드에 디테일 API가 있으면 이걸 만들어 사용하세요.
-import { fetchMortgageProducts /*, fetchMortgageProductDetail*/ } from "../../../api/accounts";
+import { fetchLoanProductDetail, fetchMortgageProducts /*, fetchMortgageProductDetail*/ } from "../../../api/accounts";
 
 export default function LoanProductDetailPage() {
   const { id } = useParams();
   const location = useLocation();
   const stateProduct = location.state?.product || null;
+
 
   // ---------- 상태 ----------
   const [product, setProduct] = React.useState(stateProduct);
@@ -16,7 +17,7 @@ export default function LoanProductDetailPage() {
   React.useEffect(() => {
     if (stateProduct) return; 
     setLoading(true);
-    fetchMortgageProducts({ topFinGrpNo: "020000", pageNo: 1 })
+    fetchLoanProductDetail(id, { topFinGrpNo: "020000", pageNo: 1 })
       .then(res => {
         const items = Array.isArray(res.data) ? res.data : [];
         const found = items.find(x => String(x.id) === String(id));

@@ -1,6 +1,6 @@
 import React from "react";
 import { fetchAccountDetail, fetchAccountTransactions } from "../../api/accounts";
-import { useParams } from "react-router-dom";
+import {  useNavigate, useParams } from "react-router-dom";
 
 
 // 유틸부분 포맷 등
@@ -47,7 +47,8 @@ function AccountHistoryPage(){
   const [memoQuery, setMemoQuery] = React.useState("");
   const [memoQv, setMemoQv] = React.useState(0);
   const [sortKey, setSortKey] = React.useState("latest");
-  
+
+  const navigate = useNavigate();
 
   // 페이지네이션
   const [page, setPage] = React.useState(0);          // 백엔드에서 넘긴 값
@@ -132,8 +133,8 @@ function AccountHistoryPage(){
   
   // 필터 초기화
   function resetFilters() {
-    setDateFrom();
-    setDateTo();
+    setDateFrom("");
+    setDateTo("");
     setKinds(new Set());
     setMinAmt("");
     setMaxAmt("");
@@ -179,6 +180,11 @@ function AccountHistoryPage(){
     return <div className="p-6">로딩 중…</div>;
   }
 
+  // 뒤로가기
+  const backBtn = () =>{
+    navigate(-1);
+  }
+
   return (
     <div className="bg-gray-50">
       {/* 타이틀 */}
@@ -199,8 +205,9 @@ function AccountHistoryPage(){
                 <div className="text-lg font-semibold text-gray-900">{account.alias}</div>
                 <div className="text-sm text-gray-700 font-mono mt-1">{maskAcc(account.number)}</div>
                 <div className="mt-3 flex gap-2">
-                  <button className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-50">이체</button>
-                  <button className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-50">계좌관리</button>
+                  <button className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">이체</button>
+                    <button onClick={backBtn}
+                      className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">계좌목록</button>
                 </div>
               </div>
               <div className="text-right">
@@ -209,6 +216,7 @@ function AccountHistoryPage(){
               </div>
             </div>
           </div>
+          
           {/* 빠른날짜필터 */}
           <div className="col-span-12 lg:col-span-6">
             <div className="rounded-2xl border bg-white p-5 shadow-sm">
@@ -298,7 +306,9 @@ function AccountHistoryPage(){
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => downloadCsv(rows)} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">CSV 다운로드</button>
+                  <button onClick={() => downloadCsv(rows)} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">
+                    CSV 다운로드 
+                  </button>
                   <button onClick={() => { window.location.reload(); }} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">새로고침</button>
                 </div>
               </div>

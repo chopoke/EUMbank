@@ -2,6 +2,7 @@ package com.boot.eumbank.loan.service;
 
 import com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO;
 import com.boot.eumbank.loan.dto.LoanProductDTO;
+import com.boot.eumbank.loan.dto.LoanProductDetailDTO;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
@@ -29,7 +30,7 @@ public class FssFinlifeService {
         this.apiKey = apiKey;
     }
 
-    // 원본 JSON 그대로 받기
+    // 원본 JSON 그대로 받기 (주택담보대출)
     public String getMortgageProductsRaw(String topFinGrpNo, int pageNo){
         var uri = UriComponentsBuilder.fromPath("/finlifeapi/mortgageLoanProductsSearch.json")
                 .queryParam("auth", apiKey)
@@ -50,6 +51,35 @@ public class FssFinlifeService {
 
         if (body == null || body.isBlank()) {
             throw new IllegalStateException("FSS empty body (status=" + resp.getStatusCode() + ")");
+        }
+        return body;
+    }
+
+    // 전세자금대출(원본)
+    public String getJeonseProductsRaw(String topFinGrpNo, int pageNo) {
+        var uri = UriComponentsBuilder.fromPath("/finlifeapi/rentHouseLoanProductsSearch.json")
+                .queryParam("auth", apiKey)
+                .queryParam("topFinGrpNo", topFinGrpNo)
+                .queryParam("pageNo", pageNo)
+                .build(true).toUri();
+        var resp = client.get().uri(uri).retrieve().toEntity(String.class);
+        String body = resp.getBody();
+        if (body == null || body.isBlank()) {
+            throw new IllegalStateException("FSS empty body (jeonse)");
+        }
+        return body;
+    }
+    // 신용대출(원본)
+    public String getCreditProductsRaw(String topFinGrpNo, int pageNo) {
+        var uri = UriComponentsBuilder.fromPath("/finlifeapi/creditLoanProductsSearch.json")
+                .queryParam("auth", apiKey)
+                .queryParam("topFinGrpNo", topFinGrpNo)
+                .queryParam("pageNo", pageNo)
+                .build(true).toUri();
+        var resp = client.get().uri(uri).retrieve().toEntity(String.class);
+        String body = resp.getBody();
+        if (body == null || body.isBlank()) {
+            throw new IllegalStateException("FSS empty body (credit)");
         }
         return body;
     }
@@ -178,4 +208,115 @@ public class FssFinlifeService {
         }
         return (max < 0) ? null : (int)Math.round(max);
     }
+
+
+    /**
+     * 단일 상품 상세 가공 메서드
+     * - FSS "목록" API 응답에서 fin_prdt_cd 로 해당 상품을 찾아 상세 DTO로 변환
+     * - 서버에서 가공/조립
+     */
+    public LoanProductDetailDTO getMortgageProductDetail(String topFinGrpNo, int pageNo, String finPrdtCd) {
+        // 1) 원문 JSON 호출
+        final String json = getMortgageProductsRaw(topFinGrpNo, pageNo);
+
+        try {
+            // 2) JSON → DTO 역직렬화
+            final FinlifeMortgageResponseDTO res = om.readValue(json, FinlifeMortgageResponseDTO.class);
+
+            // 3) 널/빈 리스트 방어
+            final List<FinlifeMortgageResponseDTO.Base> baseList =
+                    Optional.ofNullable(res.getResult())
+                            .map(FinlifeMortgageResponseDTO.Result::getBaseList)
+                            .orElse(List.of());
+
+            final List<FinlifeMortgageResponseDTO.Option> optList =
+                    Optional.ofNullable(res.getResult())
+                            .map(FinlifeMortgageResponseDTO.Result::getOptionList)
+                            .orElse(List.of());
+
+            // 4) 대상 상품(Base) 찾기 (없으면 404/예외)
+            final FinlifeMortgageResponseDTO.Base base = baseList.stream()
+                    .filter(b -> finPrdtCd.equals(b.getFinPrdtCd()))
+                    .findFirst()
+                    .orElseThrow(() -> new NoSuchElementException("상품을 찾을 수 없습니다: " + finPrdtCd));
+
+            // 5) 옵션 모으기 (상환방식/금리유형/금리범위)
+            final List<LoanProductDetailDTO.RateOption> options = optList.stream()
+                    .filter(o -> finPrdtCd.equals(o.getFinPrdtCd()))
+                    .map(o -> LoanProductDetailDTO.RateOption.builder()
+                            .rpayTypeNm(o.getRpayTypeNm())
+                            .lendRateTypeNm(o.getLendRateTypeNm())
+                            .lendRateMin(o.getLendRateMin())
+                            .lendRateMax(o.getLendRateMax())
+                            .lendRateAvg(o.getLendRateAvg())
+                            .build())
+                    .toList();
+
+            // 6) 금리 범위 계산 (옵션이 없으면 0.0 ~ 99.9)
+            final Double rateMin = options.stream()
+                    .map(LoanProductDetailDTO.RateOption::getLendRateMin)
+                    .filter(Objects::nonNull)
+                    .min(Double::compareTo)
+                    .orElse(0.0);
+
+            final Double rateMax = options.stream()
+                    .map(LoanProductDetailDTO.RateOption::getLendRateMax)
+                    .filter(Objects::nonNull)
+                    .max(Double::compareTo)
+                    .orElse(99.9);
+
+            // 7) 배지(금리유형/상환방식) 추출
+            final LinkedHashSet<String> badges = new LinkedHashSet<>();
+            options.forEach(o -> {
+                if (o.getLendRateTypeNm()!=null && !o.getLendRateTypeNm().isBlank()) badges.add(o.getLendRateTypeNm());
+                if (o.getRpayTypeNm()!=null     && !o.getRpayTypeNm().isBlank())      badges.add(o.getRpayTypeNm());
+            });
+
+            // 8) 한도/ LTV 파싱 (문자열에서 최대값만 뽑아 숫자화)
+            final Long limitWon = extractMaxWon(base.getLoanLmt());
+            final Integer limitInt = (limitWon==null? null
+                    : (limitWon > Integer.MAX_VALUE ? Integer.MAX_VALUE : limitWon.intValue()));
+            final Integer ltvMax = extractMaxLtv(base.getLoanLmt());
+
+            // 9) 요약 설명
+            final String desc = (base.getKorCoNm()==null? "" : base.getKorCoNm()+" ")
+                    + Optional.ofNullable(base.getJoinWay()).orElse("")
+                    + Optional.ofNullable(base.getEtcNote()).map(s -> " " + s).orElse("");
+
+            // 10) 최종 DTO 구성
+            return LoanProductDetailDTO.builder()
+                    .id(base.getFinPrdtCd())
+                    .name(base.getFinPrdtNm())
+                    .bankName(base.getKorCoNm())
+                    .type("주택담보")
+                    .desc(desc.trim())
+                    .badges(new ArrayList<>(badges))
+                    .tags(List.of(Optional.ofNullable(base.getKorCoNm()).orElse("")))
+                    .rateMin(rateMin)
+                    .rateMax(rateMax)
+                    .termMonths(List.of(120,240,360)) // FSS 응답에 기간이 명시되지 않아 프론트 기본 가정
+                    .limitMax(limitInt)
+                    .ltvMax(ltvMax)
+                    .loanLmtRaw(base.getLoanLmt())
+                    .erlyRpayFee(base.getErlyRpayFee())
+                    .dlyRate(base.getDlyRate())
+                    .joinWay(base.getJoinWay())
+                    .etcNote(base.getEtcNote())
+                    .options(options)
+                    .docs(List.of(LoanProductDetailDTO.Doc.builder().label("상품설명서").url("#").build()))
+                    .faq(List.of(LoanProductDetailDTO.Faq.builder()
+                            .q("중도상환수수료가 있나요?")
+                            .a(Optional.ofNullable(base.getErlyRpayFee()).orElse("상품별 상이"))
+                            .build()))
+                    .build();
+
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            // 역직렬화 실패 디버깅: 앞 500자만 로그
+            log.error("[FSS] JSON parse error: {}", e.getMessage());
+            log.error("[FSS] RAW (head 500): {}", json.substring(0, Math.min(500, json.length())));
+            throw new RuntimeException("Finlife 응답 파싱 실패(JSON)", e);
+        }
+    }
+
+
 }

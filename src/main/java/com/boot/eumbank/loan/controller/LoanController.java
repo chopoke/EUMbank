@@ -1,6 +1,7 @@
 package com.boot.eumbank.loan.controller;
 
 import com.boot.eumbank.loan.dto.LoanProductDTO;
+import com.boot.eumbank.loan.dto.LoanProductDetailDTO;
 import com.boot.eumbank.loan.service.FssFinlifeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -26,7 +27,7 @@ public class LoanController {
         return fssFinlifeService.getMortgageProductsRaw(topFinGrpNo, pageNo);
     }
 
-    // 상품 목록으로 다듬기 (Json -> 가공)
+    // 상품 목록으로 다듬기 (Json -> 가공) 일단 주택담보대출만
     @GetMapping("/mortgage")
     public List<LoanProductDTO> mortgageList(
             @RequestParam(defaultValue = "020000") String topFinGrpNo,
@@ -35,6 +36,13 @@ public class LoanController {
         return fssFinlifeService.getMortgageProductsForList(topFinGrpNo, pageNo);
     }
 
-    @GetMapping("/mortgage/{lId}")
-    public
+    // 주택담보대출 단일 상세내용
+    @GetMapping("/product/{id}")
+    public LoanProductDetailDTO detail (
+            @PathVariable String id,
+            @RequestParam(defaultValue = "020000") String topFinGrpNo,
+            @RequestParam(defaultValue = "1") int pageNo
+    ){
+        return fssFinlifeService.getMortgageProductDetail(topFinGrpNo, pageNo, id);
+    }
 }

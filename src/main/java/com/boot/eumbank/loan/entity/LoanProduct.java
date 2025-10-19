@@ -1,7 +1,10 @@
 package com.boot.eumbank.loan.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.yaml.snakeyaml.tokens.BlockEndToken;
 
 import java.math.BigDecimal;
@@ -50,4 +53,18 @@ public class LoanProduct {
 
     @Column(name = "lpd_description", length = 500)
     private String description;	//'대출 설명',
+
+
+
+    // ---- FSS 캐시용 추가 컬럼(표시/필터에 필요한 값만) ----
+    @Column(name = "lpd_bank_name", length = 200) private String bankName;     // kor_co_nm
+    @Column(name = "lpd_fin_co_no", length = 32)   private String finCoNo;     // fin_co_no
+    @Column(name = "lpd_loan_lmt_raw", columnDefinition = "TEXT") private String loanLmtRaw; // loan_lmt 원문
+    @Column(name = "lpd_limit_max") private Long limitMax;    // 파싱된 한도(원)
+    @Column(name = "lpd_ltv_max")   private Integer ltvMax;   // 파싱된 LTV(%)
+    @Column(name = "lpd_rate_min")  private Double rateMin;   // 옵션 집계: 최저
+    @Column(name = "lpd_rate_max")  private Double rateMax;   // 옵션 집계: 최고
+    @Column(name = "lpd_dcls_month", length = 6) private String dclsMonth;     // 공시월
+    @Column(name = "lpd_join_way", length = 500) private String joinWay;       // 가입방법
+    @Column(name = "lpd_etc_note", columnDefinition = "TEXT") private String etcNote; // 비고
 }

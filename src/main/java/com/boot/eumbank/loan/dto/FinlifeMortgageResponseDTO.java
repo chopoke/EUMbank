@@ -23,7 +23,9 @@ public class FinlifeMortgageResponseDTO {
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Result {
 
+        @JsonProperty("baseList")
         private List<Base> baseList;
+        @JsonProperty("optionList")
         private List<Option> optionList;
 
         @JsonProperty("total_count") private Integer totalCount;

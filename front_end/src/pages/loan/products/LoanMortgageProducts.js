@@ -137,8 +137,8 @@ export default function LoanProductsListPage(){
 
         <div className="mt-4 flex gap-2">
           <Link
-          to={`/loans/${p.id}`}
-          state={{ product: p }}   // ★ 상세에 미리 전달
+          to={`/loans/product/${p.id}`}
+          state={{ product: p }}   // 상세에 미리 전달
           className="px-3 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-sm"
         >자세히 보기</Link>
           <button onClick={()=>{ if(!selected.includes(p.id)) toggleSelected(p.id); setShowPrequal(true); }} className="px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm">간편조회</button>
@@ -247,15 +247,17 @@ export default function LoanProductsListPage(){
 
       <main className="max-w-7xl mx-auto px-6 pt-8 pb-20">
         <div className="text-sm text-gray-500 mb-3">금융상품 <span className="mx-1">›</span> 대출</div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">대출 상품</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">
+          <i className="ri-hand-coin-line  text-4xl  text-lime-800 p-2"></i>
+          대출 상품</h1>
 
         {/* Filters */}
-        <section className="rounded-2xl border border-gray-100 bg-white p-4 md:p-5 mb-6">
+        <section className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 md:p-5 mb-6">
           <div className="grid lg:grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-end">
             <label className="block">
-              <span className="text-sm text-gray-600">검색</span>
+              <span className="text-sm text-gray-600 ">검색</span>
               <input value={q} onChange={(e)=>{ setQ(e.target.value); setPage(1); }} placeholder="상품명/키워드"
-                     className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"/>
+                     className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-600"/>
             </label>
 
             <label className="block">
@@ -269,7 +271,7 @@ export default function LoanProductsListPage(){
             <label className="block">
               <span className="text-sm text-gray-600">최소 기간(개월)</span>
               <input type="number" min={0} value={termMin} onChange={(e)=>{ setTermMin(clamp(parseInt(e.target.value||'0',10),0,480)); setPage(1); }}
-                     className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"/>
+                     className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-600"/>
             </label>
 
             <div>
@@ -286,7 +288,7 @@ export default function LoanProductsListPage(){
             <label className="block">
               <span className="text-sm text-gray-600">최소 한도(원)</span>
               <input type="number" min={0} value={limitMin} onChange={(e)=>{ setLimitMin(clamp(parseInt(e.target.value||'0',10),0,1_000_000_000)); setPage(1); }}
-                     className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"/>
+                     className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-600"/>
             </label>
           </div>
 

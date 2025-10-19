@@ -96,9 +96,9 @@ function App() {
             </ProtectedRoute>} />
 
         {/* 주택담보대출 상품 목록 */}
-        <Route path="/fss/mortgage" element={<LoanMortgageProduct/>} /> 
+        <Route path="/loan/mortgage" element={<LoanMortgageProduct/>} /> 
         {/* 상품 상세 */}
-        <Route path="/fss/mortgage/:id" element={<LoanProductDetail/>} /> 
+        <Route path="/loan/mortgage/:id" element={<LoanProductDetail/>} /> 
 
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
