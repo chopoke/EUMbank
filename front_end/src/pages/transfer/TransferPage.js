@@ -598,7 +598,8 @@ export default function TransferPage() {
           timestamp: response.timestamp || new Date().toISOString(),
           fromAccount: selectedAccount,
           memo: memo,
-          fee: fee
+          fee: fee,
+          remainingBalance: response.data.data.afterBalance || (balance - numericAmount - fee)
         };
         
         setIsModalOpen(false);
