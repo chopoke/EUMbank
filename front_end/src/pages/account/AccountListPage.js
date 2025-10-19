@@ -38,20 +38,33 @@ function AccountListPage(){
         const rows = res.data || [];
 
         // 값 매핑
-        const mapped = rows.map(d=>({
+        const mapped = rows.map(d => {
+        // 안전 파싱 (문자열/epoch 모두 OK)
+        const raw = d.lastTransferAt;
+        const asDate = raw
+          ? new Date(typeof raw === 'number' ? raw : String(raw).replace(' ', 'T'))
+          : null;
+
+        const ts = asDate ? asDate.getTime() : 0;
+        const lastText = asDate
+          ? asDate.toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })
+          : '— 최근 거래 없음';
+
+        return {
           id: d.a_no,
           alias: d.a_nickname || d.a_account_no,
-          accountName: d.a_account_type || "입출금",
-          bank: "EumBank",                 // 임시
+          accountName: d.a_account_type || '입출금',
+          bank: 'EumBank', // 임시
           number: d.a_account_no,
           type: d.a_account_type,
           balance: Number(d.a_balance),
-          currency: d.a_currency || "KRW",
-          status: d.a_status === "ACTIVE" ? "정상" : d.a_status,
+          currency: d.a_currency || 'KRW',
+          status: d.a_status === 'ACTIVE' ? '정상' : d.a_status,
           favorite: false,
-          lastActivityTs: Date.now(),
-          lastActivity: ""
-        }));
+          lastActivityTs: ts,
+          lastActivity: lastText,
+        };
+      });
         setAccounts(mapped);
       }).catch((e) =>{
         if (!alive) return;

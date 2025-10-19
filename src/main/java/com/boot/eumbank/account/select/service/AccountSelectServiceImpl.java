@@ -51,6 +51,7 @@ public class AccountSelectServiceImpl implements AccountSelectService {
         dto.setA_balance(a.getBalance());
         dto.setA_nickname(a.getNickname());
         dto.setA_status(a.getStatus());
+        dto.setLastTransferAt(a.getLastTxAt());
         return dto;
     }
 

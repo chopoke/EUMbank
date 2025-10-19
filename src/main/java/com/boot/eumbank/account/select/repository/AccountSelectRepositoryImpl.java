@@ -2,6 +2,8 @@ package com.boot.eumbank.account.select.repository;
 
 import com.boot.eumbank.account.Open.model.Account;
 import com.boot.eumbank.account.Open.model.QAccount;
+import com.boot.eumbank.account.select.entity.QTransferHistory;
+import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -9,8 +11,12 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -18,6 +24,7 @@ public class AccountSelectRepositoryImpl implements AccountRepositoryCustom {
 
     // 커스텀 리포의 구현체에선 JPAQueryFactory를 주입 받아 사용
     private final JPAQueryFactory jpaQueryFactory;
+    private static final QTransferHistory TH = QTransferHistory.transferHistory;
 
     @Override
     public List<Account> findAccountsByCustomer(int c_no) {
@@ -67,5 +74,27 @@ public class AccountSelectRepositoryImpl implements AccountRepositoryCustom {
         long safeTotal = (total != null) ? total : 0L;
 
         return new PageImpl<>(content, pageable,safeTotal);
+    }
+
+    @Override
+    public Map<Integer, LocalDateTime> findLastTransferAtForAccounts(List<Integer> aNos) {
+        if (aNos == null || aNos.isEmpty()) return Collections.emptyMap();
+
+        List<Tuple> rows = jpaQueryFactory
+                .select(TH.a_no, TH.th_transfer_at.max())
+                .from(TH)
+                .where(TH.a_no.in(aNos))
+                .groupBy(TH.a_no)
+                .fetch();
+
+        Map<Integer, LocalDateTime> result = new java.util.HashMap<>();
+        for (Tuple t : rows) {
+            Integer aNo = t.get(TH.a_no);
+            java.sql.Timestamp ts = t.get(TH.th_transfer_at.max());
+            if (aNo != null && ts != null) {
+                result.put(aNo, ts.toLocalDateTime()); // ⭐ Timestamp → LocalDateTime 변환
+            }
+        }
+        return result;
     }
 }

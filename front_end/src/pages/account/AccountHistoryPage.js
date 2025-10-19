@@ -128,7 +128,7 @@ function AccountHistoryPage(){
         setTotalPages(p.totalPages ?? (p.totalElements ? p.totalPages : 1));
       }).catch(console.error);
 
-  }, [a_no, kinds, dateFrom, dateTo, page, pageSize, memoQv]);
+  }, [a_no, kinds, dateFrom, dateTo, page, pageSize, memoQv, sortKey]);
 
   
   // 필터 초기화
