@@ -1,5 +1,5 @@
 import React from "react";
-import { fetchMortgageProducts } from "../../../api/accounts";
+import { fetchLoanProducts } from "../../../api/accounts";
 import { Link } from "react-router-dom";
 
 export default function LoanProductsListPage(){
@@ -11,31 +11,6 @@ export default function LoanProductsListPage(){
   // 가져올 데이터셋
   const [PRODUCTS, setPRODUCTS] = React.useState([]);
 
-  React.useEffect(()=>{
-  // 백엔드 프록시에서 가공한 데이터 그대로 사용
-  fetchMortgageProducts({ topFinGrpNo: "020000", pageNo: 1 })
-    .then(res => {
-      const data = res.data;
-      setPRODUCTS(Array.isArray(data) ? data : []);
-    })
-    // .then(data => {
-    //   // data: LoanProductListItem[] 형태로 들어옴
-    //   setPRODUCTS(data);
-    // })
-    .catch(err => {
-      console.error('주택담보대출 불러오기 실패', err);
-      setPRODUCTS([]); // 실패 시 빈 목록
-    });
-}, []);
-
-  const TYPES = ['전체','신용대출','주택담보','전세자금','사업자','자동차','학자금'];
-  const SORTS = [
-    {id:'rateAsc', label:'금리 낮은순'},
-    {id:'rateDesc', label:'금리 높은순'},
-    {id:'limitDesc', label:'한도 높은순'},
-    {id:'termDesc', label:'기간 긴순'},
-  ];
-
   // ---------------- 상태 ----------------
   const [q, setQ] = React.useState('');
   const [type, setType] = React.useState('전체');
@@ -46,6 +21,78 @@ export default function LoanProductsListPage(){
   const [selected, setSelected] = React.useState([]); // 비교 선택 id 배열 (최대 3)
   const [page, setPage] = React.useState(1);
   const PAGE_SIZE = 4;
+  
+  // UI 타입 -> API 타입 매핑
+  const TYPE_TO_PARAM = {
+    '주택담보': 'MORTGAGE',
+    '전세자금': 'JEONSE',
+    '신용대출': 'PERSONAL',
+  };
+
+  async function loadProductsFor(uiType){
+    try {
+      if (uiType === '전체') {
+        const types = ['MORTGAGE','JEONSE','PERSONAL'];
+        const resArr = await Promise.all(types.map(t => fetchLoanProducts({ type: t, page: 0, size: 100 })));
+        const merged = resArr.flatMap(res => {
+          const d = res.data;
+          return Array.isArray(d) ? d
+               : Array.isArray(d?.items) ? d.items
+               : Array.isArray(d?.content) ? d.content
+               : [];
+        });
+        setPRODUCTS(merged);
+      } else {
+        const apiType = TYPE_TO_PARAM[uiType] || 'MORTGAGE';
+        const res = await fetchLoanProducts({ type: apiType, page: 0, size: 100 });
+        const d = res.data;
+        const items = Array.isArray(d) ? d
+                    : Array.isArray(d?.items) ? d.items
+                    : Array.isArray(d?.content) ? d.content
+                    : [];
+        setPRODUCTS(items);
+      }
+    } catch (e) {
+
+           console.error('대출상품 불러오기 실패', e);
+      setPRODUCTS([]);
+    }
+  }
+
+  // React.useEffect(()=>{
+  // // 백엔드 프록시에서 가공한 데이터 그대로 사용
+  // fetchLoanProducts({ type: "MORTGAGE", page: 0, size: 50 })
+  //   .then(res => {
+  //     // A안(Map) 또는 B안(Page) 모두 지원
+  //     const d = res.data;
+  //     const items = Array.isArray(d)       ? d
+  //                  : Array.isArray(d?.items)   ? d.items
+  //                  : Array.isArray(d?.content) ? d.content
+  //                  : [];
+  //     setPRODUCTS(items);
+  //   })
+  //   // .then(data => {
+  //   //   // data: LoanProductListItem[] 형태로 들어옴
+  //   //   setPRODUCTS(data);
+  //   // })
+  //   .catch(err => {
+  //     console.error('주택담보대출 불러오기 실패', err);
+  //     setPRODUCTS([]); // 실패 시 빈 목록
+  //   });
+  // }, []);
+
+  React.useEffect(() => { loadProductsFor('전체'); }, []);
+  React.useEffect(() => { loadProductsFor(type); setPage(1); }, [type]);
+
+  const TYPES = ['전체','신용대출','주택담보','전세자금'];
+  const SORTS = [
+    {id:'rateAsc', label:'금리 낮은순'},
+    {id:'rateDesc', label:'금리 높은순'},
+    {id:'limitDesc', label:'한도 높은순'},
+    {id:'termDesc', label:'기간 긴순'},
+  ];
+
+  
 
   // 모달 상태
   const [showCompare, setShowCompare] = React.useState(false);

@@ -170,5 +170,5 @@ finlife:
 jobs:
   finlife:
     sync:
-      cron: "0 0 3 * * *"   # 매일 03:00
+      cron: "0/15 * * * * *"    # 매일 03:00
   timezone: "Asia/Seoul"

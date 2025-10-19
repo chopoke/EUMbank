@@ -9,5 +9,5 @@ import java.util.List;
 public interface LoanProductOptionRepository extends JpaRepository<LoanProductOption, Integer> {
 
     List<LoanProductOption> findByProduct(LoanProduct product);
-    void deleteByProduct(LoanProduct product);
+    void deleteAllByProduct(LoanProduct product);
 }

@@ -26,8 +26,15 @@ export const fetchMortgageProductsRaw = ({ topFinGrpNo = "020000", pageNo = 1 } 
   api.get("/api/loan/mortgage/raw", { params: { topFinGrpNo, pageNo } });
 
 // 대출 상품 상세
-export const fetchLoanProductDetail = (id, { topFinGrpNo="020000", pageNo=1 } = {}) =>
-  api.get(`/api/loan/mortgage/${id}`, { params: { topFinGrpNo, pageNo }});
+// export const fetchLoanProductDetail = (id, { topFinGrpNo="020000", pageNo=1 } = {}) =>
+//   api.get(`/api/loan/mortgage/${id}`, { params: { topFinGrpNo, pageNo }});
+
+export const fetchLoanProducts = ({ type="MORTGAGE", page=0, size=20 } = {}) =>
+  api.get("/api/loan/products", { params: { type, page, size } });
+
+export const fetchLoanProductDetail = (code) =>
+  api.get(`/api/loan/products/${code}`);
+
 
 
 export const updateProfile = (profile) => {

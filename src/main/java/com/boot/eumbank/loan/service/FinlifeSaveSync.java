@@ -1,6 +1,8 @@
 package com.boot.eumbank.loan.service;
 
 import com.boot.eumbank.loan.dto.FinlifeCreditResponseDTO;
+import com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO;
+import com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO;
 import com.boot.eumbank.loan.entity.LoanProduct;
 import com.boot.eumbank.loan.entity.LoanProductOption;
 import com.boot.eumbank.loan.repository.LoanProductOptionRepository;
@@ -11,7 +13,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.*;
 import java.util.function.Function;
@@ -22,14 +26,14 @@ import java.util.function.Function;
 public class FinlifeSaveSync {
 
     private final FssFinlifeService fss; // FSS API 호출 서비스
-    private final LoanProductRepository productRepo;
-    private final LoanProductOptionRepository optionRepo;
+    private final FinlifeUpsert upsertTx;
 
     private final ObjectMapper om = new ObjectMapper()
+            .setPropertyNamingStrategy(com.fasterxml.jackson.databind.PropertyNamingStrategies.SNAKE_CASE)
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     /** 새벽 3시(서울)마다 동기화 */
-    @Scheduled(cron = "${jobs.finlife.sync.cron:0 0 3 * * *}", zone = "${jobs.timezone:Asia/Seoul}")
+    @Scheduled(cron = "${jobs.finlife.sync.cron:0/15 * * * * *}", zone = "${jobs.timezone:Asia/Seoul}")
     public void runSave() {
         upsertAllPagesMortgage("020000"); // 주담대
         upsertAllPagesJeonse("020000");   // 전세자금(임차)
@@ -43,7 +47,7 @@ public class FinlifeSaveSync {
         PageResult work(String topFinGrpNo, int pageNo);
     }
 
-    private record PageResult(int upserted, Integer nowPageNo, Integer maxPageNo) {}
+    public static record PageResult(int upserted, Integer nowPageNo, Integer maxPageNo) {}
 
     private void loopPages(String topFinGrpNo, String loanType, PageWorker worker) {
         int page = 1, total = 0;
@@ -65,35 +69,30 @@ public class FinlifeSaveSync {
         loopPages(topFinGrpNo, "MORTGAGE", (grp, page) -> {
             try {
                 String json = fss.getMortgageProductsRaw(grp, page);
-                var res = om.readValue(json, com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.class);
+                var res = om.readValue(json, FinlifeMortgageResponseDTO.class);
                 var r = res.getResult();
-
-                return upsertOnePageGeneric(
+                return upsertTx.upsertOnePageGeneric(
                         "MORTGAGE", page,
-                        Optional.ofNullable(r).map(com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Result::getBaseList).orElse(List.of()),
-                        Optional.ofNullable(r).map(com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Result::getOptionList).orElse(List.of()),
-                        // Base extractors
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Base::getFinPrdtCd,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Base::getFinPrdtNm,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Base::getKorCoNm,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Base::getFinCoNo,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Base::getDclsMonth,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Base::getLoanLmt,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Base::getJoinWay,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Base::getEtcNote,
-                        // Option extractors
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Option::getFinPrdtCd,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Option::getLendRateMin,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Option::getLendRateMax,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Option::getLendRateAvg,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Option::getRpayTypeNm,
-                        com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Option::getLendRateTypeNm,
-                        Optional.ofNullable(r).map(com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Result::getNowPageNo).orElse(null),
-                        Optional.ofNullable(r).map(com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO.Result::getMaxPageNo).orElse(null)
+                        Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getBaseList).orElse(List.of()),
+                        Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getOptionList).orElse(List.of()),
+                        FinlifeMortgageResponseDTO.Base::getFinPrdtCd,
+                        FinlifeMortgageResponseDTO.Base::getFinPrdtNm,
+                        FinlifeMortgageResponseDTO.Base::getKorCoNm,
+                        FinlifeMortgageResponseDTO.Base::getFinCoNo,
+                        FinlifeMortgageResponseDTO.Base::getDclsMonth,
+                        FinlifeMortgageResponseDTO.Base::getLoanLmt,
+                        FinlifeMortgageResponseDTO.Base::getJoinWay,
+                        FinlifeMortgageResponseDTO.Base::getEtcNote,
+                        FinlifeMortgageResponseDTO.Option::getFinPrdtCd,
+                        FinlifeMortgageResponseDTO.Option::getLendRateMin,
+                        FinlifeMortgageResponseDTO.Option::getLendRateMax,
+                        FinlifeMortgageResponseDTO.Option::getLendRateAvg,
+                        FinlifeMortgageResponseDTO.Option::getRpayTypeNm,
+                        FinlifeMortgageResponseDTO.Option::getLendRateTypeNm,
+                        Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getNowPageNo).orElse(null),
+                        Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getMaxPageNo).orElse(null)
                 );
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            } catch (Exception e) { throw new RuntimeException(e); }
         });
     }
 
@@ -102,29 +101,29 @@ public class FinlifeSaveSync {
         loopPages(topFinGrpNo, "JEONSE", (grp, page) -> {
             try {
                 String json = fss.getJeonseProductsRaw(grp, page);
-                var res = om.readValue(json, com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.class);
+                var res = om.readValue(json, FinlifeJeonseResponseDTO.class);
                 var r = res.getResult();
 
-                return upsertOnePageGeneric(
+                return upsertTx.upsertOnePageGeneric(
                         "JEONSE", page,
-                        Optional.ofNullable(r).map(com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Result::getBaseList).orElse(List.of()),
-                        Optional.ofNullable(r).map(com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Result::getOptionList).orElse(List.of()),
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Base::getFinPrdtCd,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Base::getFinPrdtNm,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Base::getKorCoNm,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Base::getFinCoNo,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Base::getDclsMonth,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Base::getLoanLmt,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Base::getJoinWay,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Base::getEtcNote,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Option::getFinPrdtCd,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Option::getLendRateMin,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Option::getLendRateMax,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Option::getLendRateAvg,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Option::getRpayTypeNm,
-                        com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Option::getLendRateTypeNm,
-                        Optional.ofNullable(r).map(com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Result::getNowPageNo).orElse(null),
-                        Optional.ofNullable(r).map(com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO.Result::getMaxPageNo).orElse(null)
+                        Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getBaseList).orElse(List.of()),
+                        Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getOptionList).orElse(List.of()),
+                        FinlifeJeonseResponseDTO.Base::getFinPrdtCd,
+                        FinlifeJeonseResponseDTO.Base::getFinPrdtNm,
+                        FinlifeJeonseResponseDTO.Base::getKorCoNm,
+                        FinlifeJeonseResponseDTO.Base::getFinCoNo,
+                        FinlifeJeonseResponseDTO.Base::getDclsMonth,
+                        FinlifeJeonseResponseDTO.Base::getLoanLmt,
+                        FinlifeJeonseResponseDTO.Base::getJoinWay,
+                        FinlifeJeonseResponseDTO.Base::getEtcNote,
+                        FinlifeJeonseResponseDTO.Option::getFinPrdtCd,
+                        FinlifeJeonseResponseDTO.Option::getLendRateMin,
+                        FinlifeJeonseResponseDTO.Option::getLendRateMax,
+                        FinlifeJeonseResponseDTO.Option::getLendRateAvg,
+                        FinlifeJeonseResponseDTO.Option::getRpayTypeNm,
+                        FinlifeJeonseResponseDTO.Option::getLendRateTypeNm,
+                        Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getNowPageNo).orElse(null),
+                        Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getMaxPageNo).orElse(null)
                 );
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -137,10 +136,10 @@ public class FinlifeSaveSync {
         loopPages(topFinGrpNo, "PERSONAL", (grp, page) -> {
             try {
                 String json = fss.getCreditProductsRaw(grp, page);
-                var res = om.readValue(json, com.boot.eumbank.loan.dto.FinlifeCreditResponseDTO.class);
+                var res = om.readValue(json, FinlifeCreditResponseDTO.class);
                 var r = res.getResult();
 
-                return upsertOnePageGeneric(
+                return upsertTx.upsertOnePageGeneric(
                         "PERSONAL", page,
                         Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getBaseList).orElse(List.of()),
                         Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getOptionList).orElse(List.of()),
@@ -167,100 +166,7 @@ public class FinlifeSaveSync {
         });
     }
 
-    // ===== 제너릭 업서트 (페이지 단위 트랜잭션) =====
-
-    @Transactional
-    private <B,O> PageResult upsertOnePageGeneric(
-            String loanType, int pageNo,
-            List<B> baseList, List<O> optList,
-            // Base extractors
-            Function<B,String> b_finPrdtCd,
-            Function<B,String> b_finPrdtNm,
-            Function<B,String> b_korCoNm,
-            Function<B,String> b_finCoNo,
-            Function<B,String> b_dclsMonth,
-            Function<B,String> b_loanLmt,
-            Function<B,String> b_joinWay,
-            Function<B,String> b_etcNote,
-            // Option extractors
-            Function<O,String>  o_finPrdtCd,
-            Function<O,Double>  o_lendRateMin,
-            Function<O,Double>  o_lendRateMax,
-            Function<O,Double>  o_lendRateAvg,
-            Function<O,String>  o_rpayTypeNm,
-            Function<O,String>  o_lendRateTypeNm,
-            // page info
-            Integer nowPageNo, Integer maxPageNo
-    ) {
-        Map<String, List<O>> optsByProduct = new HashMap<>();
-        for (var o : optList) {
-            String code = o_finPrdtCd.apply(o);
-            if (code == null) continue;
-            optsByProduct.computeIfAbsent(code, k -> new ArrayList<>()).add(o);
-        }
-
-        int upsertCount = 0;
-
-        for (var b : baseList) {
-            String finPrdtCd = b_finPrdtCd.apply(b);
-            if (finPrdtCd == null) continue;
-
-            List<O> opts = optsByProduct.getOrDefault(finPrdtCd, List.of());
-
-            Double rateMin = opts.stream().map(o_lendRateMin).filter(Objects::nonNull).min(Double::compareTo).orElse(null);
-            Double rateMax = opts.stream().map(o_lendRateMax).filter(Objects::nonNull).max(Double::compareTo).orElse(null);
-
-            String loanLmt = b_loanLmt.apply(b);
-            Long   limitWon = extractMaxWon(loanLmt);
-            Integer ltvMax  = extractMaxLtv(loanLmt);
-
-            LoanProduct product = productRepo.findByLoanCode(finPrdtCd).orElseGet(LoanProduct::new);
-            boolean isNew = (product.getLoanNo() == 0);
-            if (isNew) {
-                product.setLoanCode(finPrdtCd);
-                product.setLoanType(loanType);
-                product.setStatus("Y");
-            }
-
-            product.setLoanName(b_finPrdtNm.apply(b));
-            product.setBankName(b_korCoNm.apply(b));
-            product.setFinCoNo(b_finCoNo.apply(b));
-            product.setLoanLmtRaw(loanLmt);
-            product.setLimitMax(limitWon);
-            product.setLtvMax(ltvMax);
-            product.setRateMin(rateMin);
-            product.setRateMax(rateMax);
-            product.setDclsMonth(b_dclsMonth.apply(b));
-            product.setJoinWay(b_joinWay.apply(b));
-            product.setEtcNote(b_etcNote.apply(b));
-
-            product = productRepo.save(product);
-
-            optionRepo.deleteByProduct(product);
-            if (!opts.isEmpty()) {
-                List<LoanProductOption> entities = new ArrayList<>(opts.size());
-                for (var o : opts) {
-                    entities.add(LoanProductOption.builder()
-                            .product(product)
-                            .rpayTypeNm(o_rpayTypeNm.apply(o))
-                            .lendRateTypeNm(o_lendRateTypeNm.apply(o))
-                            .lendRateMin(o_lendRateMin.apply(o))
-                            .lendRateMax(o_lendRateMax.apply(o))
-                            .lendRateAvg(o_lendRateAvg.apply(o))
-                            .build());
-                }
-                optionRepo.saveAll(entities);
-            }
-
-            upsertCount++;
-        }
-
-        log.info("[SYNC:{}] page {} upsert {}건", loanType, pageNo, upsertCount);
-        return new PageResult(upsertCount, nowPageNo, maxPageNo);
-    }
-
     // ===== 문자열 파서(한도/LTV) =====
-
     private static Long extractMaxWon(String raw){
         if (raw == null) return null;
         String s = raw.replace(",", "");
