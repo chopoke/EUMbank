@@ -25,6 +25,7 @@ import { AccountHistoryPage } from "./pages/account/AccountHistoryPage";
 // 이체 관련 페이지들
 import TransferPage from "./pages/transfer/TransferPage";
 import TransferComplete from "./pages/transfer/TransferComplete";
+import TransferReserveComplete from "./pages/transfer/TransferReserveComplete";
 import BulkTransferDashboard from "./pages/transfer/BulkTransferDashboard";
 import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
 
@@ -121,6 +122,11 @@ function App() {
         <Route path="/transfer/complete" element={
           <ProtectedRoute>
             <TransferComplete />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/reserve/complete" element={
+          <ProtectedRoute>
+            <TransferReserveComplete />
           </ProtectedRoute>
         } />
         <Route path="/transfer/bulk" element={

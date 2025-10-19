@@ -142,6 +142,12 @@ export default function BulkTransferComplete() {
         {/* 액션 버튼 */}
         <section className="mt-8 flex justify-center gap-4">
           <button 
+            onClick={() => navigate('/')}
+            className="rounded-full border border-gray-300 px-6 py-3 text-sm hover:bg-gray-50"
+          >
+            홈으로 가기
+          </button>
+          <button 
             onClick={() => navigate('/transfer/bulk')}
             className="rounded-full border border-gray-300 px-6 py-3 text-sm hover:bg-gray-50"
           >

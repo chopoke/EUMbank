@@ -52,4 +52,7 @@ public interface TransferService {
     
     // 이체 수수료 계산
     Map<String, Object> calculateTransferFee(TransferFeeRequestDto request);
+    
+    // 실제 예금주명 조회
+    String getActualAccountHolderName(String accountNumber, String bank);
 }

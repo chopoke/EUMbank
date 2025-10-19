@@ -24,8 +24,11 @@ export const transferApi = {
   cancelReserveTransfer: (orderId) => api.delete(`/api/transfer/reserve/${orderId}`),
   
   // === 수취인 관련 ===
-  // 예금주 조회 (GET /api/transfer/account-holder/{bankCode}/{accountNo})
-  getAccountHolder: (bankCode, accountNo) => api.get(`/api/transfer/account-holder/${bankCode}/${accountNo}`),
+  // 예금주 조회 (POST /api/transfer/account-holder)
+  getAccountHolder: (bankCode, accountNo) => api.post('/api/transfer/account-holder', {
+    bankCode,
+    accountNumber: accountNo
+  }),
   
   // 최근 수취인 조회 (GET /api/transfer/recipients/{accountNo})
   getRecentRecipients: (accountNo) => api.get(`/api/transfer/recipients/${accountNo}`),

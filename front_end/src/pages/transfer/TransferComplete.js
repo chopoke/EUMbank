@@ -47,21 +47,18 @@ export default function TransferComplete() {
     navigate('/transfer', { state: { prefilledData: transferData } });
   };
 
-  const handleSaveToFavorites = () => {
-    // 자주 쓰는 계좌 등록 로직
-    alert('자주 쓰는 계좌로 등록되었습니다.');
-  };
 
-  const handleCreateSchedule = () => {
-    // 예약 이체 생성 로직
-    navigate('/transfer', { state: { createSchedule: true, prefilledData: transferData } });
+  const handleGoHome = () => {
+    navigate('/');
   };
 
   if (!transferData) {
     return <div>로딩 중...</div>;
   }
 
-  const amount = parseInt((transferData.amount || '0').replace(/[^0-9]/g, ''));
+  const amount = typeof transferData.amount === 'string' 
+    ? parseInt(transferData.amount.replace(/[^0-9]/g, '')) 
+    : transferData.amount || 0;
   const fee = 500;
 
   return (
@@ -103,11 +100,11 @@ export default function TransferComplete() {
                   <div className="text-sm text-gray-500 mt-4">처리시각</div>
                   <div className="font-medium">{transactionInfo.timestamp}</div>
                   <div className="text-sm text-gray-500 mt-4">보내는 계좌</div>
-                  <div className="font-medium">입출금통장 · 110-123-456789</div>
+                  <div className="font-medium">{transferData.fromAccount?.accountType || '-'} · {transferData.fromAccount?.accountNo || '-'}</div>
                   <div className="text-sm text-gray-500 mt-4">받는 분</div>
-                  <div className="font-medium">{transferData.toBank} · {transferData.toAccount}</div>
+                  <div className="font-medium">{transferData.recipient?.bank || '-'} · {transferData.recipient?.account || '-'}</div>
                   <div className="text-sm text-gray-500">예금주</div>
-                  <div className="font-medium">{transferData.toName}</div>
+                  <div className="font-medium">{transferData.recipient?.name || '-'}</div>
                 </div>
                 <div className="space-y-2">
                   <div className="text-sm text-gray-500">보낸 금액</div>
@@ -148,27 +145,20 @@ export default function TransferComplete() {
               <div className="flex items-center justify-between gap-3 mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">다음에 할 일</h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <button 
                   onClick={handleReTransfer}
-                  className="rounded-xl border bg-white p-4 text-left hover:shadow"
+                  className="rounded-xl border-2 border-blue-300 bg-blue-100 p-4 text-left hover:border-blue-400 hover:bg-blue-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
                 >
-                  <div className="font-medium">같은 대상 재이체</div>
-                  <p className="mt-1 text-gray-600">반복 송금 시 편리</p>
+                  <div className="font-medium text-blue-900">같은 대상 재이체</div>
+                  <p className="mt-1 text-blue-700">반복 송금 시 편리</p>
                 </button>
                 <button 
-                  onClick={handleSaveToFavorites}
-                  className="rounded-xl border bg-white p-4 text-left hover:shadow"
+                  onClick={handleGoHome}
+                  className="rounded-xl border-2 border-gray-400 bg-gray-100 p-4 text-left hover:border-gray-500 hover:bg-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
                 >
-                  <div className="font-medium">자주 쓰는 대상 등록</div>
-                  <p className="mt-1 text-gray-600">연락처/별칭 저장</p>
-                </button>
-                <button 
-                  onClick={handleCreateSchedule}
-                  className="rounded-xl border bg-white p-4 text-left hover:shadow"
-                >
-                  <div className="font-medium">예약 이체 만들기</div>
-                  <p className="mt-1 text-gray-600">매월/매주 자동</p>
+                  <div className="font-medium text-gray-900">홈으로 가기</div>
+                  <p className="mt-1 text-gray-700">메인 페이지로 이동</p>
                 </button>
               </div>
             </section>

@@ -381,14 +381,21 @@ public class TransferController {
         log.info("은행 목록 조회 요청");
         
         try {
-            // 하드코딩된 은행 목록 (실제로는 DB에서 조회)
+            // 하드코딩된 은행 목록 (신규 입력 탭용)
             Map<String, Object> banks = Map.of(
                 "banks", List.of(
                     Map.of("code", "001", "name", "국민은행", "logo", "/images/kb.png"),
                     Map.of("code", "002", "name", "신한은행", "logo", "/images/shinhan.png"),
                     Map.of("code", "003", "name", "우리은행", "logo", "/images/woori.png"),
                     Map.of("code", "004", "name", "하나은행", "logo", "/images/hana.png"),
-                    Map.of("code", "005", "name", "농협은행", "logo", "/images/nh.png")
+                    Map.of("code", "005", "name", "농협은행", "logo", "/images/nh.png"),
+                    Map.of("code", "006", "name", "기업은행", "logo", "/images/ibk.png"),
+                    Map.of("code", "007", "name", "새마을금고", "logo", "/images/smg.png"),
+                    Map.of("code", "008", "name", "신협", "logo", "/images/sc.png"),
+                    Map.of("code", "009", "name", "우체국", "logo", "/images/post.png"),
+                    Map.of("code", "010", "name", "카카오뱅크", "logo", "/images/kakao.png"),
+                    Map.of("code", "011", "name", "토스뱅크", "logo", "/images/toss.png"),
+                    Map.of("code", "012", "name", "케이뱅크", "logo", "/images/kbank.png")
                 )
             );
             
@@ -409,21 +416,24 @@ public class TransferController {
     /**
      * [수취인 조회 API]
      * - 특정 은행/계좌의 수취인 정보 조회
-     * - GET /api/transfer/account-holder/{bankCode}/{accountNo}
+     * - POST /api/transfer/account-holder
      */
-    @GetMapping("/account-holder/{bankCode}/{accountNo}")
+    @PostMapping("/account-holder")
     public ResponseEntity<Map<String, Object>> getAccountHolder(
-            @PathVariable String bankCode, 
-            @PathVariable String accountNo) {
+            @RequestBody Map<String, String> request) {
+        String bankCode = request.get("bankCode");
+        String accountNo = request.get("accountNumber");
         log.info("수취인 조회 요청 - 은행코드: {}, 계좌번호: {}", bankCode, accountNo);
         
         try {
-            // 실제로는 외부 API 호출 또는 DB 조회
+            // 실제 DB에서 예금주명 조회
+            String accountHolder = transferService.getActualAccountHolderName(accountNo, bankCode);
+            
             Map<String, Object> holder = Map.of(
                 "bankCode", bankCode,
                 "accountNo", accountNo,
-                "holderName", "홍길동", // 실제로는 조회된 이름
-                "isValid", true
+                "accountHolder", accountHolder,
+                "isValid", !accountHolder.equals("계좌 정보 없음") && !accountHolder.equals("조회 실패")
             );
             
             Map<String, Object> result = new HashMap<>();

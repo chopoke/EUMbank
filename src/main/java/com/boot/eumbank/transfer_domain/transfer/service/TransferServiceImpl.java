@@ -860,65 +860,34 @@ public class TransferServiceImpl implements TransferService {
             return new ArrayList<>(uniqueRecipients.values());
             
         } catch (Exception e) {
-            log.warn("데이터베이스 조회 실패, 테스트용 데이터 반환: {}", e.getMessage());
+            log.warn("데이터베이스 조회 실패, 빈 리스트 반환: {}", e.getMessage());
             log.warn("계좌번호: {}, 에러 타입: {}", accountNo, e.getClass().getSimpleName());
             
-            // 테스트용 데이터 반환 (데이터베이스 연결 실패 시)
-            List<Map<String, Object>> testData = new ArrayList<>();
-            
-            Map<String, Object> recipient1 = new HashMap<>();
-            recipient1.put("name", "홍길동");
-            recipient1.put("bank", "KB국민은행");
-            recipient1.put("account", "123-456-789012");
-            recipient1.put("memo", "용돈");
-            recipient1.put("amount", 50000);
-            recipient1.put("lastTransferDate", "2025-10-19T10:30:00");
-            testData.add(recipient1);
-            
-            Map<String, Object> recipient2 = new HashMap<>();
-            recipient2.put("name", "김철수");
-            recipient2.put("bank", "이음은행");
-            recipient2.put("account", "110-123-456789");
-            recipient2.put("memo", "대출 상환");
-            recipient2.put("amount", 100000);
-            recipient2.put("lastTransferDate", "2025-10-18T15:20:00");
-            testData.add(recipient2);
-            
-            Map<String, Object> recipient3 = new HashMap<>();
-            recipient3.put("name", "이영희");
-            recipient3.put("bank", "신한은행");
-            recipient3.put("account", "110-12-345678");
-            recipient3.put("memo", "생활비");
-            recipient3.put("amount", 200000);
-            recipient3.put("lastTransferDate", "2025-10-17T09:15:00");
-            testData.add(recipient3);
-            
-            log.info("테스트용 데이터 반환 완료 - 수취인 수: {}", testData.size());
-            return testData;
+            // 데이터베이스 연결 실패 시 빈 리스트 반환
+            return List.of();
         }
     }
     
     /**
      * 실제 예금주명 조회 (DB에서 실제 고객 정보 조회)
      */
-    private String getActualAccountHolderName(String accountNumber, String bank) {
+    public String getActualAccountHolderName(String accountNumber, String bank) {
         try {
-            // 이음은행 내부 계좌인 경우 실제 DB에서 조회
-            if ("이음은행".equals(bank) || bank == null) {
-                Optional<Account> account = accountRepository.findByAccountNo(accountNumber);
-                if (account.isPresent()) {
-                    return transferCustomerRepository.findById(account.get().getCNo())
-                        .map(Customer::getCNameKr)
-                        .orElse("이음은행 고객");
-                }
+            // 계좌번호로 계좌 조회
+            Optional<Account> account = accountRepository.findByAccountNo(accountNumber);
+            if (account.isPresent()) {
+                // 계좌의 고객번호로 고객 정보 조회하여 실제 이름 반환
+                return transferCustomerRepository.findById(account.get().getCNo())
+                    .map(Customer::getCNameKr)
+                    .orElse("고객 정보 없음");
             }
             
-            // 타행 계좌이거나 조회 실패한 경우
-            return "타행 계좌";
+            // 계좌를 찾을 수 없는 경우
+            return "계좌 정보 없음";
             
         } catch (Exception e) {
             log.error("예금주명 조회 중 오류 발생 - 계좌: {}, 은행: {}", accountNumber, bank, e);
-            return "타행 계좌";
+            return "조회 실패";
         }
     }
     
@@ -926,12 +895,14 @@ public class TransferServiceImpl implements TransferService {
     public List<Map<String, Object>> getFavoriteAccounts() {
         log.info("즐겨찾기 계좌 조회");
         
-        // TODO: 실제 즐겨찾기 테이블에서 조회
-        // 현재는 임시 하드코딩된 데이터 반환
-        return List.of(
-            Map.of("accountNo", "9876543210", "bankCode", "002", "bankName", "신한은행", "holderName", "김철수"),
-            Map.of("accountNo", "9876543211", "bankCode", "003", "bankName", "우리은행", "holderName", "이영희")
-        );
+        try {
+            // TODO: 실제 즐겨찾기 테이블에서 조회
+            // 현재는 빈 리스트 반환 (실제 즐겨찾기 기능 구현 시 DB 조회)
+            return List.of();
+        } catch (Exception e) {
+            log.error("즐겨찾기 계좌 조회 실패", e);
+            return List.of();
+        }
     }
     
     @Override

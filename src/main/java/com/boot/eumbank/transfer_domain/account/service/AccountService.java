@@ -247,14 +247,14 @@ public class AccountService {
                 }
             }
             
-            // 고객 정보를 찾을 수 없는 경우 기본값 반환
-            log.debug("고객 정보를 찾을 수 없음 - 기본값 반환");
-            return "이음은행 고객";
+            // 고객 정보를 찾을 수 없는 경우
+            log.debug("고객 정보를 찾을 수 없음");
+            return "고객 정보 없음";
             
         } catch (Exception e) {
             log.error("고객 이름 조회 중 오류 발생 - 계좌: {}, 고객번호: {}", 
                     account.getAccountNo(), account.getCNo(), e);
-            return "이음은행 고객";
+            return "조회 실패";
         }
     }
 }

@@ -139,4 +139,13 @@ public interface Transfer_TransferHistoryRepositoryCustom {
      * @return 이번 달 출금 합계 금액
      */
     Integer getMonthlyWithdrawSum(Integer accountNo);
+
+    /**
+     * [수취 계좌별 이체 내역 조회]
+     * - 특정 수취 계좌로의 이체 내역을 최신순으로 조회 (예금주명 조회용)
+     * @param toAccountNo 수취 계좌번호
+     * @param pageable 페이징 정보
+     * @return 수취 계좌로의 이체 내역 리스트
+     */
+    List<TransferHistory> findByToAccountNoOrderByTransferAtDesc(String toAccountNo, Pageable pageable);
 }

@@ -133,9 +133,6 @@ export default function TransferPage() {
   const [accountHolder, setAccountHolder] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   
-  // 내 계좌 목록 (이체 가능한 다른 계좌들)
-  const [myOtherAccounts, setMyOtherAccounts] = useState([]);
-
   // 은행별 계좌번호 포맷 정의 (하이픈 위치)
   const bankAccountFormats = {
     'EUM': [3, 3, 6],    // 이음은행: 110-123-456789
@@ -150,6 +147,9 @@ export default function TransferPage() {
     'TOSS': [4, 4, 6],   // 토스뱅크: 1000-1234-123456
     'KBANK': [3, 3, 6]   // 케이뱅크: 100-123-123456
   };
+  
+  // 내 계좌 목록 (이체 가능한 다른 계좌들)
+  const [myOtherAccounts, setMyOtherAccounts] = useState([]);
 
   // 계좌번호 자동 포맷팅 함수
   const formatAccountNumber = (value, bankCode) => {
@@ -204,6 +204,7 @@ export default function TransferPage() {
   
   // 이체 완료 정보 저장
   const [completedTransfer, setCompletedTransfer] = useState(null);
+  
 
   // 컴포넌트 마운트 시 계좌 목록과 잔액 조회
   useEffect(() => {
@@ -211,6 +212,24 @@ export default function TransferPage() {
     loadFavoriteAccounts();
     loadBanks();
     loadRecentRecipients();
+    
+    // 하드코딩된 은행 목록 즉시 설정
+    const hardcodedBanks = [
+      { code: 'EUM', name: '이음은행' },
+      { code: '001', name: '국민은행' },
+      { code: '002', name: '신한은행' },
+      { code: '003', name: '우리은행' },
+      { code: '004', name: '하나은행' },
+      { code: '005', name: '농협은행' },
+      { code: '006', name: '기업은행' },
+      { code: '007', name: '새마을금고' },
+      { code: '008', name: '신협' },
+      { code: '009', name: '우체국' },
+      { code: '010', name: '카카오뱅크' },
+      { code: '011', name: '토스뱅크' },
+      { code: '012', name: '케이뱅크' }
+    ];
+    setBanks(hardcodedBanks);
   }, []);
 
   // 계좌 목록과 잔액을 로드하는 함수 - API 호출로 실제 데이터 조회
@@ -276,7 +295,23 @@ export default function TransferPage() {
       }
     } catch (error) {
       console.error('은행 목록 로딩 실패:', error.message || '알 수 없는 오류');
-      // 에러 발생 시 빈 배열 유지
+      // 백엔드 서버가 없을 때 하드코딩된 은행 목록 사용
+      const hardcodedBanks = [
+        { code: 'EUM', name: '이음은행' },
+        { code: '001', name: '국민은행' },
+        { code: '002', name: '신한은행' },
+        { code: '003', name: '우리은행' },
+        { code: '004', name: '하나은행' },
+        { code: '005', name: '농협은행' },
+        { code: '006', name: '기업은행' },
+        { code: '007', name: '새마을금고' },
+        { code: '008', name: '신협' },
+        { code: '009', name: '우체국' },
+        { code: '010', name: '카카오뱅크' },
+        { code: '011', name: '토스뱅크' },
+        { code: '012', name: '케이뱅크' }
+      ];
+      setBanks(hardcodedBanks);
     }
   };
 
@@ -421,26 +456,30 @@ export default function TransferPage() {
     try {
       setIsVerifying(true);
       
-      // 은행 + 계좌번호로 예금주명 조회
+      // 실제 API 호출로 예금주 조회
       const response = await transferApi.getAccountHolder(selectedBank, newAccountNumber);
       
       if (response.data && response.data.success) {
         const holderData = response.data.data;
-        setAccountHolder(holderData.holderName);
+        setAccountHolder(holderData.accountHolder);
         setSelectedRecipient({
-          name: holderData.holderName,
+          name: holderData.accountHolder,
           bank: banks.find(b => b.code === selectedBank)?.name || selectedBank,
           account: newAccountNumber,
           bankCode: selectedBank
         });
+        setError(null);
       } else {
         setAccountHolder('');
         setSelectedRecipient(null);
+        setError('예금주를 찾을 수 없습니다.');
       }
+      
     } catch (error) {
       console.error('예금주 조회 실패:', error.message || '알 수 없는 오류');
       setAccountHolder('');
       setSelectedRecipient(null);
+      setError('예금주 조회에 실패했습니다. 서버를 확인해주세요.');
     } finally {
       setIsVerifying(false);
     }
@@ -509,15 +548,27 @@ export default function TransferPage() {
         const scheduleResponse = await transferApi.createReserveTransfer(requestData);
 
         if (scheduleResponse.data && scheduleResponse.data.success) {
-          alert(`예약 이체가 성공적으로 등록되었습니다.\n예약 시간: ${reserveDate} ${reserveTime}`);
-          setIsModalOpen(false);
-          // 폼 초기화
-          setAmount('');
-          setMemo('');
-          setIsReserved(false);
-          setReserveDate('');
-          setReserveTime('');
+          // 예약이체 완료 페이지로 이동
+          const reserveData = {
+            orderId: scheduleResponse.data.data.orderId,
+            amount: numericAmount,
+            toName: selectedRecipient.name,
+            toBank: selectedRecipient.bank,
+            toAccount: selectedRecipient.account,
+            fromAccountType: selectedAccount.accountType,
+            fromAccountNo: selectedAccount.accountNo,
+            fromAccountBalance: balance,
+            startAt: `${reserveDate}T${reserveTime}:00`,
+            memo: memo
+          };
+          
+          navigate('/transfer/reserve/complete', { state: { reserveData } });
           return;
+        } else {
+          // 예약이체 실패 시 alert로 에러 메시지 표시
+          const errorMessage = scheduleResponse.data?.message || '예약 이체 등록에 실패했습니다.';
+          alert(`예약이체 실패: ${errorMessage}`);
+          throw new Error(errorMessage);
         }
       }
 
@@ -539,23 +590,28 @@ export default function TransferPage() {
         setSelectedAccount({ ...selectedAccount, balance: newBalance });
         
         // 이체 완료 정보 저장
-        setCompletedTransfer({
+        const transferData = {
           transferId: response.data.data.transferId,
           transferNo: response.data.data.transferNo,
           amount: numericAmount,
           recipient: selectedRecipient,
-          timestamp: response.timestamp || new Date().toISOString()
-        });
+          timestamp: response.timestamp || new Date().toISOString(),
+          fromAccount: selectedAccount,
+          memo: memo,
+          fee: fee
+        };
         
         setIsModalOpen(false);
-        setStep('done');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigate('/transfer/complete', { state: { transferData } });
         
         // 자주 쓰는 계좌 목록 새로고침
         loadFavoriteAccounts();
         loadRecentRecipients();
       } else {
-        throw new Error(response.error || '이체 처리에 실패했습니다.');
+        // 이체 실패 시 alert로 에러 메시지 표시
+        const errorMessage = response.data?.message || response.error || '이체 처리에 실패했습니다.';
+        alert(`이체 실패: ${errorMessage}`);
+        throw new Error(errorMessage);
       }
 
     } catch (error) {
@@ -617,46 +673,6 @@ export default function TransferPage() {
     setError(null);
   };
 
-  // 영수증 저장 핸들러
-  const handleSaveReceipt = () => {
-    if (!completedTransfer) return;
-    
-    const receiptData = `
-=== 이체 영수증 ===
-이체번호: ${completedTransfer.transferId}
-받는 분: ${completedTransfer.recipient.name}
-은행: ${completedTransfer.recipient.bank}
-계좌: ${completedTransfer.recipient.account}
-금액: ₩${completedTransfer.amount.toLocaleString('ko-KR')}
-처리시각: ${new Date(completedTransfer.timestamp).toLocaleString('ko-KR')}
-==================
-`;
-    
-    // 텍스트 파일로 다운로드
-    const blob = new Blob([receiptData], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `이체영수증_${completedTransfer.transferId}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    alert('영수증이 저장되었습니다.');
-  };
-
-  // 같은 대상 재이체 핸들러
-  const handleRetransfer = () => {
-    if (!completedTransfer) return;
-    
-    setStep('form');
-    setAmount('');
-    setMemo('');
-    setSelectedRecipient(completedTransfer.recipient);
-    setActiveTab('fav');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   // 자주 쓰는 대상 등록 핸들러 (이미 자동으로 등록됨)
   const handleAddToFavorites = () => {
@@ -774,11 +790,7 @@ export default function TransferPage() {
                                   <div className="text-sm font-medium text-gray-800">{recipient.name}</div>
                                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{recipient.bank}</span>
                                 </div>
-                                <div className="text-xs text-gray-500 font-mono mb-1">{recipient.account}</div>
-                                <div className="text-sm font-semibold text-gray-900">{formatKRW(recipient.amount)}</div>
-                                {recipient.memo && (
-                                  <div className="text-xs text-gray-500 mt-1">{recipient.memo}</div>
-                                )}
+                                <div className="text-xs text-gray-500 font-mono">{recipient.account}</div>
                               </button>
                             ))}
                           </div>
@@ -984,56 +996,6 @@ export default function TransferPage() {
               </section>
             )}
 
-            {step === 'done' && (
-              <section id="step-done" className="rounded-2xl border bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">이체 완료</h2>
-                  <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs text-gray-700">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    성공
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <div className="text-sm text-gray-500">받는 분</div>
-                    <div className="text-lg font-semibold">{selectedRecipient.bank} · {selectedRecipient.account}</div>
-                    <div className="text-sm text-gray-500">예금주</div>
-                    <div className="font-medium">{selectedRecipient.name}</div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-sm text-gray-500">금액</div>
-                    <div className="text-2xl font-bold">{formatKRW(numericAmount)}</div>
-                    <div className="text-sm text-gray-500">수수료</div>
-                    <div className="font-medium">{formatKRW(fee)}</div>
-                  </div>
-                </div>
-                <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                  <span>이체번호: {completedTransfer?.transferId || 'N/A'}</span>
-                  <span>처리시각: {completedTransfer ? new Date(completedTransfer.timestamp).toLocaleTimeString('ko-KR') : new Date().toLocaleTimeString('ko-KR')}</span>
-                  <span>알림: SMS 발송</span>
-                </div>
-                <div className="mt-6 flex flex-wrap gap-2">
-                  <button 
-                    onClick={handleSaveReceipt}
-                    className="rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  >
-                    영수증 저장
-                  </button>
-                  <button 
-                    onClick={handleRetransfer}
-                    className="rounded-full border px-5 py-2 text-sm hover:bg-gray-50"
-                  >
-                    같은 대상 재이체
-                  </button>
-                  <button 
-                    onClick={handleAddToFavorites}
-                    className="rounded-full border px-5 py-2 text-sm hover:bg-gray-50"
-                  >
-                    자주 쓰는 대상 등록
-                  </button>
-                </div>
-              </section>
-            )}
           </div>
 
           <div className="col-span-12 lg:col-span-4 space-y-6">

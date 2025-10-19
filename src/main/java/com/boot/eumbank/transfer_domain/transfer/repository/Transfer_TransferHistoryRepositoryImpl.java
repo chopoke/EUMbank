@@ -209,4 +209,15 @@ public class Transfer_TransferHistoryRepositoryImpl implements Transfer_Transfer
 
         return result != null ? result.intValue() : 0;
     }
+
+    @Override
+    public List<TransferHistory> findByToAccountNoOrderByTransferAtDesc(String toAccountNo, Pageable pageable) {
+        return queryFactory
+                .selectFrom(transferHistory)
+                .where(transferHistory.otherAccount.eq(toAccountNo))
+                .orderBy(transferHistory.transferAt.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+    }
 }
