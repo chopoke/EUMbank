@@ -105,50 +105,95 @@ public class TransferServiceImpl implements TransferService {
     @Override
     @Transactional
     public TransferOrderDto createReserveTransfer(TransferOrderDto request) {
+        log.info("=== TransferServiceImpl.createReserveTransfer 시작 ===");
+        log.info("요청 데이터 상세: {}", request);
         log.info("예약 이체 등록 시작 - 출금계좌: {}, 수취계좌: {}, 금액: {}, 예약시간: {}", 
                 request.getAccountNo(), request.getDestAccountNo(), request.getAmount(), request.getStartAt());
 
-        // 1. 기본 검증
-        validateReserveTransferRequest(request);
+        try {
+            // 1. 기본 검증
+            log.info("1. 기본 검증 시작");
+            validateReserveTransferRequest(request);
+            log.info("1. 기본 검증 완료");
 
-        // 2. 계좌 상태 확인
-        if (!checkAccountStatus(request.getAccountNo())) {
-            throw new AccountStatusException("계좌가 이체 불가능한 상태입니다.");
+            // 2. 계좌 상태 확인
+            log.info("2. 계좌 상태 확인 시작 - 계좌번호: {}", request.getAccountNo());
+            if (!checkAccountStatus(request.getAccountNo())) {
+                log.error("계좌 상태 확인 실패 - 계좌가 이체 불가능한 상태입니다.");
+                throw new AccountStatusException("계좌가 이체 불가능한 상태입니다.");
+            }
+            log.info("2. 계좌 상태 확인 완료");
+
+            // 3. 예약 이체 엔티티 생성
+            log.info("3. 예약 이체 엔티티 생성 시작");
+            log.info("3-1. OrderId 생성 시작");
+            Integer orderId = generateOrderId();
+            log.info("3-1. OrderId 생성 완료: {}", orderId);
+            
+            log.info("3-2. 날짜 파싱 시작 - startAt: {}, endAt: {}", request.getStartAt(), request.getEndAt());
+            LocalDateTime startAt = parseDateTime(request.getStartAt());
+            LocalDateTime endAt = parseDateTime(request.getEndAt());
+            log.info("3-2. 날짜 파싱 완료 - startAt: {}, endAt: {}", startAt, endAt);
+            
+            log.info("3-3. 현재 시간 생성 시작");
+            LocalDateTime now = LocalDateTime.now();
+            log.info("3-3. 현재 시간 생성 완료: {}", now);
+            
+            log.info("3-4. TransferOrder Builder 호출 시작");
+            TransferOrder transferOrder = TransferOrder.builder()
+                    .to_order_id(orderId)
+                    .a_no(request.getAccountNo())
+                    .to_bank_code(request.getBankCode())
+                    .to_dest_account_no(request.getDestAccountNo())
+                    .to_amount(BigDecimal.valueOf(request.getAmount()))
+                    .to_schedule_type(request.getScheduleType())
+                    .to_schedule_expr(request.getScheduleExpr())
+                    .to_start_at(startAt)
+                    .to_end_at(endAt)
+                    .to_status("SCHEDULED")
+                    .to_memo(request.getMemo())
+                    .to_created_at(now)  // 명시적으로 현재 시간 전달
+                    .build();
+            log.info("3-4. TransferOrder Builder 호출 완료");
+            log.info("3. 예약 이체 엔티티 생성 완료: {}", transferOrder);
+            log.info("3-5. to_created_at 값 확인: {}", transferOrder.getTo_created_at());
+
+            // 4. 예약 이체 저장
+            log.info("4. 예약 이체 저장 시작");
+            TransferOrder savedOrder = transferOrderRepository.save(transferOrder);
+            log.info("4. 예약 이체 저장 완료 - ID: {}", savedOrder.getTo_order_id());
+
+            // 5. 응답 DTO 생성
+            log.info("5. 응답 DTO 생성 시작");
+            TransferOrderDto response = TransferOrderDto.builder()
+                    .orderId(savedOrder.getTo_order_id())
+                    .accountNo(savedOrder.getA_no())
+                    .bankCode(savedOrder.getTo_bank_code())
+                    .destAccountNo(savedOrder.getTo_dest_account_no())
+                    .amount(savedOrder.getTo_amount().intValue())
+                    .scheduleType(savedOrder.getTo_schedule_type())
+                    .scheduleExpr(savedOrder.getTo_schedule_expr())
+                    .startAt(formatDateTime(savedOrder.getTo_start_at()))
+                    .endAt(formatDateTime(savedOrder.getTo_end_at()))
+                    .status(savedOrder.getTo_status())
+                    .memo(savedOrder.getTo_memo())
+                    .createdAt(formatDateTime(savedOrder.getTo_created_at()))
+                    .build();
+            log.info("5. 응답 DTO 생성 완료: {}", response);
+            log.info("=== TransferServiceImpl.createReserveTransfer 성공 완료 ===");
+            
+            return response;
+            
+        } catch (Exception e) {
+            log.error("=== TransferServiceImpl.createReserveTransfer 실패 ===");
+            log.error("예약 이체 등록 중 오류 발생", e);
+            log.error("에러 타입: {}", e.getClass().getSimpleName());
+            log.error("에러 메시지: {}", e.getMessage());
+            if (e.getCause() != null) {
+                log.error("원인 에러: {}", e.getCause().getMessage());
+            }
+            throw e;
         }
-
-        // 3. 예약 이체 엔티티 생성
-        TransferOrder transferOrder = TransferOrder.builder()
-                .to_order_id(generateOrderId())
-                .a_no(request.getAccountNo())
-                .to_bank_code(request.getBankCode())
-                .to_dest_account_no(request.getDestAccountNo())
-                .to_amount(BigDecimal.valueOf(request.getAmount()))
-                .to_schedule_type(request.getScheduleType())
-                .to_schedule_expr(request.getScheduleExpr())
-                .to_start_at(parseDateTime(request.getStartAt()))
-                .to_end_at(parseDateTime(request.getEndAt()))
-                .to_status("SCHEDULED")
-                .to_memo(request.getMemo())
-                .build();
-
-        // 4. 예약 이체 저장
-        TransferOrder savedOrder = transferOrderRepository.save(transferOrder);
-
-        // 5. 응답 DTO 생성
-        return TransferOrderDto.builder()
-                .orderId(savedOrder.getTo_order_id())
-                .accountNo(savedOrder.getA_no())
-                .bankCode(savedOrder.getTo_bank_code())
-                .destAccountNo(savedOrder.getTo_dest_account_no())
-                .amount(savedOrder.getTo_amount().intValue())
-                .scheduleType(savedOrder.getTo_schedule_type())
-                .scheduleExpr(savedOrder.getTo_schedule_expr())
-                .startAt(formatDateTime(savedOrder.getTo_start_at()))
-                .endAt(formatDateTime(savedOrder.getTo_end_at()))
-                .status(savedOrder.getTo_status())
-                .memo(savedOrder.getTo_memo())
-                .createdAt(formatDateTime(savedOrder.getTo_created_at()))
-                .build();
     }
 
     @Override
@@ -303,7 +348,7 @@ public class TransferServiceImpl implements TransferService {
     }
 
     @Transactional
-    public TransferResultDto executeTransfer(Integer fromAccountNo, String toAccountNo,
+    private TransferResultDto executeTransfer(Integer fromAccountNo, String toAccountNo,
                                            String toBankName, String toName, Integer amount,
                                            String memo, String password) {
         
@@ -339,10 +384,14 @@ public class TransferServiceImpl implements TransferService {
             throw new AccountStatusException(fromAccount.getAccountNo(), fromAccount.getStatus());
         }
 
-        // === 3단계: 계좌 비밀번호 검증 ===
-        if (!fromAccount.getAccountPwd().equals(password)) {
+        // === 3단계: 계좌 비밀번호 검증 (password가 null이면 검증 생략) ===
+        if (password != null && !fromAccount.getAccountPwd().equals(password)) {
             log.warn("계좌 비밀번호 불일치 - 계좌: {}", fromAccountNo);
             throw new PasswordMismatchException(fromAccount.getAccountNo());
+        }
+        
+        if (password == null) {
+            log.info("비밀번호 검증 생략 - 계좌: {} (예약이체 자동 실행)", fromAccountNo);
         }
 
         // === 4단계: 잔액 검증 ===
@@ -516,10 +565,20 @@ public class TransferServiceImpl implements TransferService {
     }
 
     public boolean checkAccountStatus(Integer accountNo) {
-        Account account = accountRepository.findById(accountNo)
-                .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
-
-        return account.isActive();
+        log.info("checkAccountStatus 시작 - 계좌번호: {}", accountNo);
+        
+        try {
+            Account account = accountRepository.findById(accountNo)
+                    .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
+            
+            boolean isActive = account.isActive();
+            log.info("계좌 상태 확인 완료 - 계좌번호: {}, 활성상태: {}", accountNo, isActive);
+            
+            return isActive;
+        } catch (Exception e) {
+            log.error("계좌 상태 확인 중 오류 발생 - 계좌번호: {}, 에러: {}", accountNo, e.getMessage());
+            throw e;
+        }
     }
 
     // === 유틸리티 메서드들 ===
@@ -535,9 +594,34 @@ public class TransferServiceImpl implements TransferService {
     }
 
     private void validateReserveTransferRequest(TransferOrderDto request) {
-        if (request.getAmount() <= 0) {
+        log.info("validateReserveTransferRequest 시작 - 요청: {}", request);
+        
+        if (request == null) {
+            log.error("요청 데이터가 null입니다.");
+            throw new IllegalArgumentException("요청 데이터가 null입니다.");
+        }
+        
+        if (request.getAccountNo() == null) {
+            log.error("계좌번호가 null입니다.");
+            throw new IllegalArgumentException("계좌번호는 필수입니다.");
+        }
+        
+        if (request.getAmount() == null || request.getAmount() <= 0) {
+            log.error("이체 금액이 유효하지 않습니다: {}", request.getAmount());
             throw new InvalidAmountException("이체 금액은 0보다 커야 합니다.");
         }
+        
+        if (!StringUtils.hasText(request.getDestAccountNo())) {
+            log.error("수취 계좌번호가 비어있습니다.");
+            throw new IllegalArgumentException("수취 계좌번호는 필수입니다.");
+        }
+        
+        if (!StringUtils.hasText(request.getStartAt())) {
+            log.error("시작 시간이 비어있습니다.");
+            throw new IllegalArgumentException("시작 시간은 필수입니다.");
+        }
+        
+        log.info("validateReserveTransferRequest 완료 - 검증 통과");
     }
 
     private void validateBulkTransferRequest(BulkTransferRequestDto request) {
@@ -559,15 +643,30 @@ public class TransferServiceImpl implements TransferService {
     }
 
     private LocalDateTime parseDateTime(String dateTimeStr) {
+        log.info("parseDateTime 시작 - 입력값: '{}'", dateTimeStr);
+        
         if (!StringUtils.hasText(dateTimeStr)) {
+            log.warn("날짜 문자열이 비어있습니다.");
             return null;
         }
+        
         // ISO 8601 형식 (2025-10-18T16:56:00) 또는 일반 형식 (2025-10-18 16:56:00) 모두 지원
         try {
-            return LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+            log.info("ISO 8601 형식으로 파싱 시도: {}", dateTimeStr);
+            LocalDateTime result = LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+            log.info("ISO 8601 형식 파싱 성공: {}", result);
+            return result;
         } catch (DateTimeParseException e) {
-            // ISO 형식이 실패하면 일반 형식으로 시도
-            return LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            log.warn("ISO 8601 형식 파싱 실패, 일반 형식으로 시도: {}", e.getMessage());
+            try {
+                LocalDateTime result = LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                log.info("일반 형식 파싱 성공: {}", result);
+                return result;
+            } catch (DateTimeParseException e2) {
+                log.error("모든 형식 파싱 실패 - 입력값: '{}', ISO 에러: {}, 일반 에러: {}", 
+                         dateTimeStr, e.getMessage(), e2.getMessage());
+                throw new IllegalArgumentException("날짜 형식이 올바르지 않습니다: " + dateTimeStr);
+            }
         }
     }
 

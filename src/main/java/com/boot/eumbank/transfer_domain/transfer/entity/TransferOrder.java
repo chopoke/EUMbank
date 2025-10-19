@@ -6,8 +6,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,7 +26,6 @@ import java.time.LocalDateTime;
 @Table(name = "TRANSFER_ORDER_TBL")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
 public class TransferOrder {
 
     @Id
@@ -65,7 +62,6 @@ public class TransferOrder {
     @Column(name = "to_memo", length = 200)
     private String to_memo;
 
-    @CreatedDate
     @Column(name = "to_created_at", nullable = false, updatable = false)
     private LocalDateTime to_created_at;
 
@@ -75,11 +71,11 @@ public class TransferOrder {
     private Account account;
 
     @Builder
-    public TransferOrder(Integer to_order_id, Integer a_no, String to_bank_code, 
-                        String to_dest_account_no, BigDecimal to_amount, 
+    public TransferOrder(Integer to_order_id, Integer a_no, String to_bank_code,
+                        String to_dest_account_no, BigDecimal to_amount,
                         String to_schedule_type, String to_schedule_expr,
-                        LocalDateTime to_start_at, LocalDateTime to_end_at, 
-                        String to_status, String to_memo) {
+                        LocalDateTime to_start_at, LocalDateTime to_end_at,
+                        String to_status, String to_memo, LocalDateTime to_created_at) {
         this.to_order_id = to_order_id;
         this.a_no = a_no;
         this.to_bank_code = to_bank_code;
@@ -91,6 +87,11 @@ public class TransferOrder {
         this.to_end_at = to_end_at;
         this.to_status = to_status;
         this.to_memo = to_memo;
+        // to_created_at이 null이면 현재 시간으로 설정
+        this.to_created_at = to_created_at != null ? to_created_at : LocalDateTime.now();
+        
+        // 디버깅을 위한 로그
+        System.out.println("TransferOrder Builder - to_created_at 설정: " + this.to_created_at);
     }
 
     // 비즈니스 메서드

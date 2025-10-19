@@ -77,18 +77,26 @@ public class TransferController {
      */
     @PostMapping("/reserve")
     public ResponseEntity<Map<String, Object>> reserveTransfer(@Valid @RequestBody TransferOrderDto request, @AuthenticationPrincipal Customer customer) {
+        log.info("=== 예약이체 API 시작 ===");
+        log.info("요청 데이터: {}", request);
+        log.info("고객 정보: {}", customer != null ? customer.getCId() : "null");
         log.info("예약 이체 요청 - 출금계좌: {}, 수취계좌: {}, 금액: {}, 예약시간: {}", 
                 request.getAccountNo(), request.getDestAccountNo(), request.getAmount(), request.getStartAt());
         
         try {
+            log.info("1. 인증 확인 시작");
             if (customer == null) {
+                log.error("인증 실패: 고객 정보가 null입니다.");
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", false);
                 result.put("message", "인증이 필요합니다.");
                 return ResponseEntity.status(401).body(result);
             }
+            log.info("1. 인증 확인 완료 - 고객ID: {}", customer.getCId());
             
+            log.info("2. TransferService.createReserveTransfer 호출 시작");
             TransferOrderDto response = transferService.createReserveTransfer(request);
+            log.info("2. TransferService.createReserveTransfer 호출 완료 - 응답: {}", response);
             
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -96,10 +104,17 @@ public class TransferController {
             result.put("message", "예약 이체가 등록되었습니다.");
             result.put("timestamp", LocalDateTime.now().toString());
             
+            log.info("=== 예약이체 API 성공 완료 ===");
             return ResponseEntity.ok(result);
             
         } catch (Exception e) {
+            log.error("=== 예약이체 API 실패 ===");
             log.error("예약 이체 등록 중 오류 발생", e);
+            log.error("에러 타입: {}", e.getClass().getSimpleName());
+            log.error("에러 메시지: {}", e.getMessage());
+            if (e.getCause() != null) {
+                log.error("원인 에러: {}", e.getCause().getMessage());
+            }
             throw e; // GlobalExceptionHandler에서 처리
         }
     }
