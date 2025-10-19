@@ -38,9 +38,6 @@ public interface TransferService {
     // 계좌 잔액 조회
     Long getAccountBalance(int accountNo, Customer customer);
     
-    // 계좌 목록 조회
-    List<Object> getAccounts(Customer customer);
-    
     // 계좌 목록 조회 (JWT 토큰 기반)
     Object getAccounts();
     

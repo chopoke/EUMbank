@@ -254,19 +254,16 @@ export default function TransferPage() {
     }
   };
 
-  // 최근 이체 계좌 목록 로드 (선택된 계좌의 거래 내역 기반)
+  // 자주 쓰는 계좌 목록 로드 (별도 API)
   const loadFavoriteAccounts = async () => {
     try {
-      // 선택된 계좌가 있을 때만 조회
-      if (selectedAccount && selectedAccount.aNo) {
-        const response = await transferApi.getRecentRecipients(selectedAccount.aNo);
-        if (response.data && response.data.success && response.data.data) {
-          setFavoriteAccounts(response.data.data.recipients || []);
-        }
+      const response = await transferApi.getFavoriteAccounts();
+      if (response.data && response.data.success && response.data.data) {
+        setFavoriteAccounts(response.data.data || []);
       }
     } catch (error) {
-      console.error('최근 이체 계좌 로딩 실패:', error.message || '알 수 없는 오류');
-      // 에러 발생 시 빈 배열 유지
+      console.error('자주 쓰는 계좌 로딩 실패:', error.message || '알 수 없는 오류');
+      setFavoriteAccounts([]);
     }
   };
 
@@ -283,17 +280,43 @@ export default function TransferPage() {
     }
   };
 
-  // 최근 이체 대상 로드 (자주 쓰는 계좌 목록 활용)
+  // 최근 이체 대상 로드 (실제 이체 내역 기반)
   const loadRecentRecipients = async () => {
-      try {
-        const response = await transferApi.getFavoriteAccounts();
-        if (response.data && response.data.success) {
+    try {
+      console.log('=== loadRecentRecipients 시작 ===');
+      console.log('selectedAccount:', selectedAccount);
+      
+      // 선택된 계좌가 있을 때만 조회
+      if (selectedAccount && selectedAccount.aNo) {
+        console.log('API 호출 시작 - 계좌번호:', selectedAccount.aNo);
+        const response = await transferApi.getRecentRecipients(selectedAccount.aNo);
+        console.log('API 응답 전체:', response);
+        console.log('API 응답 data:', response.data);
+        
+        if (response.data && response.data.success && response.data.data) {
+          console.log('최근 이체 데이터:', response.data.data);
           // 최근 3개만 표시
-          setRecentRecipients(response.data.data.slice(0, 3));
+          const recentData = response.data.data.slice(0, 3);
+          console.log('표시할 데이터 (3개):', recentData);
+          setRecentRecipients(recentData);
+        } else {
+          console.log('최근 이체 데이터 없음 - 응답 구조:', {
+            hasData: !!response.data,
+            success: response.data?.success,
+            hasDataArray: !!response.data?.data,
+            dataLength: response.data?.data?.length
+          });
+          setRecentRecipients([]);
         }
-      } catch (error) {
-      console.error('최근 이체 대상 로딩 실패:', error.message || '알 수 없는 오류');
-      // 에러 발생 시 빈 배열 유지
+      } else {
+        console.log('선택된 계좌 없음 - selectedAccount:', selectedAccount);
+        setRecentRecipients([]);
+      }
+      console.log('=== loadRecentRecipients 완료 ===');
+    } catch (error) {
+      console.error('최근 이체 대상 로딩 실패:', error);
+      console.error('에러 상세:', error.message || '알 수 없는 오류');
+      setRecentRecipients([]);
     }
   };
 
@@ -331,7 +354,8 @@ export default function TransferPage() {
   // 선택된 계좌가 변경될 때마다 최근 이체 목록 새로고침
   useEffect(() => {
     if (selectedAccount && selectedAccount.aNo) {
-      loadFavoriteAccounts();
+      loadRecentRecipients(); // 최근 이체 내역 로드
+      loadFavoriteAccounts(); // 자주 쓰는 계좌 로드
     }
   }, [selectedAccount?.aNo]);
 
@@ -381,6 +405,9 @@ export default function TransferPage() {
       bankCode: 'EUM'  // 내 계좌는 이음은행 코드
     });
     setError(null);
+    
+    // 내 계좌 선택 시에도 최근 이체 목록 업데이트
+    loadRecentRecipients();
   };
 
   // 예금주 조회 함수 (신규 입력) - 은행 + 계좌번호로 예금주명만 조회
@@ -731,24 +758,27 @@ export default function TransferPage() {
                     {/* 최근 이체 탭 */}
                     {activeTab === 'fav' && (
                       <div id="tab-fav" className="min-h-[200px]">
-                        {favoriteAccounts.length > 0 ? (
+                        {recentRecipients.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {favoriteAccounts.map((acc, index) => (
+                            {recentRecipients.map((recipient, index) => (
                               <button 
                                 key={index} 
-                                onClick={() => handleSelectFavorite(acc)} 
+                                onClick={() => handleSelectRecentRecipient(recipient)} 
                                 className={`rounded-xl border p-4 text-left hover:shadow transition-all ${
-                                  selectedRecipient?.account === acc.account 
+                                  selectedRecipient?.account === recipient.account 
                                     ? 'bg-blue-50 border-blue-600 ring-2 ring-blue-600' 
                                     : 'bg-white hover:border-blue-300'
                                 }`}
                               >
                                 <div className="flex justify-between items-start mb-2">
-                                  <div className="text-sm font-medium text-gray-800">{acc.name}</div>
-                                  <div className="text-xs text-gray-400">{acc.memo || ''}</div>
+                                  <div className="text-sm font-medium text-gray-800">{recipient.name}</div>
+                                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{recipient.bank}</span>
                                 </div>
-                                <div className="text-xs text-gray-600 mb-1">{acc.bank}</div>
-                                <div className="text-sm text-gray-900 font-mono">{acc.account}</div>
+                                <div className="text-xs text-gray-500 font-mono mb-1">{recipient.account}</div>
+                                <div className="text-sm font-semibold text-gray-900">{formatKRW(recipient.amount)}</div>
+                                {recipient.memo && (
+                                  <div className="text-xs text-gray-500 mt-1">{recipient.memo}</div>
+                                )}
                               </button>
                             ))}
                           </div>

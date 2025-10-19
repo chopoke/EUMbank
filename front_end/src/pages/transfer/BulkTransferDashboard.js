@@ -139,13 +139,27 @@ export default function BulkTransferPage() {
         setError(null); setIsLoading(true);
         const [accRes, bankRes] = await Promise.all([transferApi.getAccounts(), transferApi.getBanks()]);
         
-        if (accRes.success && accRes.data.length > 0) {
-          setAccounts(accRes.data);
-          setSelectedAccount(accRes.data[0]);
-        } else throw new Error("계좌 조회 실패");
+        // 계좌 목록 처리 - 새로운 API 응답 구조에 맞춰 수정
+        if (accRes.data && accRes.data.success && accRes.data.data && accRes.data.data.accounts) {
+          const accounts = accRes.data.data.accounts;
+          if (accounts.length > 0) {
+            setAccounts(accounts);
+            setSelectedAccount(accounts[0]);
+          } else {
+            throw new Error("보유 계좌가 없습니다.");
+          }
+        } else {
+          throw new Error("계좌 조회 실패: " + (accRes.data?.message || "알 수 없는 오류"));
+        }
 
-        if (bankRes.success) setBanks(bankRes.data);
-        else throw new Error("은행 목록 조회 실패");
+        // 은행 목록 처리 - 새로운 API 응답 구조에 맞춰 수정
+        if (bankRes.data && bankRes.data.success && bankRes.data.data) {
+          const banksData = Array.isArray(bankRes.data.data) ? bankRes.data.data : [];
+          setBanks(banksData);
+        } else {
+          console.warn("은행 목록 조회 실패, 기본값 사용");
+          setBanks([]);
+        }
         
         setRows([makeRow()]);
       } catch (err) { setError(err.message);
