@@ -74,6 +74,7 @@ const init = {
   currency: "",               // ← 초기에는 비워두기(2단계에서 선택)
   nickname: "",
   pin: "",
+  pinNumber: "",      // 거래 PIN
   // 서버에서 채워질 값
   customerId: "",
 };
@@ -88,7 +89,7 @@ export default function ForeignOpenPage() {
   // 1) /api/me 에서 고객번호 채우기
   useEffect(() => {
     (async () => {
-      const r = await apiFetch("/api/me");
+      const r = await apiFetch("/api/foreign/open/me");
       if (!r.ok) {
         console.warn("/api/me 실패:", r.status, await r.text().catch(() => ""));
         return;
@@ -116,10 +117,19 @@ export default function ForeignOpenPage() {
   ]);
 
   useEffect(() => {
-    apiFetch("/api/foreign/currencies")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((rows) => Array.isArray(rows) && rows.length && setCurrencies(rows))
-      .catch(() => {});
+    apiFetch("/api/foreign/rates")
+        .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+        .then((data) => {
+          const rows = Array.isArray(data) ? data : data?.rows; // ← rows 꺼내기
+          if (!Array.isArray(rows)) return;
+          // 드롭다운에 맞게 단순화
+          const list = rows.map(x => ({
+            code: x.code || x.cur || x.curUnit,
+            name: x.name || x.curNm || x.cur || "",
+          })).filter(v => v.code);
+          if (list.length) setCurrencies(list);
+        })
+        .catch(() => {});
   }, []);
 
   const next = () => setStep((s) => Math.min(3, s + 1));
@@ -135,6 +145,8 @@ export default function ForeignOpenPage() {
     if (!form.currency) return alert("기본 통화를 선택해 주세요.");
     if (!/^\d{4,}$/.test(form.pin))
       return alert("계좌 비밀번호는 숫자 4자리 이상이어야 합니다.");
+    if (!/^\d{4,}$/.test(form.pinNumber))
+      return alert("거래 PIN은 숫자 4자리 이상이어야 합니다.");
     if (!form.customerId || Number.isNaN(Number(form.customerId)))
       return alert("고객번호가 없습니다. 로그인 상태를 확인해 주세요.");
 
@@ -149,6 +161,7 @@ export default function ForeignOpenPage() {
           agreeMarketing: form.agreeMarketing ? "Y" : "N",
           currency: form.currency,
           pin: form.pin,
+          pinNumber: Number(form.pinNumber),
           nickname: form.nickname || null,
           customerId: Number(form.customerId),
           name: form.name,
@@ -178,10 +191,10 @@ export default function ForeignOpenPage() {
 
   return (
     <>
-      <div className="fx-container">
+      <div className={"fx-container " + (step===3 && result ? "fx-center" : "")}>
         <div className="fx-grid">
           {/* 왼쪽 본문 */}
-          <div className="fx-card">
+          <div className={"fx-card" + (step===3 && result ? " fx-done" : "")}>
             <h2 className="fx-title">외화가입 (비대면)</h2>
             <nav className="fx-steps">
               {["1 약관 동의", "2 본인 확인", "3 검토·개설"].map((t, i) => (
@@ -217,13 +230,16 @@ export default function ForeignOpenPage() {
             )}
           </div>
 
-          {/* 오른쪽 요약박스 (SummaryBox) */}
-          <aside
-            className="fx-card"
-            style={{ position: "sticky", top: 16, height: "fit-content" }}
-          >
-            <SummaryBox form={form} step={step} currencies={currencies} />
-          </aside>
+          {/* 오른쪽 요약박스 (SummaryBox) — 완료 화면(step===3 && result)에서는 숨김 */}
+          {!(step === 3 && result) && (
+            <aside
+              className="fx-card"
+              style={{ position: "sticky", top: 16, height: "fit-content" }}
+            >
+              <SummaryBox form={form} step={step} currencies={currencies} />
+            </aside>
+          )}
+
         </div>
       </div>
 
@@ -248,25 +264,43 @@ function Step1Terms({ form, setForm, next }) {
       agreeAll: v,
       agreeTerms: v,
       agreePrivacy: v,
+      agreeRisk: v, // 외화 계좌에 새로 추가된 필수 약관
+      agreeProduct: v, // 외화 계좌에 새로 추가된 필수 약관
+      agreeMarketing: v,
     }));
+
+  // 필수 약관이 모두 동의되었는지 확인하는 로직
+  const allRequiredAgreed = form.agreeTerms && form.agreePrivacy && form.agreeRisk && form.agreeProduct;
 
   return (
     <>
-      <p className="fx-muted">비대면 계좌 개설 안내 · 필수 약관을 확인해 주세요.</p>
+      <p className="fx-muted">비대면 외화 입출금 계좌 개설을 위한 필수 약관 및 상품 설명서를 확인해 주세요.</p>
 
-      <label className="fx-check">
+      <label className="fx-check fx-check--all">
         <input
           type="checkbox"
           checked={form.agreeAll}
           onChange={(e) => toggleAll(e.target.checked)}
         />
-        전체 동의
+        <b>전체 동의 (필수 및 선택 포함)</b>
       </label>
 
+      {/* 1. 외화 예금 거래 기본 약관 (필수) */}
       <details className="fx-acc" open>
-        <summary>전자금융거래약관 (필수)</summary>
+        <summary>외화 예금 거래 기본 약관 (필수)</summary>
         <div className="terms-box">
-          <p>전자적 장치를 이용하여 제공하는 금융거래에 관한 사항을 규정합니다.</p>
+          <p>
+            제1조 (목적) 이 약관은 e.um 뱅크와 고객 사이에 외화예금 거래에 관하여 필요한 사항을 정함을 목적으로 합니다.
+          </p>
+          <p>
+            제3조 (거래의 종류) 외화예금 거래는 외화 보통예금, 외화 저축예금, 외화 정기예금 등 당행이 취급하는 외화예금 상품을 대상으로 합니다.
+          </p>
+          <p>
+            제5조 (환율의 적용) 입금 및 출금 시 환율은 외국환은행 고시 환율을 적용하며, 고객이 선택한 통화의 매매기준율, 현찰 매매율 등을 고려하여 정합니다.
+          </p>
+          <p className="important-text">
+             <i className="fas fa-exclamation-triangle"></i> 본 약관은 고객의 외화 거래 시 기본이 되는 계약이며, 반드시 동의해야 계좌 개설이 가능합니다.
+          </p>
         </div>
         <label className="fx-check">
           <input
@@ -276,14 +310,68 @@ function Step1Terms({ form, setForm, next }) {
               setForm((f) => ({ ...f, agreeTerms: e.target.checked }))
             }
           />
-          위 내용을 읽고 동의합니다.
+          위 내용을 읽고 필수 동의합니다.
         </label>
       </details>
 
+      {/* 2. 환율 변동 위험 고지 및 확인서 (필수 - 외화 계좌의 핵심) */}
+      <details className="fx-acc" open>
+        <summary>환율 변동 위험 고지 및 확인서 (필수)</summary>
+        <div className="terms-box fx-risk-box">
+          <p>
+            1. 외화 상품의 원금 손실 가능성 고지: 외화 예금은 예금자 보호 대상 상품이지만, **환율 변동에 따라 원화로 환산 시 원금 손실이 발생**할 수 있습니다.
+          </p>
+          <p>
+            2. 환전 수수료: 외화 매입(TTB) 및 매도(TTS) 시 은행의 스프레드(수수료)가 적용됩니다. 이는 외화 현찰 시와 비대면 거래 시 다를 수 있습니다.
+          </p>
+          <p>
+            3. 중요 확인: 고객은 상기 환율 변동 위험을 충분히 인지하고 이해하였으며, 이에 동의함을 확인합니다.
+          </p>
+        </div>
+        <label className="fx-check">
+          <input
+            type="checkbox"
+            checked={form.agreeRisk}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, agreeRisk: e.target.checked }))
+            }
+          />
+          환율 변동 위험을 충분히 인지하고 필수 동의합니다.
+        </label>
+      </details>
+
+      {/* 3. 외화 입출금 계좌 상품 설명서 (필수) */}
       <details className="fx-acc">
-        <summary>개인정보 수집·이용 (필수)</summary>
+        <summary>외화 입출금 계좌 상품 설명서 (필수)</summary>
         <div className="terms-box">
-          <p>수집항목/목적/보관기간 등을 안내합니다.</p>
+           <p>
+             상품명: e.um 뱅크 외화드림 자유입출금 예금<br/>
+             예금자 보호: 본 외화 예금은 예금자 보호법에 따라 보호되지 않습니다. (단, 원화 환산 잔액은 국내 규정에 따름)<br/>
+             이자 지급: 통화별로 정해진 이자율에 따라 월별 또는 분기별로 지급됩니다.<br/>
+             거래 제한: 일부 고시 통화에 대해 현찰 입출금 및 해외 송금이 제한될 수 있습니다.
+           </p>
+        </div>
+        <label className="fx-check">
+          <input
+            type="checkbox"
+            checked={form.agreeProduct}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, agreeProduct: e.target.checked }))
+            }
+          />
+          상품 설명서를 충분히 읽고 필수 동의 합니다.
+        </label>
+      </details>
+
+      {/* 4. 개인정보 수집·이용 동의 (필수) */}
+      <details className="fx-acc">
+        <summary>개인정보 수집·이용 동의 (필수)</summary>
+        <div className="terms-box">
+          <p>
+            수집 목적: 외화 계좌 개설 및 관리, 외국환 거래법상 의무 이행<br/>
+            수집 항목: 성명, 주민등록번호, 연락처, 거래 내역 등<br/>
+            보유 기간: 거래 종료일로부터 5년 (관계 법령 기준)
+          </p>
         </div>
         <label className="fx-check">
           <input
@@ -293,14 +381,15 @@ function Step1Terms({ form, setForm, next }) {
               setForm((f) => ({ ...f, agreePrivacy: e.target.checked }))
             }
           />
-          위 내용을 읽고 동의합니다.
+          개인정보 수집·이용에 *필수 동의* 합니다.
         </label>
       </details>
 
+      {/* 5. 마케팅 정보 수신 동의 (선택) */}
       <details className="fx-acc">
-        <summary>마케팅 정보 수신 (선택)</summary>
+        <summary>마케팅 정보 수신 동의 (선택)</summary>
         <div className="terms-box">
-          <p>신규 상품/이벤트 안내 수신 동의(선택).</p>
+          <p>신규 외화 상품 및 환율 알림 서비스, 이벤트 안내 수신 동의 (선택)</p>
         </div>
         <label className="fx-check">
           <input
@@ -310,7 +399,7 @@ function Step1Terms({ form, setForm, next }) {
               setForm((f) => ({ ...f, agreeMarketing: e.target.checked }))
             }
           />
-          이메일/문자로 안내받겠습니다.
+          이메일/문자로 안내받겠습니다. (선택)
         </label>
       </details>
 
@@ -318,7 +407,7 @@ function Step1Terms({ form, setForm, next }) {
         <button
           className="fx-btn fx-btn--primary"
           onClick={next}
-          disabled={!form.agreeTerms || !form.agreePrivacy}
+          disabled={!allRequiredAgreed} // 필수 약관 4개 모두 동의해야 다음 단계로 이동 가능
         >
           다음 단계
         </button>
@@ -396,14 +485,26 @@ function Step3ReviewOpen({ form, setForm, submitting, prev, onSubmit, result }) 
   const done = !!result;
 
   if (done) {
-    return (
-      <>
-        <h3 className="fx-subtitle">개설 완료</h3>
-        <p><b>계좌번호</b> {result.accountNo}</p>
-        <p><b>통화</b> {result.currency} / <b>유형</b> {result.accountType}</p>
-        <p><b>개설일</b> {new Date(result.openedAt).toLocaleString()}</p>
-      </>
-    );
+    const nick = result.nickname ?? form.nickname ?? "-";
+      return (
+        <>
+          <h3 className="fx-subtitle">개설 완료</h3>
+          {/* 계좌번호 */}
+          <p className="fx-datarow">
+            <b>계좌번호</b><span>{result.accountNo}</span>
+          </p>
+          {/* 통화 / 유형 / 별칭 (촘촘하게 한 줄) */}
+          <p className="fx-row-3">
+           <b>통화</b><span>{result.currency}</span>
+            <b>유형</b><span>{result.accountType}</span>
+            <b>별칭</b><span>{nick}</span>
+          </p>
+          {/* 개설일 */}
+          <p className="fx-datarow">
+            <b>개설일</b><span>{new Date(result.openedAt).toLocaleString()}</span>
+          </p>
+        </>
+      );
   }
 
   return (
@@ -442,12 +543,30 @@ function Step3ReviewOpen({ form, setForm, submitting, prev, onSubmit, result }) 
         />
       </label>
 
+      <label className="fx-field">
+         <span>거래 PIN(4+자리)</span>
+         <input
+           type="password"
+           inputMode="numeric"
+           pattern="\d*"
+           value={form.pinNumber}
+           onChange={(e) =>
+             setForm((f) => ({ ...f, pinNumber: e.target.value.replace(/\D+/g, "") }))
+           }
+         />
+      </label>
+
       <div style={{ marginTop: 12 }}>
         <button className="fx-btn" onClick={prev}>이전</button>
         <button
           className="fx-btn fx-btn--primary"
           onClick={onSubmit}
-          disabled={submitting || !form.pin || form.pin.length < 4 || !form.customerId}
+          disabled={
+             submitting ||
+             !form.pin || form.pin.length < 4 ||
+             !form.pinNumber || form.pinNumber.length < 4 ||
+             !form.customerId
+          }
         >
           {submitting ? "개설 중..." : "계좌 개설"}
         </button>

@@ -35,7 +35,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.contains("/auth/")
                 || path.endsWith("/signup")
                 || path.endsWith("/login")
-                || "/actuator/health".equals(path);
+                || "/actuator/health".equals(path)
+                // 환율조회 공개
+                || path.equals("/api/foreign/rates")
+                || path.startsWith("/api/foreign/rates/");
     }
 
     @Override

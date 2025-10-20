@@ -7,6 +7,7 @@ import { Footer } from './common/footer';
 import { useEffect, useState } from "react";
 import ForeignRatePage from "./pages/foreign/ForeignRatePage";
 import ForeignOpenPage from "./pages/foreign/ForeignOpenPage";
+import ForeignExchangePage from "./pages/foreign/ForeignExchangePage";
 import ProtectedRoute from "./pages/account/component/ProtectedRoute";
 
 // 계좌 개설 단계별 화면
@@ -99,6 +100,7 @@ function App() {
         <Route path="/foreign" element={<Navigate to="/foreign/rate" replace />} />
         <Route path="/foreign/rate" element={<ForeignRatePage />} />
         <Route path="/foreign/open" element={<ForeignOpenPage />} />
+        <Route path="/foreign/exchange" element={<ForeignExchangePage />} />
 
       </Routes >
 

@@ -12,6 +12,9 @@ public interface CustomerRepo extends JpaRepository<Customer, Integer> {
     boolean existsByUserId(String userId);
     Optional<Customer> findByUserIdAndLoginType(String userId, String loginType);
 
+    @Query("select c from Customer c where c.cId = :cId")
+    Optional<Customer> findByCId(@Param("cId") String cId);
+
     // 이메일 중복 체크 (대소문자 무시)
     @Query("""
            select case when count(c) > 0 then true else false end

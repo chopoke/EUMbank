@@ -18,6 +18,7 @@ import org.springframework.web.cors.*;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 @RequiredArgsConstructor
@@ -48,15 +49,21 @@ public class SecurityConfig {
                                 "/api/v1/auth/**",
                                 "/api/v1/join/**",
                                 "/api/v1/email/**",
-                                "/api/v1/customers/exists-email"
+                                "/api/v1/customers/exists-email",
+                                "/api/foreign/exchange/calculate",
+                                "/api/foreign/exchange"
 
                         ).permitAll()
-                        // 환율 조회/외화계좌 개설 개방
-                        .requestMatchers(HttpMethod.GET,  "/api/foreign/rates", "/api/foreign/rates/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/foreign/open").permitAll()
+                        // actuator 전부 허용
+                        .requestMatchers("/actuator/**").permitAll()
+                        // (원하는 공개 API들)
+                        .requestMatchers("/api/foreign/rates", "/api/healthz").permitAll()
+                        // 환율 조회만 공개
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/foreign/rates", "/api/foreign/rates/**"
+                        ).permitAll()
 
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // ✅ 그 외는 보호
+                        // 그 외는 모두 보호
                         .anyRequest().authenticated()
                 )
                 // ✅ JWT 필터는 UsernamePasswordAuthenticationFilter 앞
@@ -73,6 +80,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
         return cfg.getAuthenticationManager();
@@ -83,9 +91,17 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         var config = new CorsConfiguration();
 
-        List<String> origins = Arrays.stream(corsProps.getAllowedOrigins().split(","))
+        // 프로퍼티 값을 수정가능 리스트로 수집
+        List<String> origins = Arrays.stream(
+                        (corsProps.getAllowedOrigins() == null ? "" : corsProps.getAllowedOrigins()).split(","))
                 .map(String::trim)
-                .toList();
+                .filter(s -> !s.isBlank())
+                .collect(Collectors.toList());
+
+        if (!origins.contains("http://localhost:3000")) origins.add("http://localhost:3000"); // CRA
+        if (!origins.contains("http://localhost:5173")) origins.add("http://localhost:5173");
+        if (!origins.contains("http://127.0.0.1:5173")) origins.add("http://127.0.0.1:5173");
+
         config.setAllowedOrigins(origins);
         config.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
 

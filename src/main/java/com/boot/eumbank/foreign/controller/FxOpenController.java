@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/foreign/open")
 @RequiredArgsConstructor
@@ -17,5 +19,10 @@ public class FxOpenController {
     @PostMapping
     public ResponseEntity<FxOpenRespDto> open(@RequestBody FxOpenReqDto req) {
         return ResponseEntity.ok(service.openUsdAccount(req));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<Map<String, Object>> me() {
+        return ResponseEntity.ok(service.getNo());
     }
 }
