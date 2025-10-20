@@ -2,6 +2,7 @@ import { Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import BankHome from './pages/main';
 import LoginPage from "./pages/login/login";
 import SignUp from "./pages/signup/signup";
+import MyPage from "./pages/mypage/my_costomer2";
 import { Header } from './common/header';
 import { Footer } from './common/footer';
 import { useEffect, useState } from "react";
@@ -21,6 +22,12 @@ import api from "./api/axios";
 import ProtectedRoute from "./pages/account/component/ProtectedRoute";
 import { AccountListPage } from "./pages/account/AccountListPage";
 import { AccountHistoryPage } from "./pages/account/AccountHistoryPage";
+// 이체 관련 페이지들
+import TransferPage from "./pages/transfer/TransferPage";
+import TransferComplete from "./pages/transfer/TransferComplete";
+import TransferReserveComplete from "./pages/transfer/TransferReserveComplete";
+import BulkTransferDashboard from "./pages/transfer/BulkTransferDashboard";
+import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
 
 
 // App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
@@ -53,11 +60,11 @@ function App() {
 
   // 로그아웃 시 호출될 콜백 함수
   const handleLogout = async () => {
-    try{
+    try {
       const rt = localStorage.getItem("refresh");
-      if (rt) await api.post("/api/auth/logout", {refreshToken: rt });
-    } catch(e){
-      
+      if (rt) await api.post("/api/auth/logout", { refreshToken: rt });
+    } catch (e) {
+
     }
     localStorage.removeItem("access");
     localStorage.removeItem("refresh"); // 완전한 로그아웃과 보안을 위해 같이 삭제
@@ -73,27 +80,27 @@ function App() {
       <Routes>
         <Route path="/" element={<BankHome user={user} />} />
         {/* <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} /> */}
-        <Route path="/login" element={<LoginPage/>} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/cookie" element={<Cookie />} />
         <Route path="/socialAgree" element={<SocialAgree />} />
-        
+
         {/* 계좌 목록 */}
         <Route path="/accounts" element={
           <ProtectedRoute>
             <AccountListPage />
-            </ProtectedRoute>} />
+          </ProtectedRoute>} />
         {/* 이체 내역 */}
         <Route path="/accounts/:a_no" element={
           <ProtectedRoute>
             <AccountHistoryPage />
-            </ProtectedRoute>} />
+          </ProtectedRoute>} />
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
         <Route path="/account/open" element={
-           <ProtectedRoute>
+          <ProtectedRoute>
             <Navigate to="/account/open/step1" replace />
-           </ProtectedRoute>
+          </ProtectedRoute>
         } />
         <Route path="/account/open/step1" element={<Step1Consent />} />
         <Route path="/account/open/step2" element={<Step2IdVerify />} />
@@ -106,6 +113,35 @@ function App() {
         <Route path="/foreign/rate" element={<ForeignRatePage />} />
         <Route path="/foreign/products" element={<ForeignProductsPage />} />
 
+        {/* 이체 관련 라우팅 */}
+        <Route path="/transfer" element={
+          <ProtectedRoute>
+            <TransferPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/complete" element={
+          <ProtectedRoute>
+            <TransferComplete />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/reserve/complete" element={
+          <ProtectedRoute>
+            <TransferReserveComplete />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/bulk" element={
+          <ProtectedRoute>
+            <BulkTransferDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/bulk/complete" element={
+          <ProtectedRoute>
+            <BulkTransferComplete />
+          </ProtectedRoute>
+        } />
+
+        {/* 마이페이지 진입 */}
+        <Route path="/mypage" element={<MyPage />} />
       </Routes >
 
       <Footer />
