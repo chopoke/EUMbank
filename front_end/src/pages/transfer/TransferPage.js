@@ -459,7 +459,7 @@ export default function TransferPage() {
       // 실제 API 호출로 예금주 조회
       const response = await transferApi.getAccountHolder(selectedBank, newAccountNumber);
       
-      if (response.data && response.data.success) {
+      if (response.data && response.data.success && response.data.data && response.data.data.accountHolder) {
         const holderData = response.data.data;
         setAccountHolder(holderData.accountHolder);
         setSelectedRecipient({
@@ -470,16 +470,25 @@ export default function TransferPage() {
         });
         setError(null);
       } else {
+        // 계좌가 존재하지 않거나 조회 실패
         setAccountHolder('');
         setSelectedRecipient(null);
-        setError('예금주를 찾을 수 없습니다.');
+        setError('존재하지 않는 계좌입니다. 은행과 계좌번호를 다시 확인해주세요.');
       }
       
     } catch (error) {
       console.error('예금주 조회 실패:', error.message || '알 수 없는 오류');
       setAccountHolder('');
       setSelectedRecipient(null);
-      setError('예금주 조회에 실패했습니다. 서버를 확인해주세요.');
+      
+      // 서버 오류인지 계좌 존재 여부 오류인지 구분
+      if (error.response && error.response.status === 404) {
+        setError('존재하지 않는 계좌입니다. 은행과 계좌번호를 다시 확인해주세요.');
+      } else if (error.response && error.response.status === 400) {
+        setError('계좌번호 형식이 올바르지 않습니다.');
+      } else {
+        setError('계좌 조회에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -517,6 +526,13 @@ export default function TransferPage() {
     try {
       setIsLoading(true);
       setError(null);
+
+      // 신규 입력 탭에서 계좌 존재 여부 재검증
+      if (activeTab === 'new' && (!accountHolder || accountHolder.trim() === '')) {
+        alert('존재하지 않는 계좌입니다. 은행과 계좌번호를 다시 확인해주세요.');
+        setIsLoading(false);
+        return;
+      }
 
       // 이체 요청 데이터 구성
       const requestData = {

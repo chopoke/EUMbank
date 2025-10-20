@@ -124,6 +124,37 @@ public class TransferServiceImpl implements TransferService {
             }
             log.info("2. 계좌 상태 확인 완료");
 
+            // 2-1. 수취 계좌 검증 (모든 계좌에 대해 존재 여부 및 상태 필수 확인)
+            log.info("2-1. 수취 계좌 존재 여부 확인 시작 - 계좌번호: {}", request.getDestAccountNo());
+            Optional<Account> toAccountOpt = accountRepository.findByAccountNo(request.getDestAccountNo());
+            if (toAccountOpt.isEmpty()) {
+                log.error("수취 계좌를 찾을 수 없습니다: {}", request.getDestAccountNo());
+                throw new AccountNotFoundException("수취 계좌를 찾을 수 없습니다: " + request.getDestAccountNo());
+            }
+            
+            Account toAccount = toAccountOpt.get();
+            
+            // 계좌 상태 상세 검증
+            if (toAccount.getStatus() == null || !"ACTIVE".equals(toAccount.getStatus())) {
+                log.error("수취 계좌 상태 이상 - 계좌: {}, 상태: {}", toAccount.getAccountNo(), toAccount.getStatus());
+                throw new AccountStatusException("수취 계좌가 거래 불가능한 상태입니다. 상태: " + toAccount.getStatus());
+            }
+            
+            // 약관 동의 검증
+            if (toAccount.getAgreeTerms() == null || !"Y".equals(toAccount.getAgreeTerms())) {
+                log.error("수취 계좌 약관 미동의 - 계좌: {}, 약관동의: {}", toAccount.getAccountNo(), toAccount.getAgreeTerms());
+                throw new AccountStatusException("수취 계좌의 약관에 동의하지 않았습니다.");
+            }
+            
+            // 개인정보 처리방침 동의 검증
+            if (toAccount.getAgreePrivacy() == null || !"Y".equals(toAccount.getAgreePrivacy())) {
+                log.error("수취 계좌 개인정보처리방침 미동의 - 계좌: {}, 개인정보동의: {}", toAccount.getAccountNo(), toAccount.getAgreePrivacy());
+                throw new AccountStatusException("수취 계좌의 개인정보 처리방침에 동의하지 않았습니다.");
+            }
+            
+            log.info("2-1. 수취 계좌 검증 완료 - 계좌: {}, 상태: {}, 약관동의: {}, 개인정보동의: {}", 
+                toAccount.getAccountNo(), toAccount.getStatus(), toAccount.getAgreeTerms(), toAccount.getAgreePrivacy());
+
             // 3. 예약 이체 엔티티 생성
             log.info("3. 예약 이체 엔티티 생성 시작");
             log.info("3-1. OrderId 생성 시작");
@@ -363,27 +394,49 @@ public class TransferServiceImpl implements TransferService {
         
         BigDecimal transferAmount = BigDecimal.valueOf(amount);
         
-        // === 1-1단계: 자기 계좌 이체 방지 (이음은행 내부 이체만) ===
-        if ("이음은행".equals(toBankName) || "EUM".equals(toBankName)) {
-            Account tempFromAccount = accountRepository.findById(fromAccountNo).orElse(null);
-            if (tempFromAccount != null && tempFromAccount.getAccountNo().equals(toAccountNo)) {
-                log.warn("자기 계좌 이체 시도 - 계좌: {}", toAccountNo);
-                throw new SameAccountTransferException(toAccountNo);
-            }
+        // === 1-1단계: 자기 계좌 이체 방지 ===
+        Account tempFromAccount = accountRepository.findById(fromAccountNo).orElse(null);
+        if (tempFromAccount != null && tempFromAccount.getAccountNo().equals(toAccountNo)) {
+            log.warn("자기 계좌 이체 시도 - 계좌: {}", toAccountNo);
+            throw new SameAccountTransferException(toAccountNo);
         }
         
-        // === 2단계: 출금 계좌 조회 및 존재 여부 확인 ===
-        Account fromAccount = accountRepository.findByIdWithLock(fromAccountNo)
-                .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
-
-        log.info("출금 계좌 조회 완료 - 계좌ID: {}, 현재 잔액: {}", fromAccount.getANo(), fromAccount.getBalance());
+        // === 2단계: 데드락 방지를 위한 계좌 락 순서 보장 ===
+        log.info("데드락 방지를 위한 계좌 락 순서 보장 시작");
         
-        // === 2-1단계: 계좌 상태 검증 ===
-        if (!"ACTIVE".equals(fromAccount.getStatus())) {
-            log.warn("계좌 상태 이상 - 계좌: {}, 상태: {}", fromAccount.getAccountNo(), fromAccount.getStatus());
-            throw new AccountStatusException(fromAccount.getAccountNo(), fromAccount.getStatus());
+        // 수취 계좌의 aNo를 먼저 조회 (락 없이)
+        Account tempToAccount = accountRepository.findByAccountNo(toAccountNo)
+                .orElseThrow(() -> new AccountNotFoundException("수취 계좌를 찾을 수 없습니다: " + toAccountNo));
+        
+        Integer fromId = fromAccountNo;
+        Integer toId = tempToAccount.getANo();
+        
+        log.info("계좌 ID 비교 - 출금계좌: {}, 수취계좌: {}", fromId, toId);
+        
+        // 계좌 ID 순서로 락 획득 (작은 ID → 큰 ID)
+        Account firstLock, secondLock;
+        Account fromAccount, toAccount;
+        
+        if (fromId < toId) {
+            log.info("출금계좌({}) → 수취계좌({}) 순서로 락 획득", fromId, toId);
+            firstLock = accountRepository.findByIdWithLock(fromId)
+                    .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
+            secondLock = accountRepository.findByIdWithLock(toId)
+                    .orElseThrow(() -> new AccountNotFoundException("수취 계좌를 찾을 수 없습니다."));
+            fromAccount = firstLock;
+            toAccount = secondLock;
+        } else {
+            log.info("수취계좌({}) → 출금계좌({}) 순서로 락 획득", toId, fromId);
+            firstLock = accountRepository.findByIdWithLock(toId)
+                    .orElseThrow(() -> new AccountNotFoundException("수취 계좌를 찾을 수 없습니다."));
+            secondLock = accountRepository.findByIdWithLock(fromId)
+                    .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
+            fromAccount = secondLock;
+            toAccount = firstLock;
         }
-
+        
+        log.info("계좌 락 획득 완료 - 출금계좌: {}, 수취계좌: {}", fromAccount.getANo(), toAccount.getANo());
+        
         // === 3단계: 계좌 비밀번호 검증 (password가 null이면 검증 생략) ===
         if (password != null && !fromAccount.getAccountPwd().equals(password)) {
             log.warn("계좌 비밀번호 불일치 - 계좌: {}", fromAccountNo);
@@ -393,50 +446,70 @@ public class TransferServiceImpl implements TransferService {
         if (password == null) {
             log.info("비밀번호 검증 생략 - 계좌: {} (예약이체 자동 실행)", fromAccountNo);
         }
+        
+        log.info("출금 계좌 조회 완료 - 계좌ID: {}, 현재 잔액: {}", fromAccount.getANo(), fromAccount.getBalance());
 
-        // === 4단계: 잔액 검증 ===
+        // === 4단계: 잔액 검증 (강화) ===
         if (fromAccount.getBalance().compareTo(transferAmount) < 0) {
             log.warn("잔액 부족 - 현재 잔액: {}, 이체 금액: {}", fromAccount.getBalance(), transferAmount);
             throw new InsufficientBalanceException(fromAccount.getBalance(), amount);
+        }
+        
+        // 추가: 잔액이 0보다 작은 경우 체크
+        if (fromAccount.getBalance().compareTo(BigDecimal.ZERO) < 0) {
+            log.warn("잔액이 음수 - 현재 잔액: {}", fromAccount.getBalance());
+            throw new AccountStatusException("계좌 잔액이 올바르지 않습니다.");
+        }
+        
+        // 추가: 이체 금액이 0인 경우 체크
+        if (transferAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("이체 금액이 0 이하 - 이체 금액: {}", transferAmount);
+            throw new InvalidAmountException("이체 금액은 0보다 커야 합니다.");
         }
 
         // === 5단계: 계좌 한도 조회 및 검증 ===
         // TODO: AccountService를 통한 한도 검증 구현 필요
         // 현재는 기본적인 검증만 수행
         
-        // === 6단계: 출금 처리 (잔액 차감) ===
+        // === 3단계: 계좌 상태 상세 검증 (락 획득 후) ===
+        log.info("계좌 상태 상세 검증 시작 - 출금계좌: {}, 수취계좌: {}", fromAccount.getAccountNo(), toAccount.getAccountNo());
+        
+        // 출금 계좌 상태 검증
+        if (fromAccount.getStatus() == null || !"ACTIVE".equals(fromAccount.getStatus())) {
+            log.warn("출금 계좌 상태 이상 - 계좌: {}, 상태: {}", fromAccount.getAccountNo(), fromAccount.getStatus());
+            throw new AccountStatusException("출금 계좌가 거래 불가능한 상태입니다. 상태: " + fromAccount.getStatus());
+        }
+        
+        // 수취 계좌 상태 검증
+        if (toAccount.getStatus() == null || !"ACTIVE".equals(toAccount.getStatus())) {
+            log.warn("수취 계좌 상태 이상 - 계좌: {}, 상태: {}", toAccount.getAccountNo(), toAccount.getStatus());
+            throw new AccountStatusException("수취 계좌가 거래 불가능한 상태입니다. 상태: " + toAccount.getStatus());
+        }
+        
+        log.info("계좌 상태 검증 완료 - 출금계좌: {}, 수취계좌: {}", fromAccount.getAccountNo(), toAccount.getAccountNo());
+        
+        // === 7단계: 출금 처리 (수취 계좌 검증 완료 후) ===
         fromAccount.withdraw(transferAmount);
         BigDecimal afterBalance = fromAccount.getBalance();
         
         log.info("출금 처리 완료 - 차감 금액: {}, 이체 후 잔액: {}", transferAmount, afterBalance);
-
-        // === 7단계: 입금 처리 (이음은행 내부 계좌인 경우만) ===
-        Account toAccount = null;
-        if ("이음은행".equals(toBankName) || "EUM".equals(toBankName)) {
-            // 계좌번호로 입금 계좌 조회
-            toAccount = accountRepository.findByAccountNoWithLock(toAccountNo).orElse(null);
-            
-            // 입금 계좌가 존재하는 경우에만 입금 처리
-            if (toAccount != null) {
-                BigDecimal currentBalance = toAccount.getBalance();
-                BigDecimal newBalance = currentBalance.add(transferAmount);
-                
-                // 오버플로우 방지
-                if (newBalance.compareTo(new BigDecimal("999999999999999999.99")) > 0) {
-                    log.error("입금 계좌 잔액 오버플로우 위험 - 현재: {}, 입금액: {}", currentBalance, transferAmount);
-                    throw new IllegalArgumentException("입금 후 잔액이 시스템 최대값을 초과합니다.");
-                }
-                
-                toAccount.deposit(transferAmount);
-                
-                log.info("입금 처리 완료 - 계좌: {}, 입금액: {}, 입금 후 잔액: {}", 
-                    toAccountNo, transferAmount, toAccount.getBalance());
-            } else {
-                log.warn("입금 계좌를 찾을 수 없음 - 계좌번호: {}", toAccountNo);
-            }
+        
+        // === 8단계: 입금 처리 (모든 계좌에 대해) ===
+        BigDecimal currentBalance = toAccount.getBalance();
+        BigDecimal newBalance = currentBalance.add(transferAmount);
+        
+        // 오버플로우 방지
+        if (newBalance.compareTo(new BigDecimal("999999999999999999.99")) > 0) {
+            log.error("입금 계좌 잔액 오버플로우 위험 - 현재: {}, 입금액: {}", currentBalance, transferAmount);
+            throw new IllegalArgumentException("입금 후 잔액이 시스템 최대값을 초과합니다.");
         }
+        
+        toAccount.deposit(transferAmount);
+        
+        log.info("입금 처리 완료 - 계좌: {}, 입금액: {}, 입금 후 잔액: {}", 
+            toAccountNo, transferAmount, toAccount.getBalance());
 
-        // === 8단계: 출금 이체 내역 저장 ===
+        // === 9단계: 이체 내역 저장 ===
         String transferId = generateTransferId();
         
         TransferHistory transferHistory = TransferHistory.builder()
@@ -873,21 +946,39 @@ public class TransferServiceImpl implements TransferService {
      */
     public String getActualAccountHolderName(String accountNumber, String bank) {
         try {
+            log.info("예금주명 조회 시작 - 계좌번호: {}, 은행: {}", accountNumber, bank);
+            
             // 계좌번호로 계좌 조회
             Optional<Account> account = accountRepository.findByAccountNo(accountNumber);
             if (account.isPresent()) {
+                Account foundAccount = account.get();
+                log.info("계좌 조회 성공 - 계좌번호: {}, 상태: {}", accountNumber, foundAccount.getStatus());
+                
+                // 계좌 상태 검증
+                if (!"ACTIVE".equals(foundAccount.getStatus())) {
+                    log.warn("계좌가 비활성 상태입니다 - 계좌번호: {}, 상태: {}", accountNumber, foundAccount.getStatus());
+                    throw new AccountStatusException("계좌가 거래 불가능한 상태입니다.");
+                }
+                
                 // 계좌의 고객번호로 고객 정보 조회하여 실제 이름 반환
-                return transferCustomerRepository.findById(account.get().getCNo())
+                String customerName = transferCustomerRepository.findById(foundAccount.getCNo())
                     .map(Customer::getCNameKr)
-                    .orElse("고객 정보 없음");
+                    .orElseThrow(() -> new AccountNotFoundException("고객 정보를 찾을 수 없습니다."));
+                
+                log.info("예금주명 조회 완료 - 계좌번호: {}, 예금주: {}", accountNumber, customerName);
+                return customerName;
             }
             
             // 계좌를 찾을 수 없는 경우
-            return "계좌 정보 없음";
+            log.warn("계좌를 찾을 수 없습니다 - 계좌번호: {}", accountNumber);
+            throw new AccountNotFoundException("존재하지 않는 계좌입니다: " + accountNumber);
             
+        } catch (AccountNotFoundException | AccountStatusException e) {
+            // 계좌 관련 예외는 그대로 전파
+            throw e;
         } catch (Exception e) {
             log.error("예금주명 조회 중 오류 발생 - 계좌: {}, 은행: {}", accountNumber, bank, e);
-            return "조회 실패";
+            throw new RuntimeException("계좌 조회 중 오류가 발생했습니다.");
         }
     }
     
