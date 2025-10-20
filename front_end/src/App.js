@@ -22,6 +22,12 @@ import api from "./api/axios";
 import ProtectedRoute from "./pages/account/component/ProtectedRoute";
 import { AccountListPage } from "./pages/account/AccountListPage";
 import { AccountHistoryPage } from "./pages/account/AccountHistoryPage";
+// 이체 관련 페이지들
+import TransferPage from "./pages/transfer/TransferPage";
+import TransferComplete from "./pages/transfer/TransferComplete";
+import TransferReserveComplete from "./pages/transfer/TransferReserveComplete";
+import BulkTransferDashboard from "./pages/transfer/BulkTransferDashboard";
+import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
 
 
 // App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
@@ -106,6 +112,33 @@ function App() {
         <Route path="/foreign" element={<Navigate to="/foreign/rate" replace />} />
         <Route path="/foreign/rate" element={<ForeignRatePage />} />
         <Route path="/foreign/products" element={<ForeignProductsPage />} />
+
+        {/* 이체 관련 라우팅 */}
+        <Route path="/transfer" element={
+          <ProtectedRoute>
+            <TransferPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/complete" element={
+          <ProtectedRoute>
+            <TransferComplete />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/reserve/complete" element={
+          <ProtectedRoute>
+            <TransferReserveComplete />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/bulk" element={
+          <ProtectedRoute>
+            <BulkTransferDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/bulk/complete" element={
+          <ProtectedRoute>
+            <BulkTransferComplete />
+          </ProtectedRoute>
+        } />
 
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={<MyPage />} />

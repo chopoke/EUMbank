@@ -124,4 +124,21 @@ public class Customer {
         this.cEmail = signupRequest.getC_email();
         this.cPhoneMobile = signupRequest.getC_phone_mobile();
     }
+
+    // 비즈니스 메서드들
+    public void updateAuthLevel(Integer authLevel) {
+        this.cAuthLevel = authLevel;
+    }
+
+    public void updateRiskGrade(String riskGrade) {
+        this.cRiskGrade = riskGrade;
+    }
+
+    public void updateStatus(String status) {
+        this.cStatus = status;
+    }
+
+    public boolean isActive() {
+        return "ACTIVE".equals(this.cStatus);
+    }
 }
