@@ -13,11 +13,11 @@ public interface TransferHistoryRepository extends JpaRepository<TransferHistory
 
     @Query("""
         select t from TransferHistory t
-        where t.a_no = :a_no
-          and (:type   is null or t.th_transfer_type = :type)
-          and (:from_at is null or t.th_transfer_at >= :from_at)
-          and (:to_at   is null or t.th_transfer_at <  :to_at)
-        order by t.th_transfer_at desc
+        where t.accountNo = :a_no
+          and (:type   is null or t.transferType = :type)
+          and (:from_at is null or t.transferAt >= :from_at)
+          and (:to_at   is null or t.transferAt <  :to_at)
+        order by t.transferAt desc
     """)
     Page<TransferHistory> search(
             @Param("a_no") int a_no,
