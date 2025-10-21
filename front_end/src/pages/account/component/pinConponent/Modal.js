@@ -18,7 +18,7 @@ const Modal = (props) => {
                     </header>
                     <main>{props.children}</main>
                     <footer>
-                        <div className='warning'>※타인에게 <b style={{color: 'red'}}>절대</b> 노출하지 마세요.</div>
+                        <div className='warning'>※타인에게 <b style={{ color: 'red' }}>절대</b> 노출하지 마세요.</div>
                         <button className="close" onClick={close}>
                             닫기
                         </button>

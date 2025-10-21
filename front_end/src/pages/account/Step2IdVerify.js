@@ -1,9 +1,8 @@
-// Step2IdVerify.js (또는 IdVerificationPage)
-// 주의: import 경로 오타가 있으면 ./common/ui 로 수정하세요.
-import React, { useMemo, useState } from "react";
+// Step2IdVerify.js
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Frame, Header, Stepper, AsideHelp, Checkbox } from "./commom/ui";
-import { ocrCheck, verifyMinSjon } from "./api/accountApi"; // 경로는 프로젝트 구조에 맞게
+import { checkPinNumber, ocrCheck, verifyExistingPin, verifyMinSjon } from "./api/accountApi";
 import { useAccountOpenStore } from './state/accountOpenStore';
 import Modal from "./component/pinConponent/Modal";
 import { PinPadModal } from "./component/pinConponent/PinPadModal";
@@ -18,11 +17,43 @@ export default function Step2IdVerify() {
     const [checked, setChecked] = useState(false);
     const [loading, setLoading] = useState(false);
     const [verified, setVerified] = useState(false);
+
+    const [pinVerified, setPinVerified] = useState(false); // 기존 PIN 인증 성공 여부
+    const [modalMode, setModalMode] = useState('register'); // 모달의 모드 ('register' 또는 'verify')
+
+    // 현재 로그인한 유저가 핀번호를 가지고 있는지 파악
+    const [checkPin, setCheckPin] = useState('');
+
+    // 핀번호 초기 입력
     const [pinNumber, setPinNumber] = useState('');
+    // 핀번호 확인용
     const [pinReNumber, setRePinNumber] = useState('');
+    // 핀번호 2번입력에 대한 각기 상태값
     const [pinStep, setPinStep] = useState('enter');
+
+    // 백엔드에서 받은 에러 관련 UI에 뿌려주기위한 방법
     const [msg, setMsg] = useState("");
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        const checkPinFunction = async () => {
+            try {
+                const verifyRes = await checkPinNumber();
+
+                if (verifyRes?.ok) {
+                    console.log("성공했다.");
+                    setCheckPin(verifyRes?.state);
+                } else {
+                    console.log("실패했다.");
+                    setCheckPin(verifyRes?.state);
+                }
+            } catch (error) {
+                setCheckPin(false);
+                console.log(error);
+            }
+        }
+        checkPinFunction();
+    }, [])
 
     const onFileChange = (e) => {
         const f = e.target.files?.[0];
@@ -93,45 +124,80 @@ export default function Step2IdVerify() {
         }
     };
 
-    const canStart = !!file && checked && !loading;
-    const primaryLabel = verified ? "다음" : loading ? "검증 중…" : "인증 시작";
+    // ✅ 1. 기존 PIN을 입력받아 백엔드에 검증을 요청하는 함수를 새로 만듭니다.
+    const handleVerifyPin = async (pin) => {
+        setLoading(true);
+        setError("");
+        try {
+            // 새로 추가해야 할 API 함수: verifyExistingPin
+            const res = await verifyExistingPin({ pinNumber: pin });
 
-    // 최종 버튼 입력버튼
-    function finalButton() {
+            // ✅ 응답에서 email, phone 추출
+            const { name, rrn6, address, rrn13, email, phone } = res;
 
-        if (verified) {
-            if (pinNumber === '' && pinReNumber === '') {
-                alert("PIN번호를 등록해주세요.");
-                return false;
-            }
+            // ✅ Zustand 스토어에 모든 정보 저장
+            setStep2({ verified: true, name, rrn6, rrn13, address, email, phone });
 
-            if (pinNumber !== pinReNumber) {
-                alert("pin 일치하지 않습니다.");
-                setPinNumber('');
-                setRePinNumber('');
-                return false;
-            }
-            // 2025-10-14
-            // 핀 번호 추가하기
-            setStep2({ pinNumber });
+            setPinVerified(true);
+            setMsg(res.message);
+            closeModal();
+        } catch (e) {
+            setError(e?.message);
+            closeModal();
+        } finally {
+            setLoading(false);
+        }
+    };
 
-            nav(NEXT_PATH);
-        } else {
-            handleOcr();
+    // ✅ 2. 최종 "다음" 버튼 클릭 로직을 명확하게 분리합니다.
+    const goToNextStep = () => {
+        if (!checked) {
+            alert("개인정보 수집·이용에 동의해주세요.");
+            return;
         }
 
+        // 분기 A: 기존 PIN 사용자인 경우
+        if (checkPin) {
+            if (pinVerified) {
+                // 백엔드에서 인증이 끝났으므로, 다음 단계로 넘어갈 수 있다는 사실만 저장
+                setStep2({ verified: true, pinVerified: true });
+                nav(NEXT_PATH);
+            } else {
+                alert("PIN 인증을 완료해야 다음으로 진행할 수 있습니다.");
+            }
+            return;
+        }
 
-    }
+        // 분기 B: 신규 PIN 등록 사용자인 경우
+        const pinIsSet = pinNumber !== '' && pinNumber === pinReNumber;
+        if (verified && pinIsSet) {
+            setStep2({ pinNumber }); // 새로 등록한 PIN 번호를 저장
+            nav(NEXT_PATH);
+        }
+    };
+
+    const canStart = !!file && checked && !loading;
+    // 🚨 수정: verified 상태이면서, PIN 번호가 일치할 때 '다음'으로 표시
+    const pinIsSet = pinNumber !== '' && pinNumber === pinReNumber;
+
+
+    // ✅ 3. 모달 열기 함수를 모드에 따라 분리합니다.
+    const openRegisterModal = () => {
+        setModalMode('register');
+        setPinStep('enter');
+        setPinNumber('');
+        setRePinNumber('');
+        setModalOpen(true);
+    };
+
+    const openVerifyModal = () => {
+        setModalMode('verify');
+        setModalOpen(true);
+    };
 
     // 모달 작업창 부분 시작 ------
     // 참고사이트 : https://velog.io/@phrygia/2021-09-21-react-modal
     const [modalOpen, setModalOpen] = useState(false);
-
-    const primaryDisabled = useMemo(() => (verified), [verified]);
-
-    const openModal = () => {
-        setModalOpen(true);
-    };
 
     const closeModal = () => {
         setModalOpen(false);
@@ -146,35 +212,56 @@ export default function Step2IdVerify() {
                 <Stepper current={2} />
                 <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
                     <section className="rounded-2xl border bg-white shadow-sm">
+
                         <div className="px-5 py-4 border-b">
                             <h2 className="text-base font-semibold">2. 본인인증</h2>
                         </div>
-
                         <div className="p-5 space-y-6">
-                            <p className="text-sm text-gray-700">
-                                주민등록증/운전면허증 앞면 이미지를 업로드하세요. 빛 반사/흐림 없이 전체가 보이도록 촬영해 주세요.
-                            </p>
+                            {checkPin && (
+                                <div className="text-center p-4">
+                                    <p className="text-sm text-gray-700 mb-4">
+                                        기존에 등록된 PIN 번호가 확인되었습니다. <br />
+                                        PIN 번호를 입력하여 본인 인증을 완료해주세요.
+                                    </p>
+                                    <button
+                                        onClick={openVerifyModal}
+                                        disabled={pinVerified} // 이미 인증했으면 비활성화
+                                        className={`min-w-[120px] rounded-xl px-5 py-2.5 text-sm font-semibold text-white ${pinVerified ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+                                            }`}
+                                    >
+                                        {pinVerified ? "인증 완료" : "PIN으로 인증하기"}
+                                    </button>
+                                </div>
+                            )}
 
-                            <label className="block rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center hover:border-gray-300 cursor-pointer">
-                                <input type="file" accept="image/*" className="hidden" onChange={onFileChange} />
-                                {preview ? (
-                                    <img src={preview} alt="미리보기" className="mx-auto max-h-56 rounded-lg" />
-                                ) : (
-                                    <div className="space-y-2">
-                                        <div className="text-sm font-medium">이미지 업로드</div>
-                                        <div className="text-xs text-gray-500">PNG, JPG, HEIC 지원</div>
+                            {/* checkPin이 false일 때만 신분증 업로드 UI를 보여줌 */}
+                            {!checkPin && (
+                                <>
+                                    <p className="text-sm text-gray-700">
+                                        주민등록증/운전면허증 앞면 이미지를 업로드하세요. 빛 반사/흐림 없이 전체가 보이도록 촬영해 주세요.
+                                    </p>
+
+                                    <label className="block rounded-2xl border-2 border-dashed border-gray-200 p-6 text-center hover:border-gray-300 cursor-pointer">
+                                        <input type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+                                        {preview ? (
+                                            <img src={preview} alt="미리보기" className="mx-auto max-h-56 rounded-lg" />
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <div className="text-sm font-medium">이미지 업로드</div>
+                                                <div className="text-xs text-gray-500">PNG, JPG, HEIC 지원</div>
+                                            </div>
+                                        )}
+                                    </label>
+
+                                    <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li>민감정보는 HTTPS/TLS로 암호화 전송됩니다.</li>
+                                            <li>주민등록번호는 화면/서버에서 마스킹 처리됩니다.</li>
+                                            <li>업로드 이미지는 검증 후 즉시 파기합니다.</li>
+                                        </ul>
                                     </div>
-                                )}
-                            </label>
-
-                            <div className="rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
-                                <ul className="list-disc pl-5 space-y-1">
-                                    <li>민감정보는 HTTPS/TLS로 암호화 전송됩니다.</li>
-                                    <li>주민등록번호는 화면/서버에서 마스킹 처리됩니다.</li>
-                                    <li>업로드 이미지는 검증 후 즉시 파기합니다.</li>
-                                </ul>
-                            </div>
-
+                                </>
+                            )}
                             <Checkbox
                                 checked={checked}
                                 onChange={() => setChecked(!checked)}
@@ -213,53 +300,94 @@ export default function Step2IdVerify() {
                                             재시도
                                         </button>
                                     )}
-                                    {primaryDisabled !== false &&
+
+                                    {/* ✅ Case A: 기존 PIN 사용자 '다음' 버튼 */}
+                                    {checkPin && (
                                         <button
-                                            onClick={openModal}
-                                            className={[
-                                                "min-w-[96px] rounded-xl px-5 py-2.5 text-white bg-blue-700",
-                                            ]}
-                                            disabled={!primaryDisabled}
-                                        >PIN 등록
+                                            type="button"
+                                            disabled={!checked || !pinVerified}
+                                            onClick={goToNextStep}
+                                            className={`min-w-[96px] rounded-xl px-5 py-2.5 text-sm font-semibold ${(!checked || !pinVerified)
+                                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                                }`}
+                                        >
+                                            다음
                                         </button>
-                                    }
-                                    {/* ✅ 3. 모달 제목을 pinStep에 따라 동적으로 변경합니다. */}
-                                    <Modal open={modalOpen} close={closeModal} header={pinStep === 'enter' ? "PIN 6자리 입력" : "PIN 6자리 확인"}>
+                                    )}
+
+                                    {/* ✅ Case B-1: 신규 사용자 'OCR 시작' 버튼 */}
+                                    {!checkPin && !verified && (
+                                        <button
+                                            type="button"
+                                            disabled={!canStart}
+                                            onClick={handleOcr}
+                                            className={`min-w-[96px] rounded-xl px-5 py-2.5 text-sm font-semibold ${!canStart
+                                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                                }`}
+                                        >
+                                            {loading ? "검증 중..." : "OCR 시작"}
+                                        </button>
+                                    )}
+
+                                    {/* ✅ Case B-2: OCR 성공 후 'PIN 등록' 버튼 */}
+                                    {!checkPin && verified && !pinIsSet && (
+                                        <button
+                                            type="button"
+                                            onClick={openRegisterModal}
+                                            className="min-w-[96px] rounded-xl px-5 py-2.5 text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700"
+                                        >
+                                            PIN 등록
+                                        </button>
+                                    )}
+
+                                    {/* ✅ Case B-3: PIN 등록 후 '다음' 버튼 */}
+                                    {!checkPin && verified && pinIsSet && (
+                                        <button
+                                            type="button"
+                                            disabled={!checked}
+                                            onClick={goToNextStep}
+                                            className={`min-w-[96px] rounded-xl px-5 py-2.5 text-sm font-semibold ${!checked
+                                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                                }`}
+                                        >
+                                            다음
+                                        </button>
+                                    )}
+                                    {/* ✅ 4. 모달 로직을 'verify'와 'register' 모드에 따라 분기 처리합니다. */}
+                                    <Modal open={modalOpen} close={closeModal} header={
+                                        modalMode === 'verify' ? "PIN 6자리 입력"
+                                            : (pinStep === 'enter' ? "PIN 6자리 입력" : "PIN 6자리 확인")
+                                    }>
                                         <PinPadModal
-                                            // ✅ 4. pinStep이 바뀔 때마다 PinPadModal을 새로 렌더링하여 초기화합니다. (key prop 사용)
-                                            key={pinStep}
+                                            key={`${modalMode}-${pinStep}`} // 모드가 바뀔 때도 초기화되도록 key 수정
                                             length={6}
-                                            // ✅ 5. onSubmit 로직을 단계에 따라 다르게 처리합니다.
                                             onSubmit={async (pin) => {
-                                                if (pinStep === 'enter') {
-                                                    setPinNumber(pin);   // 첫 번째 입력값 저장
-                                                    setPinStep('confirm'); // 확인 단계로 변경
-                                                } else { // pinStep === 'confirm'
-                                                    setRePinNumber(pin); // 두 번째 입력값 저장
-                                                    closeModal();         // 모달 닫기
+                                                if (modalMode === 'verify') {
+                                                    await handleVerifyPin(pin);
+                                                } else { // 'register' mode
+                                                    if (pinStep === 'enter') {
+                                                        setPinNumber(pin);
+                                                        setPinStep('confirm');
+                                                    } else {
+                                                        if (pinNumber === pin) {
+                                                            setRePinNumber(pin);
+                                                            closeModal();
+                                                        } else {
+                                                            alert("PIN이 일치하지 않습니다. 다시 입력해주세요.");
+                                                            setPinStep('enter'); // 첫 단계로 리셋
+                                                            setPinNumber('');
+                                                            // PinPadModal이 리셋되도록 에러 throw
+                                                            throw new Error("PIN mismatch");
+                                                        }
+                                                    }
                                                 }
                                             }}
                                             onCancel={closeModal}
                                         />
                                     </Modal>
-
-
-
-                                    <button
-                                        type="button"
-                                        disabled={!canStart && !verified}
-                                        className={[
-                                            "min-w-[96px] rounded-xl px-5 py-2.5 text-sm font-semibold",
-                                            verified
-                                                ? "bg-blue-600 text-white hover:bg-blue-700"
-                                                : canStart
-                                                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                                                    : "bg-gray-200 text-gray-500 cursor-not-allowed",
-                                        ].join(" ")}
-                                        onClick={finalButton}
-                                    >
-                                        {primaryLabel}
-                                    </button>
                                 </div>
                             </div>
                         </div>

@@ -1,7 +1,7 @@
 package com.boot.eumbank.account.select.entity;
 
 
-import com.boot.eumbank.account.Open.model.Account;
+import com.boot.eumbank.account.open.model.Account;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;

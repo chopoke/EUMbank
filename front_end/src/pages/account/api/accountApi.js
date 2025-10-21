@@ -52,3 +52,30 @@ export async function verifyMinSjon(params) {
     throw new Error(`검증 요청 실패 (${error.response?.status})`);
   }
 }
+
+/**
+ * // 계좌개설쪽 핀번호 체크하기
+ * @param {*} params 
+ * @returns 
+ */
+export async function checkPinNumber() {
+  try {
+    const res = await apiConfig.post("/api/checkPinNumber");
+    return res.data;
+  } catch (error) {
+    console.error("검증 요청 실패:", error.response?.data || error.message);
+    throw new Error(`검증 요청 실패 (${error.response?.status})`);
+  }
+}
+
+
+/**
+ * pin번호 검증
+ * @param {object} pinNumber 
+ */
+export async function verifyExistingPin(data) {
+
+  const res = await apiConfig.post("/api/verifyExistingPin", data);
+  return res.data;
+
+}

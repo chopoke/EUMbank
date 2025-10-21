@@ -1,7 +1,7 @@
 package com.boot.eumbank.transfer_domain.account.repository;
 
-import com.boot.eumbank.account.Open.model.Account;
-import com.boot.eumbank.account.Open.model.QAccount;
+import com.boot.eumbank.account.open.model.Account;
+import com.boot.eumbank.account.open.model.QAccount;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
