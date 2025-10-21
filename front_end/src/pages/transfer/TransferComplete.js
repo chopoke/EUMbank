@@ -16,9 +16,9 @@ export default function TransferComplete() {
     if (location.state?.transferData) {
       setTransferData(location.state.transferData);
       setTransactionInfo({
-        transactionId: 'TRX-' + Date.now(),
-        timestamp: new Date().toLocaleString('ko-KR'),
-        remainingBalance: 17198450 // 임시값, 실제로는 계산 필요
+        transactionId: location.state.transferData.transferId || 'TRX-' + Date.now(),
+        timestamp: location.state.transferData.timestamp || new Date().toLocaleString('ko-KR'),
+        remainingBalance: location.state.transferData.remainingBalance || 0
       });
     } else {
       // 데이터가 없으면 이체 페이지로 리다이렉트
@@ -59,7 +59,7 @@ export default function TransferComplete() {
   const amount = typeof transferData.amount === 'string' 
     ? parseInt(transferData.amount.replace(/[^0-9]/g, '')) 
     : transferData.amount || 0;
-  const fee = 500;
+  const fee = transferData.fee || 0;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">

@@ -134,6 +134,24 @@ export default function BulkTransferPage() {
   };
 
   useEffect(() => {
+    // 하드코딩된 은행 목록 즉시 설정 (단건이체와 동일)
+    const hardcodedBanks = [
+      { code: 'EUM', name: '이음은행' },
+      { code: '001', name: '국민은행' },
+      { code: '002', name: '신한은행' },
+      { code: '003', name: '우리은행' },
+      { code: '004', name: '하나은행' },
+      { code: '005', name: '농협은행' },
+      { code: '006', name: '기업은행' },
+      { code: '007', name: '새마을금고' },
+      { code: '008', name: '신협' },
+      { code: '009', name: '우체국' },
+      { code: '010', name: '카카오뱅크' },
+      { code: '011', name: '토스뱅크' },
+      { code: '012', name: '케이뱅크' }
+    ];
+    setBanks(hardcodedBanks);
+
     const loadInitialData = async () => {
       try {
         setError(null); setIsLoading(true);
@@ -152,13 +170,10 @@ export default function BulkTransferPage() {
           throw new Error("계좌 조회 실패: " + (accRes.data?.message || "알 수 없는 오류"));
         }
 
-        // 은행 목록 처리 - 새로운 API 응답 구조에 맞춰 수정
+        // 은행 목록 처리 - API 성공 시 업데이트
         if (bankRes.data && bankRes.data.success && bankRes.data.data) {
           const banksData = Array.isArray(bankRes.data.data) ? bankRes.data.data : [];
           setBanks(banksData);
-        } else {
-          console.warn("은행 목록 조회 실패, 기본값 사용");
-          setBanks([]);
         }
         
         setRows([makeRow()]);
@@ -174,9 +189,8 @@ export default function BulkTransferPage() {
   const setRow = (id, patch) => setRows(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
   const clearAll = () => setRows([makeRow()]);
   
-  const handleAccountChange = (accountNo) => {
-    const account = accounts.find(a => a.accountNo === parseInt(accountNo));
-    if (account) setSelectedAccount(account);
+  const handleAccountChange = (account) => {
+    setSelectedAccount(account);
   };
 
   const handleBankChangeForRow = (rowId, bankCode) => {
@@ -197,9 +211,22 @@ export default function BulkTransferPage() {
         setRow(rowId, { isVerifying: true });
         try {
           const res = await transferApi.getAccountHolder(bankCode, formatted);
-          setRow(rowId, { holder: res.success ? res.accountHolder : '예금주 없음' });
-        } catch { setRow(rowId, { holder: '조회 실패' });
-        } finally { setRow(rowId, { isVerifying: false }); }
+          if (res.data && res.data.success && res.data.data && res.data.data.accountHolder) {
+            setRow(rowId, { holder: res.data.data.accountHolder });
+          } else {
+            setRow(rowId, { holder: '존재하지 않는 계좌' });
+          }
+        } catch (error) {
+          if (error.response && error.response.status === 404) {
+            setRow(rowId, { holder: '존재하지 않는 계좌' });
+          } else if (error.response && error.response.status === 400) {
+            setRow(rowId, { holder: '계좌번호 형식 오류' });
+          } else {
+            setRow(rowId, { holder: '조회 실패' });
+          }
+        } finally { 
+          setRow(rowId, { isVerifying: false }); 
+        }
       }
     }, 800);
     setRow(rowId, { debounceTimer: newTimer });
@@ -287,9 +314,22 @@ export default function BulkTransferPage() {
               <div className="grid sm:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-800 mb-1">보내는 계좌</label>
-                  <select onChange={e => handleAccountChange(e.target.value)} className="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
-                    {accounts.map(acc => ( <option key={acc.accountNo} value={acc.accountNo}>{acc.accountType} · {acc.accountNumber}</option>))}
-                  </select>
+                   <select 
+                     value={selectedAccount?.aNo || ''} 
+                     onChange={(e) => {
+                       const account = accounts.find(acc => acc.aNo === parseInt(e.target.value));
+                       if (account) handleAccountChange(account);
+                     }}
+                     className="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                     disabled={isLoading}
+                   >
+                     <option value="">계좌를 선택하세요</option>
+                     {accounts.map(acc => (
+                       <option key={acc.aNo} value={acc.aNo}>
+                         {acc.accountType} · {acc.accountNo}
+                       </option>
+                     ))}
+                   </select>
                   {selectedAccount && <p className="text-xs text-gray-500 mt-1">잔액 {won(selectedAccount.balance)}</p>}
                 </div>
                 <div>
