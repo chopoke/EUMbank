@@ -201,7 +201,8 @@ function ProfileTab({initialData}) {
     address: '',
     birthDate: '',
     occupation: '',
-    gender:''
+    gender:'',
+    marketing:''
   });
 
   useEffect(() => {
@@ -232,13 +233,30 @@ function ProfileTab({initialData}) {
             birthDate: birthKey ? birthKey.split('T')[0] : '', 
             gender: initialData?.cgenderCd || null ,
             address: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
-            occupation: '정보 없음' // DTO에 해당 필드가 없으므로 기본값 유지
+            occupation: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
         });
     } else {
         // 이 로그가 계속 찍히지 않는지 확인하세요. (API 호출이 두 번 성공해야 합니다.)
         console.log("ProfileTab: initialData가 비어있거나 아직 로딩 중입니다."); 
     }
   }, [initialData]);
+
+  // 마케팅 토글 핸들러 함수
+  const handleMarketingToggle = (event) => {
+      // 체크박스 클릭 시의 checked 상태 (true/false)
+      const isChecked = event.target.checked; 
+      
+      // checked 상태를 서버 DTO가 요구하는 'Y'/'N' 값으로 변환합니다.
+      const newValue = isChecked ? 'Y' : 'N';
+      
+      // profileData 상태를 업데이트하여 profileData.marketing에 반영합니다.
+      setProfileData(prevData => ({
+          ...prevData,
+          marketing: newValue 
+      }));
+      
+      console.log(`[Toggle Event] 마케팅 동의 상태 변경됨: ${newValue}`);
+  };
 
   const handleGenderChange = (event) => {
     const newGenderValue = event.target.value; // 'm' 또는 'f'
@@ -269,6 +287,7 @@ function ProfileTab({initialData}) {
             cphoneMobile: profileData.phone,
             cBirthDt: profileData.birthDate,
             cGenderCd: profileData.gender,
+            cagreeMarketing: profileData.marketing, 
 
             // 3. (옵션) 업데이트 시 갱신 정보를 추가합니다. (DB UpdatedAt, UpdatedBy 컬럼용)
             // cUpdatedAt: new Date().toISOString(),
@@ -489,15 +508,25 @@ function ProfileTab({initialData}) {
 
         {/* 계정 설정 섹션 */}
         <div className="p-6 border-t border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">계정 설정</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">마케팅 수신 동의</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <i className="ri-notification-line text-blue-600"></i>
-                <span className="text-gray-700">알림 설정</span>
+                {/* <i className="ri-notification-line text-blue-600"></i> */}
+                <span className="text-gray-700">※버튼을 활성화 하시면 마케팅 수신 약관에 동의한 것으로 간주됩니다.</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
+                {/* {profileData.marketing === 'Y' ? (<input type="checkbox" className="sr-only peer" defaultChecked />) : (<input type="checkbox" className="sr-only peer"  />)} */}
+                <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    // 'Y'일 때 체크, 'N'일 때 미체크
+                    checked={profileData.marketing === 'Y'} 
+                    // 편집 모드일 때만 변경 가능하도록
+                    disabled={!isEditing}
+                    // 토글 시 profileData.marketing 상태 업데이트
+                    onChange={handleMarketingToggle}
+                />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
@@ -506,20 +535,30 @@ function ProfileTab({initialData}) {
                 <i className="ri-mail-line text-green-600"></i>
                 <span className="text-gray-700">이메일 알림</span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              {/* <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+              </label> */}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <i className="ri-mail-line text-green-600"></i>
+                <span className="text-gray-700">이메일 알림</span>
+              </div>
+              {/* <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" defaultChecked />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label> */}
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <i className="ri-phone-line text-orange-600"></i>
                 <span className="text-gray-700">SMS 알림</span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              {/* <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+              </label> */}
             </div>
           </div>
         </div>
@@ -568,7 +607,7 @@ function SecurityTab() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-smartphone-line text-blue-600 mr-2"></i>
-          OTP 인증
+          아마도 핀번호 인증
         </h3>
         <div className="flex items-center justify-between">
           <div>
@@ -621,7 +660,7 @@ function SecurityTab() {
       </div>
 
       {/* 생체 인증 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-fingerprint-line text-purple-600 mr-2"></i>
           생체 인증
@@ -654,7 +693,7 @@ function SecurityTab() {
             </label>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* 로그인 기록 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">

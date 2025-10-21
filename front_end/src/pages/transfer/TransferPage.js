@@ -1053,7 +1053,7 @@ export default function TransferPage() {
                 <li>이체 한도 변경은 마이페이지 &gt; 한도관리에서 가능합니다.</li>
               </ul>
             </section>
-            <section className="rounded-2xl border bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border bg-amber-50 p-6 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-lg font-semibold text-gray-900">보안 주의</h2>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 8h.01M12 12v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>

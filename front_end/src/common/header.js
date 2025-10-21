@@ -85,12 +85,12 @@ export function Header({ isLoggedIn, user, onLogout }) {
         {/* flex items-center gap-3 */}
         <div className="main-nav-right">
           {/* relative hidden md:block */}
-          <label className="search-label">
+          {/* <label className="search-label"> */}
             {/* peer w-64 rounded-full border border-gray-300 pl-10 pr-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
-            <input className="search-input" placeholder="메뉴나 기능 검색" />
+            {/* <input className="search-input" placeholder="메뉴나 기능 검색" /> */}
             {/* absolute left-3 top-2.5 text-gray-500 */}
-            <span className="search-icon"><Icon path={paths.search} /></span>
-          </label>
+            {/* <span className="search-icon"><Icon path={paths.search} /></span> */}
+          {/* </label> */}
           {!isLoggedIn ? (
             <>
               <Link to='/signup'><button className="login-button">회원가입</button></Link>

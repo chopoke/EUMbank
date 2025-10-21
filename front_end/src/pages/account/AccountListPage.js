@@ -165,8 +165,12 @@ function AccountListPage({user}){
               <p className="text-sm text-gray-600 mt-1">보유 중인 계좌를 한눈에 확인하고, 빠르게 이체/관리하세요.</p>
             </div>
             <div className="flex items-center gap-2">
-              <button className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">계좌개설</button>
-              <button className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">이체하기</button>
+              <Link to={`/account/open`}>
+              <button className="rounded-full border px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200">계좌개설</button>
+              </Link>
+              <Link to={`/transfer`}>
+              <button className="rounded-full border px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200">이체하기</button>
+              </Link>
             </div>
           </div>
         </div>
