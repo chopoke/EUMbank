@@ -895,21 +895,38 @@ public class TransferServiceImpl implements TransferService {
     
     @Override
     public List<Map<String, Object>> getRecentRecipients(Integer accountNo) {
-        log.info("최근 수취인 조회 - 계좌: {}", accountNo);
+        log.info("=== 최근 수취인 조회 시작 - 계좌: {} ===", accountNo);
         
         try {
             // 최근 이체 내역에서 수취인 정보 추출 (출금 내역만)
+            log.info("이체 내역 조회 시작 - 계좌: {}, 페이지: 0, 크기: 50", accountNo);
             List<TransferHistory> recentTransfers = transferHistoryRepository
                 .findByAccountNoOrderByTransferAtDescList(accountNo, 
                     org.springframework.data.domain.PageRequest.of(0, 50));
             
+            log.info("조회된 이체 내역 건수: {}", recentTransfers.size());
+            
+            if (recentTransfers.isEmpty()) {
+                log.warn("계좌 {}에 대한 이체 내역이 없습니다.", accountNo);
+                return new ArrayList<>();
+            }
+            
             // 중복 제거를 위한 LinkedHashMap (순서 유지)
             java.util.LinkedHashMap<String, Map<String, Object>> uniqueRecipients = new java.util.LinkedHashMap<>();
             
+            int withdrawCount = 0;
             for (TransferHistory transfer : recentTransfers) {
+                log.debug("이체 내역 처리 - ID: {}, 타입: {}, 상대계좌: {}, 금액: {}", 
+                    transfer.getTransferId(), transfer.getTransactionType(), 
+                    transfer.getOtherAccount(), transfer.getAmount());
+                
                 // 출금(송금) 내역만 처리
                 if ("WITHDRAW".equals(transfer.getTransactionType())) {
+                    withdrawCount++;
                     String accountKey = transfer.getOtherAccount();
+                    
+                    log.info("출금 내역 발견 - 상대계좌: {}, 금액: {}, 날짜: {}", 
+                        accountKey, transfer.getAmount(), transfer.getTransferAt());
                     
                     // 중복이 아닌 경우만 추가 (최근 순서 유지, 최대 10개)
                     if (!uniqueRecipients.containsKey(accountKey) && uniqueRecipients.size() < 10) {
@@ -925,13 +942,20 @@ public class TransferServiceImpl implements TransferService {
                         recipient.put("amount", transfer.getAmount().intValue());
                         recipient.put("lastTransferDate", transfer.getTransferAt().toString());
                         uniqueRecipients.put(accountKey, recipient);
+                        
+                        log.info("수취인 추가 - 계좌: {}, 예금주: {}, 은행: {}", 
+                            accountKey, accountHolderName, transfer.getOtherBank());
                     }
                 }
             }
             
+            log.info("출금 내역 총 건수: {}, 고유 수취인 수: {}", withdrawCount, uniqueRecipients.size());
+            log.info("=== 최근 수취인 조회 완료 - 계좌: {}, 반환 건수: {} ===", accountNo, uniqueRecipients.size());
+            
             return new ArrayList<>(uniqueRecipients.values());
             
         } catch (Exception e) {
+            log.error("=== 최근 수취인 조회 실패 - 계좌: {} ===", accountNo, e);
             log.warn("데이터베이스 조회 실패, 빈 리스트 반환: {}", e.getMessage());
             log.warn("계좌번호: {}, 에러 타입: {}", accountNo, e.getClass().getSimpleName());
             
