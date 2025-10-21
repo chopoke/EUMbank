@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
-@Service
+@Service("accountSelectTransferService")
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TransferServiceImpl implements TransferService {
