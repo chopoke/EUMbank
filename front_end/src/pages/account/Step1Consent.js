@@ -1,23 +1,36 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Frame, Header, Stepper, AsideHelp, Checkbox, LabelWithBadge, Divider } from './commom/ui';
 import { useAccountOpenStore } from './state/accountOpenStore';
 
 
 export default function Step1Consent() {
-    const nav = useNavigate();
+    const navigate = useNavigate();
+
+    // 스텝1에 대한 값을 zustand에 넣기
     const setStep1 = useAccountOpenStore(s => s.setStep1);
 
+    // 스토어의 모든 변경사항을 구독하고, 변경될 때마다 콘솔에 출력합니다.
+    useAccountOpenStore.subscribe((state) => {
+        console.log('들어가는 값 확인 : ', state);
+    });
+
     const [agreements, setAgreements] = useState({ all: false, eContract: false, privacy: false, marketing: false });
+
+    // 전체 토클에 대한 처리
     const toggleAll = () => {
+        // !는 반대이기 때문에 처음에 초기값이 false이니, 전체 체크박스를 체크하게되면 true가 되기 위해... 그리고 그외 3가지 동의에 대해서 전체 체크를 true하게 됨
         const next = !agreements.all;
         setAgreements({ all: next, eContract: next, privacy: next, marketing: next });
     };
+
     const toggleOne = (k) => {
         const next = { ...agreements, [k]: !agreements[k] };
+        // 전체가 체크되어 있다면(true 라면), toggleAll도 true로 체크 
         next.all = next.eContract && next.privacy && next.marketing;
         setAgreements(next);
     };
+
     const canProceed = useMemo(() => agreements.eContract && agreements.privacy, [agreements]);
 
     return (
@@ -39,10 +52,10 @@ export default function Step1Consent() {
                             </div>
                             <div className="mt-8 flex justify-between">
                                 <button type="button" className="min-w-[96px] rounded-xl px-5 py-2.5 text-sm font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    onClick={() => nav(-1)}>이전</button>
+                                    onClick={() => navigate(-1)}>이전</button>
                                 <button type="button" disabled={!canProceed}
                                     className={`min-w-[96px] rounded-xl px-5 py-2.5 text-sm font-semibold ${canProceed ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-200 text-gray-500 cursor-not-allowed"}`}
-                                    onClick={() => { setStep1(agreements); nav("/account/open/step2"); }}>다음</button>
+                                    onClick={() => { setStep1(agreements); navigate("/account/open/step2"); }}>다음</button>
                             </div>
                         </div>
                     </section>

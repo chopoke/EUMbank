@@ -1,5 +1,5 @@
 // Step2IdVerify.js
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Frame, Header, Stepper, AsideHelp, Checkbox } from "./commom/ui";
 import { checkPinNumber, ocrCheck, verifyExistingPin, verifyMinSjon } from "./api/accountApi";
@@ -23,7 +23,6 @@ export default function Step2IdVerify() {
 
     // 현재 로그인한 유저가 핀번호를 가지고 있는지 파악
     const [checkPin, setCheckPin] = useState('');
-
     // 핀번호 초기 입력
     const [pinNumber, setPinNumber] = useState('');
     // 핀번호 확인용

@@ -1,4 +1,4 @@
-package com.boot.eumbank.account.open.model;
+package com.boot.eumbank.account.open.entity.deposit;
 
 import jakarta.persistence.*;
 import lombok.Getter;

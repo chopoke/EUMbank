@@ -6,7 +6,7 @@ import { useAccountOpenStore, genAccountNo } from "./state/accountOpenStore";
 export default function Step4Product() {
     const nav = useNavigate();
     const setStep4 = useAccountOpenStore(s => s.setStep4);
-    const storeNewAcctNo = useAccountOpenStore(s => s.step4.newAccountNo);
+    //const storeNewAcctNo = useAccountOpenStore(s => s.step4.newAccountNo);
 
     const randDigits = (n) => Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join("");
     const genMockAccountNo = () => `110-${randDigits(3)}-${randDigits(6)}`;
@@ -14,9 +14,9 @@ export default function Step4Product() {
 
     // ===== 계좌번호 랜덤 생성 (형식: 110-123-456789) =====
     const [accounts] = useState(() => generateAccounts(3));
-    const defaultFrom = `입출금통장 · ${accounts[0]}`;
+    const defaultFrom = `입출금 · ${accounts[0]}`;
 
-    const [product, setProduct] = useState("saving"); // saving=자유적금, deposit=입출금
+    const [product, setProduct] = useState("자유적금"); // saving=자유적금, deposit=입출금
     const [fromAccount, setFromAccount] = useState(defaultFrom);
     const [mPin, setMPin] = useState("");
 
@@ -38,8 +38,8 @@ export default function Step4Product() {
                         <div className="px-5 py-4 border-b"><h2 className="text-base font-semibold">4. 상품선택</h2></div>
                         <div className="p-5 space-y-5">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <RadioCard checked={product === "deposit"} onClick={() => setProduct("deposit")} title="입출금통장" subtitle="수수료 우대, 체크카드 연계" />
-                                <RadioCard checked={product === "saving"} onClick={() => setProduct("saving")} title="자유적금" subtitle="매월 자유 납입, 목표저축" />
+                                <RadioCard checked={product === "입출금"} onClick={() => setProduct("입출금")} title="입출금통장" subtitle="수수료 우대, 체크카드 연계" />
+                                <RadioCard checked={product === "자유적금"} onClick={() => setProduct("자유적금")} title="자유적금" subtitle="매월 자유 납입, 목표저축" />
                             </div>
 
 

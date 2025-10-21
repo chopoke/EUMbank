@@ -2,12 +2,6 @@
 /* 필요 시 이 파일에 적금 페이지에만 적용될 스타일을 추가할 수 있습니다. */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
-body {
-    font-family: 'Noto Sans KR', sans-serif;
-    background-color: #f8f9fa;
-    color: #343a40;
-    margin: 0;
-}
 
 .sub-container {
     max-width: 1200px;

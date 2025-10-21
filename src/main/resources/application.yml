@@ -29,7 +29,7 @@ spring:
     hibernate:
       ddl-auto: validate # none -> validate로 변경
     open-in-view: false
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true

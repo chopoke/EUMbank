@@ -1,6 +1,6 @@
 package com.boot.eumbank.transfer_domain.transfer.service;
 
-import com.boot.eumbank.account.open.model.Account;
+import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.account.select.entity.TransferHistory;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.transfer_domain.account.entity.AccountLimit;
@@ -19,7 +19,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

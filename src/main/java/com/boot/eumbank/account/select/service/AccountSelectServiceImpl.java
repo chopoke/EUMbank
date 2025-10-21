@@ -1,6 +1,6 @@
 package com.boot.eumbank.account.select.service;
 
-import com.boot.eumbank.account.open.model.Account;
+import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.account.select.dto.AccountDetailDTO;
 import com.boot.eumbank.account.select.dto.AccountSummaryDTO;
 import com.boot.eumbank.account.select.repository.AccountSelectRepository;

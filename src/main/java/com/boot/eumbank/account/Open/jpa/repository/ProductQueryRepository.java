@@ -9,9 +9,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static com.boot.eumbank.account.open.model.QDepositProduct.depositProduct;
-import static com.boot.eumbank.account.open.model.QInstallmentProduct.installmentProduct;
-import static com.boot.eumbank.account.open.model.QAForeignProduct.aForeignProduct;
+import static com.boot.eumbank.account.open.entity.QDepositProduct.depositProduct;
+import static com.boot.eumbank.account.open.entity.QInstallmentProduct.installmentProduct;
+import static com.boot.eumbank.account.open.entity.QAForeignProduct.aForeignProduct;
 
 @Repository
 @RequiredArgsConstructor
