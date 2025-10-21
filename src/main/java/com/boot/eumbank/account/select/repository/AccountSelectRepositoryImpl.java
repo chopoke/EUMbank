@@ -81,18 +81,18 @@ public class AccountSelectRepositoryImpl implements AccountRepositoryCustom {
         if (aNos == null || aNos.isEmpty()) return Collections.emptyMap();
 
         List<Tuple> rows = jpaQueryFactory
-                .select(TH.a_no, TH.th_transfer_at.max())
+                .select(TH.accountNo, TH.transferAt.max())
                 .from(TH)
-                .where(TH.a_no.in(aNos))
-                .groupBy(TH.a_no)
+                .where(TH.accountNo.in(aNos))
+                .groupBy(TH.accountNo)
                 .fetch();
 
         Map<Integer, LocalDateTime> result = new java.util.HashMap<>();
         for (Tuple t : rows) {
-            Integer aNo = t.get(TH.a_no);
-            java.sql.Timestamp ts = t.get(TH.th_transfer_at.max());
+            Integer aNo = t.get(TH.accountNo);
+            LocalDateTime ts = t.get(TH.transferAt.max());
             if (aNo != null && ts != null) {
-                result.put(aNo, ts.toLocalDateTime()); // localdata로 변환
+                result.put(aNo, ts);
             }
         }
         return result;

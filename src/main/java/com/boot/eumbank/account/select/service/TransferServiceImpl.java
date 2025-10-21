@@ -30,20 +30,20 @@ public class TransferServiceImpl implements TransferService {
 
     private TransactionDTO toDTO(TransferHistory th) {
         return TransactionDTO.builder()
-                .th_transfer_no(th.getTh_transfer_no())
-                .th_transfer_id(th.getTh_transfer_id())
-                .a_no(th.getA_no())
-                .th_amount(th.getTh_amount())
-                .th_transfer_type(th.getTh_transfer_type())
-                .th_transaction_type(th.getTh_transaction_type())
-                .th_memo(th.getTh_memo())
-                .th_other_bank(th.getTh_other_bank())
-                .th_other_account(th.getTh_other_account())
-                .th_after_balance(th.getTh_after_balance())
-                .th_account_out(th.getTh_account_out())
-                .th_account_in(th.getTh_account_in())
+                .th_transfer_no(th.getTransferNo())
+                .th_transfer_id(th.getTransferId())
+                .a_no(th.getAccountNo())
+                .th_amount(th.getAmount())
+                .th_transfer_type(th.getTransferType())
+                .th_transaction_type(th.getTransactionType())
+                .th_memo(th.getMemo())
+                .th_other_bank(th.getOtherBank())
+                .th_other_account(th.getOtherAccount())
+                .th_after_balance(th.getAfterBalance())
+                .th_account_out(th.getAccountOut())
+                .th_account_in(th.getAccountIn())
                 .th_transfer_at(
-                        th.getTh_transfer_at() != null ? th.getTh_transfer_at().toLocalDateTime() : null
+                        th.getTransferAt() != null ? th.getTransferAt() : null
                 )
                 .build();
     }
