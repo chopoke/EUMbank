@@ -19,4 +19,7 @@ public interface AccountRepositoryCustom {
     // 페이지네이션 버전
     Page<Account> findAccountsByCustomer(int c_no, Pageable pageable);
 
+    // 별명변경
+    long updateNickname(int a_no, String nickname);
+
 }

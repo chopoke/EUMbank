@@ -72,4 +72,11 @@ public class AccountListController {
     ) {
         return transferService.transactions(a_no, type, from, to, pageable);
     }
+
+    // 별명 변경
+    @PostMapping("/{a_no}/alias")
+    public ResponseEntity<?> updateNickname(@PathVariable int a_no, @RequestBody AccountDetailDTO dto){
+        accountService.updateNickname(a_no, dto.getA_nickname());
+        return ResponseEntity.noContent().build();
+    }
 }

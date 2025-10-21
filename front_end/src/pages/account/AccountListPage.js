@@ -1,4 +1,3 @@
-
 import React from "react";
 import { fetchAccounts } from "../../api/accounts";
 import { Link, useNavigate } from "react-router-dom";
@@ -48,7 +47,7 @@ function AccountListPage(){
 
         return {
           id: d.a_no,
-          alias: d.a_nickname || d.a_account_no,
+          nickname: d.a_nickname || d.a_account_no,
           accountName: d.a_account_type || '입출금',
           bank: 'EumBank', // 임시
           number: d.a_account_no,
@@ -115,7 +114,7 @@ function AccountListPage(){
   // csv 다운로드
   function downloadCsv(rows) {
     const header = ["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"];
-    const body = rows.map((r) => [r.alias, r.accountName, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity]);
+    const body = rows.map((r) => [r.nickname, r.accountName, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity]);
     const csv = [header, ...body].map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -134,7 +133,7 @@ function AccountListPage(){
     return accounts
       .filter((a) => {
         const q = search.trim().toLowerCase();
-        const okQ = !q || [a.alias, a.accountName, a.number].some((s) => s?.toLowerCase().includes(q));
+        const okQ = !q || [a.nickname, a.accountName, a.number].some((s) => s?.toLowerCase().includes(q));
         if (!okQ) return false;
         if (type !== "전체" && a.type !== type) return false;
         if (selectedBanks.size > 0 && !selectedBanks.has(a.bank)) return false;
@@ -148,7 +147,7 @@ function AccountListPage(){
         switch (sortKey) {
           case "balDesc": return toKRW(b) - toKRW(a);
           case "balAsc": return toKRW(a) - toKRW(b);
-          case "name": return (a.alias || a.accountName).localeCompare(b.alias || b.accountName, "ko");
+          case "name": return (a.nickname || a.accountName).localeCompare(b.nickname || b.accountName, "ko");
           default: return b.lastActivityTs - a.lastActivityTs;
         }
       });
@@ -295,7 +294,7 @@ function AccountListPage(){
                         <tr key={row.id} className="hover:bg-gray-50">
                           {/* 계좌이름/별칭 */}
                           <td className="px-3 py-3">
-                            <div className="font-medium text-gray-900">{row.alias}</div>
+                            <div className="font-medium text-gray-900">{row.nickname}</div>
                             <div className="text-gray-500 text-xs">{row.accountName} · {row.type}</div>
                           </td>
                           {/* 계좌번호 */}
@@ -331,7 +330,7 @@ function AccountListPage(){
                               <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">이체</button>
                               {/* <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">상세</button> */}
                               <Link to={`/accounts/${row.id}`}>
-                                <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">이체내역</button>
+                                <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">계좌상세</button>
                               </Link>
                             </div>
                           </td>
@@ -348,7 +347,7 @@ function AccountListPage(){
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="text-sm text-gray-500">{row.bank} · {row.type}</div>
-                          <div className="font-medium text-gray-900">{row.alias}</div>
+                          <div className="font-medium text-gray-900">{row.nickname}</div>
                         </div>
                         <button onClick={()=>setAccounts(list=>list.map(a=> a.id===row.id?{...a,favorite:!a.favorite}:a))} aria-label="즐겨찾기">
                           {row.favorite ? (

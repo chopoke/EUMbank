@@ -1,5 +1,5 @@
 import React from "react";
-import { fetchAccountDetail, fetchAccountTransactions } from "../../api/accounts";
+import { fetchAccountDetail, fetchAccountTransactions, updateAccountAlias } from "../../api/accounts";
 import {  useNavigate, useParams } from "react-router-dom";
 
 
@@ -10,6 +10,15 @@ const formatCur = (amt)=> {
   const sign = amt < 0 ? '-' : '';    // 원금이 음수라면 - 붙여주기
   return `${sign}₩ ${won(abs)}`;      // 포맷해서 정리
 };
+
+const parseTs = (v) =>{
+  // 들어오는거 없으면 건너뛰기
+  if(!v) return null;
+  // 공백또는 구분자 들어올때 대비
+  const s = typeof v === 'number' ? v : String(v).replace(' ', 'T');
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
 
 // 계좌번호 마스킹
 const maskAcc = (s)=> s.replace(/(\d{2,4})-(\d{2,4})-(\d{2,6})/, (_ ,a,b,c)=> `${a}-${b}-` + c.replace(/\d/g,'•'));  
@@ -37,6 +46,9 @@ function AccountHistoryPage(){
 
   const {a_no} = useParams();   // URL로 넘어온 계좌번호
   const [account, setAccounts] = React.useState(null);
+  // 계좌별명변경
+  const [changeAlias, setChangeAlias] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
 
   // 필터상태
   const [dateFrom, setDateFrom] = React.useState("");
@@ -65,14 +77,41 @@ function AccountHistoryPage(){
       .then((res) => {
         const d= res.data;
         setAccounts({
-          alias:d.a_nickname || d.a_account_no,
+          nickname: d.a_nickname || "",
+          alias: d.a_account_no,
           bank: "EumBank",
           number: d.a_account_no,
           type: d.a_account_type,
-          balance: Number(d.a_balance || 0)
+          balance: Number(d.a_balance || 0),
+          openAt: parseTs(d.a_opened_at ?? d.a_open_at ?? d.openAt ?? d.open_at)
         });
+        setChangeAlias(d.a_nickname || "");
       }).catch(console.error);
   }, [a_no]);
+
+  // 별명변경
+  async function saveAlias(){
+    if(!account) return;
+
+    const nextAlias = changeAlias.trim();
+    if(!nextAlias) {
+      alert("공백은 별명일 수 없습니다.");
+      return;
+    }
+    try{
+      setSaving(true);
+      await updateAccountAlias(Number(a_no), nextAlias);
+      // 낙관갱신
+      setAccounts(prev => prev ? ({...prev, nickname:nextAlias}) : prev);
+    }
+    catch (e){
+      console.error(e);
+      alert("별명 저장 중 오류가 발생했습니다.");
+    }
+    finally{
+      setSaving(false);
+    }
+  }
 
   React.useEffect(()=>{ 
     if (a_no) localStorage.setItem('last_a_no', String(a_no)); 
@@ -107,6 +146,7 @@ function AccountHistoryPage(){
           memo: r.th_memo || "-",
           amount: (r.th_transfer_type === "입금" ? +1 : -1) * (r.th_amount ?? 0),
           balance: Number(r.th_after_balance ?? 0),
+          openAt : r.a_open_at
         }));
 
         // 보조 필ㅓ링 부분 
@@ -201,13 +241,34 @@ function AccountHistoryPage(){
           <div className="col-span-12 lg:col-span-6">
             <div className="rounded-2xl border bg-white p-5 shadow-sm flex items-center justify-between">
               <div>
-                <div className="text-sm text-gray-500">{account.bank} · {account.type}</div>
+                   <div className="mt-2 flex items-center gap-2">
+                    <div className="mx-auto" >{account.bank} </div>
+                   ·
+                  <input 
+                    value={changeAlias}
+                    onChange={(e) => setChangeAlias(e.target.value)}
+                    onKeyDown={(e) => {if(e.key === 'Enter') saveAlias();}}  // 엔터입력하면 저장
+                    maxLength={10}
+                    placeholder="계좌 별칭"
+                    className="rounded-lg border px-3 py-2 text-sm"
+                  />
+                  <button
+                   onClick={saveAlias}
+                   disabled={saving || !changeAlias.trim() || changeAlias.trim() === (account.nickname || "")}
+                   className={"rounded-lg px-3 py-2 text-sm text-white " + (saving ? "bg-gray-400" : "bg-blue-700 hover:bg-blue-800")}
+                    >
+                  {saving ? "저장중..." : "저장"}
+                  </button>
+                  </div>
                 <div className="text-lg font-semibold text-gray-900">{account.alias}</div>
-                <div className="text-sm text-gray-700 font-mono mt-1">{maskAcc(account.number)}</div>
+              
                 <div className="mt-3 flex gap-2">
                   <button className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">이체</button>
                     <button onClick={backBtn}
                       className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">계좌목록</button>
+                      <div className="text-xs text-gray-900 py-1.5"> 
+                        개설: {account.openAt ? toISODate(account.openAt) : '-'}
+                      </div>
                 </div>
               </div>
               <div className="text-right">
