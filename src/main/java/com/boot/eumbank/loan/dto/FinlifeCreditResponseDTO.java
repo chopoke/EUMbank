@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data @NoArgsConstructor @AllArgsConstructor
@@ -46,8 +47,8 @@ public class FinlifeCreditResponseDTO {
         @JsonProperty("fin_prdt_cd")      private String finPrdtCd;
         @JsonProperty("rpay_type_nm")     private String rpayTypeNm;
         @JsonProperty("lend_rate_type_nm")private String lendRateTypeNm;
-        @JsonProperty("lend_rate_min")    private Double lendRateMin;
-        @JsonProperty("lend_rate_max")    private Double lendRateMax;
-        @JsonProperty("lend_rate_avg")    private Double lendRateAvg;
+        @JsonProperty("lend_rate_min")    private BigDecimal lendRateMin;
+        @JsonProperty("lend_rate_max")    private BigDecimal  lendRateMax;
+        @JsonProperty("lend_rate_avg")    private BigDecimal  lendRateAvg;
     }
 }

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -15,9 +16,9 @@ public class LoanProductDTO {
     private String id;
     private String name;
     private String type;         // "주택담보"
-    private Double rateMin;
-    private Double rateMax;
-    private Integer limitMax;           // 숫자로 정규화
+    private BigDecimal rateMin;
+    private BigDecimal rateMax;
+    private BigDecimal limitMax;           // 숫자로 정규화
     private List<Integer> termMonths;   // 보통 120/240/360 개월로 표기
     private List<String> badges;        // ["고정", "변동", "원리금균등"]
     private List<String> tags;          // ["은행명", ...]

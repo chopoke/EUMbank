@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -22,10 +23,10 @@ public class LoanProductDetailDTO {
     private List<String> tags;   // ["은행명", ...]
 
     // 금리/기간/한도
-    private Double rateMin;      // 모든 옵션 중 최저
-    private Double rateMax;      // 모든 옵션 중 최고
+    private BigDecimal rateMin;      // 모든 옵션 중 최저
+    private BigDecimal rateMax;      // 모든 옵션 중 최고
     private List<Integer> termMonths; // [120,240,360] 등
-    private Integer limitMax;    // 원 단위 최대치 (null 허용)
+    private BigDecimal limitMax;    // 원 단위 최대치 (null 허용)
     private Integer ltvMax;      // % (null 허용)
 
     // 원문/문구
@@ -41,9 +42,13 @@ public class LoanProductDetailDTO {
     public static class RateOption {
         private String rpayTypeNm;
         private String lendRateTypeNm;
-        private Double lendRateMin;
-        private Double lendRateMax;
-        private Double lendRateAvg;
+        private BigDecimal lendRateMin;
+        private BigDecimal lendRateMax;
+        private BigDecimal lendRateAvg;
+        private Integer termMonth;      // (있으면) 옵션별 기간
+        private String  dclsMonth;      // (있으면) 옵션 공시월
+        private String  isOverdraft;    // 'Y'/'N'
+        private String  note;
     }
 
     private List<RateOption> options;

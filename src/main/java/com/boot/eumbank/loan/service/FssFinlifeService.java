@@ -5,13 +5,14 @@ import com.boot.eumbank.loan.dto.LoanProductDTO;
 import com.boot.eumbank.loan.dto.LoanProductDetailDTO;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,14 +24,15 @@ public class FssFinlifeService {
     private final String apiKey;
 
     private final ObjectMapper om = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .findAndRegisterModules();
 
     public FssFinlifeService(RestClient finlifeRestClient, @Value("${finlife.api-key}") String apiKey) {
         this.client = finlifeRestClient;
         this.apiKey = apiKey;
     }
 
-    // 원본 JSON 그대로 받기 (주택담보대출)
+    // ─────────────── FSS RAW 호출 ───────────────
     public String getMortgageProductsRaw(String topFinGrpNo, int pageNo){
         var uri = UriComponentsBuilder.fromPath("/finlifeapi/mortgageLoanProductsSearch.json")
                 .queryParam("auth", apiKey)
@@ -55,7 +57,6 @@ public class FssFinlifeService {
         return body;
     }
 
-    // 전세자금대출(원본)
     public String getJeonseProductsRaw(String topFinGrpNo, int pageNo) {
         var uri = UriComponentsBuilder.fromPath("/finlifeapi/rentHouseLoanProductsSearch.json")
                 .queryParam("auth", apiKey)
@@ -64,12 +65,10 @@ public class FssFinlifeService {
                 .build(true).toUri();
         var resp = client.get().uri(uri).retrieve().toEntity(String.class);
         String body = resp.getBody();
-        if (body == null || body.isBlank()) {
-            throw new IllegalStateException("FSS empty body (jeonse)");
-        }
+        if (body == null || body.isBlank()) throw new IllegalStateException("FSS empty body (jeonse)");
         return body;
     }
-    // 신용대출(원본)
+
     public String getCreditProductsRaw(String topFinGrpNo, int pageNo) {
         var uri = UriComponentsBuilder.fromPath("/finlifeapi/creditLoanProductsSearch.json")
                 .queryParam("auth", apiKey)
@@ -78,13 +77,11 @@ public class FssFinlifeService {
                 .build(true).toUri();
         var resp = client.get().uri(uri).retrieve().toEntity(String.class);
         String body = resp.getBody();
-        if (body == null || body.isBlank()) {
-            throw new IllegalStateException("FSS empty body (credit)");
-        }
+        if (body == null || body.isBlank()) throw new IllegalStateException("FSS empty body (credit)");
         return body;
     }
 
-    // 화면 목록에 띄우기 위해 가공
+    // ─────────────── 목록 가공 (주담대) ───────────────
     public List<LoanProductDTO> getMortgageProductsForList(String topFinGrpNo, int pageNo) {
         try {
             String json = getMortgageProductsRaw(topFinGrpNo, pageNo);
@@ -101,38 +98,34 @@ public class FssFinlifeService {
             var optByPrdt = optList.stream()
                     .collect(Collectors.groupingBy(FinlifeMortgageResponseDTO.Option::getFinPrdtCd));
 
-            List<Integer> defaultTerms = List.of(120, 240, 360); // 10/20/30년 가정
+            List<Integer> defaultTerms = List.of(120, 240, 360); // 10/20/30년 가정(표시용)
 
             var list = baseList.stream().map(b -> {
                 var opts = optByPrdt.getOrDefault(b.getFinPrdtCd(), List.of());
 
-                // 금리 없으면 기본값(0.0 ~ 99.9)로 세팅해서 프론트 필터(0.0~10.0 시작값)에 안 잘리게 함
-                Double minRate = opts.stream()
+                BigDecimal minRate = opts.stream()
                         .map(FinlifeMortgageResponseDTO.Option::getLendRateMin)
                         .filter(Objects::nonNull)
-                        .min(Double::compareTo)
-                        .orElse(0.0);
+                        .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
+                        .min(BigDecimal::compareTo)
+                        .orElse(new BigDecimal("0.000"));
 
-                Double maxRate = opts.stream()
+                BigDecimal maxRate = opts.stream()
                         .map(FinlifeMortgageResponseDTO.Option::getLendRateMax)
                         .filter(Objects::nonNull)
-                        .max(Double::compareTo)
-                        .orElse(99.9);
+                        .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
+                        .max(BigDecimal::compareTo)
+                        .orElse(new BigDecimal("99.900"));
 
                 // 배지(금리유형/상환방식)
                 var badges = new LinkedHashSet<String>();
                 opts.forEach(o -> {
-                    if (o.getLendRateTypeNm() != null && !o.getLendRateTypeNm().isBlank())
-                        badges.add(o.getLendRateTypeNm());
-                    if (o.getRpayTypeNm() != null && !o.getRpayTypeNm().isBlank())
-                        badges.add(o.getRpayTypeNm());
+                    if (notBlank(o.getLendRateTypeNm())) badges.add(o.getLendRateTypeNm());
+                    if (notBlank(o.getRpayTypeNm()))     badges.add(o.getRpayTypeNm());
                 });
 
-
-                Long limitWon = extractMaxWon(b.getLoanLmt());
+                BigDecimal limitWon = extractMaxWon(b.getLoanLmt());
                 Integer ltvMax = extractMaxLtv(b.getLoanLmt());
-                Integer limitInt = (limitWon == null ? null
-                        : (limitWon > Integer.MAX_VALUE ? Integer.MAX_VALUE : limitWon.intValue()));
 
                 String desc = (b.getKorCoNm() == null ? "" : (b.getKorCoNm()+" "))
                         + Optional.ofNullable(b.getJoinWay()).orElse("")
@@ -144,14 +137,13 @@ public class FssFinlifeService {
                         .type("주택담보")
                         .rateMin(minRate)
                         .rateMax(maxRate)
-                        .limitMax(limitInt)          // ← 명시적으로 limitMax에 맵핑
+                        .limitMax(limitWon)
                         .termMonths(defaultTerms)
                         .badges(new ArrayList<>(badges))
                         .tags(List.of(Optional.ofNullable(b.getKorCoNm()).orElse("")))
                         .desc(desc.trim())
                         .link("#")
                         .build();
-
             }).toList();
 
             log.info("[FSS] mapped products size={}", list.size());
@@ -163,67 +155,13 @@ public class FssFinlifeService {
         }
     }
 
-
-    // 원단위 매핑
-    private static Long extractMaxWon(String raw){
-        if (raw == null) return null;
-        String s = raw.replace(",", "");
-        double max = -1;
-
-        // 억 (소수점 허용): 1.5억, 10억, 10억원
-        max = Math.max(max, scanMax(s, "(\\d+(?:\\.\\d+)?)\\s*억(?:원)?", 100_000_000));
-
-        // 천만원 / 백만원 / 만원
-        max = Math.max(max, scanMax(s, "(\\d+)\\s*천만(?:원)?", 10_000_000));
-        max = Math.max(max, scanMax(s, "(\\d+)\\s*백만(?:원)?", 1_000_000));
-        max = Math.max(max, scanMax(s, "(\\d+(?:\\.\\d+)?)\\s*만(?:원)?", 10_000));
-
-        // 그냥 '원' 숫자 (예: 500000000원)
-        max = Math.max(max, scanMax(s, "(\\d+)\\s*원", 1));
-
-        return (max < 0) ? null : (long)Math.floor(max);
-    }
-    private static double scanMax(String s, String regex, double unit){
-        var m = java.util.regex.Pattern.compile(regex).matcher(s);
-        double max = -1;
-        while (m.find()){
-            try {
-                double v = Double.parseDouble(m.group(1)) * unit;
-                if (v > max) max = v;
-            } catch (Exception ignore) {}
-        }
-        return max;
-    }
-
-    private static Integer extractMaxLtv(String raw){
-        if (raw == null) return null;
-        String s = raw;
-        var m = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%").matcher(s);
-        double max = -1;
-        while (m.find()){
-            try {
-                double v = Double.parseDouble(m.group(1));
-                if (v > max) max = v;
-            } catch (Exception ignore) {}
-        }
-        return (max < 0) ? null : (int)Math.round(max);
-    }
-
-
-    /**
-     * 단일 상품 상세 가공 메서드
-     * - FSS "목록" API 응답에서 fin_prdt_cd 로 해당 상품을 찾아 상세 DTO로 변환
-     * - 서버에서 가공/조립
-     */
+    // ─────────────── 단건 상세 가공 (주담대) ───────────────
     public LoanProductDetailDTO getMortgageProductDetail(String topFinGrpNo, int pageNo, String finPrdtCd) {
-        // 1) 원문 JSON 호출
         final String json = getMortgageProductsRaw(topFinGrpNo, pageNo);
 
         try {
-            // 2) JSON → DTO 역직렬화
             final FinlifeMortgageResponseDTO res = om.readValue(json, FinlifeMortgageResponseDTO.class);
 
-            // 3) 널/빈 리스트 방어
             final List<FinlifeMortgageResponseDTO.Base> baseList =
                     Optional.ofNullable(res.getResult())
                             .map(FinlifeMortgageResponseDTO.Result::getBaseList)
@@ -234,13 +172,11 @@ public class FssFinlifeService {
                             .map(FinlifeMortgageResponseDTO.Result::getOptionList)
                             .orElse(List.of());
 
-            // 4) 대상 상품(Base) 찾기 (없으면 404/예외)
             final FinlifeMortgageResponseDTO.Base base = baseList.stream()
                     .filter(b -> finPrdtCd.equals(b.getFinPrdtCd()))
                     .findFirst()
                     .orElseThrow(() -> new NoSuchElementException("상품을 찾을 수 없습니다: " + finPrdtCd));
 
-            // 5) 옵션 모으기 (상환방식/금리유형/금리범위)
             final List<LoanProductDetailDTO.RateOption> options = optList.stream()
                     .filter(o -> finPrdtCd.equals(o.getFinPrdtCd()))
                     .map(o -> LoanProductDetailDTO.RateOption.builder()
@@ -252,38 +188,33 @@ public class FssFinlifeService {
                             .build())
                     .toList();
 
-            // 6) 금리 범위 계산 (옵션이 없으면 0.0 ~ 99.9)
-            final Double rateMin = options.stream()
+            final BigDecimal rateMin = options.stream()
                     .map(LoanProductDetailDTO.RateOption::getLendRateMin)
                     .filter(Objects::nonNull)
-                    .min(Double::compareTo)
-                    .orElse(0.0);
+                    .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
+                    .min(BigDecimal::compareTo)
+                    .orElse(new BigDecimal("0.000"));
 
-            final Double rateMax = options.stream()
+            final BigDecimal rateMax = options.stream()
                     .map(LoanProductDetailDTO.RateOption::getLendRateMax)
                     .filter(Objects::nonNull)
-                    .max(Double::compareTo)
-                    .orElse(99.9);
+                    .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
+                    .max(BigDecimal::compareTo)
+                    .orElse(new BigDecimal("99.900"));
 
-            // 7) 배지(금리유형/상환방식) 추출
             final LinkedHashSet<String> badges = new LinkedHashSet<>();
             options.forEach(o -> {
-                if (o.getLendRateTypeNm()!=null && !o.getLendRateTypeNm().isBlank()) badges.add(o.getLendRateTypeNm());
-                if (o.getRpayTypeNm()!=null     && !o.getRpayTypeNm().isBlank())      badges.add(o.getRpayTypeNm());
+                if (notBlank(o.getLendRateTypeNm())) badges.add(o.getLendRateTypeNm());
+                if (notBlank(o.getRpayTypeNm()))     badges.add(o.getRpayTypeNm());
             });
 
-            // 8) 한도/ LTV 파싱 (문자열에서 최대값만 뽑아 숫자화)
-            final Long limitWon = extractMaxWon(base.getLoanLmt());
-            final Integer limitInt = (limitWon==null? null
-                    : (limitWon > Integer.MAX_VALUE ? Integer.MAX_VALUE : limitWon.intValue()));
+            final BigDecimal limitWon = extractMaxWon(base.getLoanLmt());
             final Integer ltvMax = extractMaxLtv(base.getLoanLmt());
 
-            // 9) 요약 설명
             final String desc = (base.getKorCoNm()==null? "" : base.getKorCoNm()+" ")
                     + Optional.ofNullable(base.getJoinWay()).orElse("")
                     + Optional.ofNullable(base.getEtcNote()).map(s -> " " + s).orElse("");
 
-            // 10) 최종 DTO 구성
             return LoanProductDetailDTO.builder()
                     .id(base.getFinPrdtCd())
                     .name(base.getFinPrdtNm())
@@ -294,8 +225,8 @@ public class FssFinlifeService {
                     .tags(List.of(Optional.ofNullable(base.getKorCoNm()).orElse("")))
                     .rateMin(rateMin)
                     .rateMax(rateMax)
-                    .termMonths(List.of(120,240,360)) // FSS 응답에 기간이 명시되지 않아 프론트 기본 가정
-                    .limitMax(limitInt)
+                    .termMonths(List.of(120,240,360)) // FSS 목록 API엔 기간항목이 없어 표시용 기본값
+                    .limitMax(limitWon)
                     .ltvMax(ltvMax)
                     .loanLmtRaw(base.getLoanLmt())
                     .erlyRpayFee(base.getErlyRpayFee())
@@ -311,12 +242,71 @@ public class FssFinlifeService {
                     .build();
 
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            // 역직렬화 실패 디버깅: 앞 500자만 로그
             log.error("[FSS] JSON parse error: {}", e.getMessage());
             log.error("[FSS] RAW (head 500): {}", json.substring(0, Math.min(500, json.length())));
             throw new RuntimeException("Finlife 응답 파싱 실패(JSON)", e);
         }
     }
 
+    // ─────────────── 파서 유틸(문구 → 숫자) ───────────────
+    private static final java.util.regex.Pattern P_EOK =
+            java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*억(?:원)?");
+    private static final java.util.regex.Pattern P_CHEONMAN =
+            java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*천\\s*만(?:원)?");
+    private static final java.util.regex.Pattern P_MAN =
+            java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*만(?:원)?");
+    private static final java.util.regex.Pattern P_WON =
+            java.util.regex.Pattern.compile("(\\d{1,3}(?:,\\d{3})+|\\d+)\\s*원");
 
+    private static final BigDecimal U_EOK      = new BigDecimal("100000000");
+    private static final BigDecimal U_CHEONMAN = new BigDecimal("10000000");
+    private static final BigDecimal U_MAN      = new BigDecimal("10000");
+
+    /** "3천만~2억" "1.5억" "250만" "123,456,789원" 등에서 최대 원화 금액 추출 */
+    private static BigDecimal extractMaxWon(String raw){
+        if (raw == null) return null;
+        String s = raw.replaceAll("\\s+", "");
+        BigDecimal max = null;
+        max = maxOf(max, scanAll(s, P_EOK, U_EOK, false));
+        max = maxOf(max, scanAll(s, P_CHEONMAN, U_CHEONMAN, false));
+        max = maxOf(max, scanAll(s, P_MAN, U_MAN, false));
+        max = maxOf(max, scanAll(s, P_WON, BigDecimal.ONE, true));
+        return max;
+    }
+
+    private static BigDecimal scanAll(String s, java.util.regex.Pattern p, BigDecimal unit, boolean stripComma) {
+        var m = p.matcher(s);
+        BigDecimal max = null;
+        while (m.find()) {
+            String n = m.group(1);
+            if (stripComma) n = n.replace(",", "");
+            try {
+                BigDecimal v = new BigDecimal(n).multiply(unit);
+                max = maxOf(max, v);
+            } catch (Exception ignore) {}
+        }
+        return max;
+    }
+
+    private static BigDecimal maxOf(BigDecimal a, BigDecimal b) {
+        if (b == null) return a;
+        if (a == null) return b;
+        return a.max(b);
+    }
+
+    /** "% 숫자"들 중 최댓값 정수로 */
+    private static Integer extractMaxLtv(String raw){
+        if (raw == null) return null;
+        var m = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%").matcher(raw);
+        BigDecimal max = null;
+        while (m.find()) {
+            try {
+                BigDecimal v = new BigDecimal(m.group(1));
+                max = (max == null) ? v : max.max(v);
+            } catch (Exception ignore) {}
+        }
+        return (max == null) ? null : max.setScale(0, RoundingMode.HALF_UP).intValue();
+    }
+
+    private static boolean notBlank(String s){ return s != null && !s.isBlank(); }
 }

@@ -73,28 +73,6 @@ public class AccountSelectRepositoryImpl implements AccountRepositoryCustom {
 
         long safeTotal = (total != null) ? total : 0L;
 
-        return new PageImpl<>(content, pageable,safeTotal);
-    }
-
-    @Override
-    public Map<Integer, LocalDateTime> findLastTransferAtForAccounts(List<Integer> aNos) {
-        if (aNos == null || aNos.isEmpty()) return Collections.emptyMap();
-
-        List<Tuple> rows = jpaQueryFactory
-                .select(TH.accountNo, TH.transferAt.max())
-                .from(TH)
-                .where(TH.accountNo.in(aNos))
-                .groupBy(TH.accountNo)
-                .fetch();
-
-        Map<Integer, LocalDateTime> result = new java.util.HashMap<>();
-        for (Tuple t : rows) {
-            Integer aNo = t.get(TH.accountNo);
-            LocalDateTime ts = t.get(TH.transferAt.max());
-            if (aNo != null && ts != null) {
-                result.put(aNo, ts);
-            }
-        }
-        return result;
+        return new PageImpl<>(content, pageable, safeTotal);
     }
 }

@@ -17,21 +17,10 @@ export const fetchAccountTransactions = (a_no, { type, from, to, page=0, size=20
 export const testmypage = () =>
   api.get(`/api/mypage`, {});
 
-// 주담대 리스트(가공본)
-export const fetchMortgageProducts = ({ topFinGrpNo = "020000", pageNo = 1 } = {}) =>
-  api.get("/api/loan/mortgage", { params: { topFinGrpNo, pageNo } });
-
-// (원본 JSON 확인용)
-export const fetchMortgageProductsRaw = ({ topFinGrpNo = "020000", pageNo = 1 } = {}) =>
-  api.get("/api/loan/mortgage/raw", { params: { topFinGrpNo, pageNo } });
-
-// 대출 상품 상세
-// export const fetchLoanProductDetail = (id, { topFinGrpNo="020000", pageNo=1 } = {}) =>
-//   api.get(`/api/loan/mortgage/${id}`, { params: { topFinGrpNo, pageNo }});
-
+// 대출 상품 리스트
 export const fetchLoanProducts = ({ type="MORTGAGE", page=0, size=20 } = {}) =>
   api.get("/api/loan/products", { params: { type, page, size } });
-
+// 대출상품 상세
 export const fetchLoanProductDetail = (code) =>
   api.get(`/api/loan/products/${code}`);
 

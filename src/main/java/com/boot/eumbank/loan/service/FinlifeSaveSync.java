@@ -3,22 +3,16 @@ package com.boot.eumbank.loan.service;
 import com.boot.eumbank.loan.dto.FinlifeCreditResponseDTO;
 import com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO;
 import com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO;
-import com.boot.eumbank.loan.entity.LoanProduct;
-import com.boot.eumbank.loan.entity.LoanProductOption;
-import com.boot.eumbank.loan.repository.LoanProductOptionRepository;
-import com.boot.eumbank.loan.repository.LoanProductRepository;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.*;
-import java.util.function.Function;
+import java.util.Collections;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,12 +22,14 @@ public class FinlifeSaveSync {
     private final FssFinlifeService fss; // FSS API 호출 서비스
     private final FinlifeUpsert upsertTx;
 
+    // JsonMapper 대신 ObjectMapper 사용 (버전 호환성)
     private final ObjectMapper om = new ObjectMapper()
-            .setPropertyNamingStrategy(com.fasterxml.jackson.databind.PropertyNamingStrategies.SNAKE_CASE)
+            .findAndRegisterModules()
+            .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    /** 새벽 3시(서울)마다 동기화 */
-    @Scheduled(cron = "${jobs.finlife.sync.cron:0/15 * * * * *}", zone = "${jobs.timezone:Asia/Seoul}")
+    /** 새벽 3시(서울)마다 동기화 (기본값은 properties로 제어) */
+    @Scheduled(cron = "${jobs.finlife.sync.cron:0 0 3 * * *}", zone = "${jobs.timezone:Asia/Seoul}")
     public void runSave() {
         upsertAllPagesMortgage("020000"); // 주담대
         upsertAllPagesJeonse("020000");   // 전세자금(임차)
@@ -71,10 +67,11 @@ public class FinlifeSaveSync {
                 String json = fss.getMortgageProductsRaw(grp, page);
                 var res = om.readValue(json, FinlifeMortgageResponseDTO.class);
                 var r = res.getResult();
+
                 return upsertTx.upsertOnePageGeneric(
                         "MORTGAGE", page,
-                        Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getBaseList).orElse(List.of()),
-                        Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getOptionList).orElse(List.of()),
+                        Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getBaseList).orElse(Collections.emptyList()),
+                        Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getOptionList).orElse(Collections.emptyList()),
                         FinlifeMortgageResponseDTO.Base::getFinPrdtCd,
                         FinlifeMortgageResponseDTO.Base::getFinPrdtNm,
                         FinlifeMortgageResponseDTO.Base::getKorCoNm,
@@ -89,10 +86,17 @@ public class FinlifeSaveSync {
                         FinlifeMortgageResponseDTO.Option::getLendRateAvg,
                         FinlifeMortgageResponseDTO.Option::getRpayTypeNm,
                         FinlifeMortgageResponseDTO.Option::getLendRateTypeNm,
+                        // 옵션 확장 필드가 스키마에 없으면 null 전달
+                        o -> null,                                // termMonth
+                        o -> null,                                // dclsMonth (옵션에 없으면 상품 공시월 사용)
+                        o -> isOverdraftByRepayName(o.getRpayTypeNm()), // isOverdraft 추정
+                        o -> null,                                // note
                         Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getNowPageNo).orElse(null),
                         Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getMaxPageNo).orElse(null)
                 );
-            } catch (Exception e) { throw new RuntimeException(e); }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         });
     }
 
@@ -106,8 +110,8 @@ public class FinlifeSaveSync {
 
                 return upsertTx.upsertOnePageGeneric(
                         "JEONSE", page,
-                        Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getBaseList).orElse(List.of()),
-                        Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getOptionList).orElse(List.of()),
+                        Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getBaseList).orElse(Collections.emptyList()),
+                        Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getOptionList).orElse(Collections.emptyList()),
                         FinlifeJeonseResponseDTO.Base::getFinPrdtCd,
                         FinlifeJeonseResponseDTO.Base::getFinPrdtNm,
                         FinlifeJeonseResponseDTO.Base::getKorCoNm,
@@ -122,6 +126,10 @@ public class FinlifeSaveSync {
                         FinlifeJeonseResponseDTO.Option::getLendRateAvg,
                         FinlifeJeonseResponseDTO.Option::getRpayTypeNm,
                         FinlifeJeonseResponseDTO.Option::getLendRateTypeNm,
+                        o -> null,
+                        o -> null,
+                        o -> isOverdraftByRepayName(o.getRpayTypeNm()),
+                        o -> null,
                         Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getNowPageNo).orElse(null),
                         Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getMaxPageNo).orElse(null)
                 );
@@ -141,8 +149,8 @@ public class FinlifeSaveSync {
 
                 return upsertTx.upsertOnePageGeneric(
                         "PERSONAL", page,
-                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getBaseList).orElse(List.of()),
-                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getOptionList).orElse(List.of()),
+                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getBaseList).orElse(Collections.emptyList()),
+                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getOptionList).orElse(Collections.emptyList()),
                         FinlifeCreditResponseDTO.Base::getFinPrdtCd,
                         FinlifeCreditResponseDTO.Base::getFinPrdtNm,
                         FinlifeCreditResponseDTO.Base::getKorCoNm,
@@ -157,6 +165,10 @@ public class FinlifeSaveSync {
                         FinlifeCreditResponseDTO.Option::getLendRateAvg,
                         FinlifeCreditResponseDTO.Option::getRpayTypeNm,
                         FinlifeCreditResponseDTO.Option::getLendRateTypeNm,
+                        o -> null,
+                        o -> null,
+                        o -> isOverdraftByRepayName(o.getRpayTypeNm()),
+                        o -> null,
                         Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getNowPageNo).orElse(null),
                         Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getMaxPageNo).orElse(null)
                 );
@@ -166,41 +178,12 @@ public class FinlifeSaveSync {
         });
     }
 
-    // ===== 문자열 파서(한도/LTV) =====
-    private static Long extractMaxWon(String raw){
-        if (raw == null) return null;
-        String s = raw.replace(",", "");
-        double max = -1;
-        max = Math.max(max, scanMax(s, "(\\d+(?:\\.\\d+)?)\\s*억(?:원)?", 100_000_000));
-        max = Math.max(max, scanMax(s, "(\\d+)\\s*천만(?:원)?", 10_000_000));
-        max = Math.max(max, scanMax(s, "(\\d+)\\s*백만(?:원)?", 1_000_000));
-        max = Math.max(max, scanMax(s, "(\\d+(?:\\.\\d+)?)\\s*만(?:원)?", 10_000));
-        max = Math.max(max, scanMax(s, "(\\d+)\\s*원", 1));
-        return (max < 0) ? null : (long)Math.floor(max);
-    }
+    // ===== 유틸 =====
 
-    private static double scanMax(String s, String regex, double unit){
-        var m = java.util.regex.Pattern.compile(regex).matcher(s);
-        double max = -1;
-        while (m.find()){
-            try {
-                double v = Double.parseDouble(m.group(1)) * unit;
-                if (v > max) max = v;
-            } catch (Exception ignore) {}
-        }
-        return max;
-    }
-
-    private static Integer extractMaxLtv(String raw){
-        if (raw == null) return null;
-        var m = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%").matcher(raw);
-        double max = -1;
-        while (m.find()){
-            try {
-                double v = Double.parseDouble(m.group(1));
-                if (v > max) max = v;
-            } catch (Exception ignore) {}
-        }
-        return (max < 0) ? null : (int)Math.round(max);
+    /** 상환방식명으로 마이너스한도 여부 추정 */
+    private static boolean isOverdraftByRepayName(String repayTypeNm) {
+        if (repayTypeNm == null) return false;
+        String s = repayTypeNm.replaceAll("\\s+", "");
+        return s.contains("마이너스") || s.contains("한도");
     }
 }

@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -63,8 +64,8 @@ public class FinlifeMortgageResponseDTO {
         @JsonProperty("fin_prdt_cd")      private String finPrdtCd;     // 조인키
         @JsonProperty("rpay_type_nm")     private String rpayTypeNm;    // 상환방식명
         @JsonProperty("lend_rate_type_nm")private String lendRateTypeNm;// 금리유형명
-        @JsonProperty("lend_rate_min")    private Double lendRateMin;   // 최저금리
-        @JsonProperty("lend_rate_max")    private Double lendRateMax;   // 최고금리
-        @JsonProperty("lend_rate_avg")    private Double lendRateAvg;   // 평균금리(있을 때)
+        @JsonProperty("lend_rate_min")    private BigDecimal lendRateMin;   // 최저금리
+        @JsonProperty("lend_rate_max")    private BigDecimal lendRateMax;   // 최고금리
+        @JsonProperty("lend_rate_avg")    private BigDecimal lendRateAvg;   // 평균금리(있을 때)
     }
 }

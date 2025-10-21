@@ -19,6 +19,4 @@ public interface AccountRepositoryCustom {
     // 페이지네이션 버전
     Page<Account> findAccountsByCustomer(int c_no, Pageable pageable);
 
-    // 최근거래일
-    Map<Integer, LocalDateTime> findLastTransferAtForAccounts(List<Integer> aNos);
 }

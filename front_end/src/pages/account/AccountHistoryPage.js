@@ -190,7 +190,7 @@ function AccountHistoryPage(){
       {/* 타이틀 */}
       <section className="border-b bg-white">
         <div className="mx-auto max-w-screen-xl px-6 py-6">
-          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">계좌이체내역 조회</h1>
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight">내 계좌 상세</h1>
           <p className="text-sm text-gray-600 mt-1">선택한 계좌의 정보와 거래내역을 함께 확인하세요.</p>
         </div>
       </section>

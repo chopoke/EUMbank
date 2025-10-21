@@ -5,7 +5,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { goToAccountOpenPage } from "./utils/navigations";
 
 
+
 function AccountListPage(){
+  
   const[accounts, setAccounts] = React.useState([]);
   const[loading, setLoading] = React.useState(false);
   const[error, setError] = React.useState(null);
@@ -18,12 +20,6 @@ function AccountListPage(){
   const [statuses, setStatuses] = React.useState(new Set());
   const [sortKey, setSortKey] = React.useState("recent");
   const navigate = useNavigate();
-
-
-  // // 고객 번호 받기위한 토큰
-  // const token = localStorage.getItem("access");
-  // console.log('[AccountListPage] token =', token);
-
 
   React.useEffect(()=>{
     let alive = true;
@@ -63,6 +59,9 @@ function AccountListPage(){
           favorite: false,
           lastActivityTs: ts,
           lastActivity: lastText,
+          // aNo: d.a_no,                     // 출금 계좌 PK
+          // accountNo: d.a_account_no,       // 계좌번호 (문자열)
+          // accountType: d.a_account_type,   // 계좌유형
         };
       });
         setAccounts(mapped);
@@ -178,8 +177,7 @@ function AccountListPage(){
               <p className="text-sm text-gray-600 mt-1">보유 중인 계좌를 한눈에 확인하고, 빠르게 이체/관리하세요.</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => goToAccountOpenPage(navigate)} 
-                className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">계좌개설</button>
+              <button className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">계좌개설</button>
               <button className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">이체하기</button>
             </div>
           </div>
@@ -331,7 +329,7 @@ function AccountListPage(){
                           <td className="px-3 py-3 text-center whitespace-nowrap w-[180px]">
                             <div className="flex justify-center gap-1.5">
                               <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">이체</button>
-                              <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">상세</button>
+                              {/* <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">상세</button> */}
                               <Link to={`/accounts/${row.id}`}>
                                 <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">이체내역</button>
                               </Link>

@@ -30,7 +30,7 @@ import BulkTransferDashboard from "./pages/transfer/BulkTransferDashboard";
 import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
 
 // 주택담보대출
-import LoanMortgageProduct from "./pages/loan/products/LoanMortgageProducts"
+import LoanProductList from "./pages/loan/products/LoanProductList"
 // 대출상품상세
 import LoanProductDetail from "./pages/loan/products/LoanProductDetail"
 
@@ -102,9 +102,9 @@ function App() {
             </ProtectedRoute>} />
 
         {/* 주택담보대출 상품 목록 */}
-        <Route path="/loan/mortgage" element={<LoanMortgageProduct/>} /> 
+        <Route path="/loan/products" element={<LoanProductList/>} /> 
         {/* 상품 상세 */}
-        <Route path="/loan/mortgage/:id" element={<LoanProductDetail/>} /> 
+        <Route path="/loan/products/:code" element={<LoanProductDetail/>} /> 
 
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
