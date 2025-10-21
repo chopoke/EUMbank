@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "CUSTOMER_TBL")
@@ -37,7 +38,7 @@ public class Customer {
     private String cNameEn;
 
     @Column(name = "c_birth_dt")
-    private Instant cBirthDt;
+    private LocalDate cBirthDt;
 
     @Column(name = "c_gender_cd", length = 1)
     private String cGenderCd;
@@ -122,5 +123,22 @@ public class Customer {
         this.cNameKr = signupRequest.getC_name_kr();
         this.cEmail = signupRequest.getC_email();
         this.cPhoneMobile = signupRequest.getC_phone_mobile();
+    }
+
+    // 비즈니스 메서드들
+    public void updateAuthLevel(Integer authLevel) {
+        this.cAuthLevel = authLevel;
+    }
+
+    public void updateRiskGrade(String riskGrade) {
+        this.cRiskGrade = riskGrade;
+    }
+
+    public void updateStatus(String status) {
+        this.cStatus = status;
+    }
+
+    public boolean isActive() {
+        return "ACTIVE".equals(this.cStatus);
     }
 }

@@ -20,6 +20,7 @@ public interface CustomerRepo extends JpaRepository<Customer, Integer> {
            select case when count(c) > 0 then true else false end
            from Customer c
            where lower(c.cEmail) = lower(:email)
+           and c.loginType = :loginType
            """)
-    boolean existsByEmailIgnoreCase(@Param("email") String email);
+    boolean existsByEmailIgnoreCase(@Param("email") String email, @Param("loginType") String loginType);
 }

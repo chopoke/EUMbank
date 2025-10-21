@@ -55,6 +55,7 @@ public interface ForeignRateRepo extends JpaRepository<ForeignRate, Integer> {
         return (n == 0) ? insertOne(unit, name, ttb, tts, base, observedDate) : n;
     }
 
+    /** 최신 관측일의 전체 스냅샷 */
     @Query("""
         SELECT f FROM ForeignRate f
         WHERE f.frObservedDate = (SELECT max(x.frObservedDate) FROM ForeignRate x)
@@ -91,9 +92,9 @@ public interface ForeignRateRepo extends JpaRepository<ForeignRate, Integer> {
     }
 
     @Query(value = """
-        SELECT fr_cur_unit   AS unit,
+        SELECT fr_cur_unit     AS unit,
                fr_observed_date AS date,
-               fr_deal_bas   AS rate
+               fr_deal_bas      AS rate
           FROM FOREIGN_RATE_TBL
          WHERE fr_observed_date IN (
                 SELECT DISTINCT fr_observed_date

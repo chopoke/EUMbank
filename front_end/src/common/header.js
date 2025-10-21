@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
 import mainlogo from '../resources/img/eumonly.png'
+import myp from '../resources/img/mypage.png'
 
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
@@ -68,11 +69,12 @@ export function Header({ isLoggedIn, user, onLogout }) {
           <Link to="/" className="logo">이음은행</Link>
           {/* hidden lg:flex items-center gap-6 text-sm text-gray-700 */}
           <nav className="main-nav-links">
-            <Link to="/personal" className="nav-link">개인</Link>
+            <Link to="/accounts" className="nav-link">개인</Link>
             <Link to="/products" className="nav-link">상품</Link>
             <Link to="/wealth" className="nav-link nav-link-active">자산관리</Link>
             <Link to="/foreign/rate" className="nav-link">외환/환율</Link>
-            <Link to="/events" className="nav-link">이벤트</Link>
+            <Link to="/mypage" className="nav-link"><img src={myp} className="mypage w-5"/></Link>
+            {/* <Link to="/events" className="nav-link">이벤트</Link> */}
             <button className="notification-button" aria-label="알림">
             <Icon path={paths.bell} />
             {/* absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 */}

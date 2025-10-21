@@ -46,6 +46,29 @@ const ForeignExchangePage = () => {
   const isBuy = form.transactionType === 'BUY';
   const selectedFx = form.fromCurUnit;
 
+  // ★ BUY/SELL에 따라 색상 톤 자동 전환
+  const tone = useMemo(() => {
+    return isBuy
+      ? { // BUY = 파랑
+          text: 'text-blue-600',
+          textMuted: 'text-blue-700',
+          bgSoft: 'bg-blue-50',
+          ring: 'ring-blue-200',
+          btn: 'bg-blue-600 hover:bg-blue-700',
+          btnLight: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+          borderSoft: 'border-blue-200',
+        }
+      : { // SELL = 빨강(rose)
+          text: 'text-rose-600',
+          textMuted: 'text-rose-700',
+          bgSoft: 'bg-rose-50',
+          ring: 'ring-rose-200',
+          btn: 'bg-rose-600 hover:bg-rose-700',
+          btnLight: 'bg-rose-100 text-rose-700 hover:bg-rose-200',
+          borderSoft: 'border-rose-200',
+        };
+  }, [isBuy]);
+
   const [calculationResult, setCalculationResult] = useState(null);
 
   useEffect(() => {
@@ -54,7 +77,6 @@ const ForeignExchangePage = () => {
   }, []);
 
   const fetchInitialData = async () => {
-    // ===== 임시 디버그 로그 =====
     console.log('[DEBUG] axios baseURL =', api.defaults.baseURL,
                 'withCredentials =', api.defaults.withCredentials);
     try {
@@ -276,7 +298,7 @@ const ForeignExchangePage = () => {
     // 신청 후 강제 새로고침
     useEffect(() => {
       if (activeTab === 'history' && cNo) fetchHistory();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [version]);
 
     const formatCurrency = (amount, currency) =>
@@ -288,7 +310,7 @@ const ForeignExchangePage = () => {
             minimumFractionDigits: 2,
           }).format(amount);
 
-    // ===== 상태 라벨/색 매핑 (표시만 바꿔줌) =====
+    // 상태 라벨/색 매핑
     const statusLabel = (s) =>
       ({
         COMMITTED: '승인대기',
@@ -381,7 +403,7 @@ const ForeignExchangePage = () => {
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-extrabold text-gray-900 mb-6">
-        <span className="text-indigo-600">환전 신청</span> / 환전 내역
+        <span className={`${tone.text}`}>환전 신청</span> / 환전 내역
       </h1>
 
       <div className="border-b border-gray-200 mb-6">
@@ -423,7 +445,7 @@ const ForeignExchangePage = () => {
                     setCalculationResult(null);
                     setMessage('');
                   }}
-                  className={`px-4 py-2 text-sm font-medium ${isBuy ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}
+                  className={`px-4 py-2 text-sm font-medium ${isBuy ? `${tone.btn} text-white` : 'bg-white text-gray-700'}`}
                 >
                   매입(사기)
                 </button>
@@ -434,7 +456,7 @@ const ForeignExchangePage = () => {
                     setCalculationResult(null);
                     setMessage('');
                   }}
-                  className={`px-4 py-2 text-sm font-medium ${!isBuy ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}
+                  className={`px-4 py-2 text-sm font-medium ${!isBuy ? `${tone.btn} text-white` : 'bg-white text-gray-700'}`}
                 >
                   매도(팔기)
                 </button>
@@ -518,7 +540,7 @@ const ForeignExchangePage = () => {
               <div className="block">
                 <span className="text-sm font-medium text-gray-700">우대율 (%)</span>
                 <div className="mt-1 flex items-center gap-2">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold bg-indigo-50 text-indigo-700">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold ${tone.bgSoft} ${tone.textMuted}`}>
                     {myPreferentialRate}% 적용
                   </span>
                   <span className="text-xs text-gray-500">(서버 정책에 따라 자동 적용)</span>
@@ -559,7 +581,7 @@ const ForeignExchangePage = () => {
               <button
                 onClick={handleCalculate}
                 disabled={isLoading || !form.fxAmount || !currentRate}
-                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition duration-150"
+                className={`flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${tone.btn} focus:outline-none focus:ring-2 focus:ring-offset-2 ${tone.ring} disabled:opacity-50 transition duration-150`}
               >
                 <Calculator className="w-5 h-5 mr-2" />
                 {isLoading ? '계산 중...' : '환율 계산하기'}
@@ -568,7 +590,7 @@ const ForeignExchangePage = () => {
               <button
                 onClick={handleSubmit}
                 disabled={isLoading || !calculationResult}
-                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition duration-150"
+                className={`flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm ${tone.btnLight} focus:outline-none focus:ring-2 focus:ring-offset-2 ${tone.ring} disabled:opacity-50 transition duration-150`}
               >
                 <Send className="w-5 h-5 mr-2" />
                 신청 제출
@@ -591,12 +613,15 @@ const ForeignExchangePage = () => {
                     ? `거래 기준 환율 (은행이 ${selectedFx}를 팔 때 - TTS)`
                     : `거래 기준 환율 (은행이 ${selectedFx}를 살 때 - TTB)`}
                 </dt>
-                <dd className="text-md font-semibold text-gray-700">
-                  {currentRate
-                    ? Number(
-                        normalizeNumber(isBuy ? currentRate.tts : currentRate.ttb)
-                      ).toFixed(2)
-                    : '-'}
+                <dd className="text-md font-semibold">
+                  <span className={`mr-2 px-2 py-0.5 rounded-full text-xs ${tone.bgSoft} ${tone.text}`}>
+                    {isBuy ? 'TTS' : 'TTB'}
+                  </span>
+                  <span className={`${tone.text}`}>
+                    {currentRate
+                      ? Number(normalizeNumber(isBuy ? currentRate.tts : currentRate.ttb)).toFixed(2)
+                      : '-'}
+                  </span>
                 </dd>
               </div>
 
@@ -605,7 +630,7 @@ const ForeignExchangePage = () => {
                 <dd className="text-md font-semibold text-gray-700">{myPreferentialRate}%</dd>
               </div>
 
-              <div className="pt-4 border-t border-indigo-200 space-y-3">
+              <div className={`pt-4 border-t ${tone.borderSoft} space-y-3`}>
                 <div className="flex justify-between">
                   <dt className="text-sm font-medium text-gray-500">
                     {isBuy ? '환전 원화 금액 (KRW)' : `환전 외화 금액 (${selectedFx})`}
@@ -621,7 +646,7 @@ const ForeignExchangePage = () => {
 
                 <div className="flex justify-between">
                   <dt className="text-sm font-medium text-gray-500">적용 환율</dt>
-                  <dd className="text-md font-semibold text-gray-700">
+                  <dd className={`text-md font-semibold ${tone.text}`}>
                     {calculationResult ? Number(normalizeNumber(calculationResult.finalExchangeRate)).toFixed(6) : '-'}
                   </dd>
                 </div>
@@ -637,7 +662,7 @@ const ForeignExchangePage = () => {
                   <dt className="text-base font-bold text-gray-900">
                     {isBuy ? `최종 수취 외화 금액 (${selectedFx})` : '최종 수취 원화 금액 (KRW)'}
                   </dt>
-                  <dd className="text-xl font-extrabold text-indigo-600">
+                  <dd className={`text-xl font-extrabold ${tone.text}`}>
                     {calculationResult
                       ? isBuy
                         ? `${Number(normalizeNumber(calculationResult.expectedReceiveAmount)).toFixed(4)} ${selectedFx}`

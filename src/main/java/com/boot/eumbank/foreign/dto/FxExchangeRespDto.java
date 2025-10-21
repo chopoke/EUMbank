@@ -37,4 +37,6 @@ public class FxExchangeRespDto {
 
     // 거래 완료 시각
     private LocalDateTime updatedAt;
+
+    private String status;
 }

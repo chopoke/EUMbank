@@ -27,7 +27,7 @@ public class FxRateService {
     private final EximClient eximClient;
     private final ForeignRateRepo repo;
 
-    /** 화면 목록 캐시 */
+    /** 화면 목록 캐시 (항상 '최신 스냅샷'만 유지) */
     private volatile List<ForeignRate> cache = Collections.emptyList();
     private volatile LocalDateTime updatedAt = null;
 
@@ -82,7 +82,7 @@ public class FxRateService {
 
     public LocalDateTime getLastUpdated() { return updatedAt; }
 
-    /** 실시간 갱신 + DB 업서트(유니크 없음: UPDATE→INSERT) + 캐시 최신화 */
+    /** 실시간 갱신 + DB 업서트 + 캐시 최신화(덮어쓰기) */
     @Transactional
     public int refreshRates() {
         try {
@@ -97,7 +97,7 @@ public class FxRateService {
                     ? rows.get(0).date
                     : LocalDate.now(KST);
 
-            // DTO -> 엔티티
+            // DTO -> 엔티티 (필수 필드 없는 행 제외)
             List<ForeignRate> entities = rows.stream()
                     .map(r -> toEntity(r, observed))
                     .filter(Objects::nonNull)
@@ -121,11 +121,23 @@ public class FxRateService {
                 );
             }
 
-            // 캐시 최신화
-            this.cache = repo.findLatestSnapshot();
+            // ---- 캐시 최신화 (덮어쓰기 + 유일화 + 정렬) ----
+            // 최신 관측일의 행을 가져와 통화코드 기준으로 유일화
+            // (혹시 같은 코드가 중복으로 들어와도 1개만 유지)
+            List<ForeignRate> latest = repo.findLatestSnapshot();
+            Map<String, ForeignRate> dedup = new LinkedHashMap<>();
+            for (ForeignRate fr : latest) {
+                dedup.putIfAbsent(fr.getFrCurUnit(), fr);
+            }
+            // 정렬: 통화코드 오름차순
+            List<ForeignRate> fresh = dedup.values().stream()
+                    .sorted(Comparator.comparing(ForeignRate::getFrCurUnit))
+                    .toList();
+
+            this.cache = fresh;                 // ← append 금지, 항상 교체
             this.updatedAt = LocalDateTime.now();
 
-            log.info("[FX] refreshed {} currencies at {}", affected, this.updatedAt);
+            log.info("[FX] refreshed {} rows, cache={} currencies at {}", affected, this.cache.size(), this.updatedAt);
             return affected;
 
         } catch (Exception e) {
@@ -204,7 +216,7 @@ public class FxRateService {
     /** 전일 대비 상위 변동 통화 */
     @Transactional(readOnly = true)
     public List<Mover> topMovers(int limit) {
-        var rows = repo.findLast2ForAll(); // 각 통화 최근 2일
+        var rows = repo.findLast2ForAll(); // 각 통화 최근 2일 (ORDER BY unit, date ASC)
         var byUnit = new LinkedHashMap<String, List<ForeignRateRepo.ChangeRow>>();
         rows.forEach(r -> byUnit.computeIfAbsent(r.getUnit(), k -> new ArrayList<>()).add(r));
 
@@ -212,8 +224,8 @@ public class FxRateService {
         for (var e : byUnit.entrySet()) {
             var list = e.getValue();
             if (list.size() < 2) continue;
-            var y = list.get(0).getRate(); // 어제
-            var t = list.get(1).getRate(); // 오늘
+            var y = list.get(0).getRate(); // 어제(더 과거)
+            var t = list.get(1).getRate(); // 오늘(최근)
             var d = t.subtract(y);
             var p = y.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
                     : d.divide(y, 6, java.math.RoundingMode.HALF_UP);

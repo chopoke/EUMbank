@@ -28,7 +28,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HexFormat;
 import java.util.List;
@@ -63,8 +62,7 @@ public class SocialService extends DefaultOAuth2UserService {
         String birthyear;
         String birthday;
         String fullDate;
-        LocalDate localDate;
-        Instant birthDt = null;
+        LocalDate birthDt = null;
 
         // 네이버로그인이 맞는지 확인
         String registrationId = oAuth2UserRequest.getClientRegistration().getRegistrationId().toUpperCase();
@@ -82,8 +80,7 @@ public class SocialService extends DefaultOAuth2UserService {
             birthyear = attributes.get("birthyear").toString();
             birthday = attributes.get("birthday").toString();
             fullDate = birthyear + "-" + birthday;
-            localDate = LocalDate.parse(fullDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-            birthDt = localDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
+            birthDt = LocalDate.parse(fullDate, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
 
         } else if(registrationId.equals("GOOGLE")) {
             attributes = (Map<String, Object>) oAuth2User.getAttributes();
@@ -112,6 +109,7 @@ public class SocialService extends DefaultOAuth2UserService {
             signupRequest.setC_name_kr(nameKr);
             signupRequest.setC_email(email);
             signupRequest.setC_phone_mobile(phone);
+            signupRequest.setC_birth_dt(birthDt);
             //signupRequest.setC_phone_mobile(customer.get().getCPhoneMobile());
 
             customer.get().updateCustomer(signupRequest);
@@ -124,7 +122,7 @@ public class SocialService extends DefaultOAuth2UserService {
                     .cId(userId)
                     .cPassword(encoder.encode(rawPw))
                     .cNameKr(nameKr)
-                    .cBirthDt(birthDt)
+                    .cBirthDt(LocalDate.from(birthDt))
                     .cEmail(email)
                     .cPhoneMobile(phone)
                     .cNationalityCd("KOR")
@@ -228,7 +226,7 @@ public class SocialService extends DefaultOAuth2UserService {
         Instant now = Instant.now();
         // 같은 사용자 오래된 토큰 정리 정책(선택): 10개 이상이면 전체 삭제
         if (refreshTokens.countByCustomerNoAndExpiresAtAfterAndDeleteAtIsNull(customer.getCustomerNo(), now) >= 10) {
-            refreshTokens.markAllDeletedByCustomer(customer.getCustomerNo(),Instant.now(),"TOO_MANY_TOKENS");
+            refreshTokens.markAllDeletedByCustomerWithQueryDsl(customer.getCustomerNo(),Instant.now(),"TOO_MANY_TOKENS");
         }
 
         refreshTokens.save(refresh);

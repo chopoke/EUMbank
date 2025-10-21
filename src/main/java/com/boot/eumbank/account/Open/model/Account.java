@@ -77,4 +77,39 @@ public class Account {
 
     @Column(name = "a_pin_number")
     private Integer pinNumber;
+
+    // 비즈니스 메서드들
+    public boolean isActive() {
+        return "ACTIVE".equals(this.status);
+    }
+
+    public boolean hasSufficientBalance(BigDecimal amount) {
+        return this.balance.compareTo(amount) >= 0;
+    }
+
+    public void deposit(BigDecimal amount) {
+        this.balance = this.balance.add(amount);
+        this.lastTxAt = LocalDateTime.now();
+    }
+
+    public void withdraw(BigDecimal amount) {
+        if (!hasSufficientBalance(amount)) {
+            throw new IllegalArgumentException("잔액이 부족합니다.");
+        }
+        this.balance = this.balance.subtract(amount);
+        this.lastTxAt = LocalDateTime.now();
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void closeAccount() {
+        this.status = "CLOSED";
+        this.closedAt = LocalDateTime.now();
+    }
+
+    public String getDisplayName() {
+        return nickname != null ? nickname : accountType;
+    }
 }

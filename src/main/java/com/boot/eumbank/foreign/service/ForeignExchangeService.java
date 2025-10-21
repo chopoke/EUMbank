@@ -7,7 +7,6 @@ import com.boot.eumbank.foreign.dto.FxExchangeReqDto;
 import com.boot.eumbank.foreign.dto.FxExchangeRespDto;
 import com.boot.eumbank.foreign.entity.ForeignHistory;
 import com.boot.eumbank.foreign.entity.ForeignRate;
-// (ENUM을 쓰실 경우 주석 해제)
 // import com.boot.eumbank.foreign.entity.FxStatus;
 import com.boot.eumbank.foreign.repo.ForeignHistoryRepo;
 import com.boot.eumbank.foreign.repo.ForeignRateRepo;
@@ -79,9 +78,10 @@ public class ForeignExchangeService {
     private static class CalcOut {
         BigDecimal fromAmount;         // 입력 금액 (From 통화)
         BigDecimal toAmount;           // 수취 금액 (To 통화)
-        BigDecimal finalRate;          // 표시용 최종 환율
+        BigDecimal finalRate;          // 우대 반영 최종 환율
         BigDecimal commissionKrw;      // 수수료(KRW 환산)
-        BigDecimal baseRateToKrw;      // 기준율(표시)
+        BigDecimal baseRateToKrw;      // 매매기준율(표시)
+        BigDecimal krwAmount;          // 거래 관련 KRW 금액(반드시 세팅)
     }
 
     /** SELL/BUY/CROSS 공통 계산 */
@@ -111,10 +111,11 @@ public class ForeignExchangeService {
                 BigDecimal fee = krwBefore.multiply(feeRate);
                 BigDecimal take = krwBefore.subtract(fee);
 
-                out.toAmount = take.setScale(0, RM);     // KRW
+                out.toAmount = take.setScale(0, RM);       // 수취 KRW
                 out.finalRate = ttb.multiply(BigDecimal.ONE.subtract(feeRate));
                 out.commissionKrw = fee.setScale(0, RM);
                 out.baseRateToKrw = from.deal();
+                out.krwAmount = out.toAmount;              // DB 필수 컬럼용
             }
             case "BUY" -> {
                 // KRW -> FX : 은행이 FX를 파는 환율 = to.tts
@@ -123,10 +124,11 @@ public class ForeignExchangeService {
                 BigDecimal feeFx = fxBefore.multiply(feeRate);
                 BigDecimal takeFx = fxBefore.subtract(feeFx);
 
-                out.toAmount = takeFx.setScale(4, RM);   // FX
+                out.toAmount = takeFx.setScale(4, RM);     // 수취 FX
                 out.finalRate = tts.multiply(BigDecimal.ONE.add(feeRate));
                 out.commissionKrw = feeFx.multiply(tts).setScale(0, RM);
                 out.baseRateToKrw = to.deal();
+                out.krwAmount = amt.setScale(0, RM);       // 지출 KRW = 입력금액
             }
             case "CROSS" -> {
                 // FX1 -> FX2 : (FX1→KRW: from.ttb) -> (KRW→FX2: to.tts)
@@ -135,16 +137,16 @@ public class ForeignExchangeService {
 
                 BigDecimal krw1 = amt.multiply(ttb1);
                 BigDecimal fee1 = krw1.multiply(feeRate);
-                BigDecimal krw2 = krw1.subtract(fee1);
-
+                BigDecimal krw2 = krw1.subtract(fee1);     // 중간 KRW
                 BigDecimal fx2Before = krw2.divide(tts2, 8, RM);
                 BigDecimal fee2 = fx2Before.multiply(feeRate);
                 BigDecimal takeFx2 = fx2Before.subtract(fee2);
 
-                out.toAmount = takeFx2.setScale(4, RM);
+                out.toAmount = takeFx2.setScale(4, RM);    // 수취 FX2
                 out.finalRate = krw2.divide(amt, 8, RM).divide(tts2, 8, RM);
-                out.commissionKrw = fee1.add(fee2.multiply(tts2)).setScale(0, RM);
+                out.commissionKrw = fee1.add(nz(tts2).multiply(fee2)).setScale(0, RM);
                 out.baseRateToKrw = from.deal();
+                out.krwAmount = krw2.setScale(0, RM);      // 기록용 KRW
             }
             default -> throw new IllegalArgumentException("지원하지 않는 거래 유형입니다: " + req.getTransactionType());
         }
@@ -174,46 +176,66 @@ public class ForeignExchangeService {
                 .build();
     }
 
-    /** 환전 신청(거래 실행) */
+    /** 환전 신청(거래 실행) — 잔액 충분하면 즉시 정산 및 완료 */
     @Transactional
     public FxExchangeRespDto exchange(FxExchangeReqDto req) {
-        // 동일 로직으로 금액/환율 산출
+        // 1) 금액/환율 산출
         CalcOut c = doCalc(req);
 
-        // 출금 계좌 한 번만 조회해서 aNo / cNo 둘 다 확보
+        // 2) 출금 계좌 조회
         Account acc = accountRepo.findByAccountNo(req.getFromAccountNo())
                 .orElseThrow(() -> new IllegalArgumentException("출금 계좌를 찾을 수 없습니다."));
 
-        Integer aNo = acc.getANo();  // 계좌 PK
-        Integer cNo = acc.getCNo();  // 고객 PK (NOT NULL)
+        Integer aNo = acc.getANo();     // 계좌 PK
+        Integer cNo = acc.getCNo();     // 고객 PK
 
-        // (선택) BUY 시 원화 잔액 검증
+        // 3) BUY 시 원화 잔액 검증 (지출 KRW = c.krwAmount)
         if ("BUY".equalsIgnoreCase(req.getTransactionType())) {
-            if (acc.getBalance().compareTo(c.toAmount) < 0) {
+            if (acc.getBalance().compareTo(c.krwAmount) < 0) {
                 throw new IllegalArgumentException("출금 계좌 잔액이 부족합니다.");
             }
         }
 
+        // 4) 거래 ID 생성
         String exId = "FX" + System.currentTimeMillis()
                 + ThreadLocalRandom.current().nextInt(1000, 9999);
 
+        // 5) 외화 코드/외화 금액 (KRW가 아닌 쪽)
+        String fxCode = !"KRW".equalsIgnoreCase(req.getFromCurUnit())
+                ? req.getFromCurUnit() : req.getToCurUnit();
+
+        BigDecimal fxAmount = switch (req.getTransactionType().toUpperCase()) {
+            case "SELL" -> req.getFxAmount();   // 입력 FX
+            case "BUY", "CROSS" -> c.toAmount;  // 수취 FX
+            default -> req.getFxAmount();
+        };
+
+        // 6) 이력 먼저 저장(요청 상태) — 트래킹 목적
         ForeignHistory h = ForeignHistory.builder()
-                .cNo(cNo)                                   // 고객번호 저장 (NULL 아님)
+                .cNo(cNo)
                 .aNo(aNo)
                 .fhEventType(req.getTransactionType())
-                .fhFxCurCode(req.getFromCurUnit())
-                .fhFxAmtFc(req.getFxAmount())               // 항상 From 기준
-                .fhAmtKrw("KRW".equalsIgnoreCase(req.getToCurUnit()) ? c.toAmount : null)
+                .fhFxCurCode(fxCode)
+                .fhFxAmtFc(fxAmount)
+                .fhAmtKrw(c.krwAmount)
                 .fhFxRateApplied(c.finalRate)
                 .memo(req.getMemo())
                 .fhOrderedAt(LocalDateTime.now())
                 .fhExId(exId)
-                // ENUM을 쓰실 경우: .fhStatus(FxStatus.REQUESTED.name())
-                .fhStatus("REQUESTED")                      // ★ 신청 상태로 저장
+                .fhStatus("REQUESTED")
                 .build();
 
         historyRepo.save(h);
 
+        // 7) ★ 즉시 정산 — 관리자 승인 없이 완료 처리
+        settleImmediately(req.getTransactionType(), acc, c);
+
+        // 8) 상태/완료일시 업데이트
+        h.setFhStatus("COMPLETED");
+        h.setFhCompletedAt(LocalDateTime.now());
+        historyRepo.save(h);
+
+        // 9) 응답
         return FxExchangeRespDto.builder()
                 .transactionId(exId)
                 .fromCurUnit(req.getFromCurUnit())
@@ -223,6 +245,36 @@ public class ForeignExchangeService {
                 .exchangeRate(c.finalRate)          // 적용 환율
                 .commissionKrw(c.commissionKrw)
                 .updatedAt(LocalDateTime.now())
+                .status("COMPLETED")
                 .build();
+    }
+
+    /** 계좌 반영 - 즉시 정산 로직 */
+    private void settleImmediately(String txType, Account acc, CalcOut c) {
+        String type = txType.toUpperCase();
+
+        switch (type) {
+            case "BUY" -> {
+                // 원화 차감
+                BigDecimal newBal = acc.getBalance().subtract(c.krwAmount).setScale(0, RM);
+                if (newBal.compareTo(BigDecimal.ZERO) < 0) {
+                    throw new IllegalStateException("정산 중 잔액 부족");
+                }
+                acc.setBalance(newBal);
+                accountRepo.save(acc);
+                // 실제 외화 잔액을 따로 관리한다면 여기서 외화지갑/외화계좌에 c.toAmount 적립 로직 추가
+            }
+            case "SELL" -> {
+                // 원화 입금
+                BigDecimal newBal = acc.getBalance().add(c.toAmount).setScale(0, RM);
+                acc.setBalance(newBal);
+                accountRepo.save(acc);
+                // 외화 차감 로직이 있다면 외화지갑에서 fromAmount 차감
+            }
+            case "CROSS" -> {
+                // 원화 계좌 변동 없음(중간 KRW일 뿐). 외화지갑 간 이동이 있다면 거기서 처리.
+            }
+            default -> throw new IllegalArgumentException("지원하지 않는 거래 유형입니다: " + txType);
+        }
     }
 }

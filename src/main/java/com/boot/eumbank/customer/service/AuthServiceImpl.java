@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HexFormat;
 import java.util.Map;
 
@@ -40,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
         final String nameKr = req.getC_name_kr().trim();
         final String email  = req.getC_email().trim();
         final String phone  = req.getC_phone_mobile().trim();
+        final LocalDate birthDt = req.getC_birth_dt();
 
         if (customers.existsByUserId(userId)) {
             throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
@@ -62,6 +64,7 @@ public class AuthServiceImpl implements AuthService {
                 .cNameKr(nameKr)
                 .cEmail(email)
                 .cPhoneMobile(phone)
+                .cBirthDt(birthDt)
                 .cNationalityCd("KOR")
                 .cAuthLevel(1)
                 .cRiskGrade("LOW")
@@ -123,7 +126,7 @@ public class AuthServiceImpl implements AuthService {
         // 같은 사용자 오래된 토큰 정리 정책(선택): 10개 이상이면 전체 삭제
         long alive = refreshTokens.countByCustomerNoAndExpiresAtAfterAndDeleteAtIsNull(customer.getCustomerNo(), now);
         if (alive >= 10) {
-            refreshTokens.markAllDeletedByCustomer(customer.getCustomerNo(), now, "TOO_MANY_TOKENS");
+            refreshTokens.markAllDeletedByCustomerWithQueryDsl(customer.getCustomerNo(), now, "TOO_MANY_TOKENS");
         }
 
         refreshTokens.save(row);
@@ -191,7 +194,7 @@ public class AuthServiceImpl implements AuthService {
     public void logout(String refreshToken) {
         // 단일 토큰 소프트 삭제(폐기)
         String hash = sha256(refreshToken);
-        refreshTokens.markDeleted(hash, Instant.now(), "LOGOUT");
+        refreshTokens.markDeletedWithQueryDsl(hash, Instant.now(), "LOGOUT");
         // 존재하지 않거나 이미 폐기된 경우에도 조용히 통과하도록 설계
     }
 

@@ -19,9 +19,10 @@ spring:
   # 기존 .yml 파일의 MariaDB 설정을 유지합니다.
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://localhost:3306/eum_bank?sessionVariables=time_zone='+00:00'
-    username: ${DB_USER}
-    password: ${DB_PASS}
+
+    url: jdbc:mariadb://localhost:3306/eum_bank?sessionVariables=time_zone='+09:00'
+    username: ${DB_USER} # 환경 변수에서 주입
+    password: ${DB_PASS} # 환경 변수에서 주입
     hikari:
       maximum-pool-size: ${DB_POOL_MAX:10}
       minimum-idle: ${DB_POOL_MIN:2}
@@ -38,15 +39,15 @@ spring:
       hibernate:
         format_sql: true
         jdbc:
-          time_zone: UTC
+          time_zone: Asia/Seoul
 
   # --- Mail Sender (Gmail SMTP) ---
   # .properties 파일에서 가져온 새로운 설정입니다.
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USER}
-    password: ${MAIL_PASS}
+    username: amumu7700@gmail.com
+    password: rkiixxqyoaqiqdyp
     properties:
       mail:
         smtp:
@@ -76,8 +77,8 @@ spring:
       client:
         registration:
           naver:
-            client-id: ${NAVER_CLIENT_ID}
-            client-secret: ${NAVER_CLIENT_SECRET}
+            client-id: dYMyrfa3rgIKuDwUYZyH
+            client-secret: HwVQiFUqAQ
             scope:
               - name
               - email
@@ -86,8 +87,8 @@ spring:
             redirect-uri: http://localhost:8081/login/oauth2/code/naver
           google:
             client-name: google
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
+            client-id: 1009179449495-uqphuqqd21h1919m4354agk1cjottn33.apps.googleusercontent.com
+            client-secret: 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
             redirect-uri: http://localhost:8081/login/oauth2/code/google
             authorization-grant-type: authorization_code
             scope:
@@ -123,7 +124,7 @@ app:
     verify:
       expire-minutes: 15
     code:
-      secret: ${EMAIL_CODE_SECRET}
+      secret: K7k6x7w4Y7xV1X7y0i3o9kq2PqZB1k4mQ9l2s6u8v0w3x5y7z9A==
       exp-min: 15
       period-seconds: 60
       clock-skew: 1
@@ -141,7 +142,7 @@ clova:
 exim:
   api:
     base: https://www.koreaexim.go.kr/site/program/financial/exchangeJSON
-    key: ${EXIM_API_KEY}
+    key: GWHvpofCSHfJ4eumZdAavLgNkl8J4qme
 
 # ===================================================================
 # JWT (JSON Web Token) CONFIGURATION
@@ -149,10 +150,10 @@ exim:
 jwt:
   access:
     secret: change-this-to-a-very-long-random-access-secret-at-least-64-bytes
-    ttl-seconds: 1800
+    ttl-seconds: 36000
   refresh:
     secret: change-this-to-a-very-long-random-refresh-secret-at-least-64-bytes
-    ttl-seconds: 604800
+    ttl-seconds: 86400
 
 # ===================================================================
 # LOGGING CONFIGURATION
