@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { transferApi } from '../../api/transferApi';
 
 // 이체 확인 모달 컴포넌트 - OTP 제거하고 계좌 비밀번호 입력으로 변경
@@ -232,6 +232,26 @@ export default function TransferPage() {
     setBanks(hardcodedBanks);
   }, []);
 
+
+  const location = useLocation();
+
+  // 컴포넌트가 마운트되거나 location이 변경될 때 실행
+  useEffect(() => {
+    // 1. 전달받은 state 객체 전체를 로그로 확인
+    console.log('--- Location State 전체 로그 ---');
+    console.log(location.state);
+
+    // 2. 전달받은 특정 계좌번호 값만 추출하여 로그로 확인
+    const passedAccountNumber = location.state?.fromAccountNumber; // 👈 fromAccountNumber 키로 접근
+    
+    if (passedAccountNumber) {
+      console.log('✅ 전달받은 계좌번호 (fromAccountNumber):', passedAccountNumber);
+    } else {
+      console.log('⚠️ 전달받은 계좌번호(fromAccountNumber)가 없습니다. (직접 URL 접근 등)');
+    }
+  }, [location]);
+
+
   // 계좌 목록과 잔액을 로드하는 함수 - API 호출로 실제 데이터 조회
   const loadAccountsAndBalance = async () => {
     try {
@@ -248,9 +268,18 @@ export default function TransferPage() {
         // 내 계좌 목록 설정 (현재 선택된 계좌 제외)
         setMyOtherAccounts(accounts);
         
+        // 2. 전달받은 특정 계좌번호 값만 추출하여 로그로 확인
+        const passedAccountNumber = location.state?.fromAccountNumber; // 👈 fromAccountNumber 키로 접근
+        
+        if (passedAccountNumber) {
+          console.log('✅ 전달받은 계좌번호 (fromAccountNumber):', passedAccountNumber);
+        } else {
+          console.log('⚠️ 전달받은 계좌번호(fromAccountNumber)가 없습니다. (직접 URL 접근 등)');
+        }
+
         // 첫 번째 계좌를 기본 선택으로 설정
         if (accounts.length > 0) {
-          const firstAccount = accounts[0];
+          const firstAccount = accounts.find((account) => account.accountNo === passedAccountNumber);
           setSelectedAccount(firstAccount);
           
           // 선택된 계좌의 잔액 조회
@@ -267,7 +296,7 @@ export default function TransferPage() {
       
     } catch (error) {
       console.error('계좌 정보 로딩 실패:', error.message || '알 수 없는 오류');
-      setError('계좌 정보를 불러오는데 실패했습니다.');
+      setError('보내실 계좌를 선택해주세요.');
     } finally {
       setIsLoading(false);
     }

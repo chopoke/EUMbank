@@ -112,7 +112,7 @@ function OverviewTab({onTabSwitch}) {
       icon: 'ri-exchange-line',
       color: 'from-orange-300 to-orange-300',
       image: 'https://readdy.ai/api/search-image?query=quick%20money%20transfer%20interface%20with%20arrows%20and%20banking%20symbols%2C%20modern%20digital%20payment%20system%2C%20clean%20white%20background%2C%20professional%20financial%20transfer%2C%20minimalist%20design&width=400&height=300&seq=quick_transfer&orientation=landscape',
-      href: "#"
+      href: "/transfer"
     }
   ];
 
@@ -266,7 +266,7 @@ function ProfileTab({initialData}) {
             cnameKr: profileData.name, 
             cnameEn: profileData.enname,
             cemail: profileData.email,
-            cPhoneMobile: profileData.phone,
+            cphoneMobile: profileData.phone,
             cBirthDt: profileData.birthDate,
             cGenderCd: profileData.gender,
 
@@ -404,6 +404,7 @@ function ProfileTab({initialData}) {
                             name="gender"
                             type="radio"
                             value="m"
+                            disabled={true}
                             checked={gender === 'm'}
                             onChange={handleGenderChange}
                             className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
@@ -420,6 +421,7 @@ function ProfileTab({initialData}) {
                             name="gender"
                             type="radio"
                             value="f"
+                            disabled={true}
                             checked={gender === 'f'}
                             onChange={handleGenderChange}
                             className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
