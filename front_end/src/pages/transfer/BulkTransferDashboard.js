@@ -277,7 +277,18 @@ export default function BulkTransferPage() {
         throw new Error(response.data?.message || '다건이체에 실패했습니다.');
       }
     } catch (err) {
-      setError(err.message);
+      console.error('다건이체 실행 실패:', err);
+      
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '다건이체 처리 중 오류가 발생했습니다.';
+      
+      if (err.response && err.response.data) {
+        errorMessage = err.response.data.error || err.response.data.message || errorMessage;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       setIsModalOpen(false);
     } finally {
       setIsLoading(false);

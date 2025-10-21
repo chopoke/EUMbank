@@ -243,7 +243,7 @@ export default function TransferPage() {
 
     // 2. 전달받은 특정 계좌번호 값만 추출하여 로그로 확인
     const passedAccountNumber = location.state?.fromAccountNumber; // 👈 fromAccountNumber 키로 접근
-    
+
     if (passedAccountNumber) {
       console.log('✅ 전달받은 계좌번호 (fromAccountNumber):', passedAccountNumber);
     } else {
@@ -270,7 +270,7 @@ export default function TransferPage() {
         
         // 2. 전달받은 특정 계좌번호 값만 추출하여 로그로 확인
         const passedAccountNumber = location.state?.fromAccountNumber; // 👈 fromAccountNumber 키로 접근
-        
+
         if (passedAccountNumber) {
           console.log('✅ 전달받은 계좌번호 (fromAccountNumber):', passedAccountNumber);
         } else {
@@ -295,8 +295,18 @@ export default function TransferPage() {
       }
       
     } catch (error) {
-      console.error('계좌 정보 로딩 실패:', error.message || '알 수 없는 오류');
-      setError('보내실 계좌를 선택해주세요.');
+      console.error('계좌 정보 로딩 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '계좌 정보를 불러오는데 실패했습니다.';
+
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -310,7 +320,18 @@ export default function TransferPage() {
         setFavoriteAccounts(response.data.data || []);
       }
     } catch (error) {
-      console.error('자주 쓰는 계좌 로딩 실패:', error.message || '알 수 없는 오류');
+      console.error('자주 쓰는 계좌 로딩 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '자주 쓰는 계좌를 불러오는데 실패했습니다.';
+
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      console.warn(errorMessage);
       setFavoriteAccounts([]);
     }
   };
@@ -403,7 +424,18 @@ export default function TransferPage() {
         setFee(0);
       }
     } catch (error) {
-      console.error('수수료 조회 실패:', error.message || '알 수 없는 오류');
+      console.error('수수료 조회 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '수수료 조회에 실패했습니다.';
+
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      console.warn(errorMessage);
       setFee(0); // 에러 시 무료로 설정
     }
   };
@@ -661,9 +693,20 @@ export default function TransferPage() {
       }
 
     } catch (error) {
-      console.error('이체 실행 실패:', error.message || '알 수 없는 오류');
-      setError(error.message || '이체 처리 중 오류가 발생했습니다.');
-      alert(error.message || '이체 처리 중 오류가 발생했습니다.');
+      console.error('이체 실행 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '이체 처리 중 오류가 발생했습니다.';
+
+      if (error.response && error.response.data) {
+        // 백엔드 TransferGlobalExceptionHandler에서 보내는 에러 메시지 사용
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
+      alert(`이체 실패: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -689,7 +732,18 @@ export default function TransferPage() {
       // 선택된 계좌의 최근 이체 내역 로드
       loadRecentRecipientsForAccount(account.aNo);
     } catch (error) {
-      console.error('잔액 조회 실패:', error.message || '알 수 없는 오류');
+      console.error('잔액 조회 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '잔액 조회에 실패했습니다.';
+
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      console.warn(errorMessage);
       setBalance(account.balance || 0); // 에러 시 계좌 객체의 잔액 사용
     }
   };
@@ -702,7 +756,18 @@ export default function TransferPage() {
         setFavoriteAccounts(response.data.data.recipients || []);
       }
     } catch (error) {
-      console.error('최근 이체 대상 로딩 실패:', error.message || '알 수 없는 오류');
+      console.error('최근 이체 대상 로딩 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '최근 이체 대상을 불러오는데 실패했습니다.';
+
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      console.warn(errorMessage);
       setFavoriteAccounts([]);
     }
   };
