@@ -906,6 +906,14 @@ public class TransferServiceImpl implements TransferService {
             
             log.info("조회된 이체 내역 건수: {}", recentTransfers.size());
             
+            // 모든 이체 내역 상세 로그 출력
+            for (int i = 0; i < recentTransfers.size(); i++) {
+                TransferHistory th = recentTransfers.get(i);
+                log.info("이체내역[{}] - ID: {}, 타입: {}, 상대계좌: {}, 금액: {}, 날짜: {}", 
+                    i, th.getTransferId(), th.getTransactionType(), 
+                    th.getOtherAccount(), th.getAmount(), th.getTransferAt());
+            }
+            
             if (recentTransfers.isEmpty()) {
                 log.warn("계좌 {}에 대한 이체 내역이 없습니다.", accountNo);
                 return new ArrayList<>();
@@ -980,13 +988,13 @@ public class TransferServiceImpl implements TransferService {
                 // 계좌 상태 검증
                 if (!"ACTIVE".equals(foundAccount.getStatus())) {
                     log.warn("계좌가 비활성 상태입니다 - 계좌번호: {}, 상태: {}", accountNumber, foundAccount.getStatus());
-                    throw new AccountStatusException("계좌가 거래 불가능한 상태입니다.");
+                    return "계좌 정보 없음";
                 }
                 
                 // 계좌의 고객번호로 고객 정보 조회하여 실제 이름 반환
                 String customerName = transferCustomerRepository.findById(foundAccount.getCNo())
                     .map(Customer::getCNameKr)
-                    .orElseThrow(() -> new AccountNotFoundException("고객 정보를 찾을 수 없습니다."));
+                    .orElse("계좌 정보 없음");
                 
                 log.info("예금주명 조회 완료 - 계좌번호: {}, 예금주: {}", accountNumber, customerName);
                 return customerName;
@@ -994,14 +1002,11 @@ public class TransferServiceImpl implements TransferService {
             
             // 계좌를 찾을 수 없는 경우
             log.warn("계좌를 찾을 수 없습니다 - 계좌번호: {}", accountNumber);
-            throw new AccountNotFoundException("존재하지 않는 계좌입니다: " + accountNumber);
+            return "계좌 정보 없음";
             
-        } catch (AccountNotFoundException | AccountStatusException e) {
-            // 계좌 관련 예외는 그대로 전파
-            throw e;
         } catch (Exception e) {
-            log.error("예금주명 조회 중 오류 발생 - 계좌: {}, 은행: {}", accountNumber, bank, e);
-            throw new RuntimeException("계좌 조회 중 오류가 발생했습니다.");
+            log.warn("예금주명 조회 실패 - 계좌번호: {}, 에러: {}", accountNumber, e.getMessage());
+            return "계좌 정보 없음";
         }
     }
     
