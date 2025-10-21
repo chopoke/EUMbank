@@ -75,9 +75,6 @@ public class Account {
     @Column(name = "a_rate", precision = 6, scale = 4)
     private BigDecimal rate;
 
-    @Column(name = "a_pin_number")
-    private Integer pinNumber;
-
     // 비즈니스 메서드들
     public boolean isActive() {
         return "ACTIVE".equals(this.status);

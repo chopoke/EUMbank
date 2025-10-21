@@ -1,6 +1,6 @@
 package com.boot.eumbank.transfer_domain.transfer.service;
 
-import com.boot.eumbank.account.Open.model.Account;
+import com.boot.eumbank.account.open.model.Account;
 import com.boot.eumbank.account.select.entity.TransferHistory;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.transfer_domain.account.entity.AccountLimit;

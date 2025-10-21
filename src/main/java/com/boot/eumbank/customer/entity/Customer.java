@@ -118,6 +118,15 @@ public class Customer {
     @Builder.Default
     private String loginType = "EUM";
 
+    @Column(name = "c_pin_number")
+    private String pinNumber;
+
+    @Column(name = "c_address")
+    private String cAddress;
+
+    @Column(name = "c_zip_code")
+    private String cZipCode;
+
     public void updateCustomer(SignupRequest signupRequest) {
         this.cPassword = signupRequest.getC_password();
         this.cNameKr = signupRequest.getC_name_kr();

@@ -1,10 +1,9 @@
 package com.boot.eumbank.account.open.util;
 
-import com.boot.eumbank.account.open.controller.UserController;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.customer.entity.QCustomer;
-import com.boot.eumbank.account.open.dto.VerifyMinSjonRequest;
-import com.boot.eumbank.account.open.dto.VerifyMinSjonResponse;
+import com.boot.eumbank.account.open.dto.account.VerifyMinSjonRequest;
+import com.boot.eumbank.account.open.dto.account.VerifyMinSjonResponse;
 
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -25,7 +24,7 @@ public class KycVerify {
 
     private final JPQLQueryFactory jpqlQueryFactory;
 
-    private Logger logger = LoggerFactory.getLogger(UserController.class);
+    private Logger logger = LoggerFactory.getLogger(KycVerify.class);
 
     public VerifyMinSjonResponse verify(VerifyMinSjonRequest req) {
         // --- 1. 현재 로그인한 사용자(JWT) 정보 가져오기 ---

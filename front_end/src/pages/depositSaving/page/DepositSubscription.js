@@ -1,3 +1,5 @@
+// 예금
+
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../css/depositSubscription.css'; // 예금 전용 CSS import
@@ -43,7 +45,6 @@ const depositProduct = {
 };
 
 const DepositSubscription = () => {
-    const navigate = useNavigate();
     const product = depositProduct;
 
     const [amount, setAmount] = useState(10000000);
