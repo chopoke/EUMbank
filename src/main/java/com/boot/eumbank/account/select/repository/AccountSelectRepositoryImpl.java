@@ -92,7 +92,7 @@ public class AccountSelectRepositoryImpl implements AccountRepositoryCustom {
             Integer aNo = t.get(TH.a_no);
             java.sql.Timestamp ts = t.get(TH.th_transfer_at.max());
             if (aNo != null && ts != null) {
-                result.put(aNo, ts.toLocalDateTime()); // ⭐ Timestamp → LocalDateTime 변환
+                result.put(aNo, ts.toLocalDateTime()); // localdata로 변환
             }
         }
         return result;
