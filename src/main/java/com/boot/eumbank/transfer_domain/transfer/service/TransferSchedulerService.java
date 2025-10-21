@@ -48,9 +48,9 @@ public class TransferSchedulerService {
 //        log.info("예약 이체 스케줄러 실행 시작 - {}", LocalDateTime.now());
         
         try {
-            // === 1단계: 스케줄된 예약 이체 목록 조회 ===
-            // SCHEDULED 상태의 예약 이체만 조회
-            List<TransferOrder> scheduledTransfers = transferOrderRepository.findByStatusAndStartAtLessThanEqual("SCHEDULED", LocalDateTime.now());
+            // === 1단계: 스케줄된 예약 이체 목록 조회 (Race Condition 방지) ===
+            // SELECT FOR UPDATE SKIP LOCKED를 사용하여 동시 실행 방지
+            List<TransferOrder> scheduledTransfers = transferOrderRepository.findByStatusAndStartAtLessThanEqualForUpdate("SCHEDULED", LocalDateTime.now());
             
             // 로그 기록 - 조회된 예약 이체 건수
 //            log.info("조회된 예약 이체 건수: {}", scheduledTransfers.size());
@@ -92,6 +92,11 @@ public class TransferSchedulerService {
         if (transferOrder.getTo_start_at() == null || now.isAfter(transferOrder.getTo_start_at())) {
             
             try {
+                // === 예약 이체 실행 전 상태 변경 (중복 실행 방지) ===
+                transferOrder.updateStatus("PROCESSING");
+                transferOrderRepository.save(transferOrder);
+                log.info("예약 이체 처리 시작 - 주문ID: {}, 상태: PROCESSING", transferOrder.getTo_order_id());
+                
                 // === 예약 이체 실행 ===
                 transferService.executeReserveTransfer(transferOrder.getTo_order_id());
                 

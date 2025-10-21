@@ -42,11 +42,12 @@ public interface Transfer_TransferOrderRepository extends JpaRepository<Transfer
     List<TransferOrder> findByAccountNoAndStatus(@Param("accountNo") Integer accountNo, @Param("status") String status);
 
     /**
-     * 실행 대기 중인 주문 조회 (스케줄러용)
+     * 실행 대기 중인 주문 조회 (스케줄러용) - Race Condition 방지
+     * Native SQL의 SELECT FOR UPDATE SKIP LOCKED를 사용하여 동시 실행 방지
      * @Query 사용으로 JPA 네이밍 규칙 문제 회피
      */
-    @Query("SELECT o FROM TransferOrder o WHERE o.to_status = :status AND o.to_start_at <= :currentTime")
-    List<TransferOrder> findByStatusAndStartAtLessThanEqual(@Param("status") String status, @Param("currentTime") LocalDateTime currentTime);
+    @Query(value = "SELECT * FROM transfer_order_tbl WHERE to_status = :status AND to_start_at <= :currentTime FOR UPDATE SKIP LOCKED", nativeQuery = true)
+    List<TransferOrder> findByStatusAndStartAtLessThanEqualForUpdate(@Param("status") String status, @Param("currentTime") LocalDateTime currentTime);
 
     /**
      * 완료된 주문 조회
