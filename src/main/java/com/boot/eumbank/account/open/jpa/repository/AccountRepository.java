@@ -1,9 +1,10 @@
 package com.boot.eumbank.account.open.jpa.repository;
 
 import com.boot.eumbank.account.open.dto.account.CustomerDTO;
-import com.boot.eumbank.account.open.model.Account;
-import com.boot.eumbank.account.open.model.QAccount;
+import com.boot.eumbank.account.open.entity.account.Account;
+import com.boot.eumbank.account.open.entity.account.QAccount;
 import com.boot.eumbank.account.open.util.AccountIds;
+
 import com.boot.eumbank.customer.entity.QCustomer;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.Expressions;
@@ -103,7 +104,7 @@ public class AccountRepository {
         logger.info("customer.getCNo() => " + customer.getCNo());
 
         qf.update(c)
-                .set(c.pinNumber, encryptedMPin)
+                .set(c.pinNumber, pinNumber)
                 .set(c.cRrnHash, rrn13FormId)
                 .set(c.cAddress, addressFromId)
                 .set(c.cZipCode, czipcode)

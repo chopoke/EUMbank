@@ -89,7 +89,8 @@ public class AccountServiceImpl implements AccoutService {
         // 4. 입력된 PIN과 저장된 PIN 비교
         // passwordEncoder.matches(평문, 해싱된 값)
         Map<String, Object> map = new HashMap<>();
-        map.put("pinBooleanCheck", passwordEncoder.matches(submittedPin, storedHashedPin));
+        //map.put("pinBooleanCheck", passwordEncoder.matches(submittedPin, storedHashedPin));
+        map.put("pinBooleanCheck", submittedPin.equals(user.getPinNumber()));
         map.put("name", user.getCNameKr());
         map.put("rrn6", user.getCBirthDt());
         map.put("address", user.getCAddress());

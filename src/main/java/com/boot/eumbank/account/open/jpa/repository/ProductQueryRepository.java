@@ -9,9 +9,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static com.boot.eumbank.account.open.model.QDepositProduct.depositProduct;
-import static com.boot.eumbank.account.open.model.QInstallmentProduct.installmentProduct;
-import static com.boot.eumbank.account.open.model.QAForeignProduct.aForeignProduct;
+import static com.boot.eumbank.account.open.entity.deposit.QProductForeignList.productForeignList;
+import static com.boot.eumbank.account.open.entity.deposit.QProductDepositList.productDepositList;
+import static com.boot.eumbank.account.open.entity.deposit.QProductInstallmentList.productInstallmentList;
 
 @Repository
 @RequiredArgsConstructor
@@ -25,14 +25,14 @@ public class ProductQueryRepository {
     public List<ProductDto> findDepositProducts() {
         return queryFactory
                 .select(Projections.constructor(ProductDto.class,
-                        depositProduct.dpCode,
-                        depositProduct.dpName,
-                        depositProduct.dpEarlyTerminationRate.stringValue().append("%"), // 예시: 이율을 문자열로
-                        depositProduct.dpMinAmount.stringValue().prepend("최소금액: ").append("원"),
+                        productDepositList.dpCode,
+                        productDepositList.dpName,
+                        productDepositList.dpEarlyTerminationRate.stringValue().append("%"), // 예시: 이율을 문자열로
+                        productDepositList.dpMinAmount.stringValue().prepend("최소금액: ").append("원"),
                         Expressions.stringTemplate("{0}", "예금")// 카테고리
                 ))
-                .from(depositProduct)
-                .where(depositProduct.dpIsActive.eq("Y"))
+                .from(productDepositList)
+                .where(productDepositList.dpIsActive.eq("Y"))
                 .fetch();
     }
 
@@ -42,14 +42,14 @@ public class ProductQueryRepository {
     public List<ProductDto> findInstallmentProducts() {
         return queryFactory
                 .select(Projections.constructor(ProductDto.class,
-                        installmentProduct.ipCode,
-                        installmentProduct.ipName,
-                        installmentProduct.ipEarlyTerminationRate.stringValue().append("%"),
-                        installmentProduct.ipMinMonthlyAmount.stringValue().prepend("최소납입: 월 ").append("원"),
+                        productInstallmentList.ipCode,
+                        productInstallmentList.ipName,
+                        productInstallmentList.ipEarlyTerminationRate.stringValue().append("%"),
+                        productInstallmentList.ipMinMonthlyAmount.stringValue().prepend("최소납입: 월 ").append("원"),
                         Expressions.stringTemplate("{0}", "적금")
                 ))
-                .from(installmentProduct)
-                .where(installmentProduct.ipIsActive.eq("Y"))
+                .from(productInstallmentList)
+                .where(productInstallmentList.ipIsActive.eq("Y"))
                 .fetch();
     }
 
@@ -59,13 +59,13 @@ public class ProductQueryRepository {
     public List<ProductDto> findForeignProducts() {
         return queryFactory
                 .select(Projections.constructor(ProductDto.class,
-                        aForeignProduct.id.stringValue(),
-                        aForeignProduct.curNm,
-                        aForeignProduct.apy.stringValue().prepend("연 ").append("%"),
-                        aForeignProduct.prodType, // 최소금액 대신 상품 타입으로 대체 (예시)
+                        productForeignList.id.stringValue(),
+                        productForeignList.curNm,
+                        productForeignList.apy.stringValue().prepend("연 ").append("%"),
+                        productForeignList.prodType, // 최소금액 대신 상품 타입으로 대체 (예시)
                         Expressions.stringTemplate("{0}", "외환")
                 ))
-                .from(aForeignProduct)
+                .from(productForeignList)
                 // 외환 상품은 활성 상태 컬럼이 없으므로 조건 생략 (필요 시 추가)
                 .fetch();
     }

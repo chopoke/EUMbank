@@ -20,8 +20,6 @@ apiConfig.interceptors.request.use(
     // 로컬 스토리지에서 access token을 가져옵니다.
     const token = localStorage.getItem("access");
 
-    console.log(token);
-
     // 토큰이 존재하면 Authorization 헤더에 담아줍니다.
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

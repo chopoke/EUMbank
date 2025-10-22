@@ -151,7 +151,7 @@ const TermsAgreement = ({ productType }) => {
     };
 
     return (
-        <div className="container">
+        <div className="containerdepart">
             <button className="back-button" onClick={handleBack}>← 뒤로가기</button>
             <div className="terms-box modern">
                 <h2>{terms.title}</h2>

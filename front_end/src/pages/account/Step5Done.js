@@ -43,8 +43,8 @@ export default function Step5Done() {
     }, [submitted]);
 
     const productLabel =
-        step4.product === "saving" ? "자유적금" :
-            step4.product === "deposit" ? "입출금통장" : "-";
+        step4.product === "자유적금" ? "자유적금" :
+            step4.product === "입출금" ? "입출금통장" : "-";
     if (saving) {
         return (
             <Frame>

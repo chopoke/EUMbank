@@ -1,6 +1,6 @@
 package com.boot.eumbank.transfer_domain.transfer.entity;
 
-import com.boot.eumbank.account.open.model.Account;
+import com.boot.eumbank.account.open.entity.account.Account;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

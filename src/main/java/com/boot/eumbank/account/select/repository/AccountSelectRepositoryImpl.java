@@ -1,7 +1,8 @@
 package com.boot.eumbank.account.select.repository;
 
-import com.boot.eumbank.account.open.model.Account;
-import com.boot.eumbank.account.open.model.QAccount;
+import com.boot.eumbank.account.open.entity.account.Account;
+//import com.boot.eumbank.account.open.entity;
+import com.boot.eumbank.account.open.entity.account.QAccount;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

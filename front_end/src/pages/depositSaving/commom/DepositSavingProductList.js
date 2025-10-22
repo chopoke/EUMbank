@@ -49,8 +49,8 @@ const DepositSavingProductList = () => {
     };
 
     return (
-        <div className="container">
-            <header>
+        <div className="containerdepart">
+            <header className='headerType'>
                 <h1>전체 금융 상품</h1>
                 <p>다양한 금융 상품을 둘러보고 나에게 맞는 최적의 상품을 찾아보세요.</p>
             </header>
@@ -59,7 +59,7 @@ const DepositSavingProductList = () => {
                 <input
                     type="text"
                     placeholder="상품명 검색..."
-                    className="search-input"
+                    className="depositsearch-input"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />

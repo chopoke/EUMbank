@@ -47,6 +47,12 @@ public class AccountController {
 
     private final AccoutService accoutService;
 
+    /**
+     * NAVER CLOVA에 주민등록증 O
+     * @param file
+     * @param messageJson
+     * @return
+     */
     @PostMapping(value = "/ocr-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> proxyToClova(
             @RequestPart("file") MultipartFile file,

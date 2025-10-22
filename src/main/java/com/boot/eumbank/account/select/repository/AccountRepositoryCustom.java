@@ -1,6 +1,6 @@
 package com.boot.eumbank.account.select.repository;
 
-import com.boot.eumbank.account.open.model.Account;
+import com.boot.eumbank.account.open.entity.account.Account;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
