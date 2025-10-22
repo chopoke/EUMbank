@@ -732,6 +732,15 @@ export default function TransferPage() {
           case 'INVALID_AMOUNT':
             userFriendlyMessage = '이체 금액이 올바르지 않습니다.';
             break;
+          case 'PER_TRANSFER_LIMIT_EXCEEDED':
+            userFriendlyMessage = '1회 이체 한도를 초과했습니다.';
+            break;
+          case 'DAILY_LIMIT_EXCEEDED':
+            userFriendlyMessage = '일일 이체 한도를 초과했습니다.';
+            break;
+          case 'MONTHLY_LIMIT_EXCEEDED':
+            userFriendlyMessage = '월간 이체 한도를 초과했습니다.';
+            break;
           case 'LIMIT_EXCEEDED':
             userFriendlyMessage = '이체 한도를 초과했습니다.';
             break;

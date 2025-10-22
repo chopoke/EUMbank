@@ -251,10 +251,8 @@ public class TransferServiceImpl implements TransferService {
                 .mapToInt(RecipientDto::getAmount)
                 .sum();
 
-        // 5. 총 이체 한도 확인
-        if (!checkTransferLimit(request.getFromAccountNo(), totalAmount)) {
-            throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), totalAmount);
-        }
+        // 5. 총 이체 한도 확인 (총합 먼저 검증)
+        checkTransferLimit(request.getFromAccountNo(), totalAmount);
 
         // 6. 각 수취인별 이체 실행 (개별 트랜잭션으로 처리)
         List<TransferResultDto> results = new ArrayList<>();
@@ -757,24 +755,50 @@ public class TransferServiceImpl implements TransferService {
         // 계좌 한도 정보 조회
         Optional<AccountLimit> limitOpt = accountLimitRepository.findByAccountNo(accountNo);
         
+        AccountLimit limit;
         if (limitOpt.isEmpty()) {
-            // 한도 정보가 없으면 기본 한도 적용 (예: 1,000만원)
-            return amount <= 10_000_000;
+            // 한도 정보가 없으면 기본 한도 적용
+            log.warn("계좌 한도 정보 없음. 기본 한도 적용 - 계좌: {}", accountNo);
+            limit = AccountLimit.builder()
+                        .perTransferLimit(new BigDecimal("10000000"))  // 1회 1천만원
+                        .dailyTransferLimit(new BigDecimal("50000000"))  // 일일 5천만원
+                        .monthlyTransferLimit(new BigDecimal("100000000"))  // 월간 1억원
+                        .build();
+        } else {
+            limit = limitOpt.get();
         }
 
-        AccountLimit limit = limitOpt.get();
+        BigDecimal transferAmount = BigDecimal.valueOf(amount);
+
+        // 1. 1회 이체 한도 확인
+        if (transferAmount.compareTo(limit.getPerTransferLimit()) > 0) {
+            log.warn("1회 이체 한도 초과 - 계좌: {}, 한도: {}, 시도: {}", 
+                     accountNo, limit.getPerTransferLimit(), amount);
+            throw LimitExceededException.perTransferLimit(limit.getPerTransferLimit(), amount);
+        }
+
+        // 2. 일일 이체 한도 확인
+        Integer todaySum = transferHistoryRepository.getTodayWithdrawSum(accountNo);
+        BigDecimal totalDailyAmount = BigDecimal.valueOf(todaySum).add(transferAmount);
         
-        // 1회 이체 한도 확인
-        if (amount > limit.getPerTransferLimit().intValue()) {
-            return false;
+        if (totalDailyAmount.compareTo(limit.getDailyTransferLimit()) > 0) {
+            log.warn("일일 이체 한도 초과 - 계좌: {}, 한도: {}, 오늘 기출금액: {}, 총 시도액: {}",
+                     accountNo, limit.getDailyTransferLimit(), todaySum, totalDailyAmount);
+            throw LimitExceededException.dailyLimit(limit.getDailyTransferLimit(), todaySum, amount);
+        }
+        
+        // 3. 월간 이체 한도 확인
+        Integer monthlySum = transferHistoryRepository.getMonthlyWithdrawSum(accountNo);
+        BigDecimal totalMonthlyAmount = BigDecimal.valueOf(monthlySum).add(transferAmount);
+
+        if (totalMonthlyAmount.compareTo(limit.getMonthlyTransferLimit()) > 0) {
+            log.warn("월간 이체 한도 초과 - 계좌: {}, 한도: {}, 이번 달 기출금액: {}, 총 시도액: {}",
+                     accountNo, limit.getMonthlyTransferLimit(), monthlySum, totalMonthlyAmount);
+            throw LimitExceededException.monthlyLimit(limit.getMonthlyTransferLimit(), monthlySum, amount);
         }
 
-        // 일일 이체 한도 확인 (실제로는 오늘 이체액을 계산해야 함)
-        // 여기서는 간단히 1회 한도의 10배로 설정
-        if (amount > limit.getPerTransferLimit().multiply(BigDecimal.TEN).intValue()) {
-            return false;
-        }
-
+        log.info("이체 한도 검증 통과 - 계좌: {}, 금액: {}, 오늘 출금액: {}, 이번 달 출금액: {}",
+                 accountNo, amount, todaySum, monthlySum);
         return true;
     }
 
