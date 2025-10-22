@@ -114,6 +114,7 @@ export default function TransferPage() {
   const [fee, setFee] = useState(0);
   const [activeTab, setActiveTab] = useState('fav');
   const [amount, setAmount] = useState('');
+  const [formattedAmount, setFormattedAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [isReserved, setIsReserved] = useState(false);
@@ -478,8 +479,40 @@ export default function TransferPage() {
     return formatKRW(balance - (numericAmount + fee));
   }, [numericAmount, balance, fee]);
 
+  // 금액 포맷팅 함수 (3자리마다 콤마)
+  const formatAmount = (value) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  // 금액 입력 처리 함수
+  const handleAmountChange = (e) => {
+    const inputValue = e.target.value;
+    const numericValue = inputValue.replace(/[^0-9]/g, '');
+    
+    // 최대 1억원 제한
+    if (parseInt(numericValue) > 100000000) {
+      return;
+    }
+    
+    setAmount(numericValue);
+    setFormattedAmount(formatAmount(numericValue));
+  };
+
   // 금액 추가 함수
-  const handleAddAmount = (addValue) => setAmount(String(numericAmount + addValue));
+  const handleAddAmount = (addValue) => {
+    const currentAmount = parseInt(amount || '0');
+    const newAmount = currentAmount + addValue;
+    
+    // 최대 1억원 제한
+    if (newAmount > 100000000) {
+      return;
+    }
+    
+    const newAmountStr = String(newAmount);
+    setAmount(newAmountStr);
+    setFormattedAmount(formatAmount(newAmountStr));
+  };
   
   // 자주 쓰는 계좌 선택 함수
   const handleSelectFavorite = (account) => {
@@ -829,6 +862,7 @@ export default function TransferPage() {
   // 취소 버튼 핸들러 - 입력 초기화
   const handleCancel = () => {
     setAmount('');
+    setFormattedAmount('');
     setMemo('');
     setSelectedRecipient(null);
     setIsReserved(false);
@@ -1090,7 +1124,13 @@ export default function TransferPage() {
                     <div className="col-span-12 md:col-span-6">
                       <label className="block text-sm font-medium text-gray-800 mb-1">보낼 금액</label>
                       <div className="relative">
-                        <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="numeric" className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="0" />
+                        <input 
+                          value={formattedAmount} 
+                          onChange={handleAmountChange} 
+                          inputMode="numeric" 
+                          className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" 
+                          placeholder="0" 
+                        />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3">
                           <button onClick={() => handleAddAmount(100000)} className="text-sm text-blue-600 hover:underline">+10만</button>
                           <button onClick={() => handleAddAmount(500000)} className="text-sm text-blue-600 hover:underline">+50만</button>
@@ -1132,7 +1172,7 @@ export default function TransferPage() {
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 7h18v10H3V7Zm0 3h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       이체 후 예상 잔액
                     </div>
-                    <div className="font-semibold">{remainingBalance}</div>
+                    <div className="font-semibold font-mono">{remainingBalance}</div>
                   </div>
 
                   {/* 에러 메시지 표시 */}

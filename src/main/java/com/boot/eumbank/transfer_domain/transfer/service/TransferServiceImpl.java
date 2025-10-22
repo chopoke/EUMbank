@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
@@ -54,6 +55,17 @@ public class TransferServiceImpl implements TransferService {
     public TransferResponseDto processTransfer(TransferRequestDto request) {
         log.info("일반 이체 처리 시작 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
                 request.getFromAccountNo(), request.getToAccount(), request.getAmount());
+
+        // 0. JWT 토큰에서 고객 정보 추출 및 계좌 소유자 검증
+        Customer customer = (Customer) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (customer == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        
+        // 계좌 소유자 검증 (최우선)
+        if (!validateAccountOwnership(request.getFromAccountNo(), customer.getCustomerNo())) {
+            throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
+        }
 
         // 1. 기본 검증
         validateTransferRequest(request);
@@ -111,6 +123,17 @@ public class TransferServiceImpl implements TransferService {
                 request.getAccountNo(), request.getDestAccountNo(), request.getAmount(), request.getStartAt());
 
         try {
+            // 0. JWT 토큰에서 고객 정보 추출 및 계좌 소유자 검증
+            Customer customer = (Customer) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (customer == null) {
+                throw new UnauthorizedException("인증이 필요합니다.");
+            }
+            
+            // 계좌 소유자 검증 (등록 시점에 검증)
+            if (!validateAccountOwnership(request.getAccountNo(), customer.getCustomerNo())) {
+                throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
+            }
+
             // 1. 기본 검증
             log.info("1. 기본 검증 시작");
             validateReserveTransferRequest(request);
@@ -233,6 +256,17 @@ public class TransferServiceImpl implements TransferService {
         log.info("다건 이체 처리 시작 - 출금계좌: {}, 수취인 수: {}", 
                 request.getFromAccountNo(), request.getRecipients().size());
 
+        // 0. JWT 토큰에서 고객 정보 추출 및 계좌 소유자 검증
+        Customer customer = (Customer) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (customer == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        
+        // 계좌 소유자 검증 (최우선)
+        if (!validateAccountOwnership(request.getFromAccountNo(), customer.getCustomerNo())) {
+            throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
+        }
+
         // 1. 기본 검증
         validateBulkTransferRequest(request);
 
@@ -353,6 +387,26 @@ public class TransferServiceImpl implements TransferService {
                     fromAccountNo, toAccountNo, e.getMessage());
             throw e; // 상위로 예외 전파
         }
+    }
+
+    /**
+     * 계좌 소유자 검증
+     * @param accountNo 계좌 번호
+     * @param customerNo JWT 토큰의 고객 번호
+     * @return 검증 성공 여부
+     */
+    private boolean validateAccountOwnership(Integer accountNo, Integer customerNo) {
+        Account account = accountRepository.findById(accountNo)
+                .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
+        
+        if (!account.getCNo().equals(customerNo)) {
+            log.warn("계좌 소유자 불일치 - 계좌: {}, 요청자: {}, 실제 소유자: {}", 
+                    accountNo, customerNo, account.getCNo());
+            return false;
+        }
+        
+        log.info("계좌 소유자 검증 통과 - 계좌: {}, 소유자: {}", accountNo, customerNo);
+        return true;
     }
 
     /**

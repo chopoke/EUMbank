@@ -185,10 +185,31 @@ export default function BulkTransferPage() {
     loadInitialData();
   }, []);
 
-  const makeRow = () => ({ id: randId(), bankCode: '', account: '', holder: '', amount: '', memo: '', isVerifying: false, debounceTimer: null });
+  const makeRow = () => ({ id: randId(), bankCode: '', account: '', holder: '', amount: '', formattedAmount: '', memo: '', isVerifying: false, debounceTimer: null });
   const addRow = () => setRows(prev => [...prev, makeRow()]);
   const removeRow = (id) => setRows(prev => prev.length > 1 ? prev.filter(r => r.id !== id) : [makeRow()]);
   const setRow = (id, patch) => setRows(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+  
+  // 금액 포맷팅 함수 (3자리마다 콤마)
+  const formatAmount = (value) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  // 금액 입력 처리 함수
+  const handleAmountChange = (rowId, inputValue) => {
+    const numericValue = inputValue.replace(/[^0-9]/g, '');
+    
+    // 최대 1억원 제한
+    if (parseInt(numericValue) > 100000000) {
+      return;
+    }
+    
+    setRow(rowId, { 
+      amount: numericValue,
+      formattedAmount: formatAmount(numericValue)
+    });
+  };
   const clearAll = () => setRows([makeRow()]);
   
   const handleAccountChange = (account) => {
@@ -237,7 +258,7 @@ export default function BulkTransferPage() {
   const totals = useMemo(() => {
     let count = 0, totalAmount = 0, fee = 0, hasError = false;
     for (const r of rows) {
-      const amount = parseInt(String(r.amount).replace(/,/g, ''), 10) || 0;
+      const amount = parseInt(String(r.amount || '').replace(/[^0-9]/g, ''), 10) || 0;
       if (amount > 0 && r.bankCode && r.account && r.holder && r.holder !== '예금주 없음') {
         count++; totalAmount += amount;
       } else if (r.bankCode || r.account || r.amount) {
@@ -443,8 +464,13 @@ export default function BulkTransferPage() {
                         </div>
                         <div className="md:col-span-1">
                           <label className="block text-sm font-medium text-gray-800 mb-1">금액(원)</label>
-                          <input value={row.amount} onChange={e => setRow(row.id, { amount: e.target.value })}
-                                 className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                          <input 
+                            value={row.formattedAmount || ''} 
+                            onChange={e => handleAmountChange(row.id, e.target.value)}
+                            inputMode="numeric"
+                            className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" 
+                            placeholder="0"
+                          />
                         </div>
                         <div className="md:col-span-2">
                           <label className="block text-sm font-medium text-gray-800 mb-1">메모</label>
