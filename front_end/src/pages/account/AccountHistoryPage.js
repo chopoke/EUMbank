@@ -1,6 +1,8 @@
 import React from "react";
 import { fetchAccountDetail, fetchAccountTransactions, updateAccountAlias } from "../../api/accounts";
 import {  useNavigate, useParams } from "react-router-dom";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 
 // 유틸부분 포맷 등
@@ -10,6 +12,7 @@ const formatCur = (amt)=> {
   const sign = amt < 0 ? '-' : '';    // 원금이 음수라면 - 붙여주기
   return `${sign}₩ ${won(abs)}`;      // 포맷해서 정리
 };
+
 
 const parseTs = (v) =>{
   // 들어오는거 없으면 건너뛰기
@@ -61,6 +64,22 @@ function AccountHistoryPage(){
   const [sortKey, setSortKey] = React.useState("latest");
 
   const navigate = useNavigate();
+
+  // 폰트 사용을 위한 캐시처리
+  const fontCache = React.useRef({regular:""});
+  async function loadFontBase64(url){
+    if(!url) return "";
+    const result = await fetch(url);
+    const buffers = await result.arrayBuffer();
+
+    let binary = "";
+    const byt = new Uint8Array(buffers);
+    const chunk = 0x8000;
+    for(let i=0; i<byt.length; i+= chunk){
+      binary += String.fromCharCode(...byt.subarray(i, i+chunk));
+    }
+    return btoa(binary);
+  }
 
   // 페이지네이션
   const [page, setPage] = React.useState(0);          // 백엔드에서 넘긴 값
@@ -210,6 +229,57 @@ function AccountHistoryPage(){
     a.click();
     URL.revokeObjectURL(url);     // createObjectURL로 생긴 url 폐기
   }
+
+  // PDF 파일 다운로드
+  async function downloadPdf(list) {
+    //폰트로딩
+    const doc = new jsPDF({unit:"pt", format:"a4"});
+    // 한글폰트로딩
+    if(!fontCache.current.regular){
+      fontCache.current.regular = await loadFontBase64("/font/NotoSansKR.ttf");   // 폰트 로드되지 않았다면 다시 로드
+    }
+    doc.addFileToVFS("NotoSansKR.ttf", fontCache.current.regular);
+    doc.addFont("NotoSansKR.ttf", "NotoSansKR", "normal");
+    doc.setFont("NotoSansKR", "normal");
+
+    // 제목
+    doc.setFontSize(15);
+    doc.text("이체 내역", 40, 40);
+    doc.setFontSize(10);
+    doc.text(`출력일 : ${new Date().toLocaleString('ko-KR')}`, 40, 58);
+
+    //테이블구성
+    const head = [["일시", "구분", "상대", "메모", "금액(±)", "잔액"]];
+    const body = list.map((r) => [`${toISODate(r.ts)} ${r.time}`, r.type, r.counterparty, r.memo, r.amount, r.balance
+    ]);
+
+    //autoTable 호출
+    autoTable(doc, {
+    head,
+    body,
+    startY: 76,
+    styles: { font: "NotoSansKR", fontSize: 9, cellPadding: 6, fontStyle: "normal" },
+    headStyles: { font: "NotoSansKR", fontStyle: "normal", fillColor: [242, 242, 242], textColor: 20 },
+    // 컬럼 인덱스: 0~5 (금액, 잔액만 오른쪽 정렬)
+    columnStyles: {
+      4: { halign: "right", cellWidth: 80 },
+      5: { halign: "right", cellWidth: 80 },
+    },
+    didDrawPage: (data) => {
+      const pageCnt = doc.getNumberOfPages();
+      const str = `Page ${data.pageNumber} / ${pageCnt}`;
+      doc.setFontSize(9);
+      doc.text(
+        str,
+        doc.internal.pageSize.getWidth() - 80,
+        doc.internal.pageSize.getHeight() - 20
+      );
+    },
+  });
+}
+
+
+
   // 계좌 상태 필터링
   const Chip = ({ active, children, onClick }) => (
     <button onClick={onClick} className={"px-3 py-1.5 rounded-full text-xs border transition " + (active ? "bg-blue-50 text-blue-700 border-blue-300" : "hover:bg-gray-50")}>{children}</button>
@@ -378,6 +448,9 @@ function AccountHistoryPage(){
                   <button onClick={() => downloadCsv(rows)} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">
                     CSV 다운로드 
                   </button>
+                  <button onClick={() => downloadPdf(rows)} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">
+                    PDF 다운로드 
+                  </button>
                   <button onClick={() => { window.location.reload(); }} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">새로고침</button>
                 </div>
               </div>
@@ -429,7 +502,6 @@ function AccountHistoryPage(){
     </div>
   );
 }
-
 
 
 export { AccountHistoryPage };

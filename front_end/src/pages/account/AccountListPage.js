@@ -1,6 +1,8 @@
 import React from "react";
 import { fetchAccounts } from "../../api/accounts";
 import { Link, useNavigate } from "react-router-dom";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 function AccountListPage(){
   
@@ -15,7 +17,21 @@ function AccountListPage(){
   const [maxBal, setMaxBal] = React.useState("");
   const [statuses, setStatuses] = React.useState(new Set());
   const [sortKey, setSortKey] = React.useState("recent");
-  const navigate = useNavigate();
+
+  // 폰트 캐시
+  const fontCache = React.useRef ({regular: ""});
+  async function loadFontBase64(url){
+    if(!url) return "";
+    const res = await fetch(url);
+    const buf = await res.arrayBuffer();    
+    let binary = "";
+    const bytes = new Uint8Array(buf);  // AfterBuffer -> Base64
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
 
   React.useEffect(()=>{
     let alive = true;
@@ -120,6 +136,53 @@ function AccountListPage(){
     a.download = "accounts.csv"; 
     a.click(); 
     URL.revokeObjectURL(url);
+  }
+
+  // pdf 파일 다운로드를 위한  npm i jspdf jspdf-autotable
+  async function downloadPdf(rows) {
+    
+    // 문서생성
+    const docu = new jsPDF({unit:"pt", format:"a4"})    // pt:단위
+    // 한글 폰트 로딩
+    if (!fontCache.current.regular) {
+      fontCache.current.regular = await loadFontBase64("/font/NotoSansKR.ttf");
+    }
+    docu.addFileToVFS("NotoSansKR.ttf", fontCache.current.regular);
+    docu.addFont("NotoSansKR.ttf", "NotoSansKR", "normal");
+    docu.setFont("NotoSansKR", "normal");
+
+    // 제목
+    docu.setFontSize(14);
+    docu.text("계좌 목록 내역", 40, 40);
+    docu.setFontSize(10);
+    docu.text(`생성일 : ${new Date().toLocaleString('ko-KR')}`,40, 58 );
+
+    // 테이블 구성
+    const head = [["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"]];
+    const body = rows.map((r) => [
+      r.nickname, r.accountName, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity
+    ]);
+
+    // autoTable 호출
+    autoTable(docu, {
+      head,
+      body,
+      startY:76,      // 테이블 시작점 :-> 제목 아래
+      styles:{font:"NotoSansKR", fontSize:9, cellPadding:6},
+      headStyles:{font:"NotoSansKR", fontStyle: "normal", fillColor:[242, 242, 242], textColor:20},
+      columnStyles: { 5: { halign: "right", cellWidth: 70 }, 8: { cellWidth: 140 } }, // 컬럼 폭
+      // 하단 페이지 번호 조정
+      didDrawPage:(data) => {
+        const pageCnt = docu.getNumberOfPages();
+        const str = `Page ${data.pageNumber} / ${pageCnt}`;
+        docu.setFontSize(9);
+        docu.text(str, 
+          docu.internal.pageSize.getWidth() -80, 
+          docu.internal.pageSize.getHeight() -20);
+      }
+    });
+    // 저장
+    docu.save(`accounts-${Date.now()}.pdf`);
   }
 
 
@@ -271,6 +334,7 @@ function AccountListPage(){
                   {/* csv */}
                   <div className="flex items-center gap-2">
                     <button onClick={()=>downloadCsv(filtered)} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">CSV 다운로드</button>
+                    <button onClick={()=>downloadPdf(filtered)} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">PDF 다운로드</button>
                     <button onClick={()=>setAccounts(a=>[...a])} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">목록 새로고침</button>
                   </div>
                 </div>
