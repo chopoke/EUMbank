@@ -33,7 +33,8 @@ export default function LoanProductsListPage(){
     try {
       if (uiType === '전체') {
         const types = ['MORTGAGE','JEONSE','PERSONAL'];
-        const resArr = await Promise.all(types.map(t => fetchLoanProducts({ type: t, page: 0, size: 100 })));
+        const resArr = await Promise.all(types.map(t => 
+          fetchLoanProducts({ type: t, page: 0, size: 100 })));
         const merged = resArr.flatMap(res => {
           const d = res.data;
           return Array.isArray(d) ? d
@@ -53,14 +54,13 @@ export default function LoanProductsListPage(){
         setPRODUCTS(items);
       }
     } catch (e) {
-
            console.error('대출상품 불러오기 실패', e);
       setPRODUCTS([]);
     }
   }
 
   React.useEffect(() => { loadProductsFor('전체'); }, []);
-  React.useEffect(() => { loadProductsFor(type); setPage(1); }, [type]);
+  React.useEffect(() => { loadProductsFor(type); setPage(1); }, [type]);    // 대출종류 변경시 1페이지로
 
   const TYPES = ['전체','신용대출','주택담보','전세자금'];
   const SORTS = [
@@ -73,8 +73,8 @@ export default function LoanProductsListPage(){
   
 
   // 모달 상태
-  const [showCompare, setShowCompare] = React.useState(false);
-  const [showPrequal, setShowPrequal] = React.useState(false);
+  const [showCompare, setShowCompare] = React.useState(false);    // 바교 모달
+  const [showPrequal, setShowPrequal] = React.useState(false);    // 간편 비교
 
   // 간편조회(사전심사 모의) 입력값
   const [income, setIncome] = React.useState(40_000_000); // 연소득
@@ -82,15 +82,18 @@ export default function LoanProductsListPage(){
   const CREDIT_MIN=350, CREDIT_MAX=999;
 
 
-
-
   // 파생 계산 ----------------
   const filterFn = (p)=>{
-    if(type !== '전체' && p.type !== type) return false;
+    // 타입필터
+    if(type !== '전체' && p.type !== type) return false;   
+    // 검색어 필터
     if(q && !(p.name+ p.desc + p.tags.join(',') + p.badges.join(',')).toLowerCase().includes(q.toLowerCase())) return false;
+    // 금리필터
     const rateOk = p.rateMax >= rateRange[0] && p.rateMin <= rateRange[1];
     if(!rateOk) return false;
+    // 한도 필터
     if(limitMin && p.limitMax < limitMin) return false;
+    // 최장기간 필터
     if(termMin && Math.max(...p.termMonths) < termMin) return false;
     return true;
   };
@@ -105,8 +108,12 @@ export default function LoanProductsListPage(){
     }
   };
 
-  const filtered = React.useMemo(()=> PRODUCTS.filter(filterFn).sort(sortFn), [PRODUCTS, q, type, rateRange, limitMin, termMin, sort]);
+  const filtered = React.useMemo(()=> 
+    PRODUCTS.filter(filterFn).sort(sortFn), 
+  [PRODUCTS, q, type, rateRange, limitMin, termMin, sort]);
+
   const visible = filtered.slice(0, PAGE_SIZE * page);
+
   const hasMore = visible.length < filtered.length;
 
   function toggleSelected(id){
@@ -132,8 +139,9 @@ export default function LoanProductsListPage(){
 
   // ---------------- 카드 ----------------
   function ProductCard({p}){
-    const maxTerm = Math.max(...p.termMonths);
-    const checked = selected.includes(p.id);
+    
+    const maxTerm = Math.max(...p.termMonths);  // 최장기간
+    const checked = selected.includes(p.id);    // 체크 아이템들
     return (
       <div className={`rounded-2xl border border-gray-100 bg-white p-5 shadow-sm hover:shadow-md transition ${checked? 'ring-2 ring-blue-600' : ''}`}>
         <div className="flex items-start justify-between gap-3">

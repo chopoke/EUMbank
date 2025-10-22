@@ -42,8 +42,10 @@ public class LoanServiceImpl implements LoanService {
         // 배지(금리유형/상환방식)
         LinkedHashSet<String> badges = new LinkedHashSet<>();
         for (var o : opts) {
-            if (notBlank(o.getLendRateTypeNm())) badges.add(o.getLendRateTypeNm());
-            if (notBlank(o.getRpayTypeNm()))     badges.add(o.getRpayTypeNm());
+            if (notBlank(o.getLendRateTypeNm()))        // 금리 타입이 있다면
+                badges.add(o.getLendRateTypeNm());      // 뱃지에 추가
+            if (notBlank(o.getRpayTypeNm()))     
+                badges.add(o.getRpayTypeNm());
         }
 
         // 옵션 DTO
