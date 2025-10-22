@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @Entity
 @Table(name = "FOREIGN_PRODUCT_TBL")
-public class AForeignProduct {
+public class ProductForeignList {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

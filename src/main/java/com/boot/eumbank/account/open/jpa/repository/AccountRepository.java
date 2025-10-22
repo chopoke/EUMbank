@@ -2,8 +2,9 @@ package com.boot.eumbank.account.open.jpa.repository;
 
 import com.boot.eumbank.account.open.dto.account.CustomerDTO;
 import com.boot.eumbank.account.open.entity.account.Account;
-import com.boot.eumbank.account.open.entity.QAccount;
+import com.boot.eumbank.account.open.entity.account.QAccount;
 import com.boot.eumbank.account.open.util.AccountIds;
+
 import com.boot.eumbank.customer.entity.QCustomer;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.Expressions;
