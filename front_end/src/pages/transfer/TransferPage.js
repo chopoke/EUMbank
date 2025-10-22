@@ -652,7 +652,7 @@ export default function TransferPage() {
       // 즉시 이체 실행
       const response = await transferApi.createTransfer(requestData);
 
-      if (response.data && response.data.success) {
+      if (response.data && response.data.success === true) {
         // API 응답에서 새로운 잔액 사용
         const newBalance = response.data.data.afterBalance || (balance - numericAmount);
         setBalance(newBalance);
@@ -686,10 +686,12 @@ export default function TransferPage() {
         loadFavoriteAccounts();
         loadRecentRecipients();
       } else {
-        // 이체 실패 시 alert로 에러 메시지 표시
-        const errorMessage = response.data?.message || response.error || '이체 처리에 실패했습니다.';
+        // 이체 실패 시 alert로 에러 메시지 표시하고 완료 페이지로 이동하지 않음
+        const errorMessage = response.data?.message || response.data?.error || '이체 처리에 실패했습니다.';
+        console.error('이체 실패 응답:', response.data);
         alert(`이체 실패: ${errorMessage}`);
-        throw new Error(errorMessage);
+        setIsModalOpen(false); // 모달 닫기
+        return; // 함수 종료 (완료 페이지로 이동하지 않음)
       }
 
     } catch (error) {
@@ -697,16 +699,57 @@ export default function TransferPage() {
 
       // 백엔드에서 보내는 구체적인 에러 메시지 추출
       let errorMessage = '이체 처리 중 오류가 발생했습니다.';
+      let errorCode = null;
+
 
       if (error.response && error.response.data) {
         // 백엔드 TransferGlobalExceptionHandler에서 보내는 에러 메시지 사용
         errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+        errorCode = error.response.data.errorCode;
       } else if (error.message) {
         errorMessage = error.message;
       }
+      
+      // 실패 사유별 구분된 메시지 표시
+      let userFriendlyMessage = errorMessage;
 
-      setError(errorMessage);
-      alert(`이체 실패: ${errorMessage}`);
+      if (errorCode) {
+        switch (errorCode) {
+          case 'ACCOUNT_NOT_FOUND':
+            userFriendlyMessage = '존재하지 않는 계좌입니다.';
+            break;
+          case 'INSUFFICIENT_BALANCE':
+            userFriendlyMessage = '잔액이 부족합니다.';
+            break;
+          case 'PASSWORD_MISMATCH':
+            userFriendlyMessage = '계좌 비밀번호가 일치하지 않습니다.';
+            break;
+          case 'ACCOUNT_SUSPENDED':
+            userFriendlyMessage = '거래가 제한된 계좌입니다.';
+            break;
+          case 'INVALID_AMOUNT':
+            userFriendlyMessage = '이체 금액이 올바르지 않습니다.';
+            break;
+          case 'LIMIT_EXCEEDED':
+            userFriendlyMessage = '이체 한도를 초과했습니다.';
+            break;
+          case 'SAME_ACCOUNT':
+            userFriendlyMessage = '자기 계좌로는 이체할 수 없습니다.';
+            break;
+          case 'UNAUTHORIZED':
+            userFriendlyMessage = '권한이 없습니다.';
+            break;
+          case 'INVALID_REQUEST':
+            userFriendlyMessage = '잘못된 요청입니다.';
+            break;
+          default:
+            userFriendlyMessage = errorMessage;
+        }
+      }
+
+      setError(userFriendlyMessage);
+      alert(`이체 실패: ${userFriendlyMessage}`);
+      setIsModalOpen(false); // 모달 닫기
     } finally {
       setIsLoading(false);
     }

@@ -16,6 +16,11 @@ export default function BulkTransferComplete() {
     // location.state에서 다건이체 결과 가져오기
     if (location.state?.bulkTransferResults) {
       const data = location.state.bulkTransferResults;
+      console.log('다건이체 완료 페이지 - 받은 데이터:', data);
+      console.log('results:', data.results);
+      console.log('successCount:', data.successCount);
+      console.log('failCount:', data.failCount);
+      
       setResults(data.results);
       setSummary({
         totalCount: data.totalCount,
@@ -24,12 +29,16 @@ export default function BulkTransferComplete() {
         finalBalance: data.finalBalance
       });
     } else {
+      console.log('다건이체 결과 데이터가 없음, 리다이렉트');
       // 데이터가 없으면 다건이체 페이지로 리다이렉트
       navigate('/transfer/bulk');
     }
   }, [location.state, navigate]);
 
   const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return '0';
+    }
     return new Intl.NumberFormat('ko-KR').format(amount);
   };
 
@@ -105,11 +114,11 @@ export default function BulkTransferComplete() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
                       <div className="text-sm text-gray-600">수취인</div>
-                      <div className="font-medium">{result.recipientName}</div>
+                      <div className="font-medium">{result.toAccountHolder || result.recipientName}</div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">계좌</div>
-                      <div className="font-medium font-mono">{result.recipientBank} · {result.recipientAccount}</div>
+                      <div className="font-medium font-mono">{result.toBankName || result.recipientBank} · {result.toAccountNo || result.recipientAccount}</div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">금액</div>
@@ -123,7 +132,7 @@ export default function BulkTransferComplete() {
                     ) : (
                       <div>
                         <div className="text-sm text-red-700">실패 사유</div>
-                        <div className="font-medium text-red-700">{result.errorMessage}</div>
+                        <div className="font-medium text-red-700">{result.errorMessage || result.message}</div>
                       </div>
                     )}
                   </div>

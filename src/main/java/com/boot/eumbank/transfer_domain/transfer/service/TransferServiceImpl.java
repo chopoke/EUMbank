@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -86,7 +87,7 @@ public class TransferServiceImpl implements TransferService {
         // 6. 응답 DTO 생성
         return TransferResponseDto.builder()
                 .transferId(result.getTransferId())
-                .transferNo(result.getTransferNo().longValue())
+                .transferNo(result.getTransferNo() != null ? result.getTransferNo().longValue() : 0L)
                 .accountId(request.getFromAccountId())
                 .amount(BigDecimal.valueOf(request.getAmount()))
                 .memo(request.getMemo())
@@ -255,13 +256,15 @@ public class TransferServiceImpl implements TransferService {
             throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), totalAmount);
         }
 
-        // 6. 각 수취인별 이체 실행
+        // 6. 각 수취인별 이체 실행 (개별 트랜잭션으로 처리)
         List<TransferResultDto> results = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
+        int successCount = 0;
+        int failCount = 0;
 
         for (RecipientDto recipient : request.getRecipients()) {
             try {
-                TransferResultDto result = executeTransfer(
+                // 개별 이체를 별도 트랜잭션으로 실행
+                TransferResultDto result = executeTransferInSeparateTransaction(
                         request.getFromAccountNo(),
                         recipient.getAccountNo(),
                         recipient.getBankName(),
@@ -271,22 +274,156 @@ public class TransferServiceImpl implements TransferService {
                         request.getPassword()
                 );
                 results.add(result);
+                successCount++;
             } catch (Exception e) {
                 log.error("다건 이체 중 오류 발생 - 수취인: {}, 오류: {}", 
                         recipient.getName(), e.getMessage());
-                errors.add(recipient.getName() + ": " + e.getMessage());
+                
+                // 실패한 이체 시도 기록을 별도 트랜잭션으로 저장
+                saveFailedTransferHistory(e, request.getFromAccountNo(), recipient.getAccountNo(), 
+                        recipient.getBankName(), recipient.getName(), recipient.getAmount(), recipient.getMemo());
+                
+                // 실패한 이체도 상세 정보와 함께 결과에 포함
+                TransferResultDto failedResult = TransferResultDto.builder()
+                        .transferId("FAILED-" + System.currentTimeMillis())
+                        .transferNo(null)
+                        .fromAccountNo(request.getFromAccountNo())
+                        .toAccountNo(recipient.getAccountNo())
+                        .toBankName(recipient.getBankName())
+                        .toAccountHolder(recipient.getName())
+                        .amount(recipient.getAmount())
+                        .afterBalance(null)
+                        .transferAt(LocalDateTime.now())
+                        .success(false)
+                        .message("이체 실패")
+                        .errorCode(getFailureReason(e))
+                        .errorMessage(e.getMessage())
+                        .build();
+                
+                results.add(failedResult);
+                failCount++;
             }
         }
 
-        // 7. 응답 DTO 생성
+        // 7. 최종 잔액 계산 (성공한 이체만 반영)
+        BigDecimal finalBalance = null;
+        if (successCount > 0) {
+            // 마지막 성공한 이체의 잔액을 최종 잔액으로 사용
+            Optional<TransferResultDto> lastSuccessResult = results.stream()
+                    .filter(r -> r.isSuccess())
+                    .reduce((first, second) -> second);
+            if (lastSuccessResult.isPresent()) {
+                finalBalance = lastSuccessResult.get().getAfterBalance();
+            }
+        } else {
+            // 성공한 이체가 없으면 현재 잔액 조회
+            Account account = accountRepository.findById(request.getFromAccountNo())
+                    .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
+            finalBalance = account.getBalance();
+        }
+
+        // 8. 응답 DTO 생성
         return BulkTransferResponseDto.builder()
                 .totalCount(request.getRecipients().size())
-                .successCount(results.size())
-                .failCount(errors.size())
+                .successCount(successCount)
+                .failCount(failCount)
                 .results(results)
-                .errors(errors)
                 .totalAmount(totalAmount)
+                .finalBalance(finalBalance)
                 .build();
+    }
+
+    /**
+     * 개별 이체를 별도 트랜잭션으로 실행
+     * - 실패해도 다른 이체에 영향을 주지 않음
+     * - 실패한 이체는 기록만 남기고 실제 처리하지 않음
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public TransferResultDto executeTransferInSeparateTransaction(
+            Integer fromAccountNo, String toAccountNo, String toBankName, 
+            String toAccountHolder, Integer amount, String memo, String password) {
+        
+        log.info("개별 이체 실행 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
+                fromAccountNo, toAccountNo, amount);
+        
+        try {
+            // 기존 executeTransfer 메서드 호출
+            return executeTransfer(fromAccountNo, toAccountNo, toBankName, 
+                    toAccountHolder, amount, memo, password);
+        } catch (Exception e) {
+            log.error("개별 이체 실행 실패 - 출금계좌: {}, 수취계좌: {}, 오류: {}", 
+                    fromAccountNo, toAccountNo, e.getMessage());
+            throw e; // 상위로 예외 전파
+        }
+    }
+
+    /**
+     * 예외 타입에 따른 실패 사유 구분
+     * @param e 발생한 예외
+     * @return 실패 사유 코드
+     */
+    private String getFailureReason(Exception e) {
+        if (e instanceof AccountNotFoundException) return "ACCOUNT_NOT_FOUND";
+        if (e instanceof InsufficientBalanceException) return "INSUFFICIENT_BALANCE";
+        if (e instanceof PasswordMismatchException) return "PASSWORD_MISMATCH";
+        if (e instanceof AccountStatusException) return "ACCOUNT_SUSPENDED";
+        if (e instanceof InvalidAmountException) return "INVALID_AMOUNT";
+        if (e instanceof LimitExceededException) return "LIMIT_EXCEEDED";
+        if (e instanceof SameAccountTransferException) return "SAME_ACCOUNT";
+        if (e instanceof UnauthorizedException) return "UNAUTHORIZED";
+        if (e instanceof IllegalArgumentException) return "INVALID_REQUEST";
+        return "UNKNOWN_ERROR";
+    }
+
+    /**
+     * 실패한 이체 시도 기록을 별도 트랜잭션으로 저장
+     * - 메인 트랜잭션 롤백과 무관하게 저장됨
+     * - 실패 사유별로 구분하여 저장
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveFailedTransferHistory(Exception e, Integer fromAccountNo, String toAccountNo, 
+                                        String toBankName, String toAccountHolder, Integer amount, String memo) {
+        try {
+            log.info("실패한 이체 시도 기록 저장 시작 - 출금계좌: {}, 수취계좌: {}, 실패사유: {}", 
+                    fromAccountNo, toAccountNo, getFailureReason(e));
+            
+            // 현재 계좌 잔액 조회 (실패했으므로 변화 없음) - 안전하게 처리
+            BigDecimal currentBalance = BigDecimal.ZERO;
+            try {
+                Account fromAccount = accountRepository.findById(fromAccountNo).orElse(null);
+                if (fromAccount != null) {
+                    currentBalance = fromAccount.getBalance();
+                }
+            } catch (Exception balanceException) {
+                log.warn("계좌 잔액 조회 실패, 기본값 사용 - 계좌: {}, 오류: {}", fromAccountNo, balanceException.getMessage());
+            }
+            
+            String transferId = "FAILED-" + System.currentTimeMillis();
+            
+            TransferHistory failedHistory = TransferHistory.builder()
+                    .transferId(transferId)
+                    .accountNo(fromAccountNo)
+                    .amount(BigDecimal.valueOf(amount))
+                    .memo(memo)  // 원본 메모 유지
+                    .otherBank(toBankName)
+                    .otherAccount(toAccountNo)
+                    .transferType("이체")  // 원본 transferType 유지
+                    .afterBalance(currentBalance) // 현재 잔액 (변화 없음)
+                    .transactionType(getFailureReason(e))  // 실패 사유별 구분만 변경
+                    .accountOut(BigDecimal.valueOf(amount)) // 시도했던 금액
+                    .accountIn(BigDecimal.ZERO)             // 입금액 (0)
+                    .build();
+            
+            TransferHistory savedHistory = transferHistoryRepository.save(failedHistory);
+            
+            log.info("실패한 이체 시도 기록 저장 완료 - 이체ID: {}, 저장된ID: {}, 실패사유: {}", 
+                    transferId, savedHistory.getTransferNo(), getFailureReason(e));
+                    
+        } catch (Exception saveException) {
+            log.error("실패한 이체 시도 기록 저장 중 오류 발생 - 출금계좌: {}, 수취계좌: {}, 오류: {}", 
+                    fromAccountNo, toAccountNo, saveException.getMessage(), saveException);
+            // 기록 저장 실패해도 메인 로직에는 영향 없음
+        }
     }
 
     @Override
@@ -384,6 +521,8 @@ public class TransferServiceImpl implements TransferService {
         
         log.info("이체 실행 시작 - 출금계좌: {}, 수취은행: {}, 수취계좌: {}, 금액: {}", 
                 fromAccountNo, toBankName, toAccountNo, amount);
+        
+        try {
         
         // === 1단계: 이체 금액 검증 ===
         if (amount == null || amount <= 0) {
@@ -565,6 +704,17 @@ public class TransferServiceImpl implements TransferService {
                 .success(true)
                 .message("이체가 완료되었습니다.")
                 .build();
+                
+        } catch (Exception e) {
+            log.error("이체 실행 실패 - 출금계좌: {}, 수취계좌: {}, 실패사유: {}", 
+                    fromAccountNo, toAccountNo, getFailureReason(e));
+            
+            // 실패한 이체 시도 기록을 별도 트랜잭션으로 저장
+            saveFailedTransferHistory(e, fromAccountNo, toAccountNo, toBankName, toName, amount, memo);
+            
+            // 실패 시 예외를 다시 던져서 프론트엔드에서 catch 블록으로 처리하도록 함
+            throw e;
+        }
     }
 
     @Override

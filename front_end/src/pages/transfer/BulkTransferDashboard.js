@@ -102,7 +102,21 @@ export default function BulkTransferPage() {
   const navigate = useNavigate();
 
   const [accounts, setAccounts] = useState([]);
-  const [banks, setBanks] = useState([]);
+  const [banks, setBanks] = useState([
+    { code: 'EUM', name: '이음은행' },
+    { code: '001', name: '국민은행' },
+    { code: '002', name: '신한은행' },
+    { code: '003', name: '우리은행' },
+    { code: '004', name: '하나은행' },
+    { code: '005', name: '농협은행' },
+    { code: '006', name: '기업은행' },
+    { code: '007', name: '새마을금고' },
+    { code: '008', name: '신협' },
+    { code: '009', name: '우체국' },
+    { code: '010', name: '카카오뱅크' },
+    { code: '011', name: '토스뱅크' },
+    { code: '012', name: '케이뱅크' }
+  ]);
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [globalMemo, setGlobalMemo] = useState("");
   const [rows, setRows] = useState([]);
@@ -134,24 +148,6 @@ export default function BulkTransferPage() {
   };
 
   useEffect(() => {
-    // 하드코딩된 은행 목록 즉시 설정 (단건이체와 동일)
-    const hardcodedBanks = [
-      { code: 'EUM', name: '이음은행' },
-      { code: '001', name: '국민은행' },
-      { code: '002', name: '신한은행' },
-      { code: '003', name: '우리은행' },
-      { code: '004', name: '하나은행' },
-      { code: '005', name: '농협은행' },
-      { code: '006', name: '기업은행' },
-      { code: '007', name: '새마을금고' },
-      { code: '008', name: '신협' },
-      { code: '009', name: '우체국' },
-      { code: '010', name: '카카오뱅크' },
-      { code: '011', name: '토스뱅크' },
-      { code: '012', name: '케이뱅크' }
-    ];
-    setBanks(hardcodedBanks);
-
     const loadInitialData = async () => {
       try {
         setError(null); setIsLoading(true);
@@ -170,15 +166,21 @@ export default function BulkTransferPage() {
           throw new Error("계좌 조회 실패: " + (accRes.data?.message || "알 수 없는 오류"));
         }
 
-        // 은행 목록 처리 - API 성공 시 업데이트
+        // 은행 목록 처리 - API 성공 시 업데이트 (하드코딩된 목록은 이미 초기화됨)
         if (bankRes.data && bankRes.data.success && bankRes.data.data) {
           const banksData = Array.isArray(bankRes.data.data) ? bankRes.data.data : [];
-          setBanks(banksData);
+          if (banksData.length > 0) {
+            setBanks(banksData);
+          }
         }
         
         setRows([makeRow()]);
-      } catch (err) { setError(err.message);
-      } finally { setIsLoading(false); }
+      } catch (err) {
+        console.error('초기 데이터 로딩 실패:', err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadInitialData();
   }, []);
@@ -272,6 +274,7 @@ export default function BulkTransferPage() {
       const response = await transferApi.createBulkTransfer(requestData);
 
       if (response.data && response.data.success) {
+        console.log('다건이체 응답 데이터:', response.data);
         navigate('/transfer/bulk/complete', { state: { bulkTransferResults: response.data.data } });
       } else {
         throw new Error(response.data?.message || '다건이체에 실패했습니다.');
@@ -281,14 +284,54 @@ export default function BulkTransferPage() {
       
       // 백엔드에서 보내는 구체적인 에러 메시지 추출
       let errorMessage = '다건이체 처리 중 오류가 발생했습니다.';
+      let errorCode = null;
       
       if (err.response && err.response.data) {
         errorMessage = err.response.data.error || err.response.data.message || errorMessage;
+        errorCode = err.response.data.errorCode;
       } else if (err.message) {
         errorMessage = err.message;
       }
       
-      setError(errorMessage);
+      // 실패 사유별 구분된 메시지 표시
+      let userFriendlyMessage = errorMessage;
+      
+      if (errorCode) {
+        switch (errorCode) {
+          case 'ACCOUNT_NOT_FOUND':
+            userFriendlyMessage = '존재하지 않는 계좌가 포함되어 있습니다.';
+            break;
+          case 'INSUFFICIENT_BALANCE':
+            userFriendlyMessage = '잔액이 부족합니다.';
+            break;
+          case 'PASSWORD_MISMATCH':
+            userFriendlyMessage = '계좌 비밀번호가 일치하지 않습니다.';
+            break;
+          case 'ACCOUNT_SUSPENDED':
+            userFriendlyMessage = '거래가 제한된 계좌가 포함되어 있습니다.';
+            break;
+          case 'INVALID_AMOUNT':
+            userFriendlyMessage = '이체 금액이 올바르지 않습니다.';
+            break;
+          case 'LIMIT_EXCEEDED':
+            userFriendlyMessage = '이체 한도를 초과했습니다.';
+            break;
+          case 'SAME_ACCOUNT':
+            userFriendlyMessage = '자기 계좌로는 이체할 수 없습니다.';
+            break;
+          case 'UNAUTHORIZED':
+            userFriendlyMessage = '권한이 없습니다.';
+            break;
+          case 'INVALID_REQUEST':
+            userFriendlyMessage = '잘못된 요청입니다.';
+            break;
+          default:
+            userFriendlyMessage = errorMessage;
+        }
+      }
+      
+      setError(userFriendlyMessage);
+      alert(`다건이체 실패: ${userFriendlyMessage}`);
       setIsModalOpen(false);
     } finally {
       setIsLoading(false);
