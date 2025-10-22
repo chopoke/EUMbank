@@ -213,7 +213,7 @@ function ProfileTab({initialData}) {
     if (initialData && (initialData.cnameKr || initialData.cnamekr)) { 
         
         console.log("ProfileTab: API 데이터 수신 및 상태 업데이트:", initialData);
-        
+        console.log(profileData.marketing);
         // ⭐ 핵심: 로그에 표시된 실제 키를 사용합니다.
         // DTO 필드명 (cnameKr, cemail)이 소문자 시작으로 들어왔다면,
         // JSON 키는 'cnamekr', 'cemail' 형태로 들어올 가능성이 높습니다.
@@ -224,6 +224,7 @@ function ProfileTab({initialData}) {
         const emailKey = initialData.cemail;
         const phoneKey = initialData.cphoneMobile;
         const birthKey = initialData.cbirthDt;
+        const marketingKey = initialData.cagreeMarketing;
 
         setProfileData({
             name: nameKey || '', 
@@ -236,10 +237,12 @@ function ProfileTab({initialData}) {
             gender: initialData?.cgenderCd || null ,
             address: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
             occupation: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
+            marketing: marketingKey,
         });
     } else {
         // 이 로그가 계속 찍히지 않는지 확인하세요. (API 호출이 두 번 성공해야 합니다.)
         console.log("ProfileTab: initialData가 비어있거나 아직 로딩 중입니다."); 
+        
     }
   }, [initialData]);
 
@@ -538,8 +541,8 @@ function ProfileTab({initialData}) {
                     }
                 }}
             >
-                <span 
-                    className="text-sm text-gray-700 cursor-pointer pb-0.5 hover:text-blue-600 transition-colors"
+                <span className="text-sm text-gray-700" >
+                    ※버튼을 활성화 하시면 마케팅 수신 <a className="text-sm text-gray-700 cursor-pointer pb-0.5 hover:text-blue-600 transition-colors"
                     role="button" // 접근성 향상을 위해 버튼 역할 지정
                     tabIndex="0" // 키보드 접근 가능하게 설정 (엔터키로도 클릭 가능)
                     onClick={() => setIsTermsPopupOpen(prev => !prev)}
@@ -549,17 +552,16 @@ function ProfileTab({initialData}) {
                             e.preventDefault();
                             setIsTermsPopupOpen(prev => !prev);
                         }
-                    }}
-                >
-                    ※버튼을 활성화 하시면 마케팅 수신 약관에 동의한 것으로 간주됩니다.
+                    }} style={{textDecoration: 'underline'}}>약관</a>에 동의한 것으로 간주됩니다.
                     <span className="text-blue-600 font-semibold border-b border-dashed border-blue-400 ml-1">
-                        (클릭하여 약관 보기)
+                        <br></br><small>(약관을 클릭하시면 내용을 보실수 있습니다.)</small>
                     </span>
                 </span>
 
                 {/* 약관 팝업 (Tooltip 형태) */}
                 {isTermsPopupOpen && (
-                    <div className="absolute right-0 bottom-full mb-4 w-96 max-w-sm z-10 bg-white border border-blue-200 rounded-xl shadow-2xl p-4 transition duration-300 ease-in-out transform origin-bottom-right">
+                    <div className="absolute right-0 bottom-full mb-4 w-full max-w-xs sm:max-w-md lg:max-w-lg
+                                   mx-2 md:mx-0  z-10 bg-white border border-blue-200 rounded-xl shadow-2xl p-4 transition duration-300 ease-in-out transform origin-bottom-right">
                         <div className="flex justify-between items-center mb-2">
                             <div className="text-base font-semibold text-blue-600">
                                 마케팅 수신 약관 (요약)
