@@ -273,11 +273,16 @@ export default function BulkTransferPage() {
 
       const response = await transferApi.createBulkTransfer(requestData);
 
-      if (response.data && response.data.success) {
+      if (response.data && response.data.success === true) {
         console.log('다건이체 응답 데이터:', response.data);
         navigate('/transfer/bulk/complete', { state: { bulkTransferResults: response.data.data } });
       } else {
-        throw new Error(response.data?.message || '다건이체에 실패했습니다.');
+        // 다건이체 실패 시 alert로 에러 메시지 표시하고 완료 페이지로 이동하지 않음
+        const errorMessage = response.data?.message || response.data?.error || '다건이체에 실패했습니다.';
+        console.error('다건이체 실패 응답:', response.data);
+        alert(`다건이체 실패: ${errorMessage}`);
+        setIsModalOpen(false); // 모달 닫기
+        return; // 함수 종료 (완료 페이지로 이동하지 않음)
       }
     } catch (err) {
       console.error('다건이체 실행 실패:', err);

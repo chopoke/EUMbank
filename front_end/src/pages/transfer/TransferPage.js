@@ -624,7 +624,7 @@ export default function TransferPage() {
         // 예약 이체 생성 API 호출
         const scheduleResponse = await transferApi.createReserveTransfer(requestData);
 
-        if (scheduleResponse.data && scheduleResponse.data.success) {
+        if (scheduleResponse.data && scheduleResponse.data.success === true) {
           // 예약이체 완료 페이지로 이동
           const reserveData = {
             orderId: scheduleResponse.data.data.orderId,
@@ -642,10 +642,12 @@ export default function TransferPage() {
           navigate('/transfer/reserve/complete', { state: { reserveData } });
           return;
         } else {
-          // 예약이체 실패 시 alert로 에러 메시지 표시
-          const errorMessage = scheduleResponse.data?.message || '예약 이체 등록에 실패했습니다.';
+          // 예약이체 실패 시 alert로 에러 메시지 표시하고 완료 페이지로 이동하지 않음
+          const errorMessage = scheduleResponse.data?.message || scheduleResponse.data?.error || '예약 이체 등록에 실패했습니다.';
+          console.error('예약이체 실패 응답:', scheduleResponse.data);
           alert(`예약이체 실패: ${errorMessage}`);
-          throw new Error(errorMessage);
+          setIsModalOpen(false); // 모달 닫기
+          return; // 함수 종료 (완료 페이지로 이동하지 않음)
         }
       }
 
