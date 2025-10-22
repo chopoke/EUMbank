@@ -165,8 +165,12 @@ function AccountListPage({user}){
               <p className="text-sm text-gray-600 mt-1">보유 중인 계좌를 한눈에 확인하고, 빠르게 이체/관리하세요.</p>
             </div>
             <div className="flex items-center gap-2">
-              <button className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">계좌개설</button>
-              <button className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">이체하기</button>
+              <Link to={`/account/open`}>
+              <button className="rounded-full border px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200">계좌개설</button>
+              </Link>
+              <Link to={`/transfer`}>
+              <button className="rounded-full border px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200">이체하기</button>
+              </Link>
             </div>
           </div>
         </div>
@@ -270,12 +274,12 @@ function AccountListPage({user}){
                       <tr className="border-b bg-gray-50">
                         <th className="text-left font-medium px-3 py-2">별칭 / 계좌명</th>
                         <th className="text-left font-medium px-3 py-2">은행</th>
-                        <th className="text-left font-medium px-3 py-2">계좌번호</th>
+                        <th className="text-center font-medium px-3 py-2">계좌번호</th>
                         <th className="text-center font-medium px-3 py-2">잔액</th>
                         <th className="text-left font-medium px-3 py-2 whitespace-nowrap">최근 거래</th>
                         <th className="text-center font-medium px-3 py-2">상태</th>
                         {/* <th className="text-center font-medium px-3 py-2">즐겨찾기</th> */}
-                        <th className="text-center font-medium px-3 py-2 ">액션</th>
+                        <th className="text-center font-medium px-3 py-2 ">업무</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -316,10 +320,12 @@ function AccountListPage({user}){
                           {/* 부가기능 */}
                           <td className="px-3 py-3 text-center whitespace-nowrap w-[180px]">
                             <div className="flex justify-center gap-1.5">
-                              <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">이체</button>
+                              <Link to={`/transfer`} state={{ fromAccountNumber: row.number }}>
+                              <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">이체</button>
+                              </Link>
                               <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">상세</button>
                               <Link to={`/accounts/${row.id}`}>
-                                <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">이체내역</button>
+                                <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">이체내역</button>
                               </Link>
                             </div>
                           </td>

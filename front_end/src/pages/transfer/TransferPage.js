@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { transferApi } from '../../api/transferApi';
 
 // 이체 확인 모달 컴포넌트 - OTP 제거하고 계좌 비밀번호 입력으로 변경
@@ -232,6 +232,26 @@ export default function TransferPage() {
     setBanks(hardcodedBanks);
   }, []);
 
+
+  const location = useLocation();
+
+  // 컴포넌트가 마운트되거나 location이 변경될 때 실행
+  useEffect(() => {
+    // 1. 전달받은 state 객체 전체를 로그로 확인
+    console.log('--- Location State 전체 로그 ---');
+    console.log(location.state);
+
+    // 2. 전달받은 특정 계좌번호 값만 추출하여 로그로 확인
+    const passedAccountNumber = location.state?.fromAccountNumber; // 👈 fromAccountNumber 키로 접근
+    
+    if (passedAccountNumber) {
+      console.log('✅ 전달받은 계좌번호 (fromAccountNumber):', passedAccountNumber);
+    } else {
+      console.log('⚠️ 전달받은 계좌번호(fromAccountNumber)가 없습니다. (직접 URL 접근 등)');
+    }
+  }, [location]);
+
+
   // 계좌 목록과 잔액을 로드하는 함수 - API 호출로 실제 데이터 조회
   const loadAccountsAndBalance = async () => {
     try {
@@ -248,9 +268,18 @@ export default function TransferPage() {
         // 내 계좌 목록 설정 (현재 선택된 계좌 제외)
         setMyOtherAccounts(accounts);
         
+        // 2. 전달받은 특정 계좌번호 값만 추출하여 로그로 확인
+        const passedAccountNumber = location.state?.fromAccountNumber; // 👈 fromAccountNumber 키로 접근
+        
+        if (passedAccountNumber) {
+          console.log('✅ 전달받은 계좌번호 (fromAccountNumber):', passedAccountNumber);
+        } else {
+          console.log('⚠️ 전달받은 계좌번호(fromAccountNumber)가 없습니다. (직접 URL 접근 등)');
+        }
+
         // 첫 번째 계좌를 기본 선택으로 설정
         if (accounts.length > 0) {
-          const firstAccount = accounts[0];
+          const firstAccount = accounts.find((account) => account.accountNo === passedAccountNumber);
           setSelectedAccount(firstAccount);
           
           // 선택된 계좌의 잔액 조회
@@ -267,7 +296,7 @@ export default function TransferPage() {
       
     } catch (error) {
       console.error('계좌 정보 로딩 실패:', error.message || '알 수 없는 오류');
-      setError('계좌 정보를 불러오는데 실패했습니다.');
+      setError('보내실 계좌를 선택해주세요.');
     } finally {
       setIsLoading(false);
     }
@@ -459,7 +488,7 @@ export default function TransferPage() {
       // 실제 API 호출로 예금주 조회
       const response = await transferApi.getAccountHolder(selectedBank, newAccountNumber);
       
-      if (response.data && response.data.success) {
+      if (response.data && response.data.success && response.data.data && response.data.data.accountHolder) {
         const holderData = response.data.data;
         setAccountHolder(holderData.accountHolder);
         setSelectedRecipient({
@@ -470,16 +499,25 @@ export default function TransferPage() {
         });
         setError(null);
       } else {
+        // 계좌가 존재하지 않거나 조회 실패
         setAccountHolder('');
         setSelectedRecipient(null);
-        setError('예금주를 찾을 수 없습니다.');
+        setError('존재하지 않는 계좌입니다. 은행과 계좌번호를 다시 확인해주세요.');
       }
       
     } catch (error) {
       console.error('예금주 조회 실패:', error.message || '알 수 없는 오류');
       setAccountHolder('');
       setSelectedRecipient(null);
-      setError('예금주 조회에 실패했습니다. 서버를 확인해주세요.');
+      
+      // 서버 오류인지 계좌 존재 여부 오류인지 구분
+      if (error.response && error.response.status === 404) {
+        setError('존재하지 않는 계좌입니다. 은행과 계좌번호를 다시 확인해주세요.');
+      } else if (error.response && error.response.status === 400) {
+        setError('계좌번호 형식이 올바르지 않습니다.');
+      } else {
+        setError('계좌 조회에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -517,6 +555,13 @@ export default function TransferPage() {
     try {
       setIsLoading(true);
       setError(null);
+
+      // 신규 입력 탭에서 계좌 존재 여부 재검증
+      if (activeTab === 'new' && (!accountHolder || accountHolder.trim() === '')) {
+        alert('존재하지 않는 계좌입니다. 은행과 계좌번호를 다시 확인해주세요.');
+        setIsLoading(false);
+        return;
+      }
 
       // 이체 요청 데이터 구성
       const requestData = {
@@ -598,7 +643,8 @@ export default function TransferPage() {
           timestamp: response.timestamp || new Date().toISOString(),
           fromAccount: selectedAccount,
           memo: memo,
-          fee: fee
+          fee: fee,
+          remainingBalance: response.data.data.afterBalance || (balance - numericAmount - fee)
         };
         
         setIsModalOpen(false);
@@ -1007,7 +1053,7 @@ export default function TransferPage() {
                 <li>이체 한도 변경은 마이페이지 &gt; 한도관리에서 가능합니다.</li>
               </ul>
             </section>
-            <section className="rounded-2xl border bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border bg-amber-50 p-6 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-lg font-semibold text-gray-900">보안 주의</h2>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 8h.01M12 12v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>

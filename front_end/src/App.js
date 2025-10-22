@@ -3,6 +3,7 @@ import BankHome from './pages/main';
 import LoginPage from "./pages/login/login";
 import SignUp from "./pages/signup/signup";
 import MyPage from "./pages/mypage/my_costomer2";
+import Test from './pages/test';
 import { Header } from './common/header';
 import { Footer } from './common/footer';
 import { useEffect, useState } from "react";
@@ -165,6 +166,9 @@ function App() {
 
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={<MyPage />} />
+
+        {/* 마이페이지 진입 */}
+        <Route path="/test" element={<Test />} />
       </Routes >
 
       <Footer />
