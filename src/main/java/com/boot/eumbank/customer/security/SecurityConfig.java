@@ -48,8 +48,7 @@ public class SecurityConfig {
                                 "/api/v1/join/**",
                                 "/api/v1/email/**",
                                 "/api/v1/customers/exists-email",
-                                "/api/loan/**"
-
+                                "/deposit/products"
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()

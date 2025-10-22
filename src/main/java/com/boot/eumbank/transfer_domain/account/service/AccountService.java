@@ -1,6 +1,6 @@
 package com.boot.eumbank.transfer_domain.account.service;
 
-import com.boot.eumbank.account.Open.model.Account;
+import com.boot.eumbank.account.open.model.Account;
 import com.boot.eumbank.transfer_domain.account.entity.AccountLimit;
 import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountLimitRepository;
 import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountRepository;

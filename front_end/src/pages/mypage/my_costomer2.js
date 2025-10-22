@@ -112,7 +112,7 @@ function OverviewTab({onTabSwitch}) {
       icon: 'ri-exchange-line',
       color: 'from-orange-300 to-orange-300',
       image: 'https://readdy.ai/api/search-image?query=quick%20money%20transfer%20interface%20with%20arrows%20and%20banking%20symbols%2C%20modern%20digital%20payment%20system%2C%20clean%20white%20background%2C%20professional%20financial%20transfer%2C%20minimalist%20design&width=400&height=300&seq=quick_transfer&orientation=landscape',
-      href: "#"
+      href: "/transfer"
     }
   ];
 
@@ -192,13 +192,17 @@ function OverviewTab({onTabSwitch}) {
 // ProfileTab Component
 function ProfileTab({initialData}) {
   const [isEditing, setIsEditing] = useState(false);
+  const [gender, setGender] = useState(initialData?.cgenderCd || null);
   const [profileData, setProfileData] = useState({
     name: '',
+    enname: '',
     email: '',
     phone: '',
     address: '',
     birthDate: '',
-    occupation: ''
+    occupation: '',
+    gender:'',
+    marketing:''
   });
 
   useEffect(() => {
@@ -214,26 +218,58 @@ function ProfileTab({initialData}) {
         
         // 옵셔널 체이닝과 OR 연산자를 사용하여 가장 확실한 키를 찾습니다.
         const nameKey = initialData.cnameKr; 
+        const ennameKey = initialData.cnameEn; 
         const emailKey = initialData.cemail;
         const phoneKey = initialData.cphoneMobile;
         const birthKey = initialData.cbirthDt;
 
         setProfileData({
             name: nameKey || '', 
+            enname: ennameKey || '', 
             email: emailKey || '', 
             phone: phoneKey || '',
             
             // 날짜 형식 변환: T 뒤의 시간 부분 제거
             birthDate: birthKey ? birthKey.split('T')[0] : '', 
-            
+            gender: initialData?.cgenderCd || null ,
             address: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
-            occupation: '정보 없음' // DTO에 해당 필드가 없으므로 기본값 유지
+            occupation: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
         });
     } else {
         // 이 로그가 계속 찍히지 않는지 확인하세요. (API 호출이 두 번 성공해야 합니다.)
         console.log("ProfileTab: initialData가 비어있거나 아직 로딩 중입니다."); 
     }
   }, [initialData]);
+
+  // 마케팅 토글 핸들러 함수
+  const handleMarketingToggle = (event) => {
+      // 체크박스 클릭 시의 checked 상태 (true/false)
+      const isChecked = event.target.checked; 
+      
+      // checked 상태를 서버 DTO가 요구하는 'Y'/'N' 값으로 변환합니다.
+      const newValue = isChecked ? 'Y' : 'N';
+      
+      // profileData 상태를 업데이트하여 profileData.marketing에 반영합니다.
+      setProfileData(prevData => ({
+          ...prevData,
+          marketing: newValue 
+      }));
+      
+      console.log(`[Toggle Event] 마케팅 동의 상태 변경됨: ${newValue}`);
+  };
+
+  const handleGenderChange = (event) => {
+    const newGenderValue = event.target.value; // 'm' 또는 'f'
+        
+        // 1. UI를 제어하는 gender 상태 업데이트 (클릭 시 체크가 되도록 함)
+      setGender(newGenderValue);
+        
+        // 2. ⭐ profileData 상태도 업데이트하여 최종 전송 데이터에 반영되도록 동기화
+      setProfileData(prevData => ({
+          ...prevData,
+          gender: newGenderValue
+      }));
+  };
 
   const handleSave = () => {
         // 서버로 전송할 DTO 형식에 맞게 데이터를 매핑합니다.
@@ -246,9 +282,12 @@ function ProfileTab({initialData}) {
             // 2. 수정된 필드만 덮어씁니다.
             //    (백엔드 DTO 필드명 cNameKr, cEmail 등과 일치시켜야 합니다.)
             cnameKr: profileData.name, 
-            cEmail: profileData.email,
-            cPhoneMobile: profileData.phone,
+            cnameEn: profileData.enname,
+            cemail: profileData.email,
+            cphoneMobile: profileData.phone,
             cBirthDt: profileData.birthDate,
+            cGenderCd: profileData.gender,
+            cagreeMarketing: profileData.marketing, 
 
             // 3. (옵션) 업데이트 시 갱신 정보를 추가합니다. (DB UpdatedAt, UpdatedBy 컬럼용)
             // cUpdatedAt: new Date().toISOString(),
@@ -360,6 +399,59 @@ function ProfileTab({initialData}) {
               )}
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">영문이름</label>
+              {isEditing ? (
+                <input
+                  type="email"
+                  value={profileData.enname}
+                  onChange={(e) => setProfileData({...profileData, enname: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              ) : (
+                <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.enname}</div>
+              )}
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    성별
+                </label>
+                <div className="flex space-x-6">
+                    {/* 남성 Radio 버튼 */}
+                    <div className="flex items-center">
+                        <input
+                            id="gender-male"
+                            name="gender"
+                            type="radio"
+                            value="m"
+                            disabled={true}
+                            checked={gender === 'm'}
+                            onChange={handleGenderChange}
+                            className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <label htmlFor="gender-male" className="ml-3 block text-sm font-medium text-gray-700">
+                            남성
+                        </label>
+                    </div>
+                    
+                    {/* 여성 Radio 버튼 */}
+                    <div className="flex items-center">
+                        <input
+                            id="gender-female"
+                            name="gender"
+                            type="radio"
+                            value="f"
+                            disabled={true}
+                            checked={gender === 'f'}
+                            onChange={handleGenderChange}
+                            className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <label htmlFor="gender-female" className="ml-3 block text-sm font-medium text-gray-700">
+                            여성
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
               {isEditing ? (
                 <input
@@ -416,37 +508,48 @@ function ProfileTab({initialData}) {
 
         {/* 계정 설정 섹션 */}
         <div className="p-6 border-t border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">계정 설정</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">마케팅 수신 동의</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <i className="ri-notification-line text-blue-600"></i>
-                <span className="text-gray-700">알림 설정</span>
+                {/* <i className="ri-notification-line text-blue-600"></i> */}
+                <span className="text-gray-700">※버튼을 활성화 하시면 마케팅 수신 약관에 동의한 것으로 간주됩니다.</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
+                {/* {profileData.marketing === 'Y' ? (<input type="checkbox" className="sr-only peer" defaultChecked />) : (<input type="checkbox" className="sr-only peer"  />)} */}
+                <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    // 'Y'일 때 체크, 'N'일 때 미체크
+                    checked={profileData.marketing === 'Y'} 
+                    // 편집 모드일 때만 변경 가능하도록
+                    disabled={!isEditing}
+                    // 토글 시 profileData.marketing 상태 업데이트
+                    onChange={handleMarketingToggle}
+                />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
+            
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <i className="ri-mail-line text-green-600"></i>
                 <span className="text-gray-700">이메일 알림</span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              {/* <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+              </label> */}
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <i className="ri-phone-line text-orange-600"></i>
                 <span className="text-gray-700">SMS 알림</span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              {/* <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+              </label> */}
             </div>
           </div>
         </div>
@@ -495,7 +598,7 @@ function SecurityTab() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-smartphone-line text-blue-600 mr-2"></i>
-          OTP 인증
+          아마도 핀번호 인증
         </h3>
         <div className="flex items-center justify-between">
           <div>
@@ -548,7 +651,7 @@ function SecurityTab() {
       </div>
 
       {/* 생체 인증 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-fingerprint-line text-purple-600 mr-2"></i>
           생체 인증
@@ -581,7 +684,7 @@ function SecurityTab() {
             </label>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* 로그인 기록 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">

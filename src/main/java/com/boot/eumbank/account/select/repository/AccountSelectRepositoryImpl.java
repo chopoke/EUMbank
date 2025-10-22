@@ -1,9 +1,7 @@
 package com.boot.eumbank.account.select.repository;
 
-import com.boot.eumbank.account.Open.model.Account;
-import com.boot.eumbank.account.Open.model.QAccount;
-import com.boot.eumbank.account.select.entity.QTransferHistory;
-import com.querydsl.core.Tuple;
+import com.boot.eumbank.account.open.model.Account;
+import com.boot.eumbank.account.open.model.QAccount;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -12,12 +10,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor

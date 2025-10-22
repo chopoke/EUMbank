@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { termsData } from '../data/terms';
 import '../css/termAgreements.css';
@@ -6,7 +6,7 @@ import '../css/termAgreements.css';
 /**
  * 약관 내용을 보여주는 모달 컴포넌트
  */
-const TermsModal = ({ open, title, onClose, onReadComplete, children }) => {
+const TermsModal = ({ open, title, onClose, onReadComplete, clauseId, children }) => {
     const boxRef = useRef(null);
 
     // 스크롤 이벤트를 감지하여 끝에 도달하면 onReadComplete 콜백을 실행
@@ -19,14 +19,14 @@ const TermsModal = ({ open, title, onClose, onReadComplete, children }) => {
             // 스크롤이 맨 아래에 도달했는지 확인 (2px 여유)
             const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - 2;
             if (isAtBottom) {
-                onReadComplete?.(); // 읽음 완료 처리
+                onReadComplete?.(clauseId);
             }
         };
 
         // 스크롤바가 없는 경우를 위한 초기 체크
         const checkScrollable = () => {
             if (element.scrollHeight <= element.clientHeight) {
-                onReadComplete?.();
+                onReadComplete?.(clauseId);
             }
         }
 
@@ -34,7 +34,7 @@ const TermsModal = ({ open, title, onClose, onReadComplete, children }) => {
         checkScrollable(); // 처음 열렸을 때도 체크
 
         return () => element.removeEventListener("scroll", handleScroll);
-    }, [open]);
+    }, [open, onReadComplete, clauseId]);
 
     if (!open) return null;
 
@@ -91,12 +91,12 @@ const TermsAgreement = ({ productType }) => {
     };
 
     // 약관을 다 읽었을 때 호출되는 콜백
-    const handleReadComplete = (id) => {
+    const handleReadComplete = useCallback((id) => {
         setAgreements(prev => ({
             ...prev,
             [id]: { ...prev[id], hasRead: true }
         }));
-    };
+    }, []);
 
     // 전체 동의 로직
     const checkedCount = Object.values(agreements).filter(v => v.checked).length;
@@ -128,6 +128,8 @@ const TermsAgreement = ({ productType }) => {
         // 선택한 상품에 대한 정보이어서 가져오기
         const product = location.state?.productData;
 
+        console.log(product);
+
         const agreementStatus = Object.entries(agreements).reduce((acc, [id, value]) => {
             acc[id] = value.checked;
             return acc;
@@ -143,6 +145,8 @@ const TermsAgreement = ({ productType }) => {
         console.log("서버로 전송할 최종 데이터 객체:", finalData);
 
         console.log("서버로 전송할 최종 JSON 데이터:", finalDataJSON);
+        const result = product.id.split('-')[0];
+        navigate("/" + result + "/final", { state: { productData: product } });
 
     };
 
@@ -213,7 +217,8 @@ const TermsAgreement = ({ productType }) => {
                     open={openModalId === clause.id}
                     title={clause.text}
                     onClose={() => setOpenModalId(null)}
-                    onReadComplete={() => handleReadComplete(clause.id)}
+                    onReadComplete={handleReadComplete}
+                    clauseId={clause.id}
                 >
                     {terms.details}
                 </TermsModal>

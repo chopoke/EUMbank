@@ -1,12 +1,13 @@
 package com.boot.eumbank.transfer_domain.account.repository;
 
-import com.boot.eumbank.account.Open.model.Account;
+
+import com.boot.eumbank.account.open.model.Account;
+import jakarta.persistence.LockModeType;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import jakarta.persistence.LockModeType;
 
 import java.util.List;
 import java.util.Optional;
