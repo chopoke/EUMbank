@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +33,7 @@ public class LoanServiceImpl implements LoanService {
 
     /** 상세 */
     @Override
-    public LoanProductDetailDTO getProductDetail(String loanCode) {
+    public Optional<LoanProductDetailDTO> getProductDetail(String loanCode) {
         LoanProduct p = productRepo.findByLoanCode(loanCode)
                 .orElseThrow(() -> new NoSuchElementException("상품 없음: " + loanCode));
 
@@ -87,7 +87,7 @@ public class LoanServiceImpl implements LoanService {
                 .toList();
         if (termMonths.isEmpty()) termMonths = List.of(120, 240, 360);
 
-        return LoanProductDetailDTO.builder()
+        return Optional.ofNullable(LoanProductDetailDTO.builder()
                 .id(p.getLoanCode())
                 .name(p.getLoanName())
                 .bankName(p.getBankName())
@@ -111,7 +111,7 @@ public class LoanServiceImpl implements LoanService {
                         .q("중도상환수수료가 있나요?")
                         .a(nvlStr(p.getPolicyCode(), "상품별 상이"))
                         .build()))
-                .build();
+                .build());
     }
 
     private LoanProductDTO toListDTO(LoanProduct p) {

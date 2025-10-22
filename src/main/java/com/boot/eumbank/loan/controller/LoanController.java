@@ -7,6 +7,7 @@ import com.boot.eumbank.loan.service.LoanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -63,7 +64,9 @@ public class LoanController {
     }
 
     @GetMapping("/products/{code}")
-    public LoanProductDetailDTO detail(@PathVariable String code){
-        return loanService.getProductDetail(code);
+    public ResponseEntity<LoanProductDetailDTO> detail(@PathVariable String code) {
+        return loanService.getProductDetail(code)               // Optional<LoanProductDetailDTO>
+                .map(ResponseEntity::ok)                        // 200 OK + body
+                .orElseGet(() -> ResponseEntity.notFound().build()); // 404
     }
 }

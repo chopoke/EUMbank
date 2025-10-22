@@ -59,28 +59,6 @@ export default function LoanProductsListPage(){
     }
   }
 
-  // React.useEffect(()=>{
-  // // 백엔드 프록시에서 가공한 데이터 그대로 사용
-  // fetchLoanProducts({ type: "MORTGAGE", page: 0, size: 50 })
-  //   .then(res => {
-  //     // A안(Map) 또는 B안(Page) 모두 지원
-  //     const d = res.data;
-  //     const items = Array.isArray(d)       ? d
-  //                  : Array.isArray(d?.items)   ? d.items
-  //                  : Array.isArray(d?.content) ? d.content
-  //                  : [];
-  //     setPRODUCTS(items);
-  //   })
-  //   // .then(data => {
-  //   //   // data: LoanProductListItem[] 형태로 들어옴
-  //   //   setPRODUCTS(data);
-  //   // })
-  //   .catch(err => {
-  //     console.error('주택담보대출 불러오기 실패', err);
-  //     setPRODUCTS([]); // 실패 시 빈 목록
-  //   });
-  // }, []);
-
   React.useEffect(() => { loadProductsFor('전체'); }, []);
   React.useEffect(() => { loadProductsFor(type); setPage(1); }, [type]);
 

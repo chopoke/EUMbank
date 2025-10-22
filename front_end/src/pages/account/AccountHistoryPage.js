@@ -146,7 +146,7 @@ function AccountHistoryPage(){
           memo: r.th_memo || "-",
           amount: (r.th_transfer_type === "입금" ? +1 : -1) * (r.th_amount ?? 0),
           balance: Number(r.th_after_balance ?? 0),
-          openAt : r.a_open_at
+          tsType:r.th_transaction_type
         }));
 
         // 보조 필ㅓ링 부분 
@@ -214,6 +214,14 @@ function AccountHistoryPage(){
   const Chip = ({ active, children, onClick }) => (
     <button onClick={onClick} className={"px-3 py-1.5 rounded-full text-xs border transition " + (active ? "bg-blue-50 text-blue-700 border-blue-300" : "hover:bg-gray-50")}>{children}</button>
   );
+
+  // th_transaction_type이 OUT인 것들은 목록에서 제외(이체실패건)
+  const displayFilter = React.useMemo(() => {
+      const norm = v => String(v ?? '').trim().toUpperCase();
+      return rows.filter(r => norm(r.tsType) !== 'OUT');}
+  );
+
+  
 
   // 계정 정보가 확인되지 않을 때
   if (!account) {
@@ -388,9 +396,9 @@ function AccountHistoryPage(){
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {rows.length === 0 ? (
+                    {displayFilter.length === 0  ? (
                       <tr><td colSpan={6} className="px-3 py-10 text-center text-gray-500">조건에 맞는 내역이 없습니다.</td></tr>
-                    ) : rows.map((r) => (
+                    ) : displayFilter.map((r) => (
                       <tr key={r.id} className="hover:bg-gray-50">
                         <td className="px-3 py-3 whitespace-nowrap">{r.ts ? `${toISODate(r.ts)} ${r.time}` : '-'}</td>
                         <td className="px-3 py-3">{r.type}</td>
