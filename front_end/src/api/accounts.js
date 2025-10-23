@@ -2,6 +2,7 @@ import api from "../api/axios";
 import axios from 'axios';
 
 
+
 // 계좌목록
 export const fetchAccounts = () =>
   api.get('/api/accounts');

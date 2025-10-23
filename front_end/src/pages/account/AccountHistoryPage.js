@@ -23,8 +23,6 @@ const parseTs = (v) =>{
   return isNaN(d) ? null : d;
 }
 
-// 계좌번호 마스킹
-const maskAcc = (s)=> s.replace(/(\d{2,4})-(\d{2,4})-(\d{2,6})/, (_ ,a,b,c)=> `${a}-${b}-` + c.replace(/\d/g,'•'));  
 
 // 날짜 추가
 function addDays(date, delta){
@@ -65,6 +63,14 @@ function AccountHistoryPage(){
 
   const navigate = useNavigate();
 
+    // 페이지네이션
+  const [page, setPage] = React.useState(0);          // 백엔드에서 넘긴 값
+  const pageSize = 10;
+  const [rows, setRows] = React.useState([]);         // 백엔디 값
+  const [totalElements, setTotalElements] = React.useState(0);
+  const [totalPages, setTotalPages] = React.useState(1);
+  
+
   // 폰트 사용을 위한 캐시처리
   const fontCache = React.useRef({regular:""});
   async function loadFontBase64(url){
@@ -81,13 +87,6 @@ function AccountHistoryPage(){
     return btoa(binary);
   }
 
-  // 페이지네이션
-  const [page, setPage] = React.useState(0);          // 백엔드에서 넘긴 값
-  const pageSize = 10;
-  const [rows, setRows] = React.useState([]);         // 백엔디 값
-  const [totalElements, setTotalElements] = React.useState(0);
-  const [totalPages, setTotalPages] = React.useState(1);
-  
 
   // 계좌 요약/상세 불러오기
   React.useEffect(() => {
@@ -147,8 +146,8 @@ function AccountHistoryPage(){
       size:pageSize
     })
       .then(res=>{
-
         const p = res.data;   // 스프링 페이지 응답
+
         const parseTs = (v) => {
           if (!v) return null;
 
@@ -156,39 +155,74 @@ function AccountHistoryPage(){
           return new Date(typeof v === 'number' ? v : String(v).replace(' ', 'T'));
         };
 
+        // 매핑
         const mapped = (p.content || []).map(r=> ({
           id: r.th_transfer_no,
           ts: parseTs(r.th_transfer_at),
-          time: r.th_transfer_at ? new Date(r.th_transfer_at).toLocaleTimeString('ko-KR', { hour12:false }) : "", 
-          type: r.th_transfer_type || "-",   // 서버가 어떤 문자열로 주는지에 맞춰 표기
+          time: r.th_transfer_at ? new Date(r.th_transfer_at).toLocaleTimeString('ko-KR', { hour12:false }) : "",
+          type: r.th_transfer_type || "-",  
           counterparty: r.th_other_bank || "-",
           memo: r.th_memo || "-",
           amount: (r.th_transfer_type === "입금" ? +1 : -1) * (r.th_amount ?? 0),
           balance: Number(r.th_after_balance ?? 0),
-          tsType:r.th_transaction_type
+          tsType:r.th_transaction_type      // 실패건 구분용
         }));
 
-        // 보조 필ㅓ링 부분 
-        let clientFiltered = mapped.filter((r) => {
-          if (minAmt !== "" && Math.abs(r.amount) < Number(minAmt)) return false;
-          if (maxAmt !== "" && Math.abs(r.amount) > Number(maxAmt)) return false;
-          if (memoQuery.trim() && !(`${r.memo}${r.counterparty}`.toLowerCase().includes(memoQuery.trim().toLowerCase()))) return false;
-          return true;
-        });
-
-        if (sortKey === "amount") {
-          clientFiltered = clientFiltered.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
-        } else {
-          clientFiltered = clientFiltered.sort((a, b) => b.ts - a.ts);
-        }
-
-        setRows(clientFiltered);
-        setTotalElements(p.totalElements ?? clientFiltered.length);
+        setRows(mapped);
+        setTotalElements(p.totalElements ?? mapped.length);
         setTotalPages(p.totalPages ?? (p.totalElements ? p.totalPages : 1));
       }).catch(console.error);
 
   }, [a_no, kinds, dateFrom, dateTo, page, pageSize, memoQv, sortKey]);
 
+  // 계좌 상태 필터링 버튼 활성화
+  const Chip = ({ active, children, onClick }) => (
+    <button onClick={onClick} className={"px-3 py-1.5 rounded-full text-xs border transition " + (active ? "bg-blue-50 text-blue-700 border-blue-300" : "hover:bg-gray-50")}>{children}</button>
+  );
+
+  // 필터 패널에 의한 보조 필터링 구현
+  const displayFilter = React.useMemo(() => { // 메모리에 저장해서 효율성
+    // 날짜 범위 필터
+    const inDateRange = (ts) => {
+      if(!ts) return true;
+      const t = ts.getTime();
+      if(dateFrom){
+        const f = new Date(`${dateFrom}T00:00:00`).getTime();
+        if(t<f) return false;
+      }
+      if(dateTo){
+        const u = new Date(`${dateTo}T23:59:59.999`).getTime();
+        if(t> u) return false;
+      }
+      return true;
+    };
+    // 내역 타입 ( 입금, 출금, 수수료 )
+    const inKind = (typeText) => {
+      if(kinds.size === 0) return true;         // 아무것도 선택 안했을 때-> 전체
+      return kinds.has(String(typeText ?? '')); // 화면표시값
+    }
+
+    // 실패제외 (th_transaction_type이 'OUT'인거 제외)
+    let outErr = rows.filter(r=> String(r.tsType ?? '' ).toUpperCase() !== 'OUT');
+      outErr = outErr.filter((r) => {
+        if(!inDateRange(r.ts)) return false;
+        if(!inKind(r.type)) return false;
+        if (minAmt !== "" && Math.abs(r.amount) < Number(minAmt)) return false;
+        if (maxAmt !== "" && Math.abs(r.amount) > Number(maxAmt)) return false;
+        if (memoQuery.trim()) {
+          const q = memoQuery.trim().toLowerCase();
+          if (!(`${r.memo}${r.counterparty}`.toLowerCase().includes(q))) return false;
+        }
+        return true;
+      });
+      // 정렬
+      if (sortKey === "amount") {
+        outErr = [...outErr].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+      } else {
+        outErr = [...outErr].sort((a, b) => b.ts - a.ts);
+      }
+      return outErr;
+    },[rows, dateFrom, dateTo, kinds, minAmt, maxAmt, memoQuery, sortKey]);
   
   // 필터 초기화
   function resetFilters() {
@@ -229,7 +263,6 @@ function AccountHistoryPage(){
     a.click();
     URL.revokeObjectURL(url);     // createObjectURL로 생긴 url 폐기
   }
-
   // PDF 파일 다운로드
   async function downloadPdf(list) {
     //폰트로딩
@@ -250,48 +283,33 @@ function AccountHistoryPage(){
 
     //테이블구성
     const head = [["일시", "구분", "상대", "메모", "금액(±)", "잔액"]];
-    const body = list.map((r) => [`${toISODate(r.ts)} ${r.time}`, r.type, r.counterparty, r.memo, r.amount, r.balance
-    ]);
+    const body = list.map((r) => [`${toISODate(r.ts)} ${r.time}`, r.type, r.counterparty, r.memo, r.amount, r.balance]);
 
     //autoTable 호출
     autoTable(doc, {
-    head,
-    body,
-    startY: 76,
-    styles: { font: "NotoSansKR", fontSize: 9, cellPadding: 6, fontStyle: "normal" },
-    headStyles: { font: "NotoSansKR", fontStyle: "normal", fillColor: [242, 242, 242], textColor: 20 },
-    // 컬럼 인덱스: 0~5 (금액, 잔액만 오른쪽 정렬)
-    columnStyles: {
-      4: { halign: "right", cellWidth: 80 },
-      5: { halign: "right", cellWidth: 80 },
-    },
-    didDrawPage: (data) => {
-      const pageCnt = doc.getNumberOfPages();
-      const str = `Page ${data.pageNumber} / ${pageCnt}`;
-      doc.setFontSize(9);
-      doc.text(
-        str,
-        doc.internal.pageSize.getWidth() - 80,
-        doc.internal.pageSize.getHeight() - 20
-      );
-    },
-  });
-}
-
-
-
-  // 계좌 상태 필터링
-  const Chip = ({ active, children, onClick }) => (
-    <button onClick={onClick} className={"px-3 py-1.5 rounded-full text-xs border transition " + (active ? "bg-blue-50 text-blue-700 border-blue-300" : "hover:bg-gray-50")}>{children}</button>
-  );
-
-  // th_transaction_type이 OUT인 것들은 목록에서 제외(이체실패건)
-  const displayFilter = React.useMemo(() => {
-      const norm = v => String(v ?? '').trim().toUpperCase();
-      return rows.filter(r => norm(r.tsType) !== 'OUT');}
-  );
-
-  
+      head,
+      body,
+      startY: 76,
+      styles: { font: "NotoSansKR", fontSize: 9, cellPadding: 6, fontStyle: "normal" },
+      headStyles: { font: "NotoSansKR", fontStyle: "normal", fillColor: [242, 242, 242], textColor: 20 },
+      // 컬럼 인덱스: 0~5 (금액, 잔액만 오른쪽 정렬)
+      columnStyles: {
+        4: { halign: "right", cellWidth: 80 },
+        5: { halign: "right", cellWidth: 80 },
+      },
+      didDrawPage: (data) => {
+        const pageCnt = doc.getNumberOfPages();
+        const str = `Page ${data.pageNumber} / ${pageCnt}`;
+        doc.setFontSize(9);
+        doc.text(
+          str,
+          doc.internal.pageSize.getWidth() - 80,
+          doc.internal.pageSize.getHeight() - 20
+        );
+      },
+    });
+    doc.save(`TransferHitory-${Date.now()}.pdf`)
+  }
 
   // 계정 정보가 확인되지 않을 때
   if (!account) {
@@ -385,11 +403,11 @@ function AccountHistoryPage(){
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">시작일</label>
-                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" />
+                  <input type="date" value={dateFrom} onChange={(e) => {setDateFrom(e.target.value); setPage(0);}} className="w-full rounded-lg border px-3 py-2 text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">종료일</label>
-                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" />
+                  <input type="date" value={dateTo} onChange={(e) => {setDateTo(e.target.value); setPage(0);}} className="w-full rounded-lg border px-3 py-2 text-sm" />
                 </div>
               </div>
 
