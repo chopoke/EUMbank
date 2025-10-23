@@ -55,7 +55,7 @@ export default function BulkTransferComplete() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-semibold">다건이체 완료</h1>
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-              summary.failCount === 0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+              summary.failCount === 0 ? 'bg-cyan-100 text-cyan-700' : 'bg-yellow-100 text-yellow-700'
             }`}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
@@ -69,15 +69,15 @@ export default function BulkTransferComplete() {
               <div className="text-sm text-gray-600">전체</div>
               <div className="text-2xl font-bold">{summary.totalCount}건</div>
             </div>
-            <div className="p-4 rounded-lg bg-green-50">
-              <div className="text-sm text-green-700">성공</div>
-              <div className="text-2xl font-bold text-green-700">{summary.successCount}건</div>
+            <div className="p-4 rounded-lg bg-sky-100">
+              <div className="text-sm text-sky-600">성공</div>
+              <div className="text-2xl font-bold text-sky-600">{summary.successCount}건</div>
             </div>
-            <div className="p-4 rounded-lg bg-red-50">
-              <div className="text-sm text-red-700">실패</div>
-              <div className="text-2xl font-bold text-red-700">{summary.failCount}건</div>
+            <div className={`p-4 rounded-lg ${summary.failCount > 0 ? 'bg-red-100' : 'bg-gray-50'}`}>
+              <div className={`text-sm ${summary.failCount > 0 ? 'text-red-700' : 'text-gray-700'}`}>실패</div>
+              <div className={`text-2xl font-bold ${summary.failCount > 0 ? 'text-red-700' : 'text-gray-700'}`}>{summary.failCount}건</div>
             </div>
-            <div className="p-4 rounded-lg bg-blue-50">
+            <div className="p-4 rounded-lg bg-blue-100">
               <div className="text-sm text-blue-700">최종 잔액</div>
               <div className="text-2xl font-bold text-blue-700">₩{formatCurrency(summary.finalBalance)}</div>
             </div>
@@ -152,19 +152,19 @@ export default function BulkTransferComplete() {
         <section className="mt-8 flex justify-center gap-4">
           <button 
             onClick={() => navigate('/')}
-            className="rounded-full border border-gray-300 px-6 py-3 text-sm hover:bg-gray-50"
+            className="rounded-full border border-gray-300 px-6 py-3 text-sm text-white bg-blue-700 hover:bg-blue-800"
           >
             홈으로 가기
           </button>
           <button 
             onClick={() => navigate('/transfer/bulk')}
-            className="rounded-full border border-gray-300 px-6 py-3 text-sm hover:bg-gray-50"
+            className="rounded-full border border-gray-300 px-6 py-3 text-sm text-gray-500 bg-gray-200 hover:bg-gray-300"
           >
             다건이체 다시하기
           </button>
           <button 
             onClick={() => navigate('/transfer')}
-            className="rounded-full bg-blue-700 text-white px-6 py-3 text-sm hover:bg-blue-800"
+            className="rounded-full bg-blue-700 px-6 py-3 text-sm text-gray-500 bg-gray-200 hover:bg-gray-300"
           >
             일반 이체로 이동
           </button>
