@@ -166,7 +166,7 @@ logging:
 # ===================================================================
 finlife:
   base-url: "https://finlife.fss.or.kr"
-  api-key: ${FINLIFE_API_KEY}   # 운영/로컬 환경변수로 주입
+  api-key: "b8026175e9f7ea9382ca8f19aa8c3fe7"
 
 jobs:
   finlife:
