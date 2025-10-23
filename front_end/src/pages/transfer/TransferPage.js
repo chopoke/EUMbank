@@ -304,7 +304,12 @@ export default function TransferPage() {
       if (error.response && error.response.data) {
         errorMessage = error.response.data.error || error.response.data.message || errorMessage;
       } else if (error.message) {
-        errorMessage = error.message;
+        // JavaScript 에러 메시지 처리
+        if (error.message.includes("Cannot read properties of undefined")) {
+          errorMessage = '출금 계좌를 선택해주세요.';
+        } else {
+          errorMessage = error.message;
+        }
       }
 
       setError(errorMessage);
@@ -742,7 +747,12 @@ export default function TransferPage() {
         errorMessage = error.response.data.error || error.response.data.message || errorMessage;
         errorCode = error.response.data.errorCode;
       } else if (error.message) {
-        errorMessage = error.message;
+        // JavaScript 에러 메시지 처리
+        if (error.message.includes("Cannot read properties of undefined")) {
+          errorMessage = '출금 계좌를 선택해주세요.';
+        } else {
+          errorMessage = error.message;
+        }
       }
       
       // 실패 사유별 구분된 메시지 표시

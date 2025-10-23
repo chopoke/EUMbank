@@ -884,6 +884,11 @@ public class TransferServiceImpl implements TransferService {
     // === 유틸리티 메서드들 ===
 
     private void validateTransferRequest(TransferRequestDto request) {
+        // 출금 계좌 선택 검증
+        if (request.getFromAccountNo() == null) {
+            throw new InvalidAmountException("출금 계좌를 선택해주세요.");
+        }
+        
         if (request.getAmount() <= 0) {
             throw new InvalidAmountException("이체 금액은 0보다 커야 합니다.");
         }
