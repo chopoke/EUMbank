@@ -205,13 +205,15 @@ function ProfileTab({initialData}) {
     marketing:''
   });
 
+  const [isTermsPopupOpen, setIsTermsPopupOpen] = useState(false); 
+
   useEffect(() => {
     // initialData가 존재하고, DTO의 핵심 필드가 채워졌을 때만 실행
     // cnameKr 대신 cnamekr로 접근하거나, 더 안전하게 cNameKr도 시도합니다.
     if (initialData && (initialData.cnameKr || initialData.cnamekr)) { 
         
         console.log("ProfileTab: API 데이터 수신 및 상태 업데이트:", initialData);
-        
+        console.log(profileData.marketing);
         // ⭐ 핵심: 로그에 표시된 실제 키를 사용합니다.
         // DTO 필드명 (cnameKr, cemail)이 소문자 시작으로 들어왔다면,
         // JSON 키는 'cnamekr', 'cemail' 형태로 들어올 가능성이 높습니다.
@@ -222,6 +224,7 @@ function ProfileTab({initialData}) {
         const emailKey = initialData.cemail;
         const phoneKey = initialData.cphoneMobile;
         const birthKey = initialData.cbirthDt;
+        const marketingKey = initialData.cagreeMarketing;
 
         setProfileData({
             name: nameKey || '', 
@@ -234,10 +237,12 @@ function ProfileTab({initialData}) {
             gender: initialData?.cgenderCd || null ,
             address: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
             occupation: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
+            marketing: marketingKey,
         });
     } else {
         // 이 로그가 계속 찍히지 않는지 확인하세요. (API 호출이 두 번 성공해야 합니다.)
         console.log("ProfileTab: initialData가 비어있거나 아직 로딩 중입니다."); 
+        
     }
   }, [initialData]);
 
@@ -270,6 +275,20 @@ function ProfileTab({initialData}) {
           gender: newGenderValue
       }));
   };
+
+  // 약관 내용 Mock Data
+    const mockTerms = `
+        제 1조 (목적)
+        본 약관은 [회사명]이 제공하는 이벤트, 할인 정보, 신제품 소식 등의 마케팅 정보를 고객에게 제공하는 조건 및 절차에 관한 사항을 규정함을 목적으로 합니다.
+
+        제 2조 (수신 동의)
+        1. 고객은 본 동의서를 통해 SMS, 이메일, 앱 푸시 등의 전자적 전송 매체를 통한 정보 수신에 동의할 수 있습니다.
+        2. 수신 동의 시, 고객은 마케팅 활용 목적에 필요한 개인정보(이름, 연락처, 이메일 등) 제공에 동의한 것으로 간주합니다.
+
+        제 3조 (철회 및 불이익)
+        1. 고객은 언제든지 동의를 철회할 수 있으며, 철회 후 즉시 마케팅 정보 발송이 중단됩니다.
+        2. 마케팅 정보 수신 동의 여부는 서비스 이용에 영향을 미치지 않습니다.
+    `;
 
   const handleSave = () => {
         // 서버로 전송할 DTO 형식에 맞게 데이터를 매핑합니다.
@@ -511,10 +530,65 @@ function ProfileTab({initialData}) {
           <h3 className="text-lg font-semibold text-gray-800 mb-4">마케팅 수신 동의</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                {/* <i className="ri-notification-line text-blue-600"></i> */}
-                <span className="text-gray-700">※버튼을 활성화 하시면 마케팅 수신 약관에 동의한 것으로 간주됩니다.</span>
-              </div>
+              <div 
+                className="relative mt-2 p-3 text-right"
+                // onBlur 이벤트 추가: 팝업이 열려있을 때 팝업 외부를 클릭하면 닫히도록 설정
+                tabIndex={-1} 
+                onBlur={(e) => {
+                    // relatedTarget이 null이거나, 관련 요소가 이 div의 자식이 아니라면 팝업 닫기
+                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                        setIsTermsPopupOpen(false);
+                    }
+                }}
+            >
+                <span className="text-sm text-gray-700" >
+                    ※버튼을 활성화 하시면 마케팅 수신 <a className="text-sm text-gray-700 cursor-pointer pb-0.5 hover:text-blue-600 transition-colors"
+                    role="button" // 접근성 향상을 위해 버튼 역할 지정
+                    tabIndex="0" // 키보드 접근 가능하게 설정 (엔터키로도 클릭 가능)
+                    onClick={() => setIsTermsPopupOpen(prev => !prev)}
+                    onKeyDown={(e) => {
+                        // Enter 또는 Spacebar 키를 눌러도 클릭 작동하도록 처리
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setIsTermsPopupOpen(prev => !prev);
+                        }
+                    }} style={{textDecoration: 'underline'}}>약관</a>에 동의한 것으로 간주됩니다.
+                    <span className="text-blue-600 font-semibold border-b border-dashed border-blue-400 ml-1">
+                        <br></br><small>(약관을 클릭하시면 내용을 보실수 있습니다.)</small>
+                    </span>
+                </span>
+
+                {/* 약관 팝업 (Tooltip 형태) */}
+                {isTermsPopupOpen && (
+                    <div className="absolute right-0 bottom-full mb-4 w-full max-w-xs sm:max-w-md lg:max-w-lg
+                                   mx-2 md:mx-0  z-10 bg-white border border-blue-200 rounded-xl shadow-2xl p-4 transition duration-300 ease-in-out transform origin-bottom-right">
+                        <div className="flex justify-between items-center mb-2">
+                            <div className="text-base font-semibold text-blue-600">
+                                마케팅 수신 약관 (요약)
+                            </div>
+                            {/* 닫기 버튼 추가 */}
+                            <button 
+                                onClick={() => setIsTermsPopupOpen(false)}
+                                className="text-gray-500 hover:text-gray-900 transition-colors p-1 rounded-full hover:bg-gray-100"
+                                aria-label="약관 팝업 닫기"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        {/* 약관 내용 (스크롤 가능) */}
+                        <div className="text-xs text-gray-700 space-y-2 max-h-48 overflow-y-auto pr-2">
+                            {mockTerms.split('\n\n').map((paragraph, index) => (
+                                <p key={index}>{paragraph.trim()}</p>
+                            ))}
+                        </div>
+                        {/* 꼬리 (Tooltip Tail) */}
+                        <div className="absolute right-3 -bottom-2 w-4 h-4 bg-white border-b border-r border-blue-200 transform rotate-45"></div>
+                    </div>
+                )}
+            </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 {/* {profileData.marketing === 'Y' ? (<input type="checkbox" className="sr-only peer" defaultChecked />) : (<input type="checkbox" className="sr-only peer"  />)} */}
                 <input 

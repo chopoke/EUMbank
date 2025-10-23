@@ -1,6 +1,6 @@
 package com.boot.eumbank.transfer_domain.account.service;
 
-import com.boot.eumbank.account.open.model.Account;
+import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.transfer_domain.account.entity.AccountLimit;
 import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountLimitRepository;
 import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountRepository;
@@ -8,8 +8,6 @@ import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.transfer_domain.customer.repository.Transfer_CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

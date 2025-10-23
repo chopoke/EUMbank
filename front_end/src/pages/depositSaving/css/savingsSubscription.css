@@ -1,0 +1,250 @@
+/* 예금 CSS와 동일한 스타일을 사용합니다. */
+/* 필요 시 이 파일에 적금 페이지에만 적용될 스타일을 추가할 수 있습니다. */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+
+.sub-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+}
+
+/* --- 헤더 --- */
+.sub-header {
+    margin-bottom: 40px;
+}
+
+.tags {
+    margin-bottom: 12px;
+}
+
+.tag {
+    display: inline-block;
+    background-color: #e7f5ff;
+    color: #007bff;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-right: 8px;
+}
+
+.sub-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+}
+
+.sub-header p {
+    font-size: 1.1rem;
+    color: #6c757d;
+    margin-bottom: 24px;
+}
+
+.rate-highlight {
+    display: flex;
+    gap: 24px;
+    border-top: 1px solid #e9ecef;
+    padding-top: 24px;
+}
+.rate-highlight span {
+    font-size: 1rem;
+    color: #6c757d;
+}
+.rate-highlight strong {
+    display: block;
+    font-size: 1.5rem;
+    color: #343a40;
+    font-weight: 700;
+}
+
+
+/* --- 메인 그리드 --- */
+.sub-main-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 40px;
+}
+
+.info-section {
+    margin-bottom: 40px;
+}
+.info-section h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #343a40;
+}
+
+/* 금리 안내 테이블 */
+.rate-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+}
+.rate-table th, .rate-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e9ecef;
+}
+.rate-table th {
+    background-color: #f8f9fa;
+    font-weight: 500;
+}
+
+/* 상품 문서 & 유의사항 */
+.document-link {
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: underline;
+}
+.notice-list {
+    padding-left: 20px;
+    line-height: 1.7;
+}
+
+/* --- FAQ --- */
+.faq-item {
+    border-bottom: 1px solid #e9ecef;
+}
+.faq-question {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    background: none;
+    border: none;
+    text-align: left;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+.faq-icon {
+    transition: transform 0.3s;
+}
+.faq-icon.open {
+    transform: rotate(180deg);
+}
+.faq-answer {
+    padding: 0 16px 16px;
+    background-color: #f8f9fa;
+    color: #495057;
+    line-height: 1.6;
+}
+
+
+/* --- 우측 사이드바 --- */
+.right-col {
+    position: sticky;
+    top: 40px;
+    align-self: flex-start; /* 스크롤 시 상단에 고정 */
+}
+
+.summary-box, .calculator-box {
+    background-color: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.summary-box h4, .calculator-box h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0 0 16px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+}
+.summary-item span { color: #6c757d; }
+.summary-item strong { font-weight: 500; }
+
+.sub-action-button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background-color 0.2s;
+}
+.sub-action-button.primary {
+    background-color: #007bff;
+    color: #fff;
+    border: 1px solid #007bff;
+}
+.sub-action-button.secondary {
+    background-color: #fff;
+    color: #343a40;
+    border: 1px solid #ced4da;
+}
+.sub-action-button.disabled {
+    background-color: #e9ecef;
+    color: #adb5bd;
+    border: 1px solid #e9ecef;
+    cursor: not-allowed;
+}
+
+/* --- 계산기 --- */
+.calc-input-group {
+    margin-bottom: 16px;
+}
+.calc-input-group label {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+.calc-input-group input[type="text"],
+.calc-input-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+.calc-input-group input[type="range"] {
+    width: 100%;
+    margin-top: 8px;
+}
+
+.calc-result .result-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+.calc-result .tax { color: #dc3545; }
+.calc-result .total {
+    font-size: 1.1rem;
+    margin-top: 12px;
+}
+.calc-result .total strong {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #007bff;
+}
+.calc-result hr {
+    border: 0;
+    border-top: 1px dashed #ced4da;
+    margin: 12px 0;
+}
+
+.final-actions {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.final-actions label {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}

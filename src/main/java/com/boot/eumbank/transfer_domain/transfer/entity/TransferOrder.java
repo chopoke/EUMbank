@@ -1,6 +1,6 @@
 package com.boot.eumbank.transfer_domain.transfer.entity;
 
-import com.boot.eumbank.account.open.model.Account;
+import com.boot.eumbank.account.open.entity.account.Account;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -104,11 +104,12 @@ public class TransferOrder {
     }
 
     /**
-     * 예약 이체가 스케줄된 상태인지 확인하는 메서드
-     * @return 스케줄된 상태 여부
+     * 예약 이체가 실행 가능한 상태인지 확인하는 메서드
+     * SCHEDULED 또는 PROCESSING 상태를 모두 실행 가능으로 간주
+     * @return 실행 가능한 상태 여부
      */
     public boolean isScheduled() {
-        return "SCHEDULED".equals(this.to_status);
+        return "SCHEDULED".equals(this.to_status) || "PROCESSING".equals(this.to_status);
     }
 
     /**

@@ -114,6 +114,7 @@ export default function TransferPage() {
   const [fee, setFee] = useState(0);
   const [activeTab, setActiveTab] = useState('fav');
   const [amount, setAmount] = useState('');
+  const [formattedAmount, setFormattedAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [selectedRecipient, setSelectedRecipient] = useState(null);
   const [isReserved, setIsReserved] = useState(false);
@@ -243,7 +244,7 @@ export default function TransferPage() {
 
     // 2. 전달받은 특정 계좌번호 값만 추출하여 로그로 확인
     const passedAccountNumber = location.state?.fromAccountNumber; // 👈 fromAccountNumber 키로 접근
-    
+
     if (passedAccountNumber) {
       console.log('✅ 전달받은 계좌번호 (fromAccountNumber):', passedAccountNumber);
     } else {
@@ -270,7 +271,7 @@ export default function TransferPage() {
         
         // 2. 전달받은 특정 계좌번호 값만 추출하여 로그로 확인
         const passedAccountNumber = location.state?.fromAccountNumber; // 👈 fromAccountNumber 키로 접근
-        
+
         if (passedAccountNumber) {
           console.log('✅ 전달받은 계좌번호 (fromAccountNumber):', passedAccountNumber);
         } else {
@@ -295,8 +296,18 @@ export default function TransferPage() {
       }
       
     } catch (error) {
-      console.error('계좌 정보 로딩 실패:', error.message || '알 수 없는 오류');
-      setError('보내실 계좌를 선택해주세요.');
+      console.error('계좌 정보 로딩 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '계좌 정보를 불러오는데 실패했습니다.';
+
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -310,7 +321,18 @@ export default function TransferPage() {
         setFavoriteAccounts(response.data.data || []);
       }
     } catch (error) {
-      console.error('자주 쓰는 계좌 로딩 실패:', error.message || '알 수 없는 오류');
+      console.error('자주 쓰는 계좌 로딩 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '자주 쓰는 계좌를 불러오는데 실패했습니다.';
+
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      console.warn(errorMessage);
       setFavoriteAccounts([]);
     }
   };
@@ -403,7 +425,18 @@ export default function TransferPage() {
         setFee(0);
       }
     } catch (error) {
-      console.error('수수료 조회 실패:', error.message || '알 수 없는 오류');
+      console.error('수수료 조회 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '수수료 조회에 실패했습니다.';
+
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      console.warn(errorMessage);
       setFee(0); // 에러 시 무료로 설정
     }
   };
@@ -446,8 +479,40 @@ export default function TransferPage() {
     return formatKRW(balance - (numericAmount + fee));
   }, [numericAmount, balance, fee]);
 
+  // 금액 포맷팅 함수 (3자리마다 콤마)
+  const formatAmount = (value) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  // 금액 입력 처리 함수
+  const handleAmountChange = (e) => {
+    const inputValue = e.target.value;
+    const numericValue = inputValue.replace(/[^0-9]/g, '');
+    
+    // 최대 1억원 제한
+    if (parseInt(numericValue) > 100000000) {
+      return;
+    }
+    
+    setAmount(numericValue);
+    setFormattedAmount(formatAmount(numericValue));
+  };
+
   // 금액 추가 함수
-  const handleAddAmount = (addValue) => setAmount(String(numericAmount + addValue));
+  const handleAddAmount = (addValue) => {
+    const currentAmount = parseInt(amount || '0');
+    const newAmount = currentAmount + addValue;
+    
+    // 최대 1억원 제한
+    if (newAmount > 100000000) {
+      return;
+    }
+    
+    const newAmountStr = String(newAmount);
+    setAmount(newAmountStr);
+    setFormattedAmount(formatAmount(newAmountStr));
+  };
   
   // 자주 쓰는 계좌 선택 함수
   const handleSelectFavorite = (account) => {
@@ -592,7 +657,7 @@ export default function TransferPage() {
         // 예약 이체 생성 API 호출
         const scheduleResponse = await transferApi.createReserveTransfer(requestData);
 
-        if (scheduleResponse.data && scheduleResponse.data.success) {
+        if (scheduleResponse.data && scheduleResponse.data.success === true) {
           // 예약이체 완료 페이지로 이동
           const reserveData = {
             orderId: scheduleResponse.data.data.orderId,
@@ -610,17 +675,19 @@ export default function TransferPage() {
           navigate('/transfer/reserve/complete', { state: { reserveData } });
           return;
         } else {
-          // 예약이체 실패 시 alert로 에러 메시지 표시
-          const errorMessage = scheduleResponse.data?.message || '예약 이체 등록에 실패했습니다.';
+          // 예약이체 실패 시 alert로 에러 메시지 표시하고 완료 페이지로 이동하지 않음
+          const errorMessage = scheduleResponse.data?.message || scheduleResponse.data?.error || '예약 이체 등록에 실패했습니다.';
+          console.error('예약이체 실패 응답:', scheduleResponse.data);
           alert(`예약이체 실패: ${errorMessage}`);
-          throw new Error(errorMessage);
+          setIsModalOpen(false); // 모달 닫기
+          return; // 함수 종료 (완료 페이지로 이동하지 않음)
         }
       }
 
       // 즉시 이체 실행
       const response = await transferApi.createTransfer(requestData);
 
-      if (response.data && response.data.success) {
+      if (response.data && response.data.success === true) {
         // API 응답에서 새로운 잔액 사용
         const newBalance = response.data.data.afterBalance || (balance - numericAmount);
         setBalance(newBalance);
@@ -654,16 +721,79 @@ export default function TransferPage() {
         loadFavoriteAccounts();
         loadRecentRecipients();
       } else {
-        // 이체 실패 시 alert로 에러 메시지 표시
-        const errorMessage = response.data?.message || response.error || '이체 처리에 실패했습니다.';
+        // 이체 실패 시 alert로 에러 메시지 표시하고 완료 페이지로 이동하지 않음
+        const errorMessage = response.data?.message || response.data?.error || '이체 처리에 실패했습니다.';
+        console.error('이체 실패 응답:', response.data);
         alert(`이체 실패: ${errorMessage}`);
-        throw new Error(errorMessage);
+        setIsModalOpen(false); // 모달 닫기
+        return; // 함수 종료 (완료 페이지로 이동하지 않음)
       }
 
     } catch (error) {
-      console.error('이체 실행 실패:', error.message || '알 수 없는 오류');
-      setError(error.message || '이체 처리 중 오류가 발생했습니다.');
-      alert(error.message || '이체 처리 중 오류가 발생했습니다.');
+      console.error('이체 실행 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '이체 처리 중 오류가 발생했습니다.';
+      let errorCode = null;
+
+
+      if (error.response && error.response.data) {
+        // 백엔드 TransferGlobalExceptionHandler에서 보내는 에러 메시지 사용
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+        errorCode = error.response.data.errorCode;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // 실패 사유별 구분된 메시지 표시
+      let userFriendlyMessage = errorMessage;
+
+      if (errorCode) {
+        switch (errorCode) {
+          case 'ACCOUNT_NOT_FOUND':
+            userFriendlyMessage = '존재하지 않는 계좌입니다.';
+            break;
+          case 'INSUFFICIENT_BALANCE':
+            userFriendlyMessage = '잔액이 부족합니다.';
+            break;
+          case 'PASSWORD_MISMATCH':
+            userFriendlyMessage = '계좌 비밀번호가 일치하지 않습니다.';
+            break;
+          case 'ACCOUNT_SUSPENDED':
+            userFriendlyMessage = '거래가 제한된 계좌입니다.';
+            break;
+          case 'INVALID_AMOUNT':
+            userFriendlyMessage = '이체 금액이 올바르지 않습니다.';
+            break;
+          case 'PER_TRANSFER_LIMIT_EXCEEDED':
+            userFriendlyMessage = '1회 이체 한도를 초과했습니다.';
+            break;
+          case 'DAILY_LIMIT_EXCEEDED':
+            userFriendlyMessage = '일일 이체 한도를 초과했습니다.';
+            break;
+          case 'MONTHLY_LIMIT_EXCEEDED':
+            userFriendlyMessage = '월간 이체 한도를 초과했습니다.';
+            break;
+          case 'LIMIT_EXCEEDED':
+            userFriendlyMessage = '이체 한도를 초과했습니다.';
+            break;
+          case 'SAME_ACCOUNT':
+            userFriendlyMessage = '자기 계좌로는 이체할 수 없습니다.';
+            break;
+          case 'UNAUTHORIZED':
+            userFriendlyMessage = '권한이 없습니다.';
+            break;
+          case 'INVALID_REQUEST':
+            userFriendlyMessage = '잘못된 요청입니다.';
+            break;
+          default:
+            userFriendlyMessage = errorMessage;
+        }
+      }
+
+      setError(userFriendlyMessage);
+      alert(`이체 실패: ${userFriendlyMessage}`);
+      setIsModalOpen(false); // 모달 닫기
     } finally {
       setIsLoading(false);
     }
@@ -689,7 +819,18 @@ export default function TransferPage() {
       // 선택된 계좌의 최근 이체 내역 로드
       loadRecentRecipientsForAccount(account.aNo);
     } catch (error) {
-      console.error('잔액 조회 실패:', error.message || '알 수 없는 오류');
+      console.error('잔액 조회 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '잔액 조회에 실패했습니다.';
+
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      console.warn(errorMessage);
       setBalance(account.balance || 0); // 에러 시 계좌 객체의 잔액 사용
     }
   };
@@ -702,7 +843,18 @@ export default function TransferPage() {
         setFavoriteAccounts(response.data.data.recipients || []);
       }
     } catch (error) {
-      console.error('최근 이체 대상 로딩 실패:', error.message || '알 수 없는 오류');
+      console.error('최근 이체 대상 로딩 실패:', error);
+
+      // 백엔드에서 보내는 구체적인 에러 메시지 추출
+      let errorMessage = '최근 이체 대상을 불러오는데 실패했습니다.';
+
+      if (error.response && error.response.data) {
+        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      console.warn(errorMessage);
       setFavoriteAccounts([]);
     }
   };
@@ -710,6 +862,7 @@ export default function TransferPage() {
   // 취소 버튼 핸들러 - 입력 초기화
   const handleCancel = () => {
     setAmount('');
+    setFormattedAmount('');
     setMemo('');
     setSelectedRecipient(null);
     setIsReserved(false);
@@ -971,7 +1124,13 @@ export default function TransferPage() {
                     <div className="col-span-12 md:col-span-6">
                       <label className="block text-sm font-medium text-gray-800 mb-1">보낼 금액</label>
                       <div className="relative">
-                        <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="numeric" className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="0" />
+                        <input 
+                          value={formattedAmount} 
+                          onChange={handleAmountChange} 
+                          inputMode="numeric" 
+                          className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" 
+                          placeholder="0" 
+                        />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3">
                           <button onClick={() => handleAddAmount(100000)} className="text-sm text-blue-600 hover:underline">+10만</button>
                           <button onClick={() => handleAddAmount(500000)} className="text-sm text-blue-600 hover:underline">+50만</button>
@@ -1013,7 +1172,7 @@ export default function TransferPage() {
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 7h18v10H3V7Zm0 3h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       이체 후 예상 잔액
                     </div>
-                    <div className="font-semibold">{remainingBalance}</div>
+                    <div className="font-semibold font-mono">{remainingBalance}</div>
                   </div>
 
                   {/* 에러 메시지 표시 */}

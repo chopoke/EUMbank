@@ -1,10 +1,12 @@
 import { create } from "zustand";
+import { devtools } from 'zustand/middleware';
 
 // 새 계좌번호 생성 (형식: 110-123-456789)
 const rand = n => Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join("");
 export const genAccountNo = () => `110-${rand(3)}-${rand(6)}`;
 
-export const useAccountOpenStore = create((set, get) => ({
+export const useAccountOpenStore = create(devtools((set, get) => ({
+
     // 1단계
     step1: { all: false, eContract: false, privacy: false, marketing: false },
     setStep1: (agreements) => set({ step1: { ...agreements } }),
@@ -55,4 +57,4 @@ export const useAccountOpenStore = create((set, get) => ({
         step4: { product: "saving", fromAccount: "", mPin: "", newAccountNo: genAccountNo() },
         submitted: false,
     })
-}));
+}), { name: "AccountOpenStore" }));

@@ -1,7 +1,5 @@
 // 예금
-
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
 import '../css/depositSubscription.css'; // 예금 전용 CSS import
 
 // FAQ 아이템을 위한 간단한 아코디언 컴포넌트

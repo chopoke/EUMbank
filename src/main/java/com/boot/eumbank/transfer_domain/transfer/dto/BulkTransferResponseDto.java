@@ -5,6 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -21,7 +22,7 @@ public class BulkTransferResponseDto {
     private int totalCount;               // 총 수취인 수
     private int successCount;             // 성공 건수
     private int failCount;                // 실패 건수
-    private List<TransferResultDto> results;  // 성공한 이체 결과 목록
-    private List<String> errors;          // 실패한 이체 오류 목록
+    private List<TransferResultDto> results;  // 모든 이체 결과 목록 (성공/실패 포함)
     private Integer totalAmount;          // 총 이체 금액
+    private BigDecimal finalBalance;       // 최종 잔액
 }
