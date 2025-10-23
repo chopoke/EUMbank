@@ -33,6 +33,18 @@ function AccountListPage(){
     return btoa(binary);
   }
 
+  // 날짜포맷 유틸 ----------
+  const CustomDateFm = (d) => {
+    if(!(d instanceof Date) || isNaN(d)) return "-";    // 날짜가 아니면 -
+    const pad = (n) => String(n).padStart(2,"0");
+    const y = d.getFullYear();
+    const m = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    return `${y}-${m}-${day} ${hh}:${mm}`;
+  }
+
   React.useEffect(()=>{
     let alive = true;
     setLoading(true);
@@ -54,15 +66,16 @@ function AccountListPage(){
           : null;
 
         const ts = asDate ? asDate.getTime() : 0;
-        const lastText = asDate
-          ? asDate.toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })
-          : '— 최근 거래 없음';
+        const lastText = asDate ? CustomDateFm(asDate) : '최근거래없음';
 
+        // 계좌명 디스플레이용
+        const disName = d.a_nickname || d.a_account_code || d.a_account_type || "계좌명";
         return {
           id: d.a_no,
-          nickname: d.a_nickname || d.a_account_no,
-          accountName: d.a_account_type || '입출금',
-          bank: 'EumBank', // 임시
+          nickname: d.a_nickname,
+          productCode: d.a_product_code,    
+          accountType: d.a_account_type || '입출금',  
+          bank: 'Eum', // 임시
           number: d.a_account_no,
           type: d.a_account_type,
           balance: Number(d.a_balance),
@@ -71,9 +84,7 @@ function AccountListPage(){
           favorite: false,
           lastActivityTs: ts,
           lastActivity: lastText,
-          // aNo: d.a_no,                     // 출금 계좌 PK
-          // accountNo: d.a_account_no,       // 계좌번호 (문자열)
-          // accountType: d.a_account_type,   // 계좌유형
+          disName,
         };
       });
         setAccounts(mapped);
@@ -94,14 +105,16 @@ function AccountListPage(){
 );  
 
 
-  const bankOptions = ["EumBank","신한","KB국민","우리","하나","NH농협"];
+  const bankOptions = ["Eum","신한","KB국민","우리","하나","NH농협"];
   const typeOptions = ["전체","입출금","자유적금", "예금","적금", "대출","외화"];
+  const foreignFm = ["KRW", "USD", "JPY", "SGD", "THB", "AED", "AUD", "BHD", "BND", "CAD",
+    "CHF", "CNH", "DKK", "EUR", "GBP", "HKD", "IDR", "KWD","MYR", "NOK", "NZD","NZD", "SEK"];
 
   // 원화 스케일링
   const won = (n)=> n.toLocaleString('ko-KR');
   const formatCurrency = (amt, cur) => 
-    cur === "USD"
-      ? `$ ${amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`: `₩ ${won(amt)}`;
+    cur === "USD" ? `$ ${amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`: `₩ ${won(amt)}`;
+
     // 계좌번호 마스킹
     const maskAcc = (s) =>
       s.replace(/(\d{2,4})-(\d{2,4})-(\d{2,6})/, (_m, a, b, c) => `${a}-${b}-` + c.replace(/\d/g, "•"));
@@ -127,7 +140,7 @@ function AccountListPage(){
   // csv 다운로드
   function downloadCsv(rows) {
     const header = ["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"];
-    const body = rows.map((r) => [r.nickname, r.accountName, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity]);
+    const body = rows.map((r) => [r.nickname, r.accountType, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity]);
     const csv = [header, ...body].map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -160,7 +173,7 @@ function AccountListPage(){
     // 테이블 구성
     const head = [["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"]];
     const body = rows.map((r) => [
-      r.nickname, r.accountName, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity
+      r.nickname, r.accountType, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity
     ]);
 
     // autoTable 호출
@@ -193,7 +206,8 @@ function AccountListPage(){
     return accounts
       .filter((a) => {
         const q = search.trim().toLowerCase();
-        const okQ = !q || [a.nickname, a.accountName, a.number].some((s) => s?.toLowerCase().includes(q));
+        const okQ = !q || [a.disName, a.accountType, a.number].some((s) => 
+          s?.toLowerCase().includes(q));
         if (!okQ) return false;
         if (type !== "전체" && a.type !== type) return false;
         if (selectedBanks.size > 0 && !selectedBanks.has(a.bank)) return false;
@@ -207,7 +221,7 @@ function AccountListPage(){
         switch (sortKey) {
           case "balDesc": return toKRW(b) - toKRW(a);
           case "balAsc": return toKRW(a) - toKRW(b);
-          case "name": return (a.nickname || a.accountName).localeCompare(b.nickname || b.accountName, "ko");
+          case "name": return (a.disName || a.accountType).localeCompare(b.disName || b.accountType, "ko");
           default: return b.lastActivityTs - a.lastActivityTs;
         }
       });
@@ -345,9 +359,9 @@ function AccountListPage(){
                     <thead className="text-gray-600">
                       <tr className="border-b bg-gray-50">
                         <th className="text-left font-medium px-3 py-2">별칭 / 계좌명</th>
-                        <th className="text-left font-medium px-3 py-2">은행</th>
-                        <th className="text-center font-medium px-3 py-2">계좌번호</th>
-                        <th className="text-center font-medium px-3 py-2">잔액</th>
+                        <th className="text-left font-medium px-3 py-2 whitespace-nowrap">은행</th>
+                        <th className="text-center font-medium px-3 py-2 whitespace-nowrap">계좌번호</th>
+                        <th className="text-center font-medium px-3 py-2 whitespace-nowrap">잔액</th>
                         <th className="text-left font-medium px-3 py-2 whitespace-nowrap">최근 거래</th>
                         <th className="text-center font-medium px-3 py-2">상태</th>
                         {/* <th className="text-center font-medium px-3 py-2">즐겨찾기</th> */}
@@ -359,8 +373,8 @@ function AccountListPage(){
                         <tr key={row.id} className="hover:bg-gray-50">
                           {/* 계좌이름/별칭 */}
                           <td className="px-3 py-3">
-                            <div className="font-medium text-gray-900">{row.nickname}</div>
-                            <div className="text-gray-500 text-xs">{row.accountName} · {row.type}</div>
+                            <div className="font-medium text-gray-900">{row.disName}</div>
+                            <div className="text-gray-500 text-xs">{row.type}</div>
                           </td>
                           {/* 계좌번호 */}
                           <td className="px-3 py-3">{row.bank}</td>
@@ -374,8 +388,9 @@ function AccountListPage(){
                           <td className="px-3 py-3 text-right whitespace-nowrap">
                             <span className="font-medium">{formatCurrency(row.balance,row.currency)}</span>
                           </td>
+                          {/* 최근거래일 */}
+                          <td className="px-3 py-3 text-gray-600 text-xs leading-tight tracking-tight">{row.lastActivity}</td>
                           {/* 상태 */}
-                          <td className="px-3 py-3 text-gray-600">{row.lastActivity}</td>
                           <td className="px-3 py-3 text-center whitespace-nowrap">
                             <span className={"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium " + (row.status==="정상"?"bg-emerald-50 text-emerald-700":"bg-amber-50 text-amber-700")}>{row.status}</span>
                           </td>
@@ -395,9 +410,8 @@ function AccountListPage(){
                               <Link to={`/transfer`} state={{ fromAccountNumber: row.number }}>
                               <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">이체</button>
                               </Link>
-                              <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">상세</button>
                               <Link to={`/accounts/${row.id}`}>
-                                <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">이체내역</button>
+                                <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">상세내역</button>
                               </Link>
                             </div>
                           </td>
@@ -414,7 +428,7 @@ function AccountListPage(){
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="text-sm text-gray-500">{row.bank} · {row.type}</div>
-                          <div className="font-medium text-gray-900">{row.nickname}</div>
+                          <div className="font-medium text-gray-900">{row.disName}</div>
                         </div>
                         <button onClick={()=>setAccounts(list=>list.map(a=> a.id===row.id?{...a,favorite:!a.favorite}:a))} aria-label="즐겨찾기">
                           {row.favorite ? (

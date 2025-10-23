@@ -359,9 +359,6 @@ function AccountHistoryPage(){
                 <div className="text-lg font-semibold text-gray-900">{account.alias}</div>
               
                 <div className="mt-3 flex gap-2">
-                  <button className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">이체</button>
-                    <button onClick={backBtn}
-                      className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">계좌목록</button>
                       <div className="text-xs text-gray-900 py-1.5"> 
                         개설: {account.openAt ? toISODate(account.openAt) : '-'}
                       </div>
@@ -369,7 +366,7 @@ function AccountHistoryPage(){
               </div>
               <div className="text-right">
                 <div className="text-xs text-gray-500">현재 잔액</div>
-                <div className="text-2xl font-bold">₩ {won(account.balance)}</div>
+                <div className="text-3xl font-bold">₩ {won(account.balance)}</div>
               </div>
             </div>
           </div>
@@ -384,6 +381,11 @@ function AccountHistoryPage(){
                 <Chip onClick={() => quickRange(7)}>7일</Chip>
                 <Chip onClick={() => quickRange(30)}>한달</Chip>
               </div>
+              <div className="mt-3 flex gap-2">
+                  <button className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">이체</button>
+                    <button onClick={backBtn}
+                      className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">계좌목록</button>
+                </div>
             </div>
           </div>
         </div>
@@ -483,7 +485,7 @@ function AccountHistoryPage(){
                       <th className="text-left font-medium px-3 py-2">상대</th>
                       <th className="text-right font-medium px-3 py-2">금액</th>
                       <th className="text-right font-medium px-3 py-2">잔액</th>
-                      <th className="text-left font-medium px-3 py-2">메모/ID</th>
+                      <th className="text-left font-medium px-3 py-2">내용</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
