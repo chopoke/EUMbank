@@ -45,7 +45,7 @@ public class TransferSchedulerService {
     public void processScheduledTransfers() {
         
         // 로그 기록 - 스케줄러 실행 시작
-//        log.info("예약 이체 스케줄러 실행 시작 - {}", LocalDateTime.now());
+        log.info("=== 예약이체 스케줄러 실행 시작 - {} ===", LocalDateTime.now());
         
         try {
             // === 1단계: 스케줄된 예약 이체 목록 조회 (Race Condition 방지) ===
@@ -53,21 +53,32 @@ public class TransferSchedulerService {
             List<TransferOrder> scheduledTransfers = transferOrderRepository.findByStatusAndStartAtLessThanEqualForUpdate("SCHEDULED", LocalDateTime.now());
             
             // 로그 기록 - 조회된 예약 이체 건수
-//            log.info("조회된 예약 이체 건수: {}", scheduledTransfers.size());
+            log.info("조회된 예약 이체 건수: {}", scheduledTransfers.size());
             
+            if (scheduledTransfers.isEmpty()) {
+                log.info("실행할 예약 이체가 없습니다.");
+                return;
+            }
+
             // === 2단계: 각 예약 이체를 순회하며 처리 ===
             for (TransferOrder transferOrder : scheduledTransfers) {
+                log.info("예약 이체 처리 시작 - 주문ID: {}, 시작시간: {}, 현재시간: {}",
+                    transferOrder.getTo_order_id(),
+                    transferOrder.getTo_start_at(),
+                    LocalDateTime.now());
+
                 // 개별 예약 이체 처리 (실행 시점 확인, 이체 실행, 상태 변경)
                 processTransferOrder(transferOrder);
             }
             
             // 로그 기록 - 스케줄러 실행 완료
 //            log.info("예약 이체 스케줄러 실행 완료 - 처리된 건수: {}", scheduledTransfers.size());
-            
+            log.info("=== 예약이체 스케줄러 실행 완료 - 처리된 건수: {} ===", scheduledTransfers.size());
+
         } catch (Exception e) {
             // === 예외 처리 ===
             // 스케줄러 실행 중 오류가 발생해도 다음 실행에 영향을 주지 않도록 예외 처리
-//            log.error("예약 이체 스케줄러 실행 중 오류 발생", e);
+            log.error("=== 예약이체 스케줄러 실행 중 오류 발생 ===", e);
         }
     }
 
@@ -87,10 +98,20 @@ public class TransferSchedulerService {
         // 현재 시간 조회
         LocalDateTime now = LocalDateTime.now();
         
+        log.info("개별 예약 이체 처리 - 주문ID: {}, 상태: {}, 시작시간: {}, 현재시간: {}",
+            transferOrder.getTo_order_id(),
+            transferOrder.getTo_status(),
+            transferOrder.getTo_start_at(),
+            now);
+
         // === 실행 시점 확인 ===
         // 시작 시간이 없거나, 현재 시간이 시작 시간 이후인 경우 실행
         if (transferOrder.getTo_start_at() == null || now.isAfter(transferOrder.getTo_start_at())) {
-            
+            log.info("실행 시간 도래 - 주문ID: {}, 시작시간: {}, 현재시간: {}",
+                transferOrder.getTo_order_id(),
+                transferOrder.getTo_start_at(),
+                now);
+
             try {
                 // === 예약 이체 실행 전 상태 변경 (중복 실행 방지) ===
                 transferOrder.updateStatus("PROCESSING");
@@ -98,11 +119,13 @@ public class TransferSchedulerService {
                 log.info("예약 이체 처리 시작 - 주문ID: {}, 상태: PROCESSING", transferOrder.getTo_order_id());
                 
                 // === 예약 이체 실행 ===
+                log.info("executeReserveTransfer 호출 시작 - 주문ID: {}", transferOrder.getTo_order_id());
                 transferService.executeReserveTransfer(transferOrder.getTo_order_id());
-                
+                log.info("executeReserveTransfer 호출 완료 - 주문ID: {}", transferOrder.getTo_order_id());
+
                 // === 성공 처리 ===
                 transferOrder.updateStatus("COMPLETED");
-//                log.info("예약 이체 성공 - 주문ID: {}, 상태: COMPLETED", transferOrder.getTo_order_id());
+                log.info("예약 이체 성공 - 주문ID: {}, 상태: COMPLETED", transferOrder.getTo_order_id());
                 
                 // === 반복 예약 이체 처리 ===
                 if (transferOrder.isRecurring()) {
@@ -112,13 +135,13 @@ public class TransferSchedulerService {
                     // 종료 시간 확인
                     if (transferOrder.getTo_end_at() != null && nextTime.isAfter(transferOrder.getTo_end_at())) {
                         // 종료 시간 지남 → COMPLETED 유지 (더 이상 실행 안함)
-//                        log.info("반복 예약 이체 종료 - 주문ID: {}, 종료 시간 도달", transferOrder.getTo_order_id());
+                        log.info("반복 예약 이체 종료 - 주문ID: {}, 종료 시간 도달", transferOrder.getTo_order_id());
                     } else {
                         // 다음 실행 시간으로 업데이트 및 SCHEDULED로 재설정
                         transferOrder.updateNextExecutionTime(nextTime);
                         transferOrder.updateStatus("SCHEDULED");
-//                        log.info("반복 예약 이체 다음 스케줄 설정 - 주문ID: {}, 다음 실행: {}",
-//                                transferOrder.getTo_order_id(), nextTime);
+                        log.info("반복 예약 이체 다음 스케줄 설정 - 주문ID: {}, 다음 실행: {}", 
+                                transferOrder.getTo_order_id(), nextTime);
                     }
                 }
                 // 일회성은 COMPLETED 상태로 유지 (삭제 안함)
@@ -128,8 +151,8 @@ public class TransferSchedulerService {
             } catch (TransferException e) {
                 // === 커스텀 예외 처리 (비즈니스 로직 오류) ===
                 // 잔액 부족, 한도 초과, 계좌 상태 이상 등
-//                log.error("예약 이체 실패 - 주문ID: {}, 에러코드: {}, 메시지: {}",
-//                        transferOrder.getTo_order_id(), e.getErrorCode(), e.getMessage());
+                log.error("예약 이체 실패 - 주문ID: {}, 에러코드: {}, 메시지: {}", 
+                        transferOrder.getTo_order_id(), e.getErrorCode(), e.getMessage());
                 
                 // 실패 사유(에러 코드)를 상태에 저장
                 transferOrder.updateStatus(e.getErrorCode());
@@ -137,8 +160,8 @@ public class TransferSchedulerService {
                 
             } catch (Exception e) {
                 // === 일반 예외 처리 (시스템 오류) ===
-//                log.error("예약 이체 시스템 오류 - 주문ID: {}, 오류: {}",
-//                        transferOrder.getTo_order_id(), e.getMessage(), e);
+                log.error("예약 이체 시스템 오류 - 주문ID: {}, 오류: {}", 
+                        transferOrder.getTo_order_id(), e.getMessage(), e);
                 
                 // 시스템 오류는 SYSTEM_ERROR로 저장
                 transferOrder.updateStatus("SYSTEM_ERROR");
@@ -147,8 +170,8 @@ public class TransferSchedulerService {
             
         } else {
             // === 아직 실행 시간이 되지 않은 경우 ===
-//            log.debug("실행 시간 대기 중 - 주문ID: {}, 예약시간: {}",
-//                    transferOrder.getTo_order_id(), transferOrder.getTo_start_at());
+            log.debug("실행 시간 대기 중 - 주문ID: {}, 예약시간: {}", 
+                    transferOrder.getTo_order_id(), transferOrder.getTo_start_at());
         }
     }
 

@@ -23,9 +23,13 @@ public class TransferResultDto {
     private Integer transferNo;           // 이체 번호
     private Integer fromAccountNo;        // 출금 계좌 번호
     private String toAccountNo;           // 수취 계좌번호
+    private String toBankName;            // 수취 은행명
+    private String toAccountHolder;       // 수취인명
     private Integer amount;               // 이체 금액
     private BigDecimal afterBalance;      // 이체 후 잔액
     private LocalDateTime transferAt;     // 이체 시간
     private boolean success;              // 성공 여부
     private String message;               // 결과 메시지
+    private String errorCode;             // 오류 코드 (실패 시)
+    private String errorMessage;          // 오류 메시지 (실패 시)
 }

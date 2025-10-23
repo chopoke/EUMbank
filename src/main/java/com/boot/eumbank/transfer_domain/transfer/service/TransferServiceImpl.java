@@ -16,8 +16,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -54,6 +56,17 @@ public class TransferServiceImpl implements TransferService {
         log.info("일반 이체 처리 시작 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
                 request.getFromAccountNo(), request.getToAccount(), request.getAmount());
 
+        // 0. JWT 토큰에서 고객 정보 추출 및 계좌 소유자 검증
+        Customer customer = (Customer) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (customer == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        
+        // 계좌 소유자 검증 (최우선)
+        if (!validateAccountOwnership(request.getFromAccountNo(), customer.getCustomerNo())) {
+            throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
+        }
+
         // 1. 기본 검증
         validateTransferRequest(request);
 
@@ -86,7 +99,7 @@ public class TransferServiceImpl implements TransferService {
         // 6. 응답 DTO 생성
         return TransferResponseDto.builder()
                 .transferId(result.getTransferId())
-                .transferNo(result.getTransferNo().longValue())
+                .transferNo(result.getTransferNo() != null ? result.getTransferNo().longValue() : 0L)
                 .accountId(request.getFromAccountId())
                 .amount(BigDecimal.valueOf(request.getAmount()))
                 .memo(request.getMemo())
@@ -110,6 +123,17 @@ public class TransferServiceImpl implements TransferService {
                 request.getAccountNo(), request.getDestAccountNo(), request.getAmount(), request.getStartAt());
 
         try {
+            // 0. JWT 토큰에서 고객 정보 추출 및 계좌 소유자 검증
+            Customer customer = (Customer) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (customer == null) {
+                throw new UnauthorizedException("인증이 필요합니다.");
+            }
+            
+            // 계좌 소유자 검증 (등록 시점에 검증)
+            if (!validateAccountOwnership(request.getAccountNo(), customer.getCustomerNo())) {
+                throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
+            }
+
             // 1. 기본 검증
             log.info("1. 기본 검증 시작");
             validateReserveTransferRequest(request);
@@ -232,6 +256,17 @@ public class TransferServiceImpl implements TransferService {
         log.info("다건 이체 처리 시작 - 출금계좌: {}, 수취인 수: {}", 
                 request.getFromAccountNo(), request.getRecipients().size());
 
+        // 0. JWT 토큰에서 고객 정보 추출 및 계좌 소유자 검증
+        Customer customer = (Customer) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (customer == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        
+        // 계좌 소유자 검증 (최우선)
+        if (!validateAccountOwnership(request.getFromAccountNo(), customer.getCustomerNo())) {
+            throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
+        }
+
         // 1. 기본 검증
         validateBulkTransferRequest(request);
 
@@ -250,18 +285,18 @@ public class TransferServiceImpl implements TransferService {
                 .mapToInt(RecipientDto::getAmount)
                 .sum();
 
-        // 5. 총 이체 한도 확인
-        if (!checkTransferLimit(request.getFromAccountNo(), totalAmount)) {
-            throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), totalAmount);
-        }
+        // 5. 총 이체 한도 확인 (총합 먼저 검증)
+        checkTransferLimit(request.getFromAccountNo(), totalAmount);
 
-        // 6. 각 수취인별 이체 실행
+        // 6. 각 수취인별 이체 실행 (개별 트랜잭션으로 처리)
         List<TransferResultDto> results = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
+        int successCount = 0;
+        int failCount = 0;
 
         for (RecipientDto recipient : request.getRecipients()) {
             try {
-                TransferResultDto result = executeTransfer(
+                // 개별 이체를 별도 트랜잭션으로 실행
+                TransferResultDto result = executeTransferInSeparateTransaction(
                         request.getFromAccountNo(),
                         recipient.getAccountNo(),
                         recipient.getBankName(),
@@ -271,22 +306,176 @@ public class TransferServiceImpl implements TransferService {
                         request.getPassword()
                 );
                 results.add(result);
+                successCount++;
             } catch (Exception e) {
                 log.error("다건 이체 중 오류 발생 - 수취인: {}, 오류: {}", 
                         recipient.getName(), e.getMessage());
-                errors.add(recipient.getName() + ": " + e.getMessage());
+                
+                // 실패한 이체 시도 기록을 별도 트랜잭션으로 저장
+                saveFailedTransferHistory(e, request.getFromAccountNo(), recipient.getAccountNo(), 
+                        recipient.getBankName(), recipient.getName(), recipient.getAmount(), recipient.getMemo());
+                
+                // 실패한 이체도 상세 정보와 함께 결과에 포함
+                TransferResultDto failedResult = TransferResultDto.builder()
+                        .transferId("FAILED-" + System.currentTimeMillis())
+                        .transferNo(null)
+                        .fromAccountNo(request.getFromAccountNo())
+                        .toAccountNo(recipient.getAccountNo())
+                        .toBankName(recipient.getBankName())
+                        .toAccountHolder(recipient.getName())
+                        .amount(recipient.getAmount())
+                        .afterBalance(null)
+                        .transferAt(LocalDateTime.now())
+                        .success(false)
+                        .message("이체 실패")
+                        .errorCode(getFailureReason(e))
+                        .errorMessage(e.getMessage())
+                        .build();
+                
+                results.add(failedResult);
+                failCount++;
             }
         }
 
-        // 7. 응답 DTO 생성
+        // 7. 최종 잔액 계산 (성공한 이체만 반영)
+        BigDecimal finalBalance = null;
+        if (successCount > 0) {
+            // 마지막 성공한 이체의 잔액을 최종 잔액으로 사용
+            Optional<TransferResultDto> lastSuccessResult = results.stream()
+                    .filter(r -> r.isSuccess())
+                    .reduce((first, second) -> second);
+            if (lastSuccessResult.isPresent()) {
+                finalBalance = lastSuccessResult.get().getAfterBalance();
+            }
+        } else {
+            // 성공한 이체가 없으면 현재 잔액 조회
+            Account account = accountRepository.findById(request.getFromAccountNo())
+                    .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
+            finalBalance = account.getBalance();
+        }
+
+        // 8. 응답 DTO 생성
         return BulkTransferResponseDto.builder()
                 .totalCount(request.getRecipients().size())
-                .successCount(results.size())
-                .failCount(errors.size())
+                .successCount(successCount)
+                .failCount(failCount)
                 .results(results)
-                .errors(errors)
                 .totalAmount(totalAmount)
+                .finalBalance(finalBalance)
                 .build();
+    }
+
+    /**
+     * 개별 이체를 별도 트랜잭션으로 실행
+     * - 실패해도 다른 이체에 영향을 주지 않음
+     * - 실패한 이체는 기록만 남기고 실제 처리하지 않음
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public TransferResultDto executeTransferInSeparateTransaction(
+            Integer fromAccountNo, String toAccountNo, String toBankName, 
+            String toAccountHolder, Integer amount, String memo, String password) {
+        
+        log.info("개별 이체 실행 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
+                fromAccountNo, toAccountNo, amount);
+        
+        try {
+            // 기존 executeTransfer 메서드 호출
+            return executeTransfer(fromAccountNo, toAccountNo, toBankName, 
+                    toAccountHolder, amount, memo, password);
+        } catch (Exception e) {
+            log.error("개별 이체 실행 실패 - 출금계좌: {}, 수취계좌: {}, 오류: {}", 
+                    fromAccountNo, toAccountNo, e.getMessage());
+            throw e; // 상위로 예외 전파
+        }
+    }
+
+    /**
+     * 계좌 소유자 검증
+     * @param accountNo 계좌 번호
+     * @param customerNo JWT 토큰의 고객 번호
+     * @return 검증 성공 여부
+     */
+    private boolean validateAccountOwnership(Integer accountNo, Integer customerNo) {
+        Account account = accountRepository.findById(accountNo)
+                .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
+        
+        if (!account.getCNo().equals(customerNo)) {
+            log.warn("계좌 소유자 불일치 - 계좌: {}, 요청자: {}, 실제 소유자: {}", 
+                    accountNo, customerNo, account.getCNo());
+            return false;
+        }
+        
+        log.info("계좌 소유자 검증 통과 - 계좌: {}, 소유자: {}", accountNo, customerNo);
+        return true;
+    }
+
+    /**
+     * 예외 타입에 따른 실패 사유 구분
+     * @param e 발생한 예외
+     * @return 실패 사유 코드
+     */
+    private String getFailureReason(Exception e) {
+        if (e instanceof AccountNotFoundException) return "ACCOUNT_NOT_FOUND";
+        if (e instanceof InsufficientBalanceException) return "INSUFFICIENT_BALANCE";
+        if (e instanceof PasswordMismatchException) return "PASSWORD_MISMATCH";
+        if (e instanceof AccountStatusException) return "ACCOUNT_SUSPENDED";
+        if (e instanceof InvalidAmountException) return "INVALID_AMOUNT";
+        if (e instanceof LimitExceededException) return "LIMIT_EXCEEDED";
+        if (e instanceof SameAccountTransferException) return "SAME_ACCOUNT";
+        if (e instanceof UnauthorizedException) return "UNAUTHORIZED";
+        if (e instanceof IllegalArgumentException) return "INVALID_REQUEST";
+        return "UNKNOWN_ERROR";
+    }
+
+    /**
+     * 실패한 이체 시도 기록을 별도 트랜잭션으로 저장
+     * - 메인 트랜잭션 롤백과 무관하게 저장됨
+     * - 실패 사유별로 구분하여 저장
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveFailedTransferHistory(Exception e, Integer fromAccountNo, String toAccountNo, 
+                                        String toBankName, String toAccountHolder, Integer amount, String memo) {
+        try {
+            log.info("실패한 이체 시도 기록 저장 시작 - 출금계좌: {}, 수취계좌: {}, 실패사유: {}", 
+                    fromAccountNo, toAccountNo, getFailureReason(e));
+            
+            // 현재 계좌 잔액 조회 (실패했으므로 변화 없음) - 안전하게 처리
+            BigDecimal currentBalance = BigDecimal.ZERO;
+            try {
+                Account fromAccount = accountRepository.findById(fromAccountNo).orElse(null);
+                if (fromAccount != null) {
+                    currentBalance = fromAccount.getBalance();
+                }
+            } catch (Exception balanceException) {
+                log.warn("계좌 잔액 조회 실패, 기본값 사용 - 계좌: {}, 오류: {}", fromAccountNo, balanceException.getMessage());
+            }
+            
+            String transferId = "FAILED-" + System.currentTimeMillis();
+            
+            TransferHistory failedHistory = TransferHistory.builder()
+                    .transferId(transferId)
+                    .accountNo(fromAccountNo)
+                    .amount(BigDecimal.valueOf(amount))
+                    .memo(memo)  // 원본 메모 유지
+                    .otherBank(toBankName)
+                    .otherAccount(toAccountNo)
+                    .transferType("이체")  // 원본 transferType 유지
+                    .afterBalance(currentBalance) // 현재 잔액 (변화 없음)
+                    .transactionType(getFailureReason(e))  // 실패 사유별 구분만 변경
+                    .accountOut(BigDecimal.valueOf(amount)) // 시도했던 금액
+                    .accountIn(BigDecimal.ZERO)             // 입금액 (0)
+                    .build();
+            
+            TransferHistory savedHistory = transferHistoryRepository.save(failedHistory);
+            
+            log.info("실패한 이체 시도 기록 저장 완료 - 이체ID: {}, 저장된ID: {}, 실패사유: {}", 
+                    transferId, savedHistory.getTransferNo(), getFailureReason(e));
+                    
+        } catch (Exception saveException) {
+            log.error("실패한 이체 시도 기록 저장 중 오류 발생 - 출금계좌: {}, 수취계좌: {}, 오류: {}", 
+                    fromAccountNo, toAccountNo, saveException.getMessage(), saveException);
+            // 기록 저장 실패해도 메인 로직에는 영향 없음
+        }
     }
 
     @Override
@@ -384,6 +573,8 @@ public class TransferServiceImpl implements TransferService {
         
         log.info("이체 실행 시작 - 출금계좌: {}, 수취은행: {}, 수취계좌: {}, 금액: {}", 
                 fromAccountNo, toBankName, toAccountNo, amount);
+        
+        try {
         
         // === 1단계: 이체 금액 검증 ===
         if (amount == null || amount <= 0) {
@@ -565,6 +756,17 @@ public class TransferServiceImpl implements TransferService {
                 .success(true)
                 .message("이체가 완료되었습니다.")
                 .build();
+                
+        } catch (Exception e) {
+            log.error("이체 실행 실패 - 출금계좌: {}, 수취계좌: {}, 실패사유: {}", 
+                    fromAccountNo, toAccountNo, getFailureReason(e));
+            
+            // 실패한 이체 시도 기록을 별도 트랜잭션으로 저장
+            saveFailedTransferHistory(e, fromAccountNo, toAccountNo, toBankName, toName, amount, memo);
+            
+            // 실패 시 예외를 다시 던져서 프론트엔드에서 catch 블록으로 처리하도록 함
+            throw e;
+        }
     }
 
     @Override
@@ -607,24 +809,50 @@ public class TransferServiceImpl implements TransferService {
         // 계좌 한도 정보 조회
         Optional<AccountLimit> limitOpt = accountLimitRepository.findByAccountNo(accountNo);
         
+        AccountLimit limit;
         if (limitOpt.isEmpty()) {
-            // 한도 정보가 없으면 기본 한도 적용 (예: 1,000만원)
-            return amount <= 10_000_000;
+            // 한도 정보가 없으면 기본 한도 적용
+            log.warn("계좌 한도 정보 없음. 기본 한도 적용 - 계좌: {}", accountNo);
+            limit = AccountLimit.builder()
+                        .perTransferLimit(new BigDecimal("10000000"))  // 1회 1천만원
+                        .dailyTransferLimit(new BigDecimal("50000000"))  // 일일 5천만원
+                        .monthlyTransferLimit(new BigDecimal("100000000"))  // 월간 1억원
+                        .build();
+        } else {
+            limit = limitOpt.get();
         }
 
-        AccountLimit limit = limitOpt.get();
+        BigDecimal transferAmount = BigDecimal.valueOf(amount);
+
+        // 1. 1회 이체 한도 확인
+        if (transferAmount.compareTo(limit.getPerTransferLimit()) > 0) {
+            log.warn("1회 이체 한도 초과 - 계좌: {}, 한도: {}, 시도: {}", 
+                     accountNo, limit.getPerTransferLimit(), amount);
+            throw LimitExceededException.perTransferLimit(limit.getPerTransferLimit(), amount);
+        }
+
+        // 2. 일일 이체 한도 확인
+        Integer todaySum = transferHistoryRepository.getTodayWithdrawSum(accountNo);
+        BigDecimal totalDailyAmount = BigDecimal.valueOf(todaySum).add(transferAmount);
         
-        // 1회 이체 한도 확인
-        if (amount > limit.getPerTransferLimit().intValue()) {
-            return false;
+        if (totalDailyAmount.compareTo(limit.getDailyTransferLimit()) > 0) {
+            log.warn("일일 이체 한도 초과 - 계좌: {}, 한도: {}, 오늘 기출금액: {}, 총 시도액: {}",
+                     accountNo, limit.getDailyTransferLimit(), todaySum, totalDailyAmount);
+            throw LimitExceededException.dailyLimit(limit.getDailyTransferLimit(), todaySum, amount);
+        }
+        
+        // 3. 월간 이체 한도 확인
+        Integer monthlySum = transferHistoryRepository.getMonthlyWithdrawSum(accountNo);
+        BigDecimal totalMonthlyAmount = BigDecimal.valueOf(monthlySum).add(transferAmount);
+
+        if (totalMonthlyAmount.compareTo(limit.getMonthlyTransferLimit()) > 0) {
+            log.warn("월간 이체 한도 초과 - 계좌: {}, 한도: {}, 이번 달 기출금액: {}, 총 시도액: {}",
+                     accountNo, limit.getMonthlyTransferLimit(), monthlySum, totalMonthlyAmount);
+            throw LimitExceededException.monthlyLimit(limit.getMonthlyTransferLimit(), monthlySum, amount);
         }
 
-        // 일일 이체 한도 확인 (실제로는 오늘 이체액을 계산해야 함)
-        // 여기서는 간단히 1회 한도의 10배로 설정
-        if (amount > limit.getPerTransferLimit().multiply(BigDecimal.TEN).intValue()) {
-            return false;
-        }
-
+        log.info("이체 한도 검증 통과 - 계좌: {}, 금액: {}, 오늘 출금액: {}, 이번 달 출금액: {}",
+                 accountNo, amount, todaySum, monthlySum);
         return true;
     }
 
@@ -895,21 +1123,46 @@ public class TransferServiceImpl implements TransferService {
     
     @Override
     public List<Map<String, Object>> getRecentRecipients(Integer accountNo) {
-        log.info("최근 수취인 조회 - 계좌: {}", accountNo);
+        log.info("=== 최근 수취인 조회 시작 - 계좌: {} ===", accountNo);
         
         try {
             // 최근 이체 내역에서 수취인 정보 추출 (출금 내역만)
+            log.info("이체 내역 조회 시작 - 계좌: {}, 페이지: 0, 크기: 50", accountNo);
             List<TransferHistory> recentTransfers = transferHistoryRepository
                 .findByAccountNoOrderByTransferAtDescList(accountNo, 
                     org.springframework.data.domain.PageRequest.of(0, 50));
             
+            log.info("조회된 이체 내역 건수: {}", recentTransfers.size());
+            
+            // 모든 이체 내역 상세 로그 출력
+            for (int i = 0; i < recentTransfers.size(); i++) {
+                TransferHistory th = recentTransfers.get(i);
+                log.info("이체내역[{}] - ID: {}, 타입: {}, 상대계좌: {}, 금액: {}, 날짜: {}", 
+                    i, th.getTransferId(), th.getTransactionType(), 
+                    th.getOtherAccount(), th.getAmount(), th.getTransferAt());
+            }
+            
+            if (recentTransfers.isEmpty()) {
+                log.warn("계좌 {}에 대한 이체 내역이 없습니다.", accountNo);
+                return new ArrayList<>();
+            }
+            
             // 중복 제거를 위한 LinkedHashMap (순서 유지)
             java.util.LinkedHashMap<String, Map<String, Object>> uniqueRecipients = new java.util.LinkedHashMap<>();
             
+            int withdrawCount = 0;
             for (TransferHistory transfer : recentTransfers) {
+                log.debug("이체 내역 처리 - ID: {}, 타입: {}, 상대계좌: {}, 금액: {}", 
+                    transfer.getTransferId(), transfer.getTransactionType(), 
+                    transfer.getOtherAccount(), transfer.getAmount());
+                
                 // 출금(송금) 내역만 처리
                 if ("WITHDRAW".equals(transfer.getTransactionType())) {
+                    withdrawCount++;
                     String accountKey = transfer.getOtherAccount();
+                    
+                    log.info("출금 내역 발견 - 상대계좌: {}, 금액: {}, 날짜: {}", 
+                        accountKey, transfer.getAmount(), transfer.getTransferAt());
                     
                     // 중복이 아닌 경우만 추가 (최근 순서 유지, 최대 10개)
                     if (!uniqueRecipients.containsKey(accountKey) && uniqueRecipients.size() < 10) {
@@ -925,13 +1178,20 @@ public class TransferServiceImpl implements TransferService {
                         recipient.put("amount", transfer.getAmount().intValue());
                         recipient.put("lastTransferDate", transfer.getTransferAt().toString());
                         uniqueRecipients.put(accountKey, recipient);
+                        
+                        log.info("수취인 추가 - 계좌: {}, 예금주: {}, 은행: {}", 
+                            accountKey, accountHolderName, transfer.getOtherBank());
                     }
                 }
             }
             
+            log.info("출금 내역 총 건수: {}, 고유 수취인 수: {}", withdrawCount, uniqueRecipients.size());
+            log.info("=== 최근 수취인 조회 완료 - 계좌: {}, 반환 건수: {} ===", accountNo, uniqueRecipients.size());
+            
             return new ArrayList<>(uniqueRecipients.values());
             
         } catch (Exception e) {
+            log.error("=== 최근 수취인 조회 실패 - 계좌: {} ===", accountNo, e);
             log.warn("데이터베이스 조회 실패, 빈 리스트 반환: {}", e.getMessage());
             log.warn("계좌번호: {}, 에러 타입: {}", accountNo, e.getClass().getSimpleName());
             
@@ -956,13 +1216,13 @@ public class TransferServiceImpl implements TransferService {
                 // 계좌 상태 검증
                 if (!"ACTIVE".equals(foundAccount.getStatus())) {
                     log.warn("계좌가 비활성 상태입니다 - 계좌번호: {}, 상태: {}", accountNumber, foundAccount.getStatus());
-                    throw new AccountStatusException("계좌가 거래 불가능한 상태입니다.");
+                    return "계좌 정보 없음";
                 }
                 
                 // 계좌의 고객번호로 고객 정보 조회하여 실제 이름 반환
                 String customerName = transferCustomerRepository.findById(foundAccount.getCNo())
                     .map(Customer::getCNameKr)
-                    .orElseThrow(() -> new AccountNotFoundException("고객 정보를 찾을 수 없습니다."));
+                    .orElse("계좌 정보 없음");
                 
                 log.info("예금주명 조회 완료 - 계좌번호: {}, 예금주: {}", accountNumber, customerName);
                 return customerName;
@@ -970,14 +1230,11 @@ public class TransferServiceImpl implements TransferService {
             
             // 계좌를 찾을 수 없는 경우
             log.warn("계좌를 찾을 수 없습니다 - 계좌번호: {}", accountNumber);
-            throw new AccountNotFoundException("존재하지 않는 계좌입니다: " + accountNumber);
+            return "계좌 정보 없음";
             
-        } catch (AccountNotFoundException | AccountStatusException e) {
-            // 계좌 관련 예외는 그대로 전파
-            throw e;
         } catch (Exception e) {
-            log.error("예금주명 조회 중 오류 발생 - 계좌: {}, 은행: {}", accountNumber, bank, e);
-            throw new RuntimeException("계좌 조회 중 오류가 발생했습니다.");
+            log.warn("예금주명 조회 실패 - 계좌번호: {}, 에러: {}", accountNumber, e.getMessage());
+            return "계좌 정보 없음";
         }
     }
     
