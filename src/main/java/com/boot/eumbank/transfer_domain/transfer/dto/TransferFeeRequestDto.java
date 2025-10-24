@@ -25,7 +25,7 @@ public class TransferFeeRequestDto {
     
     @NotNull(message = "이체금액은 필수입니다")
     @Positive(message = "이체금액은 양수여야 합니다")
-    private Integer amount;
+    private Long amount;
     
     private String bankCode; // 은행코드 (선택사항)
     
