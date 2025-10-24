@@ -2,12 +2,15 @@ package com.boot.eumbank.transfer_domain.transfer.controller;
 
 import com.boot.eumbank.transfer_domain.transfer.dto.*;
 import com.boot.eumbank.transfer_domain.transfer.service.TransferService;
+import com.boot.eumbank.transfer_domain.transfer.exception.AccountNotFoundException;
+import com.boot.eumbank.transfer_domain.transfer.exception.AccountStatusException;
 import com.boot.eumbank.customer.entity.Customer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -433,7 +436,7 @@ public class TransferController {
                 "bankCode", bankCode,
                 "accountNo", accountNo,
                 "accountHolder", accountHolder,
-                "isValid", !accountHolder.equals("계좌 정보 없음") && !accountHolder.equals("조회 실패")
+                "isValid", true
             );
             
             Map<String, Object> result = new HashMap<>();
@@ -444,9 +447,29 @@ public class TransferController {
             
             return ResponseEntity.ok(result);
             
+        } catch (AccountNotFoundException e) {
+            log.warn("계좌를 찾을 수 없음 - 계좌번호: {}, 은행: {}", accountNo, bankCode);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "존재하지 않는 계좌입니다.");
+            result.put("errorCode", "ACCOUNT_NOT_FOUND");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
+            
+        } catch (AccountStatusException e) {
+            log.warn("계좌 상태 이상 - 계좌번호: {}, 은행: {}", accountNo, bankCode);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "거래 불가능한 계좌입니다.");
+            result.put("errorCode", "ACCOUNT_STATUS_ERROR");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            
         } catch (Exception e) {
             log.error("수취인 조회 중 오류 발생", e);
-            throw e; // GlobalExceptionHandler에서 처리
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "계좌 조회 중 오류가 발생했습니다.");
+            result.put("errorCode", "INTERNAL_ERROR");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
     }
 

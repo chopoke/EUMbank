@@ -51,17 +51,15 @@ public class SecurityConfig {
                                 "/api/v1/email/**",
                                 "/api/v1/customers/exists-email",
                                 "/api/foreign/exchange/calculate",
-                                "/api/foreign/exchange"
-
+                                "/api/foreign/exchange",
+                                "/actuator/**",
+                                "/api/foreign/rates",
+                                "/api/healthz",
+                                "/api/foreign/rates/**",
+                                "/deposit/products"
                         ).permitAll()
-                        // actuator 전부 허용
-                        .requestMatchers("/actuator/**").permitAll()
-                        // (원하는 공개 API들)
-                        .requestMatchers("/api/foreign/rates", "/api/healthz").permitAll()
-                        // 환율 조회만 공개
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/foreign/rates", "/api/foreign/rates/**"
-                        ).permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
 
                         // 그 외는 모두 보호
                         .anyRequest().authenticated()

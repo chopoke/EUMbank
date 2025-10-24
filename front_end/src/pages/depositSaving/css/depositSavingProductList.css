@@ -1,29 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
-body {
-  font-family: 'Noto Sans KR', sans-serif;
-  background-color: #f8f9fa;
-  margin: 0;
-  padding: 40px 20px;
-}
-
-.container {
+.containerdepart {
   max-width: 1200px;
   margin: 0 auto;
 }
 
-header {
+.headerType {
   text-align: center;
   margin-bottom: 50px;
 }
 
-header h1 {
+.headerType h1 {
   font-size: 2.5rem;
   font-weight: 700;
   color: #333;
 }
 
-header p {
+.headerType p {
   font-size: 1.1rem;
   color: #666;
   max-width: 700px;
@@ -44,8 +37,8 @@ header p {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
   justify-content: center;
 }
 
@@ -57,7 +50,7 @@ header p {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 25px;
+  padding: 16px;
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
@@ -73,8 +66,8 @@ header p {
 }
 
 .interest-rate {
-  font-size: 2.2rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 500;
   color: #007bff;
   margin: 0;
 }
@@ -121,4 +114,83 @@ header p {
 
 .action-button:hover {
   background-color: #0056b3;
+}
+
+/* 검색 및 필터 컨트롤 영역 스타일 */
+.filter-controls {
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* 검색창 스타일 */
+.depositsearch-input {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box; /* padding이 너비에 포함되도록 설정 */
+}
+
+/* 체크박스 그룹 스타일 */
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-right: 8px;
+    /* 기본 체크박스 모양 대신 커스텀 스타일을 위한 준비 */
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.checkbox-group input[type="checkbox"]:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* 체크박스 체크 표시 (v) 모양 만들기 */
+.checkbox-group input[type="checkbox"]:checked::after {
+    content: '✔';
+    color: white;
+    font-size: 14px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+
+/* 검색 결과 없음 메시지 스타일 */
+.no-results {
+    text-align: center;
+    padding: 50px 20px;
+    color: #666;
+}
+
+.no-results p {
+    font-size: 1.2em;
+    font-weight: 500;
 }

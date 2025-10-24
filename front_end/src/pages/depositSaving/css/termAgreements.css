@@ -1,16 +1,8 @@
 /* 폰트 및 기본 페이지 스타일 (제공해주신 CSS 기반) */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
 
-body {
-    font-family: 'Noto Sans KR', sans-serif;
-    background-color: #f8f9fa;
-    margin: 0;
-    padding: 40px 20px;
-    color: #343a40;
-}
-
 /* 전체 컨테이너 (약관 페이지에 맞게 너비 조정) */
-.container {
+.containerdepart {
     width: 100%;
     max-width: 800px; /* 상품 목록보다 약간 좁게 설정 */
     margin: 0 auto;

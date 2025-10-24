@@ -1,8 +1,8 @@
 // com.boot.eumbank.foreign.controller.ForeignMeController
 package com.boot.eumbank.foreign.controller;
 
-import com.boot.eumbank.account.Open.model.Account;
-import com.boot.eumbank.account.Open.repository.AccountRepo;
+import com.boot.eumbank.account.open.model.Account;
+import com.boot.eumbank.account.open.repository.AccountRepo;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.customer.repo.CustomerRepo;
 import com.boot.eumbank.foreign.dto.MeResponseDto;

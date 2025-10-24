@@ -1,10 +1,11 @@
-
 import React from "react";
 import { fetchAccounts } from "../../api/accounts";
-import { Link} from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
-
-function AccountListPage({user}){
+function AccountListPage(){
+  
   const[accounts, setAccounts] = React.useState([]);
   const[loading, setLoading] = React.useState(false);
   const[error, setError] = React.useState(null);
@@ -17,14 +18,34 @@ function AccountListPage({user}){
   const [statuses, setStatuses] = React.useState(new Set());
   const [sortKey, setSortKey] = React.useState("recent");
 
+  // 폰트 캐시
+  const fontCache = React.useRef ({regular: ""});
+  async function loadFontBase64(url){
+    if(!url) return "";
+    const res = await fetch(url);
+    const buf = await res.arrayBuffer();    
+    let binary = "";
+    const bytes = new Uint8Array(buf);  // AfterBuffer -> Base64
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
 
-  // 고객 번호 받기위한 토큰
-  const token = localStorage.getItem("access");
-  console.log('[AccountListPage] token =', token);
-
+  // 날짜포맷 유틸 ----------
+  const CustomDateFm = (d) => {
+    if(!(d instanceof Date) || isNaN(d)) return "-";    // 날짜가 아니면 -
+    const pad = (n) => String(n).padStart(2,"0");
+    const y = d.getFullYear();
+    const m = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    return `${y}-${m}-${day} ${hh}:${mm}`;
+  }
 
   React.useEffect(()=>{
-
     let alive = true;
     setLoading(true);
     setError(null);
@@ -37,20 +58,35 @@ function AccountListPage({user}){
         const rows = res.data || [];
 
         // 값 매핑
-        const mapped = rows.map(d=>({
+        const mapped = rows.map(d => {
+        // 안전 파싱 (문자열/epoch 모두 OK)
+        const raw = d.lastTransferAt;
+        const asDate = raw
+          ? new Date(typeof raw === 'number' ? raw : String(raw).replace(' ', 'T'))
+          : null;
+
+        const ts = asDate ? asDate.getTime() : 0;
+        const lastText = asDate ? CustomDateFm(asDate) : '최근거래없음';
+
+        // 계좌명 디스플레이용
+        const disName = d.a_nickname || d.a_account_code || d.a_account_type || "계좌명";
+        return {
           id: d.a_no,
-          alias: d.a_nickname || d.a_account_no,
-          accountName: d.a_account_type || "입출금",
-          bank: "EumBank",                 // 임시
+          nickname: d.a_nickname,
+          productCode: d.a_product_code,    
+          accountType: d.a_account_type || '입출금',  
+          bank: 'Eum', // 임시
           number: d.a_account_no,
           type: d.a_account_type,
           balance: Number(d.a_balance),
-          currency: d.a_currency || "KRW",
-          status: d.a_status === "ACTIVE" ? "정상" : d.a_status,
+          currency: d.a_currency || 'KRW',
+          status: d.a_status === 'ACTIVE' ? '정상' : d.a_status,
           favorite: false,
-          lastActivityTs: Date.now(),
-          lastActivity: ""
-        }));
+          lastActivityTs: ts,
+          lastActivity: lastText,
+          disName,
+        };
+      });
         setAccounts(mapped);
       }).catch((e) =>{
         if (!alive) return;
@@ -69,14 +105,16 @@ function AccountListPage({user}){
 );  
 
 
-  const bankOptions = ["EumBank","신한","KB국민","우리","하나","NH농협"];
-  const typeOptions = ["전체","입출금","예금","적금", "대출","외화"];
+  const bankOptions = ["Eum","신한","KB국민","우리","하나","NH농협"];
+  const typeOptions = ["전체","입출금","자유적금", "예금","적금", "대출","외화"];
+  const foreignFm = ["KRW", "USD", "JPY", "SGD", "THB", "AED", "AUD", "BHD", "BND", "CAD",
+    "CHF", "CNH", "DKK", "EUR", "GBP", "HKD", "IDR", "KWD","MYR", "NOK", "NZD","NZD", "SEK"];
 
   // 원화 스케일링
   const won = (n)=> n.toLocaleString('ko-KR');
   const formatCurrency = (amt, cur) => 
-    cur === "USD"
-      ? `$ ${amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`: `₩ ${won(amt)}`;
+    cur === "USD" ? `$ ${amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`: `₩ ${won(amt)}`;
+
     // 계좌번호 마스킹
     const maskAcc = (s) =>
       s.replace(/(\d{2,4})-(\d{2,4})-(\d{2,6})/, (_m, a, b, c) => `${a}-${b}-` + c.replace(/\d/g, "•"));
@@ -102,7 +140,7 @@ function AccountListPage({user}){
   // csv 다운로드
   function downloadCsv(rows) {
     const header = ["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"];
-    const body = rows.map((r) => [r.alias, r.accountName, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity]);
+    const body = rows.map((r) => [r.nickname, r.accountType, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity]);
     const csv = [header, ...body].map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -113,8 +151,53 @@ function AccountListPage({user}){
     URL.revokeObjectURL(url);
   }
 
-  // 로그인 안되어있으면 리턴 (( 훅 다음에 호출하는 것 주의!))
-  // if (!user) return <Navigate to="/login" replace />;
+  // pdf 파일 다운로드를 위한  npm i jspdf jspdf-autotable
+  async function downloadPdf(rows) {
+    
+    // 문서생성
+    const docu = new jsPDF({unit:"pt", format:"a4"})    // pt:단위
+    // 한글 폰트 로딩
+    if (!fontCache.current.regular) {
+      fontCache.current.regular = await loadFontBase64("/font/NotoSansKR.ttf");
+    }
+    docu.addFileToVFS("NotoSansKR.ttf", fontCache.current.regular);
+    docu.addFont("NotoSansKR.ttf", "NotoSansKR", "normal");
+    docu.setFont("NotoSansKR", "normal");
+
+    // 제목
+    docu.setFontSize(14);
+    docu.text("계좌 목록 내역", 40, 40);
+    docu.setFontSize(10);
+    docu.text(`생성일 : ${new Date().toLocaleString('ko-KR')}`,40, 58 );
+
+    // 테이블 구성
+    const head = [["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"]];
+    const body = rows.map((r) => [
+      r.nickname, r.accountType, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity
+    ]);
+
+    // autoTable 호출
+    autoTable(docu, {
+      head,
+      body,
+      startY:76,      // 테이블 시작점 :-> 제목 아래
+      styles:{font:"NotoSansKR", fontSize:9, cellPadding:6},
+      headStyles:{font:"NotoSansKR", fontStyle: "normal", fillColor:[242, 242, 242], textColor:20},
+      columnStyles: { 5: { halign: "right", cellWidth: 70 }, 8: { cellWidth: 140 } }, // 컬럼 폭
+      // 하단 페이지 번호 조정
+      didDrawPage:(data) => {
+        const pageCnt = docu.getNumberOfPages();
+        const str = `Page ${data.pageNumber} / ${pageCnt}`;
+        docu.setFontSize(9);
+        docu.text(str, 
+          docu.internal.pageSize.getWidth() -80, 
+          docu.internal.pageSize.getHeight() -20);
+      }
+    });
+    // 저장
+    docu.save(`accounts-${Date.now()}.pdf`);
+  }
+
 
 
   // 필터
@@ -123,7 +206,8 @@ function AccountListPage({user}){
     return accounts
       .filter((a) => {
         const q = search.trim().toLowerCase();
-        const okQ = !q || [a.alias, a.accountName, a.number].some((s) => s?.toLowerCase().includes(q));
+        const okQ = !q || [a.disName, a.accountType, a.number].some((s) => 
+          s?.toLowerCase().includes(q));
         if (!okQ) return false;
         if (type !== "전체" && a.type !== type) return false;
         if (selectedBanks.size > 0 && !selectedBanks.has(a.bank)) return false;
@@ -137,7 +221,7 @@ function AccountListPage({user}){
         switch (sortKey) {
           case "balDesc": return toKRW(b) - toKRW(a);
           case "balAsc": return toKRW(a) - toKRW(b);
-          case "name": return (a.alias || a.accountName).localeCompare(b.alias || b.accountName, "ko");
+          case "name": return (a.disName || a.accountType).localeCompare(b.disName || b.accountType, "ko");
           default: return b.lastActivityTs - a.lastActivityTs;
         }
       });
@@ -145,6 +229,7 @@ function AccountListPage({user}){
 
   // 갯수 세팅
   const totalCount = filtered.length;
+  
 
   // 상태 칩
   const Chip = ({ active, children, onClick }) => (
@@ -165,8 +250,12 @@ function AccountListPage({user}){
               <p className="text-sm text-gray-600 mt-1">보유 중인 계좌를 한눈에 확인하고, 빠르게 이체/관리하세요.</p>
             </div>
             <div className="flex items-center gap-2">
-              <button className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">계좌개설</button>
-              <button className="rounded-full border px-4 py-2 text-sm hover:bg-gray-50">이체하기</button>
+              <Link to={`/account/open`}>
+              <button className="rounded-full border px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200">계좌개설</button>
+              </Link>
+              <Link to={`/transfer`}>
+              <button className="rounded-full border px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200">이체하기</button>
+              </Link>
             </div>
           </div>
         </div>
@@ -259,6 +348,7 @@ function AccountListPage({user}){
                   {/* csv */}
                   <div className="flex items-center gap-2">
                     <button onClick={()=>downloadCsv(filtered)} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">CSV 다운로드</button>
+                    <button onClick={()=>downloadPdf(filtered)} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">PDF 다운로드</button>
                     <button onClick={()=>setAccounts(a=>[...a])} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">목록 새로고침</button>
                   </div>
                 </div>
@@ -269,13 +359,13 @@ function AccountListPage({user}){
                     <thead className="text-gray-600">
                       <tr className="border-b bg-gray-50">
                         <th className="text-left font-medium px-3 py-2">별칭 / 계좌명</th>
-                        <th className="text-left font-medium px-3 py-2">은행</th>
-                        <th className="text-left font-medium px-3 py-2">계좌번호</th>
-                        <th className="text-center font-medium px-3 py-2">잔액</th>
+                        <th className="text-left font-medium px-3 py-2 whitespace-nowrap">은행</th>
+                        <th className="text-center font-medium px-3 py-2 whitespace-nowrap">계좌번호</th>
+                        <th className="text-center font-medium px-3 py-2 whitespace-nowrap">잔액</th>
                         <th className="text-left font-medium px-3 py-2 whitespace-nowrap">최근 거래</th>
                         <th className="text-center font-medium px-3 py-2">상태</th>
                         {/* <th className="text-center font-medium px-3 py-2">즐겨찾기</th> */}
-                        <th className="text-center font-medium px-3 py-2 ">액션</th>
+                        <th className="text-center font-medium px-3 py-2 ">업무</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -283,8 +373,8 @@ function AccountListPage({user}){
                         <tr key={row.id} className="hover:bg-gray-50">
                           {/* 계좌이름/별칭 */}
                           <td className="px-3 py-3">
-                            <div className="font-medium text-gray-900">{row.alias}</div>
-                            <div className="text-gray-500 text-xs">{row.accountName} · {row.type}</div>
+                            <div className="font-medium text-gray-900">{row.disName}</div>
+                            <div className="text-gray-500 text-xs">{row.type}</div>
                           </td>
                           {/* 계좌번호 */}
                           <td className="px-3 py-3">{row.bank}</td>
@@ -298,8 +388,9 @@ function AccountListPage({user}){
                           <td className="px-3 py-3 text-right whitespace-nowrap">
                             <span className="font-medium">{formatCurrency(row.balance,row.currency)}</span>
                           </td>
+                          {/* 최근거래일 */}
+                          <td className="px-3 py-3 text-gray-600 text-xs leading-tight tracking-tight">{row.lastActivity}</td>
                           {/* 상태 */}
-                          <td className="px-3 py-3 text-gray-600">{row.lastActivity}</td>
                           <td className="px-3 py-3 text-center whitespace-nowrap">
                             <span className={"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium " + (row.status==="정상"?"bg-emerald-50 text-emerald-700":"bg-amber-50 text-amber-700")}>{row.status}</span>
                           </td>
@@ -316,10 +407,11 @@ function AccountListPage({user}){
                           {/* 부가기능 */}
                           <td className="px-3 py-3 text-center whitespace-nowrap w-[180px]">
                             <div className="flex justify-center gap-1.5">
-                              <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">이체</button>
-                              <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">상세</button>
+                              <Link to={`/transfer`} state={{ fromAccountNumber: row.number }}>
+                              <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">이체</button>
+                              </Link>
                               <Link to={`/accounts/${row.id}`}>
-                                <button className="px-2.5 py-1.5 rounded-md border text-xs hover:bg-gray-50">이체내역</button>
+                                <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">상세내역</button>
                               </Link>
                             </div>
                           </td>
@@ -336,7 +428,7 @@ function AccountListPage({user}){
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="text-sm text-gray-500">{row.bank} · {row.type}</div>
-                          <div className="font-medium text-gray-900">{row.alias}</div>
+                          <div className="font-medium text-gray-900">{row.disName}</div>
                         </div>
                         <button onClick={()=>setAccounts(list=>list.map(a=> a.id===row.id?{...a,favorite:!a.favorite}:a))} aria-label="즐겨찾기">
                           {row.favorite ? (

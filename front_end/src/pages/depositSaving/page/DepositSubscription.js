@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+// 예금
+import { useState, useMemo } from 'react';
 import '../css/depositSubscription.css'; // 예금 전용 CSS import
 
 // FAQ 아이템을 위한 간단한 아코디언 컴포넌트
@@ -43,7 +43,6 @@ const depositProduct = {
 };
 
 const DepositSubscription = () => {
-    const navigate = useNavigate();
     const product = depositProduct;
 
     const [amount, setAmount] = useState(10000000);

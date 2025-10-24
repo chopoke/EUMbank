@@ -97,6 +97,12 @@ public class MypageCustomerDTO {
     // 수정자
     private String updatedBy;
 
+    // 주소
+    private String address;
+
+    // 주소
+    private String pinnumber;
+
     /**
      * QueryDSL의 Projections.constructor와 정확히 일치하는 생성자
      * 순서: cNo(Integer), nameKr(String), email(String), phoneMobile(String)

@@ -1,8 +1,8 @@
 // src/main/java/com/boot/eumbank/foreign/service/FxOpenService.java
 package com.boot.eumbank.foreign.service;
 
-import com.boot.eumbank.account.Open.model.Account;
-import com.boot.eumbank.account.Open.repository.AccountRepo;
+import com.boot.eumbank.account.open.entity.account.Account;
+import com.boot.eumbank.account.open.jpa.repository.custom.AccountRepo;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.customer.repo.CustomerRepo;
 import com.boot.eumbank.foreign.dto.FxOpenReqDto;

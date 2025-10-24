@@ -70,7 +70,7 @@ function OverviewTab({onTabSwitch}) {
       title: '계좌 조회',
       description: '전체 계좌 현황 및 잔액 확인',
       icon: 'ri-bank-line',
-      color: 'from-sky-400 to-sky-400',
+      color: 'from-blue-300 to-sky-400',
       image: 'https://readdy.ai/api/search-image?query=modern%20banking%20account%20overview%20with%20elegant%20financial%20dashboard%2C%20clean%20white%20background%2C%20professional%20banking%20interface%2C%20digital%20account%20management%2C%20minimalist%20design%20style%2C%20soft%20lighting&width=400&height=300&seq=account_overview&orientation=landscape',
       href: "/accounts"
     },
@@ -78,21 +78,21 @@ function OverviewTab({onTabSwitch}) {
       title: '대출',
       description: '대출 관리',
       icon: 'ri-bank-card-line',
-      color: 'from-teal-400 to-teal-400',
+      color: 'from-blue-500 to-sky-400',
       image: 'https://readdy.ai/api/search-image?query=elegant%20credit%20cards%20and%20loan%20management%20interface%2C%20modern%20banking%20cards%20display%2C%20clean%20white%20background%2C%20professional%20financial%20services%2C%20minimalist%20design%2C%20soft%20professional%20lighting&width=400&height=300&seq=card_loan&orientation=landscape'
     },
     {
       title: '자산관리',
       description: '투자 포트폴리오 및 자산 현황',
       icon: 'ri-line-chart-line',
-      color: 'from-green-400 to-green-400',
+      color: 'from-blue-300 to-sky-400',
       image: 'https://readdy.ai/api/search-image?query=investment%20portfolio%20dashboard%20with%20growing%20charts%20and%20financial%20assets%2C%20clean%20white%20background%2C%20professional%20wealth%20management%20interface%2C%20minimalist%20design%2C%20modern%20financial%20graphics&width=400&height=300&seq=investment_wealth&orientation=landscape'
     },
     {
       title: '보안 설정',
       description: '비밀번호 및 보안 관리',
       icon: 'ri-shield-check-line',
-      color: 'from-indigo-400 to-indigo-400',
+      color: 'from-indigo-500 to-indigo-200',
       image: 'https://readdy.ai/api/search-image?query=digital%20security%20shield%20and%20lock%20interface%2C%20modern%20banking%20security%20system%2C%20clean%20white%20background%2C%20professional%20cybersecurity%20design%2C%20minimalist%20tech%20style%2C%20secure%20banking%20environment&width=400&height=300&seq=security_settings&orientation=landscape',
       href: "#",
       targetTab: 'security'
@@ -101,7 +101,7 @@ function OverviewTab({onTabSwitch}) {
       title: '개인정보 수정',
       description: '회원정보 및 연락처 변경',
       icon: 'ri-user-settings-line',
-      color: 'from-purple-300 to-purple-200',
+      color: 'from-indigo-700 to-indigo-300',
       image: 'https://readdy.ai/api/search-image?query=personal%20profile%20management%20interface%2C%20modern%20user%20settings%20dashboard%2C%20clean%20white%20background%2C%20professional%20account%20management%2C%20minimalist%20design%2C%20user-friendly%20interface&width=400&height=300&seq=personal_info&orientation=landscape',
       href: "#",
       targetTab: 'profile'
@@ -110,9 +110,9 @@ function OverviewTab({onTabSwitch}) {
       title: '빠른 이체',
       description: '자주 사용하는 계좌로 빠른 송금',
       icon: 'ri-exchange-line',
-      color: 'from-orange-300 to-orange-300',
+      color: 'from-indigo-500 to-indigo-200',
       image: 'https://readdy.ai/api/search-image?query=quick%20money%20transfer%20interface%20with%20arrows%20and%20banking%20symbols%2C%20modern%20digital%20payment%20system%2C%20clean%20white%20background%2C%20professional%20financial%20transfer%2C%20minimalist%20design&width=400&height=300&seq=quick_transfer&orientation=landscape',
-      href: "#"
+      href: "/transfer"
     }
   ];
 
@@ -192,14 +192,21 @@ function OverviewTab({onTabSwitch}) {
 // ProfileTab Component
 function ProfileTab({initialData}) {
   const [isEditing, setIsEditing] = useState(false);
+  const [gender, setGender] = useState(initialData?.cgenderCd || null);
   const [profileData, setProfileData] = useState({
     name: '',
+    enname: '',
     email: '',
     phone: '',
     address: '',
     birthDate: '',
-    occupation: ''
+    occupation: '',
+    gender:'',
+    marketing:'',
+    pinnum:'',
   });
+
+  const [isTermsPopupOpen, setIsTermsPopupOpen] = useState(false); 
 
   useEffect(() => {
     // initialData가 존재하고, DTO의 핵심 필드가 채워졌을 때만 실행
@@ -207,33 +214,84 @@ function ProfileTab({initialData}) {
     if (initialData && (initialData.cnameKr || initialData.cnamekr)) { 
         
         console.log("ProfileTab: API 데이터 수신 및 상태 업데이트:", initialData);
-        
+        // console.log(profileData.marketing);
         // ⭐ 핵심: 로그에 표시된 실제 키를 사용합니다.
         // DTO 필드명 (cnameKr, cemail)이 소문자 시작으로 들어왔다면,
         // JSON 키는 'cnamekr', 'cemail' 형태로 들어올 가능성이 높습니다.
         
         // 옵셔널 체이닝과 OR 연산자를 사용하여 가장 확실한 키를 찾습니다.
         const nameKey = initialData.cnameKr; 
+        const ennameKey = initialData.cnameEn; 
         const emailKey = initialData.cemail;
         const phoneKey = initialData.cphoneMobile;
         const birthKey = initialData.cbirthDt;
-
+        const marketingKey = initialData.cagreeMarketing;
+        const addressKey = initialData.caddress;
+        const pinnumKey = initialData.cpinnumber;
         setProfileData({
             name: nameKey || '', 
+            enname: ennameKey || '', 
             email: emailKey || '', 
             phone: phoneKey || '',
             
             // 날짜 형식 변환: T 뒤의 시간 부분 제거
             birthDate: birthKey ? birthKey.split('T')[0] : '', 
-            
-            address: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
-            occupation: '정보 없음' // DTO에 해당 필드가 없으므로 기본값 유지
+            gender: initialData?.cgenderCd || null ,
+            address: addressKey || '', 
+            occupation: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
+            marketing: marketingKey,
+            pinnum: pinnumKey,
         });
     } else {
         // 이 로그가 계속 찍히지 않는지 확인하세요. (API 호출이 두 번 성공해야 합니다.)
         console.log("ProfileTab: initialData가 비어있거나 아직 로딩 중입니다."); 
+        
     }
   }, [initialData]);
+
+  // 마케팅 토글 핸들러 함수
+  const handleMarketingToggle = (event) => {
+      // 체크박스 클릭 시의 checked 상태 (true/false)
+      const isChecked = event.target.checked; 
+      
+      // checked 상태를 서버 DTO가 요구하는 'Y'/'N' 값으로 변환합니다.
+      const newValue = isChecked ? 'Y' : 'N';
+      
+      // profileData 상태를 업데이트하여 profileData.marketing에 반영합니다.
+      setProfileData(prevData => ({
+          ...prevData,
+          marketing: newValue 
+      }));
+      
+      console.log(`[Toggle Event] 마케팅 동의 상태 변경됨: ${newValue}`);
+  };
+
+  const handleGenderChange = (event) => {
+    const newGenderValue = event.target.value; // 'm' 또는 'f'
+        
+        // 1. UI를 제어하는 gender 상태 업데이트 (클릭 시 체크가 되도록 함)
+      setGender(newGenderValue);
+        
+        // 2. ⭐ profileData 상태도 업데이트하여 최종 전송 데이터에 반영되도록 동기화
+      setProfileData(prevData => ({
+          ...prevData,
+          gender: newGenderValue
+      }));
+  };
+
+  // 약관 내용 Mock Data
+    const mockTerms = `
+        제 1조 (목적)
+        본 약관은 [회사명]이 제공하는 이벤트, 할인 정보, 신제품 소식 등의 마케팅 정보를 고객에게 제공하는 조건 및 절차에 관한 사항을 규정함을 목적으로 합니다.
+
+        제 2조 (수신 동의)
+        1. 고객은 본 동의서를 통해 SMS, 이메일, 앱 푸시 등의 전자적 전송 매체를 통한 정보 수신에 동의할 수 있습니다.
+        2. 수신 동의 시, 고객은 마케팅 활용 목적에 필요한 개인정보(이름, 연락처, 이메일 등) 제공에 동의한 것으로 간주합니다.
+
+        제 3조 (철회 및 불이익)
+        1. 고객은 언제든지 동의를 철회할 수 있으며, 철회 후 즉시 마케팅 정보 발송이 중단됩니다.
+        2. 마케팅 정보 수신 동의 여부는 서비스 이용에 영향을 미치지 않습니다.
+    `;
 
   const handleSave = () => {
         // 서버로 전송할 DTO 형식에 맞게 데이터를 매핑합니다.
@@ -246,9 +304,13 @@ function ProfileTab({initialData}) {
             // 2. 수정된 필드만 덮어씁니다.
             //    (백엔드 DTO 필드명 cNameKr, cEmail 등과 일치시켜야 합니다.)
             cnameKr: profileData.name, 
-            cEmail: profileData.email,
-            cPhoneMobile: profileData.phone,
+            cnameEn: profileData.enname,
+            cemail: profileData.email,
+            cphoneMobile: profileData.phone,
             cBirthDt: profileData.birthDate,
+            cGenderCd: profileData.gender,
+            cagreeMarketing: profileData.marketing, 
+            caddress: profileData.address,
 
             // 3. (옵션) 업데이트 시 갱신 정보를 추가합니다. (DB UpdatedAt, UpdatedBy 컬럼용)
             // cUpdatedAt: new Date().toISOString(),
@@ -360,6 +422,59 @@ function ProfileTab({initialData}) {
               )}
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">영문이름</label>
+              {isEditing ? (
+                <input
+                  type="email"
+                  value={profileData.enname}
+                  onChange={(e) => setProfileData({...profileData, enname: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              ) : (
+                <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.enname}</div>
+              )}
+            </div>
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    성별
+                </label>
+                <div className="flex space-x-6">
+                    {/* 남성 Radio 버튼 */}
+                    <div className="flex items-center">
+                        <input
+                            id="gender-male"
+                            name="gender"
+                            type="radio"
+                            value="m"
+                            disabled={true}
+                            checked={gender === 'm'}
+                            onChange={handleGenderChange}
+                            className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <label htmlFor="gender-male" className="ml-3 block text-sm font-medium text-gray-700">
+                            남성
+                        </label>
+                    </div>
+                    
+                    {/* 여성 Radio 버튼 */}
+                    <div className="flex items-center">
+                        <input
+                            id="gender-female"
+                            name="gender"
+                            type="radio"
+                            value="f"
+                            disabled={true}
+                            checked={gender === 'f'}
+                            onChange={handleGenderChange}
+                            className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                        />
+                        <label htmlFor="gender-female" className="ml-3 block text-sm font-medium text-gray-700">
+                            여성
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
               {isEditing ? (
                 <input
@@ -416,37 +531,103 @@ function ProfileTab({initialData}) {
 
         {/* 계정 설정 섹션 */}
         <div className="p-6 border-t border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">계정 설정</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">마케팅 수신 동의</h3>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <i className="ri-notification-line text-blue-600"></i>
-                <span className="text-gray-700">알림 설정</span>
-              </div>
+              <div 
+                className="relative mt-2 p-3 text-right"
+                // onBlur 이벤트 추가: 팝업이 열려있을 때 팝업 외부를 클릭하면 닫히도록 설정
+                tabIndex={-1} 
+                onBlur={(e) => {
+                    // relatedTarget이 null이거나, 관련 요소가 이 div의 자식이 아니라면 팝업 닫기
+                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                        setIsTermsPopupOpen(false);
+                    }
+                }}
+            >
+                <span className="text-sm text-gray-700" >
+                    ※버튼을 활성화 하시면 마케팅 수신 <a className="text-sm text-gray-700 cursor-pointer pb-0.5 hover:text-blue-600 transition-colors"
+                    role="button" // 접근성 향상을 위해 버튼 역할 지정
+                    tabIndex="0" // 키보드 접근 가능하게 설정 (엔터키로도 클릭 가능)
+                    onClick={() => setIsTermsPopupOpen(prev => !prev)}
+                    onKeyDown={(e) => {
+                        // Enter 또는 Spacebar 키를 눌러도 클릭 작동하도록 처리
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setIsTermsPopupOpen(prev => !prev);
+                        }
+                    }} style={{textDecoration: 'underline'}}>약관</a>에 동의한 것으로 간주됩니다.
+                    <span className="text-blue-600 font-semibold border-b border-dashed border-blue-400 ml-1">
+                        <br></br><small>(약관을 클릭하시면 내용을 보실수 있습니다.)</small>
+                    </span>
+                </span>
+
+                {/* 약관 팝업 (Tooltip 형태) */}
+                {isTermsPopupOpen && (
+                    <div className="absolute right-0 bottom-full mb-4 w-full max-w-xs sm:max-w-md lg:max-w-lg
+                                   mx-2 md:mx-0  z-10 bg-white border border-blue-200 rounded-xl shadow-2xl p-4 transition duration-300 ease-in-out transform origin-bottom-right">
+                        <div className="flex justify-between items-center mb-2">
+                            <div className="text-base font-semibold text-blue-600">
+                                마케팅 수신 약관 (요약)
+                            </div>
+                            {/* 닫기 버튼 추가 */}
+                            <button 
+                                onClick={() => setIsTermsPopupOpen(false)}
+                                className="text-gray-500 hover:text-gray-900 transition-colors p-1 rounded-full hover:bg-gray-100"
+                                aria-label="약관 팝업 닫기"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        {/* 약관 내용 (스크롤 가능) */}
+                        <div className="text-xs text-gray-700 space-y-2 max-h-48 overflow-y-auto pr-2">
+                            {mockTerms.split('\n\n').map((paragraph, index) => (
+                                <p key={index}>{paragraph.trim()}</p>
+                            ))}
+                        </div>
+                        {/* 꼬리 (Tooltip Tail) */}
+                        <div className="absolute right-3 -bottom-2 w-4 h-4 bg-white border-b border-r border-blue-200 transform rotate-45"></div>
+                    </div>
+                )}
+            </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
+                {/* {profileData.marketing === 'Y' ? (<input type="checkbox" className="sr-only peer" defaultChecked />) : (<input type="checkbox" className="sr-only peer"  />)} */}
+                <input 
+                    type="checkbox" 
+                    className="sr-only peer"
+                    // 'Y'일 때 체크, 'N'일 때 미체크
+                    checked={profileData.marketing === 'Y'} 
+                    // 편집 모드일 때만 변경 가능하도록
+                    disabled={!isEditing}
+                    // 토글 시 profileData.marketing 상태 업데이트
+                    onChange={handleMarketingToggle}
+                />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
+            
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <i className="ri-mail-line text-green-600"></i>
                 <span className="text-gray-700">이메일 알림</span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              {/* <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" defaultChecked />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+              </label> */}
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <i className="ri-phone-line text-orange-600"></i>
                 <span className="text-gray-700">SMS 알림</span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              {/* <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
+              </label> */}
             </div>
           </div>
         </div>
@@ -495,7 +676,7 @@ function SecurityTab() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-smartphone-line text-blue-600 mr-2"></i>
-          OTP 인증
+          아마도 핀번호 인증
         </h3>
         <div className="flex items-center justify-between">
           <div>
@@ -548,7 +729,7 @@ function SecurityTab() {
       </div>
 
       {/* 생체 인증 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-fingerprint-line text-purple-600 mr-2"></i>
           생체 인증
@@ -581,7 +762,7 @@ function SecurityTab() {
             </label>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* 로그인 기록 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -1449,8 +1630,8 @@ function TaxTab() {
 }
 
 // Sidebar Component
-function Sidebar({ customerName }) {
-  
+function Sidebar({ customerName, customerPhone }) {
+  console.log()
   return (
     <aside className="w-80 bg-gray-50 border-l border-gray-200 p-6">
       <div className="space-y-6">
@@ -1479,8 +1660,9 @@ function Sidebar({ customerName }) {
               <span className="text-sm font-medium">1,000만원</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">OTP 등록</span>
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">완료</span>
+              <span className="text-sm text-gray-600">핀번호 등록</span>
+              {customerPhone !== null ? (<span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">완료</span>) : (<span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full">미등록</span>)}
+              {/* <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">완료</span> */}
             </div>
           </div>
         </div>
@@ -1492,7 +1674,7 @@ function Sidebar({ customerName }) {
             보안 주의
           </h3>
           <div className="space-y-2">
-            <div className="text-sm text-gray-600">OTP/비밀번호 관리</div>
+            <div className="text-sm text-gray-600">핀번호/비밀번호 관리</div>
             <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded">
               정기적인 비밀번호 변경을 권장합니다
             </div>
@@ -1622,6 +1804,7 @@ function MyPage() {
 
   const [customerProfile, setCustomerProfile] = useState({});
   const [customerName, setCustomerName] = useState('이름없음');
+  const [customerPhone, setCustomerPhone] = useState('로딩 중...');
   const [activeTab, setActiveTab] = useState('overview');
 
   // ★ 범용 탭 전환 함수 정의
@@ -1664,6 +1847,16 @@ function MyPage() {
                 console.error("DTO에서 cnameKr 필드를 찾을 수 없거나 값이 비어있습니다.");
                 setCustomerName('데이터 오류'); 
             }
+
+            const fetchedPhone = customerData?.cpinnumber; 
+            if (fetchedPhone) {
+                setCustomerPhone(fetchedPhone); 
+                console.log(customerData.cpinnumber);
+            } else {
+                console.warn("DTO에서 cTelNo 필드를 찾을 수 없거나 값이 비어있습니다.");
+                // 값이 없으면 빈 문자열 또는 대시로 설정
+                setCustomerPhone(null); 
+            }
         })
         .catch(error => {
             console.error("API 호출 중 예외 발생:", error);
@@ -1704,7 +1897,7 @@ function MyPage() {
             <div className="flex-1 p-6">
               {renderTabContent()}
             </div>
-            <Sidebar customerName={customerName} /> 
+            <Sidebar customerName={customerName} customerPhone={customerPhone} /> 
           </div>
         </div>
       </div>

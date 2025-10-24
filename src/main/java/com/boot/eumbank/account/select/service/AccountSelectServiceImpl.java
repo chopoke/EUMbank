@@ -1,6 +1,6 @@
 package com.boot.eumbank.account.select.service;
 
-import com.boot.eumbank.account.Open.model.Account;
+import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.account.select.dto.AccountDetailDTO;
 import com.boot.eumbank.account.select.dto.AccountSummaryDTO;
 import com.boot.eumbank.account.select.repository.AccountSelectRepository;
@@ -40,6 +40,23 @@ public class AccountSelectServiceImpl implements AccountSelectService {
                 .map(this::toDetailDTO);
     }
 
+    @Override
+    @Transactional
+    public void updateNickname(int a_no, String nickName) {
+        String trimName = (nickName == null) ?  "" : nickName.trim();
+        if(trimName.isEmpty()){
+            throw new IllegalArgumentException("별명은 공백일 수 없습니다.");
+        }
+        if(trimName.length() > 10) {
+            throw new IllegalArgumentException("별명은 30자 이내로 입력해주세요.");
+        }
+
+        long updateCnt = accountRepository.updateNickname(a_no, trimName);
+        if(updateCnt != 1){
+            throw new IllegalArgumentException("별명 변경 오류 ");
+        }
+    }
+
     // --------- mapping ---------
     private AccountSummaryDTO toSummaryDTO(Account a) {
         AccountSummaryDTO dto = new AccountSummaryDTO();
@@ -51,6 +68,7 @@ public class AccountSelectServiceImpl implements AccountSelectService {
         dto.setA_balance(a.getBalance());
         dto.setA_nickname(a.getNickname());
         dto.setA_status(a.getStatus());
+        dto.setLastTransferAt(a.getLastTxAt());
         return dto;
     }
 

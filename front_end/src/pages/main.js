@@ -89,7 +89,7 @@ const Hero = ({ isLoggedIn, name }) => {
                 {/* rounded-full bg-blue-700 text-white px-6 py-3 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
                 <button className="primary-button-lg" onClick={() => goToAccountOpenPage(navigate)}>지금 개설하기</button>
                 {/* rounded-full border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
-                <button className="secondary-button-lg">금리 보기</button>
+                {/* <button className="secondary-button-lg">금리 보기</button> */}
               </div>
             </div>
             {/* col-span-12 md:col-span-5 */}
@@ -153,9 +153,9 @@ const QuickActions = () => {
 
   const items = [
     { id: "transfer", label: "계좌이체", icon: paths.send, href: "/transfer"  },
-    { id: "bill", label: "공과금", icon: paths.bill, href: "/" },
+    { id: "bill", label: "공과금", icon: paths.bill, href: "/test" },
     { id: "asset", label: "자산관리", icon: paths.chart, href: "/" },
-    { id: "loan", label: "대출", icon: paths.loan, href: "/" },
+    { id: "loan", label: "대출", icon: paths.loan, href: "/loan/products" },
     { id: "fx", label: "외화", icon: paths.fx, href: "/foreign/rate" },
     { id: "spot", label: "현물", icon: paths.card, href: "/" },
     { id: "deposit", label: "예적금가입", icon: paths.bank, href: "/depositSavingProductList/open" },

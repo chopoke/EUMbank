@@ -16,6 +16,11 @@ export default function BulkTransferComplete() {
     // location.state에서 다건이체 결과 가져오기
     if (location.state?.bulkTransferResults) {
       const data = location.state.bulkTransferResults;
+      console.log('다건이체 완료 페이지 - 받은 데이터:', data);
+      console.log('results:', data.results);
+      console.log('successCount:', data.successCount);
+      console.log('failCount:', data.failCount);
+      
       setResults(data.results);
       setSummary({
         totalCount: data.totalCount,
@@ -24,12 +29,16 @@ export default function BulkTransferComplete() {
         finalBalance: data.finalBalance
       });
     } else {
+      console.log('다건이체 결과 데이터가 없음, 리다이렉트');
       // 데이터가 없으면 다건이체 페이지로 리다이렉트
       navigate('/transfer/bulk');
     }
   }, [location.state, navigate]);
 
   const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return '0';
+    }
     return new Intl.NumberFormat('ko-KR').format(amount);
   };
 
@@ -46,7 +55,7 @@ export default function BulkTransferComplete() {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-semibold">다건이체 완료</h1>
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-              summary.failCount === 0 ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+              summary.failCount === 0 ? 'bg-cyan-100 text-cyan-700' : 'bg-yellow-100 text-yellow-700'
             }`}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
@@ -60,15 +69,15 @@ export default function BulkTransferComplete() {
               <div className="text-sm text-gray-600">전체</div>
               <div className="text-2xl font-bold">{summary.totalCount}건</div>
             </div>
-            <div className="p-4 rounded-lg bg-green-50">
-              <div className="text-sm text-green-700">성공</div>
-              <div className="text-2xl font-bold text-green-700">{summary.successCount}건</div>
+            <div className="p-4 rounded-lg bg-sky-100">
+              <div className="text-sm text-sky-600">성공</div>
+              <div className="text-2xl font-bold text-sky-600">{summary.successCount}건</div>
             </div>
-            <div className="p-4 rounded-lg bg-red-50">
-              <div className="text-sm text-red-700">실패</div>
-              <div className="text-2xl font-bold text-red-700">{summary.failCount}건</div>
+            <div className={`p-4 rounded-lg ${summary.failCount > 0 ? 'bg-red-100' : 'bg-gray-50'}`}>
+              <div className={`text-sm ${summary.failCount > 0 ? 'text-red-700' : 'text-gray-700'}`}>실패</div>
+              <div className={`text-2xl font-bold ${summary.failCount > 0 ? 'text-red-700' : 'text-gray-700'}`}>{summary.failCount}건</div>
             </div>
-            <div className="p-4 rounded-lg bg-blue-50">
+            <div className="p-4 rounded-lg bg-blue-100">
               <div className="text-sm text-blue-700">최종 잔액</div>
               <div className="text-2xl font-bold text-blue-700">₩{formatCurrency(summary.finalBalance)}</div>
             </div>
@@ -105,11 +114,11 @@ export default function BulkTransferComplete() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
                       <div className="text-sm text-gray-600">수취인</div>
-                      <div className="font-medium">{result.recipientName}</div>
+                      <div className="font-medium">{result.toAccountHolder || result.recipientName}</div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">계좌</div>
-                      <div className="font-medium font-mono">{result.recipientBank} · {result.recipientAccount}</div>
+                      <div className="font-medium font-mono">{result.toBankName || result.recipientBank} · {result.toAccountNo || result.recipientAccount}</div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">금액</div>
@@ -123,7 +132,7 @@ export default function BulkTransferComplete() {
                     ) : (
                       <div>
                         <div className="text-sm text-red-700">실패 사유</div>
-                        <div className="font-medium text-red-700">{result.errorMessage}</div>
+                        <div className="font-medium text-red-700">{result.errorMessage || result.message}</div>
                       </div>
                     )}
                   </div>
@@ -143,19 +152,19 @@ export default function BulkTransferComplete() {
         <section className="mt-8 flex justify-center gap-4">
           <button 
             onClick={() => navigate('/')}
-            className="rounded-full border border-gray-300 px-6 py-3 text-sm hover:bg-gray-50"
+            className="rounded-full border border-gray-300 px-6 py-3 text-sm text-white bg-blue-700 hover:bg-blue-800"
           >
             홈으로 가기
           </button>
           <button 
             onClick={() => navigate('/transfer/bulk')}
-            className="rounded-full border border-gray-300 px-6 py-3 text-sm hover:bg-gray-50"
+            className="rounded-full border border-gray-300 px-6 py-3 text-sm text-gray-500 bg-gray-200 hover:bg-gray-300"
           >
             다건이체 다시하기
           </button>
           <button 
             onClick={() => navigate('/transfer')}
-            className="rounded-full bg-blue-700 text-white px-6 py-3 text-sm hover:bg-blue-800"
+            className="rounded-full bg-blue-700 px-6 py-3 text-sm text-gray-500 bg-gray-200 hover:bg-gray-300"
           >
             일반 이체로 이동
           </button>

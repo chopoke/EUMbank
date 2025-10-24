@@ -1,3 +1,5 @@
+// 적금
+
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../css/savingsSubscription.css'; // 적금 전용 CSS import

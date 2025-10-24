@@ -16,4 +16,7 @@ public interface AccountSelectService {
     Page<AccountSummaryDTO> listpage(int c_no, Pageable pageable);
     // 단건조회
     Optional<AccountDetailDTO> detail(int a_no);
+
+    //별명검증
+    public void updateNickname(int a_no, String nickName);
 }

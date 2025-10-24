@@ -1,6 +1,6 @@
 package com.boot.eumbank.transfer_domain.account.repository;
 
-import com.boot.eumbank.account.Open.model.Account;
+import com.boot.eumbank.account.open.entity.account.Account;
 
 import java.util.List;
 import java.util.Optional;
