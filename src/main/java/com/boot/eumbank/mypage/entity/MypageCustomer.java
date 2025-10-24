@@ -117,4 +117,10 @@ public class MypageCustomer {
     @Column(name = "c_login_type", nullable = false, length = 20)
     @Builder.Default
     private String loginType = "EUM";
+
+    @Column(name = "c_address", nullable = false, length = 300)
+    private String caddress;
+
+    @Column(name = "c_pin_number", nullable = false, length = 300)
+    private String cpinnumber;
 }

@@ -145,8 +145,8 @@ const TermsAgreement = ({ productType }) => {
         console.log("서버로 전송할 최종 데이터 객체:", finalData);
 
         console.log("서버로 전송할 최종 JSON 데이터:", finalDataJSON);
-        const result = product.href.split('/')[1];
-        navigate("/" + result + "/form", { state: { productData: product } });
+        const result = product.id.split('-')[0];
+        navigate("/" + result + "/final", { state: { productData: product } });
 
     };
 

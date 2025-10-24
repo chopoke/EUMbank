@@ -29,8 +29,17 @@ import TransferComplete from "./pages/transfer/TransferComplete";
 import TransferReserveComplete from "./pages/transfer/TransferReserveComplete";
 import BulkTransferDashboard from "./pages/transfer/BulkTransferDashboard";
 import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
-import { depositSavingRouteElements } from "./pages/depositSaving/router/depositSavingRouter";
-import { accountElements } from "./pages/account/router/accountRouter";
+
+// 주택담보대출
+import LoanProductList from "./pages/loan/products/LoanProductList"
+// 대출상품상세
+import LoanProductDetail from "./pages/loan/products/LoanProductDetail"
+
+// 예금/적금
+import DepositSavingProductList from "./pages/depositSaving/commom/DepositSavingProductList";
+import TermsAgreement from "./pages/depositSaving/commom/TermAgreements";
+import DepositSubscription from "./pages/depositSaving/page/DepositSubscription";
+import SavingsSubscription from "./pages/depositSaving/page/SavingsSubscription";
 
 // App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
 // 이렇게 하면 App 컴포넌트 내에서 useNavigate를 정상적으로 사용할 수 있습니다.
@@ -98,11 +107,41 @@ function App() {
             <AccountHistoryPage />
           </ProtectedRoute>} />
 
-        {/* 계좌 개설: 각 단계 독립 경로 */}
-        {accountElements}
+        {/* 주택담보대출 상품 목록 */}
+        <Route path="/loan/products" element={<LoanProductList/>} /> 
+        {/* 상품 상세 */}
+        <Route path="/loan/products/:code" element={<LoanProductDetail/>} /> 
 
-        {/* ✅ 예금/적금 */}
-        {depositSavingRouteElements}
+
+        {/* 계좌 개설: 각 단계 독립 경로 */}
+        <Route path="/account/open" element={
+          <ProtectedRoute>
+            <Navigate to="/account/open/step1" replace />
+          </ProtectedRoute>
+        } />
+        <Route path="/account/open/step1" element={<Step1Consent />} />
+        <Route path="/account/open/step2" element={<Step2IdVerify />} />
+        <Route path="/account/open/step3" element={<Step3Info />} />
+        <Route path="/account/open/step4" element={<Step4Product />} />
+        <Route path="/account/open/step5" element={<Step5Done />} />
+
+        {/* 예금 */}
+        {/* 예금/적금 메인 라우팅 */}
+        <Route path="/depositSavingProductList/open" element={<DepositSavingProductList />} />
+
+        {/* 예금 */}
+        <Route path="/deposit/open/deposit-1" element={<TermsAgreement productType={'예금'} />} />
+        <Route path="/deposit/open/deposit-2" element={<TermsAgreement productType={'예금'} />} />
+        <Route path="/deposit/open/deposit-3" element={<TermsAgreement productType={'예금'} />} />
+
+        {/* 적금 */}
+        <Route path="/savings/open/savings-1" element={<TermsAgreement productType={'적금'} />} />
+        <Route path="/savings/open/savings-2" element={<TermsAgreement productType={'적금'} />} />
+        <Route path="/savings/open/savings-3" element={<TermsAgreement productType={'적금'} />} />
+
+        {/* 예금/적금 가입 */}
+        <Route path="/savings/final" element={<DepositSubscription />} />
+        <Route path="/deposit/final" element={<SavingsSubscription />} />
 
         {/* ✅ 외환 라우팅 */}
         <Route path="/foreign" element={<Navigate to="/foreign/rate" replace />} />
@@ -137,13 +176,17 @@ function App() {
         } />
 
         {/* 마이페이지 진입 */}
-        <Route path="/mypage" element={<MyPage />} />
+        <Route path="/mypage" element={
+          <ProtectedRoute>
+          <MyPage />
+          </ProtectedRoute>
+        } />
 
         {/* 마이페이지 진입 */}
         <Route path="/test" element={<Test />} />
       </Routes >
 
-
+        
 
       <Footer />
     </div >

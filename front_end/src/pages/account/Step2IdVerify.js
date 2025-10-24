@@ -326,7 +326,7 @@ export default function Step2IdVerify() {
                                                 : "bg-blue-600 text-white hover:bg-blue-700"
                                                 }`}
                                         >
-                                            {loading ? "검증 중..." : "OCR 시작"}
+                                            {loading ? "검증 중..." : "인증 시작"}
                                         </button>
                                     )}
 

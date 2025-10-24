@@ -155,7 +155,7 @@ const QuickActions = () => {
     { id: "transfer", label: "계좌이체", icon: paths.send, href: "/transfer"  },
     { id: "bill", label: "공과금", icon: paths.bill, href: "/test" },
     { id: "asset", label: "자산관리", icon: paths.chart, href: "/" },
-    { id: "loan", label: "대출", icon: paths.loan, href: "/" },
+    { id: "loan", label: "대출", icon: paths.loan, href: "/loan/products" },
     { id: "fx", label: "외화", icon: paths.fx, href: "/foreign/rate" },
     { id: "spot", label: "현물", icon: paths.card, href: "/" },
     { id: "deposit", label: "예적금가입", icon: paths.bank, href: "/depositSavingProductList/open" },

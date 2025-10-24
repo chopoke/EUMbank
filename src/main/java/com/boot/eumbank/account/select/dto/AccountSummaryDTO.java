@@ -3,6 +3,7 @@ package com.boot.eumbank.account.select.dto;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,4 +17,5 @@ public class AccountSummaryDTO {
     private BigDecimal a_balance;   // 잔액
     private String a_nickname;      // 별칭
     private String a_status;        // 상태
+    private LocalDateTime lastTransferAt;       // 최근거래일
 }

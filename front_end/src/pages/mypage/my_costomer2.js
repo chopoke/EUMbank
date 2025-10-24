@@ -70,7 +70,7 @@ function OverviewTab({onTabSwitch}) {
       title: '계좌 조회',
       description: '전체 계좌 현황 및 잔액 확인',
       icon: 'ri-bank-line',
-      color: 'from-sky-400 to-sky-400',
+      color: 'from-blue-300 to-sky-400',
       image: 'https://readdy.ai/api/search-image?query=modern%20banking%20account%20overview%20with%20elegant%20financial%20dashboard%2C%20clean%20white%20background%2C%20professional%20banking%20interface%2C%20digital%20account%20management%2C%20minimalist%20design%20style%2C%20soft%20lighting&width=400&height=300&seq=account_overview&orientation=landscape',
       href: "/accounts"
     },
@@ -78,21 +78,21 @@ function OverviewTab({onTabSwitch}) {
       title: '대출',
       description: '대출 관리',
       icon: 'ri-bank-card-line',
-      color: 'from-teal-400 to-teal-400',
+      color: 'from-blue-500 to-sky-400',
       image: 'https://readdy.ai/api/search-image?query=elegant%20credit%20cards%20and%20loan%20management%20interface%2C%20modern%20banking%20cards%20display%2C%20clean%20white%20background%2C%20professional%20financial%20services%2C%20minimalist%20design%2C%20soft%20professional%20lighting&width=400&height=300&seq=card_loan&orientation=landscape'
     },
     {
       title: '자산관리',
       description: '투자 포트폴리오 및 자산 현황',
       icon: 'ri-line-chart-line',
-      color: 'from-green-400 to-green-400',
+      color: 'from-blue-300 to-sky-400',
       image: 'https://readdy.ai/api/search-image?query=investment%20portfolio%20dashboard%20with%20growing%20charts%20and%20financial%20assets%2C%20clean%20white%20background%2C%20professional%20wealth%20management%20interface%2C%20minimalist%20design%2C%20modern%20financial%20graphics&width=400&height=300&seq=investment_wealth&orientation=landscape'
     },
     {
       title: '보안 설정',
       description: '비밀번호 및 보안 관리',
       icon: 'ri-shield-check-line',
-      color: 'from-indigo-400 to-indigo-400',
+      color: 'from-indigo-500 to-indigo-200',
       image: 'https://readdy.ai/api/search-image?query=digital%20security%20shield%20and%20lock%20interface%2C%20modern%20banking%20security%20system%2C%20clean%20white%20background%2C%20professional%20cybersecurity%20design%2C%20minimalist%20tech%20style%2C%20secure%20banking%20environment&width=400&height=300&seq=security_settings&orientation=landscape',
       href: "#",
       targetTab: 'security'
@@ -101,7 +101,7 @@ function OverviewTab({onTabSwitch}) {
       title: '개인정보 수정',
       description: '회원정보 및 연락처 변경',
       icon: 'ri-user-settings-line',
-      color: 'from-purple-300 to-purple-200',
+      color: 'from-indigo-700 to-indigo-300',
       image: 'https://readdy.ai/api/search-image?query=personal%20profile%20management%20interface%2C%20modern%20user%20settings%20dashboard%2C%20clean%20white%20background%2C%20professional%20account%20management%2C%20minimalist%20design%2C%20user-friendly%20interface&width=400&height=300&seq=personal_info&orientation=landscape',
       href: "#",
       targetTab: 'profile'
@@ -110,7 +110,7 @@ function OverviewTab({onTabSwitch}) {
       title: '빠른 이체',
       description: '자주 사용하는 계좌로 빠른 송금',
       icon: 'ri-exchange-line',
-      color: 'from-orange-300 to-orange-300',
+      color: 'from-indigo-500 to-indigo-200',
       image: 'https://readdy.ai/api/search-image?query=quick%20money%20transfer%20interface%20with%20arrows%20and%20banking%20symbols%2C%20modern%20digital%20payment%20system%2C%20clean%20white%20background%2C%20professional%20financial%20transfer%2C%20minimalist%20design&width=400&height=300&seq=quick_transfer&orientation=landscape',
       href: "/transfer"
     }
@@ -202,7 +202,8 @@ function ProfileTab({initialData}) {
     birthDate: '',
     occupation: '',
     gender:'',
-    marketing:''
+    marketing:'',
+    pinnum:'',
   });
 
   const [isTermsPopupOpen, setIsTermsPopupOpen] = useState(false); 
@@ -213,7 +214,7 @@ function ProfileTab({initialData}) {
     if (initialData && (initialData.cnameKr || initialData.cnamekr)) { 
         
         console.log("ProfileTab: API 데이터 수신 및 상태 업데이트:", initialData);
-        console.log(profileData.marketing);
+        // console.log(profileData.marketing);
         // ⭐ 핵심: 로그에 표시된 실제 키를 사용합니다.
         // DTO 필드명 (cnameKr, cemail)이 소문자 시작으로 들어왔다면,
         // JSON 키는 'cnamekr', 'cemail' 형태로 들어올 가능성이 높습니다.
@@ -225,7 +226,8 @@ function ProfileTab({initialData}) {
         const phoneKey = initialData.cphoneMobile;
         const birthKey = initialData.cbirthDt;
         const marketingKey = initialData.cagreeMarketing;
-
+        const addressKey = initialData.caddress;
+        const pinnumKey = initialData.cpinnumber;
         setProfileData({
             name: nameKey || '', 
             enname: ennameKey || '', 
@@ -235,9 +237,10 @@ function ProfileTab({initialData}) {
             // 날짜 형식 변환: T 뒤의 시간 부분 제거
             birthDate: birthKey ? birthKey.split('T')[0] : '', 
             gender: initialData?.cgenderCd || null ,
-            address: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
+            address: addressKey || '', 
             occupation: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
             marketing: marketingKey,
+            pinnum: pinnumKey,
         });
     } else {
         // 이 로그가 계속 찍히지 않는지 확인하세요. (API 호출이 두 번 성공해야 합니다.)
@@ -307,6 +310,7 @@ function ProfileTab({initialData}) {
             cBirthDt: profileData.birthDate,
             cGenderCd: profileData.gender,
             cagreeMarketing: profileData.marketing, 
+            caddress: profileData.address,
 
             // 3. (옵션) 업데이트 시 갱신 정보를 추가합니다. (DB UpdatedAt, UpdatedBy 컬럼용)
             // cUpdatedAt: new Date().toISOString(),
@@ -1626,8 +1630,8 @@ function TaxTab() {
 }
 
 // Sidebar Component
-function Sidebar({ customerName }) {
-  
+function Sidebar({ customerName, customerPhone }) {
+  console.log()
   return (
     <aside className="w-80 bg-gray-50 border-l border-gray-200 p-6">
       <div className="space-y-6">
@@ -1656,8 +1660,9 @@ function Sidebar({ customerName }) {
               <span className="text-sm font-medium">1,000만원</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">OTP 등록</span>
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">완료</span>
+              <span className="text-sm text-gray-600">핀번호 등록</span>
+              {customerPhone !== null ? (<span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">완료</span>) : (<span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full">미등록</span>)}
+              {/* <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">완료</span> */}
             </div>
           </div>
         </div>
@@ -1669,7 +1674,7 @@ function Sidebar({ customerName }) {
             보안 주의
           </h3>
           <div className="space-y-2">
-            <div className="text-sm text-gray-600">OTP/비밀번호 관리</div>
+            <div className="text-sm text-gray-600">핀번호/비밀번호 관리</div>
             <div className="text-xs text-orange-600 bg-orange-50 p-2 rounded">
               정기적인 비밀번호 변경을 권장합니다
             </div>
@@ -1799,6 +1804,7 @@ function MyPage() {
 
   const [customerProfile, setCustomerProfile] = useState({});
   const [customerName, setCustomerName] = useState('이름없음');
+  const [customerPhone, setCustomerPhone] = useState('로딩 중...');
   const [activeTab, setActiveTab] = useState('overview');
 
   // ★ 범용 탭 전환 함수 정의
@@ -1841,6 +1847,16 @@ function MyPage() {
                 console.error("DTO에서 cnameKr 필드를 찾을 수 없거나 값이 비어있습니다.");
                 setCustomerName('데이터 오류'); 
             }
+
+            const fetchedPhone = customerData?.cpinnumber; 
+            if (fetchedPhone) {
+                setCustomerPhone(fetchedPhone); 
+                console.log(customerData.cpinnumber);
+            } else {
+                console.warn("DTO에서 cTelNo 필드를 찾을 수 없거나 값이 비어있습니다.");
+                // 값이 없으면 빈 문자열 또는 대시로 설정
+                setCustomerPhone(null); 
+            }
         })
         .catch(error => {
             console.error("API 호출 중 예외 발생:", error);
@@ -1881,7 +1897,7 @@ function MyPage() {
             <div className="flex-1 p-6">
               {renderTabContent()}
             </div>
-            <Sidebar customerName={customerName} /> 
+            <Sidebar customerName={customerName} customerPhone={customerPhone} /> 
           </div>
         </div>
       </div>
