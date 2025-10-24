@@ -1,4 +1,4 @@
-package com.boot.eumbank.account.open.entity.deposit;
+package com.boot.eumbank.deposit.entity.deposit;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -61,4 +61,14 @@ public class ProductForeignList {
 
     @Column(name = "fp_apy", precision = 6, scale = 3)
     private BigDecimal apy;
+
+    @Column(name = "fp_code", unique = true, nullable = false, length = 50)
+    private String fpCode;
+
+    @Column(name = "fp_description")
+    private String fpDescription;
+
+    @Column(name = "fp_name")
+    private String fpName;
+
 }

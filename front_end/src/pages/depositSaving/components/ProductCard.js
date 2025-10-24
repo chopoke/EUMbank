@@ -17,6 +17,31 @@ const CheckIcon = () => (
 
 const ProductCard = ({ product, onProductClick }) => {
 
+    /**
+         * ✅ 금액 문자열을 포맷팅하는 헬퍼 함수
+         * 예: "최소금액: 50000000.00원" -> "최소금액: 50,000,000원"
+         */
+    const formatMinAmount = (amountStr) => {
+        if (!amountStr) return ""; // amountStr이 없을 경우 빈 문자열 반환
+
+        // 정규 표현식으로 문자열에서 숫자 부분(소수점 포함)을 찾습니다.
+        const numberMatch = amountStr.match(/[\d.]+/);
+
+        // 숫자 부분을 찾지 못하면 원본 문자열을 그대로 반환합니다.
+        if (!numberMatch) return amountStr;
+
+        const numericPart = numberMatch[0]; // "50000000.00"
+
+        // 1. 소수점을 버리고 정수로 변환합니다.
+        const integerValue = Math.floor(parseFloat(numericPart));
+
+        // 2. 천 단위 쉼표를 추가합니다.
+        const formattedNumber = integerValue.toLocaleString('ko-KR'); // "50,000,000"
+
+        // 3. 원래 문자열의 숫자 부분을 포맷팅된 숫자로 교체합니다.
+        return amountStr.replace(numericPart, formattedNumber);
+    };
+
     const handleClick = () => {
         // onProductClick 함수가 존재하면, product.id를 인자로 넣어 호출
         if (onProductClick) {
@@ -31,7 +56,7 @@ const ProductCard = ({ product, onProductClick }) => {
                 <h3>{product.name}</h3>
                 <p className="interest-rate">{product.rate}</p>
                 <p className="rate-label">연이율</p>
-                <p className="min-amount">{product.minAmount}</p>
+                <p className="min-amount">{formatMinAmount(product.minAmount)}</p>
                 <ul className="features">
                     {product.features.map((feature, index) => (
                         <li key={index}>

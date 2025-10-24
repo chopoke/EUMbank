@@ -1,4 +1,4 @@
-package com.boot.eumbank.account.open.entity.deposit;
+package com.boot.eumbank.deposit.entity.deposit;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -60,4 +60,7 @@ public class ProductDepositList {
 
     @Column(name = "dp_is_active")
     private String dpIsActive;
+
+    @Column(name = "dp_rate")
+    private String dpRate;
 }
