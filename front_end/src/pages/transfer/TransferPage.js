@@ -124,8 +124,6 @@ export default function TransferPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 자주 쓰는 계좌 목록 (API에서 조회)
-  const [favoriteAccounts, setFavoriteAccounts] = useState([]);
   
   // 신규 입력 탭 관련 state
   const [banks, setBanks] = useState([]);
@@ -203,15 +201,11 @@ export default function TransferPage() {
   // 최근 이체 대상 (API에서 조회)
   const [recentRecipients, setRecentRecipients] = useState([]);
   
-  // 이체 완료 정보 저장
-  const [completedTransfer, setCompletedTransfer] = useState(null);
   
 
   // 컴포넌트 마운트 시 계좌 목록과 잔액 조회
   useEffect(() => {
     loadAccountsAndBalance();
-    loadFavoriteAccounts();
-    loadBanks();
     loadRecentRecipients();
     
     // 하드코딩된 은행 목록 즉시 설정
@@ -318,58 +312,7 @@ export default function TransferPage() {
     }
   };
 
-  // 자주 쓰는 계좌 목록 로드 (별도 API)
-  const loadFavoriteAccounts = async () => {
-    try {
-      const response = await transferApi.getFavoriteAccounts();
-      if (response.data && response.data.success && response.data.data) {
-        setFavoriteAccounts(response.data.data || []);
-      }
-    } catch (error) {
-      console.error('자주 쓰는 계좌 로딩 실패:', error);
 
-      // 백엔드에서 보내는 구체적인 에러 메시지 추출
-      let errorMessage = '자주 쓰는 계좌를 불러오는데 실패했습니다.';
-
-      if (error.response && error.response.data) {
-        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      console.warn(errorMessage);
-      setFavoriteAccounts([]);
-    }
-  };
-
-  // 은행 목록 로드
-  const loadBanks = async () => {
-    try {
-      const response = await transferApi.getBanks();
-      if (response.success && response.data) {
-        setBanks(response.data);
-      }
-    } catch (error) {
-      console.error('은행 목록 로딩 실패:', error.message || '알 수 없는 오류');
-      // 백엔드 서버가 없을 때 하드코딩된 은행 목록 사용
-      const hardcodedBanks = [
-        { code: 'EUM', name: '이음은행' },
-        { code: '001', name: '국민은행' },
-        { code: '002', name: '신한은행' },
-        { code: '003', name: '우리은행' },
-        { code: '004', name: '하나은행' },
-        { code: '005', name: '농협은행' },
-        { code: '006', name: '기업은행' },
-        { code: '007', name: '새마을금고' },
-        { code: '008', name: '신협' },
-        { code: '009', name: '우체국' },
-        { code: '010', name: '카카오뱅크' },
-        { code: '011', name: '토스뱅크' },
-        { code: '012', name: '케이뱅크' }
-      ];
-      setBanks(hardcodedBanks);
-    }
-  };
 
   // 최근 이체 대상 로드 (실제 이체 내역 기반)
   const loadRecentRecipients = async () => {
@@ -457,7 +400,6 @@ export default function TransferPage() {
   useEffect(() => {
     if (selectedAccount && selectedAccount.aNo) {
       loadRecentRecipients(); // 최근 이체 내역 로드
-      loadFavoriteAccounts(); // 자주 쓰는 계좌 로드
     }
   }, [selectedAccount?.aNo]);
 
@@ -519,11 +461,6 @@ export default function TransferPage() {
     setFormattedAmount(formatAmount(newAmountStr));
   };
   
-  // 자주 쓰는 계좌 선택 함수
-  const handleSelectFavorite = (account) => {
-    setSelectedRecipient(account);
-    setError(null);
-  };
 
   // 내 계좌 선택 함수
   const handleSelectMyAccount = (account) => {
@@ -722,8 +659,7 @@ export default function TransferPage() {
         setIsModalOpen(false);
         navigate('/transfer/complete', { state: { transferData } });
         
-        // 자주 쓰는 계좌 목록 새로고침
-        loadFavoriteAccounts();
+        // 최근 이체 목록 새로고침
         loadRecentRecipients();
       } else {
         // 이체 실패 시 alert로 에러 메시지 표시하고 완료 페이지로 이동하지 않음
@@ -827,7 +763,7 @@ export default function TransferPage() {
       setMyOtherAccounts(accounts.filter(acc => acc.aNo !== account.aNo));
       
       // 선택된 계좌의 최근 이체 내역 로드
-      loadRecentRecipientsForAccount(account.aNo);
+      loadRecentRecipients();
     } catch (error) {
       console.error('잔액 조회 실패:', error);
 
@@ -845,29 +781,6 @@ export default function TransferPage() {
     }
   };
 
-  // 특정 계좌의 최근 이체 대상 로드
-  const loadRecentRecipientsForAccount = async (accountNo) => {
-    try {
-      const response = await transferApi.getRecentRecipients(accountNo);
-      if (response.data && response.data.success && response.data.data) {
-        setFavoriteAccounts(response.data.data.recipients || []);
-      }
-    } catch (error) {
-      console.error('최근 이체 대상 로딩 실패:', error);
-
-      // 백엔드에서 보내는 구체적인 에러 메시지 추출
-      let errorMessage = '최근 이체 대상을 불러오는데 실패했습니다.';
-
-      if (error.response && error.response.data) {
-        errorMessage = error.response.data.error || error.response.data.message || errorMessage;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      console.warn(errorMessage);
-      setFavoriteAccounts([]);
-    }
-  };
 
   // 취소 버튼 핸들러 - 입력 초기화
   const handleCancel = () => {
@@ -883,11 +796,6 @@ export default function TransferPage() {
   };
 
 
-  // 자주 쓰는 대상 등록 핸들러 (이미 자동으로 등록됨)
-  const handleAddToFavorites = () => {
-    alert('이체한 계좌는 자동으로 자주 쓰는 계좌에 등록됩니다.');
-    loadFavoriteAccounts(); // 목록 새로고침
-  };
 
   // 최근 이체 대상 선택 핸들러
   const handleSelectRecentRecipient = (recipient) => {
