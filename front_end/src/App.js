@@ -1,28 +1,37 @@
+// src/App.js
 import { Route, Routes, Navigate, useNavigate } from "react-router-dom";
-import BankHome from './pages/main';
-import LoginPage from "./pages/login/login";
-import SignUp from "./pages/signup/signup";
-import MyPage from "./pages/mypage/my_costomer2";
-import Test from './pages/test';
+import BankHome from "./pages/main";
 import { Header } from './common/header';
 import { Footer } from './common/footer';
 import { useEffect, useState } from "react";
+import { getAccessToken, setAccessToken } from "./api/axios";
+import ProtectedRoute from "./pages/account/component/ProtectedRoute";
+
+// 앞단에서 로그인 유무 판단하여 페이지 보호하기
+import { AccountListPage } from "./pages/account/AccountListPage";
+import { AccountHistoryPage } from "./pages/account/AccountHistoryPage";
+
+//로그인 및 회원가입
+import LoginPage from "./pages/login/login";
+import SignUp from "./pages/signup/signup";
 import Cookie from "./pages/login/Cookie";
 import SocialAgree from "./pages/signup/SocialAgree";
+import NaverLink from "./pages/login/NaverLink";
+import { refreshOnce, logout as apiLogout, fetchMe } from "./api/authApi";
+
+
+import MyPage from "./pages/mypage/my_costomer2";
+import Test from './pages/test';
 import ForeignProductsPage from "./pages/foreign/ForeignProductsPage";
 import ForeignRatePage from "./pages/foreign/ForeignRatePage";
+
 // 계좌 개설 단계별 화면
 import Step1Consent from "./pages/account/Step1Consent";
 import Step2IdVerify from "./pages/account/Step2IdVerify";
 import Step3Info from "./pages/account/Step3Info";
 import Step4Product from "./pages/account/Step4Product";
 import Step5Done from "./pages/account/Step5Done";
-import api from "./api/axios";
 
-// 앞단에서 로그인 유무 판단하여 페이지 보호하기
-import ProtectedRoute from "./pages/account/component/ProtectedRoute";
-import { AccountListPage } from "./pages/account/AccountListPage";
-import { AccountHistoryPage } from "./pages/account/AccountHistoryPage";
 // 이체 관련 페이지들
 import TransferPage from "./pages/transfer/TransferPage";
 import TransferComplete from "./pages/transfer/TransferComplete";
@@ -32,6 +41,7 @@ import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
 
 // 주택담보대출
 import LoanProductList from "./pages/loan/products/LoanProductList"
+
 // 대출상품상세
 import LoanProductDetail from "./pages/loan/products/LoanProductDetail"
 
@@ -41,48 +51,62 @@ import TermsAgreement from "./pages/depositSaving/commom/TermAgreements";
 import DepositSubscription from "./pages/depositSaving/page/DepositSubscription";
 import SavingsSubscription from "./pages/depositSaving/page/SavingsSubscription";
 
-// App 컴포넌트를 BrowserRouter로 감싸주는 Wrapper
-// 이렇게 하면 App 컴포넌트 내에서 useNavigate를 정상적으로 사용할 수 있습니다.
 function AppWrapper() {
-  return (
-    <App />
-  );
+  return <App />;
 }
 
 function App() {
+  const [ready, setReady] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // 새로고침 로그인 유지
+  // 최초 1회: RT로 AT 복구
   useEffect(() => {
-    const token = localStorage.getItem("access");
-    setIsLoggedIn(!!token);
+    const isSocial = window.location.pathname.startsWith("/social/");
+    if (isSocial) {
+      setIsLoggedIn(!!getAccessToken());
+      setReady(true);
+      return;
+    }
+    (async () => {
+      const ok = await refreshOnce();   // RT -> AT
+      if (ok) {
+        try {
+          const { fetchMe } = await import("./api/authApi");
+          const me = await fetchMe();
+          setUser(me);
+          setIsLoggedIn(true);
+        } catch {}
+      }
+      setReady(true);
+    })();
   }, []);
 
-  // // 로그인 성공 시 호출될 콜백 함수
-  // const handleLoginSuccess = (userData) => {
-  //   localStorage.setItem("accessToken", userData.accessToken);
-  //   localStorage.setItem("user", JSON.stringify(userData.profile ?? {}));
-  //   setIsLoggedIn(true);   // 로그인 상태를 true로 변경
-  //   setUser(userData);     // 사용자 정보 저장
-  //   navigate('/');         // 메인 페이지로 이동
-  // };
+  // 로그인/로그아웃 이벤트로 헤더 갱신
+  useEffect(() => {
+    const onAuthChanged = async () => {
+      const loggedIn = !!getAccessToken();
+      setIsLoggedIn(loggedIn);
+      if (loggedIn) {
+        try { setUser(await fetchMe()); } catch {}
+      } else {
+        setUser(null);
+      }
+    };
+    window.addEventListener("auth:changed", onAuthChanged);
+    return () => window.removeEventListener("auth:changed", onAuthChanged);
+  }, []);
 
-  // 로그아웃 시 호출될 콜백 함수
   const handleLogout = async () => {
-    try {
-      const rt = localStorage.getItem("refresh");
-      if (rt) await api.post("/api/auth/logout", { refreshToken: rt });
-    } catch (e) {
-
-    }
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh"); // 완전한 로그아웃과 보안을 위해 같이 삭제
-    setIsLoggedIn(false); // 로그아웃 상태를 false로 변경
+    try { await apiLogout(); } catch {}
+    setAccessToken(null);
+    setIsLoggedIn(false);
     setUser(null);
-    navigate('/');      // 메인 페이지로 이동
+    navigate("/");
   };
+
+  if (!ready) return <div>Loading...</div>;
 
   return (
     <div className="App">
@@ -93,8 +117,9 @@ function App() {
         {/* <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} /> */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route path="/cookie" element={<Cookie />} />
-        <Route path="/socialAgree" element={<SocialAgree />} />
+        <Route path="/social/cookie" element={<Cookie />} />
+        <Route path="/social/agree" element={<SocialAgree />} />
+        <Route path="/social/link" element={<NaverLink />} />
 
         {/* 계좌 목록 */}
         <Route path="/accounts" element={
@@ -186,10 +211,9 @@ function App() {
         <Route path="/test" element={<Test />} />
       </Routes >
 
-        
 
       <Footer />
-    </div >
+    </div>
   );
 }
 

@@ -20,7 +20,7 @@ class CustomerServiceImpl implements CustomerService {
         if (!StringUtils.hasText(email)) return false;
 
         // [이메일 중복체크]
-        return customerRepo.existsByEmailIgnoreCase(email.trim(), "EUM");
+        return customerRepo.existsByEmailIgnoreCase(email.trim());
 
     }
 }

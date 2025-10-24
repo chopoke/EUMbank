@@ -1,0 +1,15 @@
+package com.boot.eumbank.customer.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter @Setter
+public class LinkRequest {
+
+    @NotBlank
+    private String c_user_id;
+
+    @NotBlank
+    private String c_naver_id;
+}

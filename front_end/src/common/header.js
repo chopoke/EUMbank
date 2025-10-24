@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
 import mainlogo from '../resources/img/eumonly.png'
 import myp from '../resources/img/mypage.png'
+import api from '../api/axios';
 
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
@@ -31,12 +32,18 @@ const paths = {
 
 export function Header({ isLoggedIn, user, onLogout }) {
     const navigate = useNavigate();
-
+    const displayName = user?.c_user_id||"고객";
     const handleLogoutClick = () => {
         // 부모로부터 받은 onLogout 함수를 호출합니다.
         onLogout();
         // App.js의 onLogout에서 이미 navigate('/')를 처리하므로 여기서는 호출만 합니다.
     };
+
+    useEffect(() => {
+      if (isLoggedIn && !user) {
+        api.get("/api/me").then(r => {/* setUser는 상위에서 내려주도록 구성 */}).catch(()=>{});
+      }
+    }, [isLoggedIn, user]);
 
     return (
         <header className="main-header">
@@ -99,7 +106,11 @@ export function Header({ isLoggedIn, user, onLogout }) {
           ) : (
             <>
               <div className="logged-in-status">
-                <span className="hidden-sm">안전한 접속중</span>
+                <span className="user-chip" aria-label="로그인 사용자">
+                  <Icon path={paths.bank} />
+                  <span className='ml-1'>{displayName}님 접속중</span>
+                </span>
+                {/* <span className="hidden-sm">안전한 접속중</span> */}
                 <span className="security-tag">
                   <Icon path={paths.shield} />
                   <span className="text-gray-700">보안</span>

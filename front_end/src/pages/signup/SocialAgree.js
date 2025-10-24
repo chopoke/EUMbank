@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
-import TermsStep from "./TermsStep";            // ★ New
+import { useState } from "react";
+import TermsStep from "./TermsStep";            // New
 import api from "../../api/axios";
-import { useNavigate } from "react-router-dom";
 import maintxt from '../../resources/img/e-um.png'
 
 export default function SocialAgree() {
@@ -13,8 +12,6 @@ export default function SocialAgree() {
       agreeMarketing: false,  // 마케팅 수신동의 (선택)
     },
   });
-
-  const navigate = useNavigate();
 
   const updateFormData = (data) =>
     setFormData((prev) => ({ ...prev, ...data }));
@@ -40,7 +37,7 @@ export default function SocialAgree() {
       };
 
       try {
-        await api.post("/api/secure/agree", payload);
+        await api.patch("/api/social/agree", payload);
         alert("네이버 로그인 성공했습니다.");
         window.location.href = "/";
         // navigate("/");

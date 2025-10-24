@@ -21,6 +21,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwt;     // validateAccessToken(...), getUserIdFromAccess(...)
     private final CustomerRepo customers;   // findByUserId(String)
+//    private final UserDetailsService userDetailsService;
 
     /** 회원가입/로그인/헬스체크/프리플라이트는 전부 인증 검사 스킵 */
     @Override

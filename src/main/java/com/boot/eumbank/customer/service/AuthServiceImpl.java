@@ -9,21 +9,20 @@ import com.boot.eumbank.customer.repo.AuthRefreshTokenRepo;
 import com.boot.eumbank.customer.repo.CustomerRepo;
 import com.boot.eumbank.customer.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HexFormat;
-import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -32,6 +31,9 @@ public class AuthServiceImpl implements AuthService {
     private final AuthRefreshTokenRepo refreshTokens;
     private final PasswordEncoder encoder;
     private final JwtTokenProvider jwt;
+
+
+
 
     @Transactional
     @Override
@@ -62,7 +64,7 @@ public class AuthServiceImpl implements AuthService {
                 .cId(userId)                    // 필요하면 임시 동일
                 .cPassword(encoder.encode(rawPw))
                 .cNameKr(nameKr)
-                .cEmail(email)
+                .email(email)
                 .cPhoneMobile(phone)
                 .cBirthDt(birthDt)
                 .cNationalityCd("KOR")
@@ -95,107 +97,78 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     @Override
     public AuthResponse login(LoginRequest req, String userAgent, String clientIp) {
-        final String userId = req.getC_user_id().trim();
-        final String rawPw  = req.getC_password().trim();
+        var c = customers.findByUserId(req.getC_user_id())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid id/password"));
 
-        Customer customer = customers.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다."));
+        if (!encoder.matches(req.getC_password(), c.getCPassword()))
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid id/password");
 
-        if (!encoder.matches(rawPw, customer.getCPassword())) {
-            throw new IllegalArgumentException("아이디 또는 비밀번호가 올바르지 않습니다.");
-        }
+        String at = jwt.createAccessToken(c.getUserId());
+        String rt = jwt.createRefreshToken(c.getUserId());
+        String rtHash = sha256(rt);
 
-        // 1) Access 발급
-        String access = jwt.createAccessToken(userId);
+        var now = Instant.now();
+        var art = new AuthRefreshToken();
+        art.setCustomerNo(c.getCustomerNo());
+        art.setRtHash(rtHash);
+        art.setIssuedAt(now);
+        art.setExpiresAt(jwt.getExpiryFromRefresh(rt));
+        art.setDeviceId(userAgent);
+        refreshTokens.save(art);
 
-        // 2) Refresh 발급 & 저장(해시)
-        String refresh = jwt.createRefreshToken(userId);
-        String refreshHash = sha256(refresh);
+        return new AuthResponse("Bearer", at, "login ok", rt); // 컨트롤러에서 rt는 쿠키로만 사용
 
-        Instant now = Instant.now();
-        AuthRefreshToken row = new AuthRefreshToken();
-        row.setCustomerNo(customer.getCustomerNo());                 // Integer 타입 맞춰서 사용
-        row.setRtHash(refreshHash);
-        row.setIssuedAt(now);
-        row.setExpiresAt(jwt.getExpiryFromRefresh(refresh));
-        row.setTFrom("LOGIN");
-        row.setLastUsedAt(now);
-        row.setLastUsedIp(clientIp);
-        row.setUserAgent(userAgent);
-
-        // 같은 사용자 오래된 토큰 정리 정책(선택): 10개 이상이면 전체 삭제
-        long alive = refreshTokens.countByCustomerNoAndExpiresAtAfterAndDeleteAtIsNull(customer.getCustomerNo(), now);
-        if (alive >= 10) {
-            refreshTokens.markAllDeletedByCustomerWithQueryDsl(customer.getCustomerNo(), now, "TOO_MANY_TOKENS");
-        }
-
-        refreshTokens.save(row);
-
-        return AuthResponse.builder()
-                .accessToken(access)
-                .tokenType("Bearer")
-                .refreshToken(refresh)
-                .build();
     }
 
     @Transactional
     @Override
     public AuthResponse refresh(String refreshToken, String userAgent, String clientIp) {
-        // 1) JWT 서명/만료 검증
-        if (!jwt.validateRefreshToken(refreshToken)) {
-            throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
-        }
-        String subjectUserId = jwt.getSubjectFromRefresh(refreshToken);
-        Instant tokenExp = jwt.getExpiryFromRefresh(refreshToken);
+        log.info("[REFRESH] raw RT={}", refreshToken);
+        log.info("[REFRESH] RT hash={}", sha256(refreshToken));
+        if (refreshToken == null || refreshToken.isBlank())
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "missing rt");
 
-        // 2) DB에서 해시 매칭(회수되지 않은 토큰이어야 함)
         String hash = sha256(refreshToken);
-        AuthRefreshToken saved = refreshTokens.findByRtHashAndDeleteAtIsNull(hash)
-                .orElseThrow(() -> new IllegalArgumentException("토큰이 존재하지 않거나 이미 만료/회수되었습니다."));
+        var t = refreshTokens.findByRtHashAndDeleteAtIsNull(hash)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "rt not found"));
 
-        // 3) 만료 체크(서명 OK라도 서버 정책상 만료 또는 회수되었을 수 있음)
-        if (saved.getExpiresAt().isBefore(Instant.now())) {
-            throw new IllegalArgumentException("토큰이 만료되었습니다. 다시 로그인하세요.");
-        }
+        if (t.getExpiresAt() == null || t.getExpiresAt().isBefore(Instant.now()))
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "rt expired");
 
-        // 4) subject → 사용자 조회
-        Customer customer = customers.findByUserId(subjectUserId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        // 회전: 기존 RT 소프트 삭제
+        t.setDeleteAt(Instant.now());
+        t.setDeleteReason("rotated");
+        refreshTokens.save(t);
 
-        // 5) 토큰 회전(rotate): 기존 토큰 회수 후 새 Refresh 발급
-        saved.setDeleteAt(Instant.now());
-        saved.setDeleteReason("ROTATE");
-        refreshTokens.save(saved);
+        // 새 RT + AT 발급
+        var userId = jwt.getSubjectFromRefresh(refreshToken);
+        String newAT = jwt.createAccessToken(userId);
+        String newRT = jwt.createRefreshToken(userId);
+        String newHash = sha256(newRT);
 
-        String newAccess = jwt.createAccessToken(subjectUserId);
-        String newRefresh = jwt.createRefreshToken(subjectUserId);
-        String newHash = sha256(newRefresh);
+        var now = Instant.now();
+        var nt = new AuthRefreshToken();
+        nt.setCustomerNo(t.getCustomerNo());
+        nt.setRtHash(newHash);
+        nt.setIssuedAt(now);
+        nt.setExpiresAt(jwt.getExpiryFromRefresh(newRT));
+        nt.setDeviceId(userAgent);
+        // t_from/t_next 쓰면 여기 연결
+        refreshTokens.save(nt);
 
-        AuthRefreshToken rotated = new AuthRefreshToken();
-        rotated.setCustomerNo(customer.getCustomerNo());
-        rotated.setRtHash(newHash);
-        rotated.setIssuedAt(Instant.now());
-        rotated.setExpiresAt(jwt.getExpiryFromRefresh(newRefresh));
-        rotated.setTFrom("REFRESH");
-        rotated.setLastUsedAt(Instant.now());
-        rotated.setLastUsedIp(clientIp);
-        rotated.setUserAgent(userAgent);
-        refreshTokens.save(rotated);
-
-        return AuthResponse.builder()
-                .accessToken(newAccess)
-                .tokenType("Bearer")
-                .refreshToken(newRefresh)
-                .build();
+        return new AuthResponse("Bearer", newAT, "refreshed", newRT);
     }
 
     @Transactional
     @Override
-    public void logout(String refreshToken) {
-        // 단일 토큰 소프트 삭제(폐기)
+    public void logout(String refreshToken, String reason) {
+        if (refreshToken == null || refreshToken.isBlank()) return;
         String hash = sha256(refreshToken);
-        refreshTokens.markDeletedWithQueryDsl(hash, Instant.now(), "LOGOUT");
-        // 존재하지 않거나 이미 폐기된 경우에도 조용히 통과하도록 설계
+        refreshTokens.findByRtHashAndDeleteAtIsNull(hash).ifPresent(t -> {
+            t.setDeleteAt(Instant.now());
+            t.setDeleteReason(reason != null ? reason : "logout");
+            refreshTokens.save(t);
+        });
     }
 
     private String sha256(String value) {

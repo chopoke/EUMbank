@@ -207,7 +207,10 @@ export default function TermsStep({ terms, updateFormData }) {
       <TermsModal
         open={open.terms}
         title="서비스 이용약관"
-        onClose={() => setOpen((s) => ({ ...s, terms: false }))}
+        onClose={() => {
+          setOpen((s) => ({ ...s, terms: false }));
+          if (hasReadTerms) setTermsState({ agreeTerms: true }); // 자동 체크
+        }}
         onReadComplete={() => setTermsState({ hasReadTerms: true })}
       >
         <h5 className="font-semibold">제1조(목적)</h5>
@@ -315,7 +318,10 @@ export default function TermsStep({ terms, updateFormData }) {
       <TermsModal
         open={open.privacy}
         title="개인정보처리방침"
-        onClose={() => setOpen((s) => ({ ...s, privacy: false }))}
+        onClose={() => {
+          setOpen((s) => ({ ...s, privacy: false }));
+          if (hasReadPrivacy) setTermsState({ agreePrivacy: true }); // 자동 체크
+        }}
         onReadComplete={() => setTermsState({ hasReadPrivacy: true })}
       >
         <h5 className="font-semibold">1. 총칙</h5>
