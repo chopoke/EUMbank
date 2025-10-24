@@ -1,6 +1,6 @@
 package com.boot.eumbank.account.open.jpa.repository;
 
-import com.boot.eumbank.account.open.dto.deposit.ProductDto;
+import com.boot.eumbank.deposit.dto.deposit.ProductDto;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -9,9 +9,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static com.boot.eumbank.account.open.entity.deposit.QProductForeignList.productForeignList;
-import static com.boot.eumbank.account.open.entity.deposit.QProductDepositList.productDepositList;
-import static com.boot.eumbank.account.open.entity.deposit.QProductInstallmentList.productInstallmentList;
+import static com.boot.eumbank.deposit.entity.deposit.QProductForeignList.productForeignList;
+import static com.boot.eumbank.deposit.entity.deposit.QProductDepositList.productDepositList;
+import static com.boot.eumbank.deposit.entity.deposit.QProductInstallmentList.productInstallmentList;
 
 @Repository
 @RequiredArgsConstructor

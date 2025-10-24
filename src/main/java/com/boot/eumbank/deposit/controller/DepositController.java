@@ -1,7 +1,7 @@
-package com.boot.eumbank.account.open.controller;
+package com.boot.eumbank.deposit.controller;
 
-import com.boot.eumbank.account.open.dto.deposit.ProductDto;
-import com.boot.eumbank.account.open.service.deposit.DepositService;
+import com.boot.eumbank.deposit.dto.deposit.ProductDto;
+import com.boot.eumbank.deposit.service.deposit.DepositService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,7 +17,7 @@ public class DepositController {
 
     private final DepositService depositService;
 
-    @GetMapping("/products")
+    @GetMapping("/productsList")
     public ResponseEntity<List<ProductDto>> getAllProducts() {
         List<ProductDto> products = depositService.findAllProducts();
         return ResponseEntity.ok(products);
