@@ -2,6 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { transferApi } from '../../api/transferApi';
 
+// 전역 유틸리티 함수
+const formatKRW = (n) => `₩${(n || 0).toLocaleString('ko-KR')}`;
+
 // 이체 확인 모달 컴포넌트 - OTP 제거하고 계좌 비밀번호 입력으로 변경
 function TransferConfirmModal({ isOpen, onClose, onConfirm, data }) {
   const [agree, setAgree] = useState(false);
@@ -18,7 +21,6 @@ function TransferConfirmModal({ isOpen, onClose, onConfirm, data }) {
   if (!isOpen) return null;
 
   const isButtonEnabled = agree && password.length >= 4;
-  const formatKRW = (n) => `₩${(n || 0).toLocaleString('ko-KR')}`;
 
   const handleConfirm = async () => {
     setIsLoading(true);
@@ -417,7 +419,6 @@ export default function TransferPage() {
     return () => clearTimeout(timeoutId);
   }, [selectedBank, newAccountNumber]);
   
-  const formatKRW = (n) => `₩${(n || 0).toLocaleString('ko-KR')}`;
   const numericAmount = useMemo(() => parseInt(String(amount).replace(/[^0-9]/g, ''), 10) || 0, [amount]);
   const remainingBalance = useMemo(() => {
     if (numericAmount === 0 || numericAmount > balance) {

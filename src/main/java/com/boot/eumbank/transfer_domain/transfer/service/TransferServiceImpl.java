@@ -1089,7 +1089,7 @@ public class TransferServiceImpl implements TransferService {
     }
     
     @Override
-    public Integer getAccountBalance(Integer accountNo) {
+    public Long getAccountBalance(Integer accountNo) {
         log.info("계좌 잔액 조회 - 계좌: {}", accountNo);
         
         try {
@@ -1118,7 +1118,7 @@ public class TransferServiceImpl implements TransferService {
                 throw new UnauthorizedException("본인 계좌가 아닙니다.");
             }
             
-            return account.getBalance().intValue();
+            return account.getBalance().longValue();
             
         } catch (Exception e) {
             log.error("계좌 잔액 조회 중 오류 발생", e);
