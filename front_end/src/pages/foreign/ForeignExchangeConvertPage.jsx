@@ -7,8 +7,8 @@ const ME_URL    = '/api/foreign/me';
 const EX_API    = '/api/foreign/exchange';
 
 const modes = [
-  { key: 'SELL',  label: '외화 → KRW (매도)'  },
-  { key: 'BUY',   label: 'KRW → 외화 (매입)' },
+  { key: 'SELL',  label: '외화 → KRW (파실 때)'  },
+  { key: 'BUY',   label: 'KRW → 외화 (사실 때)' },
   { key: 'CROSS', label: '외화 → 외화 (교차)' },
 ];
 
@@ -175,186 +175,189 @@ export default function ForeignExchangeConvertPage() {
   }, [mode]);
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-extrabold text-gray-900 mb-6">환전 (매도/매입/교차)</h1>
+    <div className="bg-gray-50 min-h-screen">
+      {/* ▶ 가운데 고정폭 래퍼 */}
+      <div className="container mx-auto max-w-7xl px-4 py-8">
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-6">환전 (파실 때/사실 때/교차)</h1>
 
-      {/* 모드 탭 */}
-      <div className="flex gap-2 mb-6">
-        {modes.map(m => (
-          <button
-            key={m.key}
-            onClick={() => setMode(m.key)}
-            className={`px-4 py-2 rounded-md border ${mode === m.key ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
-
-      {msg && (
-        <div className={`p-3 rounded-md mb-6 text-sm ${msg.startsWith('오류:') ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-          {msg}
+        {/* 모드 탭 */}
+        <div className="flex gap-2 mb-6">
+          {modes.map(m => (
+            <button
+              key={m.key}
+              onClick={() => setMode(m.key)}
+              className={`px-4 py-2 rounded-md border ${mode === m.key ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}
+            >
+              {m.label}
+            </button>
+          ))}
         </div>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* 좌측 폼 */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg border">
-          {/* 통화 선택 */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            {/* From */}
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700">From 통화</span>
-              <select
-                name="fromCur"
-                value={form.fromCur}
-                onChange={e => setForm(p => ({ ...p, fromCur: e.target.value }))}
-                disabled={mode === 'BUY'} // BUY는 KRW 고정
-                className="mt-1 block w-full border-gray-300 rounded-md"
-              >
-                {allCurrencies.map(r => (
-                  <option key={r.curUnit} value={r.curUnit}>
-                    {r.curUnit} ({r.curNm})
-                  </option>
-                ))}
-              </select>
-            </label>
+        {msg && (
+          <div className={`p-3 rounded-md mb-6 text-sm ${msg.startsWith('오류:') ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+            {msg}
+          </div>
+        )}
 
-            {/* To */}
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700">To 통화</span>
-              <select
-                name="toCur"
-                value={form.toCur}
-                onChange={e => setForm(p => ({ ...p, toCur: e.target.value }))}
-                disabled={mode === 'SELL'} // SELL은 KRW 고정
-                className="mt-1 block w-full border-gray-300 rounded-md"
-              >
-                {allCurrencies
-                  .filter(r => r.curUnit !== form.fromCur)
-                  .map(r => (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* 좌측 폼 */}
+          <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg border">
+            {/* 통화 선택 */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              {/* From */}
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">From 통화</span>
+                <select
+                  name="fromCur"
+                  value={form.fromCur}
+                  onChange={e => setForm(p => ({ ...p, fromCur: e.target.value }))}
+                  disabled={mode === 'BUY'} // BUY는 KRW 고정
+                  className="mt-1 block w-full border-gray-300 rounded-md"
+                >
+                  {allCurrencies.map(r => (
                     <option key={r.curUnit} value={r.curUnit}>
                       {r.curUnit} ({r.curNm})
                     </option>
-                ))}
-              </select>
-            </label>
-          </div>
+                  ))}
+                </select>
+              </label>
 
-          {/* 출금 계좌 (KRW) */}
-          <div className="mb-6">
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700">출금 계좌 (KRW)</span>
-              <select
-                name="fromAccountNo"
-                value={form.fromAccountNo}
-                onChange={e => setForm(p => ({ ...p, fromAccountNo: e.target.value }))}
-                className="mt-1 block w-full border-gray-300 rounded-md"
-              >
-                {accounts.map(a => (
-                  <option key={a.accountNo} value={a.accountNo}>
-                    {a.accountNo} {a.name ? `· ${a.name}` : ''} ({a.type}) / 잔액: {a.balance?.toLocaleString?.() ?? a.balance ?? '-'}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+              {/* To */}
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">To 통화</span>
+                <select
+                  name="toCur"
+                  value={form.toCur}
+                  onChange={e => setForm(p => ({ ...p, toCur: e.target.value }))}
+                  disabled={mode === 'SELL'} // SELL은 KRW 고정
+                  className="mt-1 block w-full border-gray-300 rounded-md"
+                >
+                  {allCurrencies
+                    .filter(r => r.curUnit !== form.fromCur)
+                    .map(r => (
+                      <option key={r.curUnit} value={r.curUnit}>
+                        {r.curUnit} ({r.curNm})
+                      </option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
-          {/* 금액 + 우대율(읽기전용) */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            <label className="block">
-              <span className="text-sm font-medium text-gray-700">환전 금액 (From 통화 기준)</span>
-              <input
-                type="number"
-                value={form.amount}
-                onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
-                placeholder={`예: 1,000 ${form.fromCur}`}
-                className="mt-1 block w-full border-gray-300 rounded-md"
-              />
-            </label>
+            {/* 출금 계좌 (KRW) */}
+            <div className="mb-6">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">출금 계좌 (KRW)</span>
+                <select
+                  name="fromAccountNo"
+                  value={form.fromAccountNo}
+                  onChange={e => setForm(p => ({ ...p, fromAccountNo: e.target.value }))}
+                  className="mt-1 block w-full border-gray-300 rounded-md"
+                >
+                  {accounts.map(a => (
+                    <option key={a.accountNo} value={a.accountNo}>
+                      {a.accountNo} {a.name ? `· ${a.name}` : ''} ({a.type}) / 잔액: {a.balance?.toLocaleString?.() ?? a.balance ?? '-'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
-            {/* ★ 우대율은 표시만 */}
-            <div className="block">
-              <span className="text-sm font-medium text-gray-700">우대율 (%)</span>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold bg-indigo-50 text-indigo-700">
-                  {myPreferentialRate}% 적용
-                </span>
-                <span className="text-xs text-gray-500">(서버 정책에 따라 자동 적용)</span>
+            {/* 금액 + 우대율(읽기전용) */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700">환전 금액 (From 통화 기준)</span>
+                <input
+                  type="number"
+                  value={form.amount}
+                  onChange={e => setForm(p => ({ ...p, amount: e.target.value }))}
+                  placeholder={`예: 1,000 ${form.fromCur}`}
+                  className="mt-1 block w-full border-gray-300 rounded-md"
+                />
+              </label>
+
+              {/* ★ 우대율은 표시만 */}
+              <div className="block">
+                <span className="text-sm font-medium text-gray-700">우대율 (%)</span>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold bg-indigo-50 text-indigo-700">
+                    {myPreferentialRate}% 적용
+                  </span>
+                  <span className="text-xs text-gray-500">(서버 정책에 따라 자동 적용)</span>
+                </div>
               </div>
             </div>
+
+            {/* 버튼 */}
+            <div className="flex gap-3">
+              <button
+                onClick={preview}
+                className="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-md text-white bg-indigo-600"
+              >
+                <Calculator className="w-4 h-4 mr-2" />
+                계산하기
+              </button>
+
+              <button
+                onClick={submit}
+                disabled={loading || !result}
+                className="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-md bg-indigo-100 text-indigo-700 disabled:opacity-50"
+                title={mode === 'SELL' ? '' : '백엔드가 BUY/CROSS를 지원해야 제출됩니다.'}
+              >
+                <Send className="w-4 h-4 mr-2" />
+                신청 제출
+              </button>
+            </div>
           </div>
 
-          {/* 버튼 */}
-          <div className="flex gap-3">
-            <button
-              onClick={preview}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-md text-white bg-indigo-600"
-            >
-              <Calculator className="w-4 h-4 mr-2" />
-              계산하기
-            </button>
-
-            <button
-              onClick={submit}
-              disabled={loading || !result}
-              className="flex-1 inline-flex items-center justify-center px-4 py-2 rounded-md bg-indigo-100 text-indigo-700 disabled:opacity-50"
-              title={mode === 'SELL' ? '' : '백엔드가 BUY/CROSS를 지원해야 제출됩니다.'}
-            >
-              <Send className="w-4 h-4 mr-2" />
-              신청 제출
-            </button>
+          {/* 우측 요약 */}
+          <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border">
+            <h2 className="text-lg font-bold mb-4">환전 정보 및 결과 요약</h2>
+            <dl className="space-y-3">
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-600">모드</dt>
+                <dd className="font-semibold">{modes.find(m => m.key === mode)?.label}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-600">From → To</dt>
+                <dd className="font-semibold">
+                  {form.fromCur} → {form.toCur}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-600">우대율</dt>
+                <dd className="font-semibold">{myPreferentialRate}%</dd>
+              </div>
+              <hr />
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-600">From 금액</dt>
+                <dd className="font-semibold">
+                  {form.amount ? Number(form.amount).toLocaleString() : '-'} {form.fromCur}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-600">적용 환율(표시)</dt>
+                <dd className="font-semibold">
+                  {result ? result.finalRate.toFixed(6) : '-'}
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-600">수수료(KRW 환산)</dt>
+                <dd className="font-semibold">{result ? Math.round(result.commissionKrw).toLocaleString() : '-'} KRW</dd>
+              </div>
+              <div className="flex justify-between pt-2 border-t">
+                <dt className="text-base font-bold">수취 금액</dt>
+                <dd className="text-xl font-extrabold text-indigo-600">
+                  {result ? `${result.toAmount.toFixed(4)} ${form.toCur}` : '-'}
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
 
-        {/* 우측 요약 */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg border">
-          <h2 className="text-lg font-bold mb-4">환전 정보 및 결과 요약</h2>
-          <dl className="space-y-3">
-            <div className="flex justify-between">
-              <dt className="text-sm text-gray-600">모드</dt>
-              <dd className="font-semibold">{modes.find(m => m.key === mode)?.label}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-sm text-gray-600">From → To</dt>
-              <dd className="font-semibold">
-                {form.fromCur} → {form.toCur}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-sm text-gray-600">우대율</dt>
-              <dd className="font-semibold">{myPreferentialRate}%</dd>
-            </div>
-            <hr />
-            <div className="flex justify-between">
-              <dt className="text-sm text-gray-600">From 금액</dt>
-              <dd className="font-semibold">
-                {form.amount ? Number(form.amount).toLocaleString() : '-'} {form.fromCur}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-sm text-gray-600">적용 환율(표시)</dt>
-              <dd className="font-semibold">
-                {result ? result.finalRate.toFixed(6) : '-'}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-sm text-gray-600">수수료(KRW 환산)</dt>
-              <dd className="font-semibold">{result ? Math.round(result.commissionKrw).toLocaleString() : '-'} KRW</dd>
-            </div>
-            <div className="flex justify-between pt-2 border-t">
-              <dt className="text-base font-bold">수취 금액</dt>
-              <dd className="text-xl font-extrabold text-indigo-600">
-                {result ? `${result.toAmount.toFixed(4)} ${form.toCur}` : '-'}
-              </dd>
-            </div>
-          </dl>
+        {/* (선택) 내역 섹션 */}
+        <div className="mt-10 hidden">
+          <h2 className="text-xl font-bold mb-3 flex items-center"><List className="w-4 h-4 mr-2" />환전 내역</h2>
         </div>
-      </div>
-
-      {/* (선택) 내역 섹션 */}
-      <div className="mt-10 hidden">
-        <h2 className="text-xl font-bold mb-3 flex items-center"><List className="w-4 h-4 mr-2" />환전 내역</h2>
       </div>
     </div>
   );

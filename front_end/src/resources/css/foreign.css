@@ -589,3 +589,36 @@
 
 /* (선택) 스텝퍼와 너무 붙어 보이면 간격 조금만 띄우기 */
 .fx-done .fx-title + .fx-steps{ margin-bottom: 4px; }
+
+
+/* 약관 박스 기본 */
+.terms-box {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+/* 스크롤 가능한 긴 약관 박스 */
+.terms-box--scroll {
+  max-height: 260px;         /* 원하는 높이 */
+  overflow: auto;
+  white-space: pre-wrap;     /* 줄바꿈 유지 */
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+/* 스크롤 끝까지 안내 페이드(선택) */
+.terms-fade {
+  position: relative;
+}
+.terms-fade::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 36px;
+  pointer-events: none;
+  background: linear-gradient(to top, #fff, rgba(255,255,255,0));
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}

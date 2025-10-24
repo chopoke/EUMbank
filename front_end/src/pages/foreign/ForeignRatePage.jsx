@@ -1,3 +1,4 @@
+// src/pages/foreign/ForeignRatePage.jsx
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import "../../resources/css/foreign.css";
@@ -87,7 +88,7 @@ export default function ForeignRatePage() {
       <div className="fx-page__head">
         <h1>환율 정보</h1>
         <p className="fx-page__hint">
-          실시간 갱신분(스케줄), 매매기준/매입(TTB)/매도(TTS) 환율을 확인하고 간이 계산기를 사용할 수 있어요.
+          실시간 갱신분(스케줄), 매매기준/사실때/파실때 환율을 확인하고 간이 계산기를 사용할 수 있어요.
         </p>
       </div>
 
@@ -219,12 +220,12 @@ export default function ForeignRatePage() {
   );
 }
 
-/** 계산기 모달 (오른쪽 차트 포함) */
+/** 계산기 모달 (오른쪽 차트: EXIM 일봉 전용) */
 function CalcModal({ onClose, base, ttb, tts, cur }) {
   // buy: 원화→외화(TTS), sell: 외화→원화(TTB)
   const [mode, setMode] = useState("buy");
   const [amount, setAmount] = useState(1000);
-  const [feePct, setFeePct] = useState(1.75); // 우대율(%) = 스프레드 감면 비율
+  const [feePct, setFeePct] = useState(1.75); // 우대율(%)
 
   // === 차트 상태 ===
   const [series, setSeries] = useState([]); // [[Date, number], ...]
@@ -247,11 +248,9 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
     if (!mid || !_tts || !_ttb) return null;
 
     if (mode === "buy") {
-      // BUY: KRW -> FX (은행이 FX를 판다) => TTS 방향
       const spread = _tts - mid;
       return mid + spread * (1 - p);
     } else {
-      // SELL: FX -> KRW (은행이 FX를 산다) => TTB 방향
       const spread = mid - _ttb;
       return mid - spread * (1 - p);
     }
@@ -272,16 +271,24 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
     return mode === "buy" ? resultUnits * lot : resultUnits; // SELL은 KRW라 lot 영향 없음
   }, [resultUnits, lot, mode]);
 
-  // === 히스토리 데이터 호출 (우측 차트) ===
+  // ===== 레이아웃: 좌(입력/결과) · 우(차트) =====
+  const modalBodyStyle = {
+    display: "grid",
+    gridTemplateColumns: "1.4fr 1fr",
+    gap: "24px",
+  };
+
+  // ===== 타임존 안전한 날짜 만들기 =====
+  const toSafeDate = (d) => new Date(`${d}T00:00:00`);
+
+  // === 히스토리 데이터 호출 (우측 차트) — EXIM 일봉만 사용 ===
   useEffect(() => {
     const fetchSeries = async () => {
       try {
         setSeriesLoading(true);
         setSeriesErr("");
 
-        // "JPY(100)" -> "JPY" 로 정규화
         const curCode = (cur || "").replace(/\(.+\)/, "");
-
         const res = await fetch(
           `/api/foreign/rates/series?cur=${encodeURIComponent(curCode)}&days=60`,
           { headers: { Accept: "application/json" } }
@@ -293,23 +300,23 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
         const body = await res.json();
 
         // 허용 형식:
-        // 1) [{date:"2025-10-01", rate: 1380.12}, ...]
+        // 1) [{date:"YYYY-MM-DD", rate: 1380.12}, ...]
         // 2) [[timestampOrISO, rate], ...]
         let rows = [];
         if (Array.isArray(body)) {
           if (body.length > 0 && typeof body[0] === "object" && body[0].date != null) {
-            rows = body.map((r) => [new Date(r.date), Number(r.rate)]);
+            rows = body.map((r) => [toSafeDate(r.date), Number(r.rate)]);
           } else if (Array.isArray(body[0])) {
             rows = body.map((r) => [new Date(r[0]), Number(r[1])]);
           }
         } else if (Array.isArray(body?.rows)) {
           const a = body.rows;
           if (a.length > 0 && a[0].date != null) {
-            rows = a.map((r) => [new Date(r.date), Number(r.rate)]);
+            rows = a.map((r) => [toSafeDate(r.date), Number(r.rate)]);
           }
         }
 
-        rows.sort((a, b) => a[0] - b[0]); // 날짜 오름차순
+        rows.sort((a, b) => a[0].getTime() - b[0].getTime()); // 날짜 오름차순
         setSeries(rows);
       } catch (e) {
         console.error("[series] fetch fail:", e);
@@ -322,13 +329,6 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
 
     fetchSeries();
   }, [cur]);
-
-  // ===== 레이아웃: 좌(입력/결과) · 우(차트) =====
-  const modalBodyStyle = {
-    display: "grid",
-    gridTemplateColumns: "1.4fr 1fr", // ← 좌를 더 넓게
-    gap: "24px",
-  };
 
   const chartData = useMemo(() => {
     if (!series || series.length === 0) return null;
@@ -355,7 +355,7 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
       <div
         className="fx-modal"
         onClick={(e) => e.stopPropagation()}
-        style={{ width: "min(1100px, 96vw)" }}   // ← 모달 폭 확대
+        style={{ width: "min(1100px, 96vw)" }}
       >
         <header className="fx-modal__head">
           <h3>환율 계산기</h3>
@@ -432,7 +432,7 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
               <div className="fr-result__value">
                 {resultUnits == null
                   ? "—"
-                  : resultUnits.toLocaleString(undefined, {
+                  : Number(resultUnits).toLocaleString(undefined, {
                       maximumFractionDigits: 4,
                     })}{" "}
                 <span className="fr-result__unit">
@@ -441,7 +441,7 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
                 {mode === "buy" && lot !== 1 && resultActual != null && (
                   <div className="text-sm text-gray-500 mt-1">
                     ≈{" "}
-                    {resultActual.toLocaleString(undefined, {
+                    {Number(resultActual).toLocaleString(undefined, {
                       maximumFractionDigits: 2,
                     })}{" "}
                     {cur.replace(/\(\d+\)/, "")}
@@ -469,7 +469,7 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
               <Chart
                 chartType="LineChart"
                 width="100%"
-                height="320px"        // ← 차트 높이 확대
+                height="320px"
                 data={chartData}
                 options={chartOptions}
                 loader={<div>차트 렌더링…</div>}

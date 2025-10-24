@@ -1,39 +1,48 @@
+// src/main/java/com/boot/eumbank/foreign/dto/FxExchangeReqDto.java
 package com.boot.eumbank.foreign.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Builder;
 
 import java.math.BigDecimal;
 
+/**
+ * 환전 요청 DTO
+ * BUY  : KRW -> FX  (fromAccountNo=원화,  toAccountNo=외화)
+ * SELL : FX  -> KRW (fromAccountNo=외화,  toAccountNo=원화)
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class FxExchangeReqDto {
 
-    //고객번호
-    private Long cNo;
-
-    // 거래 통화 단위 (예: USD)
+    /** FROM 통화코드 (컨트롤러에서 ISO3 정규화) */
     private String fromCurUnit;
 
-    // 최종 받을 통화 단위 (예: KRW)
+    /** TO 통화코드 (컨트롤러에서 ISO3 정규화) */
     private String toCurUnit;
 
-    // 출금 계좌 번호 (원화 계좌)
-    private String fromAccountNo;
-
-    // 환전 요청 금액 (외화 단위)
+    /** 입력 금액 (BUY: KRW 금액, SELL: 외화 금액) */
     private BigDecimal fxAmount;
 
-    // 적용할 수수료율 (예: 5.0 -> 5% 우대)
+    /** 우대율(%) — 예: 5.0 -> 5% */
     private BigDecimal commissionRate;
 
-    // 거래 유형 (BUY/SELL)
+    /** 거래유형: BUY | SELL */
     private String transactionType;
 
-    // 메모
+    /** 출금 계좌번호 (필수) */
+    private String fromAccountNo;
+
+    /** 입금 계좌번호 (필수) — ★ 신규 */
+    private String toAccountNo;
+
+    /** 요청자 고객번호(선택; 없으면 서비스에서 fromAccount 소유주로 보정) */
+    private Long cNo;
+
+    /** 메모(선택) */
     private String memo;
 }

@@ -35,54 +35,64 @@ public class EximClient {
         ZoneId KST = ZoneId.of("Asia/Seoul");
         LocalDate d = LocalDate.now(KST).minusDays(1);
 
-        // 최대 7일(일주일) 탐색
+        // 최대 7일 탐색
         for (int i = 0; i < 7; i++) {
             if (d.getDayOfWeek() == DayOfWeek.SATURDAY || d.getDayOfWeek() == DayOfWeek.SUNDAY) {
                 d = d.minusDays(1);
                 continue;
             }
 
-            String ymd = d.format(DateTimeFormatter.BASIC_ISO_DATE);
-            String url = String.format("%s?authkey=%s&data=AP01&searchdate=%s", baseUrl, authKey, ymd);
-            log.info("[EXIM] GET {}", url.replace(authKey, "****"));
-
-            try {
-                HttpHeaders h = new HttpHeaders();
-                h.set(HttpHeaders.USER_AGENT, "Mozilla/5.0 (EUMbank)");
-                h.set(HttpHeaders.ACCEPT, "application/json");
-                HttpEntity<Void> req = new HttpEntity<>(h);
-
-                ResponseEntity<Object> res = rt.exchange(url, HttpMethod.GET, req, Object.class);
-                String loc = res.getHeaders().getFirst(HttpHeaders.LOCATION);
-                if (res.getStatusCode().is3xxRedirection() && loc != null) {
-                    URI next = resolveAgainst(url, loc); // 상대 경로 → 절대 URL
-                    log.warn("[EXIM] 3xx -> Location: {}", loc);
-                    res = rt.exchange(next.toString(), HttpMethod.GET, req, Object.class);
-                }
-
-                Object body = res.getBody();
-                if (body == null) {
-                    log.warn("[EXIM] Body is null (date={})", ymd);
-                } else if (body instanceof List<?> list) {
-                    log.info("[EXIM] Raw Body Type: {} size={}", body.getClass().getName(), list.size());
-                    List<Row> out = parseRows(list, d); // 관측일 전달
-                    log.info("[EXIM] Parsed {} rows (date={})", out.size(), ymd);
-                    if (!out.isEmpty()) return out; // 가장 최근일 발견 시 반환
-                } else {
-                    log.warn("[EXIM] Unexpected body: {}", body);
-                }
-            } catch (HttpStatusCodeException e) {
-                log.error("[EXIM] upstream {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-                throw e;
-            } catch (Exception e) {
-                log.warn("[EXIM] request failed for date {}: {}", d, e.toString());
-            }
+            List<Row> out = fetchBy(d);  // ← 신규 메서드 재사용
+            if (!out.isEmpty()) return out;
 
             d = d.minusDays(1);
         }
 
         log.warn("[EXIM] No data found in recent 7 days.");
         return List.of();
+    }
+
+    /** 추가: 특정 '관측일' 하루치 공시를 그대로 가져오기 */
+    public List<Row> fetchBy(LocalDate date) {
+        String ymd = date.format(DateTimeFormatter.BASIC_ISO_DATE);
+        String url = String.format("%s?authkey=%s&data=AP01&searchdate=%s", baseUrl, authKey, ymd);
+        log.info("[EXIM] GET {}", url.replace(authKey, "****"));
+
+        try {
+            HttpHeaders h = new HttpHeaders();
+            h.set(HttpHeaders.USER_AGENT, "Mozilla/5.0 (EUMbank)");
+            h.set(HttpHeaders.ACCEPT, "application/json");
+            HttpEntity<Void> req = new HttpEntity<>(h);
+
+            ResponseEntity<Object> res = rt.exchange(url, HttpMethod.GET, req, Object.class);
+            String loc = res.getHeaders().getFirst(HttpHeaders.LOCATION);
+            if (res.getStatusCode().is3xxRedirection() && loc != null) {
+                URI next = resolveAgainst(url, loc);
+                log.warn("[EXIM] 3xx -> Location: {}", loc);
+                res = rt.exchange(next.toString(), HttpMethod.GET, req, Object.class);
+            }
+
+            Object body = res.getBody();
+            if (body == null) {
+                log.warn("[EXIM] Body is null (date={})", ymd);
+                return List.of();
+            }
+            if (body instanceof List<?> list) {
+                log.info("[EXIM] Raw Body Type: {} size={}", body.getClass().getName(), list.size());
+                List<Row> out = parseRows(list, date); // 관측일 고정
+                log.info("[EXIM] Parsed {} rows (date={})", out.size(), ymd);
+                return out;
+            } else {
+                log.warn("[EXIM] Unexpected body: {}", body);
+                return List.of();
+            }
+        } catch (HttpStatusCodeException e) {
+            log.error("[EXIM] upstream {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw e;
+        } catch (Exception e) {
+            log.warn("[EXIM] request failed for date {}: {}", date, e.toString());
+            return List.of();
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -96,7 +106,7 @@ public class EximClient {
                 r.ttb      = toBd(m.get("ttb"));
                 r.tts      = toBd(m.get("tts"));
                 r.dealBasR = toBd(m.get("deal_bas_r"));
-                r.date     = obsDate; // 관측일 세팅
+                r.date     = obsDate; // 관측일
 
                 if (r.curUnit != null && r.dealBasR != null) {
                     out.add(r);
@@ -118,14 +128,14 @@ public class EximClient {
         try { return new BigDecimal(s); } catch (Exception ignore) { return null; }
     }
 
-    /** 파싱 결과 DTO (public 필드, Service에서 필드 접근) */
+    /** 파싱 결과 DTO */
     public static class Row {
         public String curUnit, curNm;
         public BigDecimal ttb, tts, dealBasR;
-        public LocalDate date; // 관측일
+        public LocalDate date;
     }
 
-    /** 필요 시 수동 진단용 */
+    /** 수동 진단용 */
     public Map<String, Object> eximProbe(String url) {
         HttpHeaders h = new HttpHeaders();
         h.set(HttpHeaders.USER_AGENT, "Mozilla/5.0 (EUMbank)");
