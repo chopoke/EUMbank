@@ -159,7 +159,7 @@ logging:
     com.boot.eumbank.mapper: DEBUG
     org.apache.ibatis: DEBUG
     org.mybatis.spring: DEBUG
-
+    
 
 # ===================================================================
 # 금감원 대출API
@@ -173,3 +173,4 @@ jobs:
     sync:
       cron: "0/15 * * * * *"    # 매일 03:00  --> 임시로 15초마다
   timezone: "Asia/Seoul"
+
