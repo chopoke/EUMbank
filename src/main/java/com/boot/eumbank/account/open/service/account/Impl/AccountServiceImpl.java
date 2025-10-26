@@ -95,7 +95,7 @@ public class AccountServiceImpl implements AccoutService {
         map.put("rrn6", user.getCBirthDt());
         map.put("address", user.getCAddress());
         map.put("rrn13", user.getCRrnHash());
-        map.put("email", user.getCEmail());
+        map.put("email", user.getEmail());
         map.put("phone", user.getCPhoneMobile());
 
         return map;

@@ -45,7 +45,7 @@ public interface Transfer_CustomerRepository extends JpaRepository<Customer, Int
      * 이메일로 고객 조회
      * @Query 사용으로 JPA 네이밍 규칙 문제 회피
      */
-    @Query("SELECT c FROM Customer c WHERE c.cEmail = :cEmail")
+    @Query("SELECT c FROM Customer c WHERE c.email = :cEmail")
     Optional<Customer> findByCEmail(@Param("cEmail") String cEmail);
 
     /**
@@ -71,7 +71,7 @@ public interface Transfer_CustomerRepository extends JpaRepository<Customer, Int
      * 이메일 존재 여부 확인
      * @Query 사용으로 JPA 네이밍 규칙 문제 회피
      */
-    @Query("SELECT COUNT(c) > 0 FROM Customer c WHERE c.cEmail = :cEmail")
+    @Query("SELECT COUNT(c) > 0 FROM Customer c WHERE c.email = :cEmail")
     boolean existsByCEmail(@Param("cEmail") String cEmail);
 
     /**

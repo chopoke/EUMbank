@@ -1,6 +1,5 @@
 package com.boot.eumbank.account.open.dto.account;
 
-import com.boot.eumbank.account.open.entity.account.Account;
 import lombok.*;
 
 import java.math.BigDecimal;

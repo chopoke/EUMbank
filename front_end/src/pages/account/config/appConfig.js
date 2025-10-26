@@ -17,19 +17,13 @@ const apiConfig = axios.create({
  */
 apiConfig.interceptors.request.use(
   (config) => {
-    // 로컬 스토리지에서 access token을 가져옵니다.
     const token = localStorage.getItem("access");
-
-    // 토큰이 존재하면 Authorization 헤더에 담아줍니다.
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
-    // 수정된 config 객체를 반환해야 요청이 계속 진행됩니다.
     return config;
   },
   (error) => {
-    // 요청 설정 중 에러가 발생하면 여기서 처리할 수 있습니다.
     return Promise.reject(error);
   }
 );
