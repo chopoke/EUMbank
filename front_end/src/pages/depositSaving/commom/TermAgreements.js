@@ -62,7 +62,35 @@ const TermsAgreement = ({ productType }) => {
     const navigate = useNavigate();
     const masterCheckboxRef = useRef(null);
 
+    // ✅ 1. product 데이터를 담을 state를 만듭니다.
+    const [product, setProduct] = useState(null);
+
+    // ✅ 2. 컴포넌트가 처음 렌더링될 때 location.state나 sessionStorage에서 데이터를 가져옵니다.
+    useEffect(() => {
+        // 우선 location.state에서 데이터를 찾습니다.
+        let productData = location.state?.productData;
+
+        // 만약 location.state에 데이터가 없다면 sessionStorage에서 가져옵니다.
+        if (!productData) {
+            const savedProduct = sessionStorage.getItem('selectedProduct');
+            if (savedProduct) {
+                productData = JSON.parse(savedProduct);
+            }
+        }
+
+        // 최종적으로 찾은 데이터가 있다면 state에 저장합니다.
+        if (productData) {
+            setProduct(productData);
+        } else {
+            // 데이터가 전혀 없다면 상품 목록으로 돌려보냅니다.
+            console.error("상품 정보를 찾을 수 없습니다. 목록 페이지로 이동합니다.");
+            navigate("/depositSavingProductList/open");
+        }
+    }, [location.state, navigate]); // 의존성 배열에 location.state와 navigate를 추가
+
     const terms = termsData[productType];
+
+
 
     // 각 약관의 동의(checked) 및 읽음(hasRead) 상태를 함께 관리
     const [agreements, setAgreements] = useState(() => {
@@ -121,32 +149,29 @@ const TermsAgreement = ({ productType }) => {
         setAgreements(newAgreements);
     };
 
+
+
+
     const handleBack = () => navigate("/depositSavingProductList/open");
+
+
 
     const handleGoToJoin = () => {
 
-        // 선택한 상품에 대한 정보이어서 가져오기
-        const product = location.state?.productData;
-
-        console.log(product);
+        if (!product) {
+            alert("상품 정보가 유효하지 않습니다.");
+            return;
+        }
 
         const agreementStatus = Object.entries(agreements).reduce((acc, [id, value]) => {
             acc[id] = value.checked;
             return acc;
         }, {});
 
-        const finalData = {
-            ...product,
-            agreements: agreementStatus
-        };
+        
 
-        const finalDataJSON = JSON.stringify(finalData, null, 2);
-
-        console.log("서버로 전송할 최종 데이터 객체:", finalData);
-
-        console.log("서버로 전송할 최종 JSON 데이터:", finalDataJSON);
-        const result = product.id.split('-')[0];
-        navigate("/" + result + "/final", { state: { productData: product } });
+        const result = product.href.split('/')[1];
+        navigate("/" + result + "/form", { state: { productData: product, agreements: agreementStatus } });
 
     };
 

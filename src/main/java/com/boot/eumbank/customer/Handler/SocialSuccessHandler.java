@@ -1,32 +1,39 @@
 package com.boot.eumbank.customer.Handler;
 
+import com.boot.eumbank.customer.dto.CustomOAuth2User;
 import com.boot.eumbank.customer.entity.AuthRefreshToken;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.customer.repo.AuthRefreshTokenRepo;
 import com.boot.eumbank.customer.repo.CustomerRepo;
+import com.boot.eumbank.customer.security.CookieUtil;
 import com.boot.eumbank.customer.security.JwtTokenProvider;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.Map;
 import java.util.Optional;
-
 
 @Component
 @RequiredArgsConstructor
 public class SocialSuccessHandler implements AuthenticationSuccessHandler {
+
+    private final CookieUtil cookieUtil;
+    private Logger logger = LoggerFactory.getLogger(SocialSuccessHandler.class);
 
     private final JwtTokenProvider jwt;
     private final CustomerRepo customers;
@@ -35,11 +42,35 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
     @Transactional
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-        System.out.println("<<< SocialSuccessHandler onAuthenticationSuccess >>>");
+        logger.info("<<< SocialSuccessHandler onAuthenticationSuccess >>>");
 
+        CustomOAuth2User principal = (CustomOAuth2User) authentication.getPrincipal();
+        Map<String, Object> attributes = principal.getAttributes();
+
+        Object needLink = attributes.get("need_link_confirmation");
+        // 연동이 필요할 경우
+        if(needLink != null && (needLink.equals(true) || "true".equalsIgnoreCase(needLink.toString()))) {
+            Map<String, Object> payload = (Map<String, Object>) attributes.get("payload");
+
+            String userId = payload.get("userId").toString();
+            String email = payload.get("email").toString();
+            String naverId = payload.get("naverId").toString();
+
+            // 한글이 깨지지않게 전송
+            String redirectUrl = String.format(
+                    "http://localhost:3000/social/link?userId=%s&email=%s&naverId=%s",
+                    URLEncoder.encode(userId, StandardCharsets.UTF_8),
+                    URLEncoder.encode(email, StandardCharsets.UTF_8),
+                    URLEncoder.encode(naverId, StandardCharsets.UTF_8)
+            );
+
+            response.sendRedirect(redirectUrl);
+            return;
+        }
+
+        // 소셜 로그인을 한 경우
         String userId = authentication.getName();
-
-        System.out.println("userId : " + userId);
+        logger.info("userId : {}", userId);
 
         String refresh = jwt.createRefreshToken(userId);
         String refreshHash;
@@ -75,22 +106,12 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
         row.setLastUsedIp(clientIp);
         row.setUserAgent(userAgent);
 
-        // 같은 사용자 오래된 토큰 정리 정책(선택): 10개 이상이면 전체 삭제
-        if (refreshTokens.countByCustomerNoAndExpiresAtAfterAndDeleteAtIsNull(customer.get().getCustomerNo(), now) >= 10) {
-            refreshTokens.markAllDeletedByCustomerWithQueryDsl(customer.get().getCustomerNo(),Instant.now(),"TOO_MANY_TOKENS");
-        }
-
         // refresh 토큰 DB 저장
         refreshTokens.save(row);
 
-        Cookie refreshCookie = new Cookie("refreshToken", refresh);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(true);
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(10);
+        cookieUtil.addHttpOnlyCookie(response,"rt", refresh, jwt.getRefreshTtlSec());
 
-        response.addCookie(refreshCookie);
-        response.sendRedirect("http://localhost:3000/cookie");
+        response.sendRedirect("http://localhost:3000/social/cookie");
 
     }
 }

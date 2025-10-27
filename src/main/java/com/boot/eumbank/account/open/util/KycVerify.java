@@ -40,7 +40,7 @@ public class KycVerify {
 
         // OCR 정보와 DB와 일치하는지
         Tuple ocrCustomerData = jpqlQueryFactory
-                .select(qCustomer.cEmail, qCustomer.cPhoneMobile)
+                .select(qCustomer.email, qCustomer.cPhoneMobile)
                 .from(qCustomer)
                 .where(qCustomer.cNameKr.eq(reqName).and(rrnMatches))
                 .fetchOne();
@@ -64,7 +64,7 @@ public class KycVerify {
         // 3. 포맷팅된 문자열과 OCR에서 받은 문자열을 비교
         boolean isreqRrn6Verified = jwtRrn6.equals(reqRrn6);
 
-        String email = ocrCustomerData.get(qCustomer.cEmail);
+        String email = ocrCustomerData.get(qCustomer.email);
         String phone = ocrCustomerData.get(qCustomer.cPhoneMobile);
 
         boolean ok = isNameKrVerified && isreqRrn6Verified; // 동일 레코드 우선, 아니면 가중치 룰

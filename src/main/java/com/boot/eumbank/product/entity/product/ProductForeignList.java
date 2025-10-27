@@ -1,4 +1,4 @@
-package com.boot.eumbank.deposit.entity.deposit;
+package com.boot.eumbank.product.entity.product;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -70,5 +70,14 @@ public class ProductForeignList {
 
     @Column(name = "fp_name")
     private String fpName;
+
+    @Column(name = "fp_feature")
+    private String fpFeature;
+
+    @Column(name = "fp_button_text")
+    private String fpButtonText;
+
+    @Column(name = "fp_href")
+    private String fpHref;
 
 }

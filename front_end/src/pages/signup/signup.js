@@ -4,6 +4,17 @@ import TermsStep from "./TermsStep";      // ← KYR 구조 유지 (2단계 = �
 import CompletionStep from "./CompletionStep";
 import { validEmail, validPassword, validPhone, validUsername } from './validators';
 import maintxt from '../../resources/img/e-um.png'
+import api from "../../api/axios";
+
+
+async function checkUsername(username) {
+  try {
+    const res = await api.get("/api/auth/check-username", { params: { userId: username } });
+    return !!res?.data?.available;        // 200 {available:true|false}
+  } catch (e) {
+    return false;
+  }
+}
 
 export default function SignUp() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -18,6 +29,7 @@ export default function SignUp() {
 
     // 계정정보
     username: "",
+    usernameAvailable: null,
     password: "",
     confirmPassword: "",
 
@@ -34,6 +46,12 @@ export default function SignUp() {
   const totalSteps = 3; // 1: 개인정보, 2: 약관동의, 3: 완료
   const updateFormData = (data) => setFormData((prev) => ({ ...prev, ...data }));
 
+  const onCheckUsername = async (u) => {
+    if (!validUsername(u)) { updateFormData({ usernameAvailable: null }); return; }
+    const ok = await checkUsername(u);
+    updateFormData({ usernameAvailable: ok });
+  };
+
   const handleNext = async () => {
     const f = formData;
 
@@ -45,11 +63,21 @@ export default function SignUp() {
       if (!validEmail(f.email)) return alert("이메일을 정확히 입력하세요.");
       if (!f.emailVerified) return alert("이메일 인증을 완료해 주세요.");
       if (!validUsername(f.username)) return alert("아이디는 영문+숫자 조합 6~20자여야 합니다.");
+      if (f.usernameAvailable === false) return alert("이미 사용 중인 아이디입니다.");
+      if (f.usernameAvailable == null) {
+        try {
+          const ok = await checkUsername(f.username);
+          updateFormData({ usernameAvailable: ok });
+          if (!ok) return alert("이미 사용 중인 아이디입니다.");
+        } catch {
+          return alert("아이디 확인 중 오류가 발생했습니다.");
+        }
+      }
       if (!validPassword(f.password)) return alert("비밀번호는 8~32자, 영문/숫자/특수문자 중 2가지 이상 포함하세요.");
       if (f.password !== f.confirmPassword) return alert("비밀번호 확인이 일치하지 않습니다.");
     }
 
-    // 2단계: 약관 필수 확인(KYR 스타일)
+    // 2단계: 약관 필수 확인
     if (currentStep === 2) {
       const { agreeTerms, agreePrivacy, hasReadTerms, hasReadPrivacy } = f.terms || {};
       if (hasReadTerms === false || hasReadPrivacy === false) {
@@ -58,7 +86,7 @@ export default function SignUp() {
       if (!agreeTerms || !agreePrivacy) {
         return alert("필수 약관에 동의해야 회원가입이 가능합니다.");
       }
-      // 실제 회원가입 API 호출이 필요하면 여기서 처리 (KYR 코드가 api.post 쓰면 그대로 사용)
+      // 실제 회원가입 API 호출이 필요하면 여기서 처리 
       // try { await api.post('/api/auth/signup', payload) ... } catch (e) { ... }
       // 최종 회원가입 API 호출
       const baseUrl = "";
@@ -103,7 +131,7 @@ export default function SignUp() {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <PersonalInfoStep formData={formData} updateFormData={updateFormData} />;
+        return <PersonalInfoStep formData={formData} updateFormData={updateFormData} onCheckUsername={onCheckUsername} />;
       case 2:
         return (
           <TermsStep
