@@ -7,22 +7,19 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.*;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.time.Duration;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Configuration
 @RequiredArgsConstructor
-/*확인용*/
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
@@ -33,16 +30,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf.disable())
                 .cors(c -> c.configurationSource(corsConfigurationSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint))
                 .authorizeHttpRequests(reg -> reg
-                        // ✅ 인증 없이 허용할 엔드포인트(두 설정의 합집합)
+                        // 인증 없이 허용할 엔드포인트(두 설정의 합집합)
                         .requestMatchers(
                                 "/api/auth/**",        // 로그인/회원가입/리프레시 등
                                 "/api/address/**",     // 주소 API
                                 "/api/email/**",       // 이메일 API(사용 시)
+                                "/api/social/link",     // 소셜로그인 연동
                                 "/actuator/health",
                                 "/", "/index.html", "/favicon.ico",
                                 "/assets/**", "/static/**", "/public/**",
@@ -54,21 +52,22 @@ public class SecurityConfig {
                                 "/api/foreign/exchange",
                                 "/actuator/**",
                                 "/api/foreign/rates",
-                                "/api/healthz",
-                                "/api/foreign/rates/**",
-                                "/deposit/products"
+                                "/api/healthz"
+
+                        ).permitAll()
+                        // 환율 조회만 공개
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/foreign/rates", "/api/foreign/rates/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
-
-                        // 그 외는 모두 보호
+                        // 그 외는 보호
                         .anyRequest().authenticated()
                 )
-                // ✅ JWT 필터는 UsernamePasswordAuthenticationFilter 앞
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
-        http
-                .oauth2Login(oauth2 -> oauth2.successHandler(socialSuccessHandler));
+                // JWT 필터는 UsernamePasswordAuthenticationFilter 앞
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(socialSuccessHandler));
 
         return http.build();
     }
@@ -78,7 +77,6 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
         return cfg.getAuthenticationManager();
@@ -87,26 +85,12 @@ public class SecurityConfig {
     /** CORS: app.cors.allowed-origins 에 정의된 도메인 허용(쉼표 구분) */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        var config = new CorsConfiguration();
-
-        // 프로퍼티 값을 수정가능 리스트로 수집
-        List<String> origins = Arrays.stream(
-                        (corsProps.getAllowedOrigins() == null ? "" : corsProps.getAllowedOrigins()).split(","))
-                .map(String::trim)
-                .filter(s -> !s.isBlank())
-                .collect(Collectors.toList());
-
-        if (!origins.contains("http://localhost:3000")) origins.add("http://localhost:3000"); // CRA
-        if (!origins.contains("http://localhost:5173")) origins.add("http://localhost:5173");
-        if (!origins.contains("http://127.0.0.1:5173")) origins.add("http://127.0.0.1:5173");
-
-        config.setAllowedOrigins(origins);
-        config.setAllowedMethods(Arrays.asList("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-
-        config.setAllowedHeaders(Arrays.asList("Authorization","Content-Type","X-Requested-With","Origin","Accept"));
-        config.setExposedHeaders(Arrays.asList("Authorization", "Set-Cookie"));
-        config.setAllowCredentials(true);
-        config.setMaxAge(Duration.ofHours(1));
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true); // 쿠키 전송 핵심
+        config.setMaxAge(3600L);
 
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

@@ -2,9 +2,6 @@ package com.boot.eumbank.customer.repo;
 
 import com.boot.eumbank.customer.entity.AuthRefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -12,6 +9,9 @@ import java.util.Optional;
 public interface AuthRefreshTokenRepo extends JpaRepository<AuthRefreshToken, Long>, AuthRefreshTokenRepoCustom {
     Optional<AuthRefreshToken> findByRtHashAndDeleteAtIsNull(String rtHash);
     long countByCustomerNoAndExpiresAtAfterAndDeleteAtIsNull(Integer customerNo, Instant now);
+    // AuthRefreshTokenRepo
+    Optional<AuthRefreshToken> findByRtHashAndDeleteAtAfterAndDeleteReason(String hash, Instant after, String reason);
+    boolean existsByRtHash(String rtHash);
 //    /** 단일 토큰 소프트 삭제 (로그아웃 등) */
 //    @Modifying
 //    @Query("update AuthRefreshToken t set t.deleteAt = :now, t.deleteReason = :reason " +

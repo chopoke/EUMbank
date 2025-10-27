@@ -1,4 +1,3 @@
-// src/main/java/com/boot/eumbank/security/JwtAuthenticationFilter.java
 package com.boot.eumbank.customer.security;
 
 import com.boot.eumbank.customer.repo.CustomerRepo;
@@ -21,6 +20,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwt;     // validateAccessToken(...), getUserIdFromAccess(...)
     private final CustomerRepo customers;   // findByUserId(String)
+//    private final UserDetailsService userDetailsService;
 
     /** 회원가입/로그인/헬스체크/프리플라이트는 전부 인증 검사 스킵 */
     @Override
@@ -35,10 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 || path.contains("/auth/")
                 || path.endsWith("/signup")
                 || path.endsWith("/login")
-                || "/actuator/health".equals(path)
-                // 환율조회 공개
-                || path.equals("/api/foreign/rates")
-                || path.startsWith("/api/foreign/rates/");
+                || "/actuator/health".equals(path);
     }
 
     @Override

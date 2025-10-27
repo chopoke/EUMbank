@@ -142,11 +142,22 @@ public class AccountController {
         }
     }
 
+    /**
+     * 파일이름 추출
+     * @param filename
+     * @return
+     */
     private static String baseName(String filename){
         if (filename == null) return "image";
         int p = filename.lastIndexOf('.');
         return (p>0) ? filename.substring(0,p) : filename;
     }
+
+    /**
+     * 이미지 타입 맵핑
+     * @param fmt
+     * @return
+     */
     private static MediaType springMediaType(String fmt) {
         return switch (fmt) {
             case "jpg" -> MediaType.IMAGE_JPEG;
@@ -157,19 +168,25 @@ public class AccountController {
         };
     }
 
+    /**
+     * 인증(Authentication) 처리
+     * @param request
+     * @return
+     */
     @PostMapping(value = "/verifyminsjon", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<VerifyMinSjonResponse> verifyMinSjon(@RequestBody VerifyMinSjonRequest request) {
-        // 로그에 주민번호 전체가 찍히지 않도록 마스킹
+
         logger.info("UserController => verifyMinSjon()");
-
         VerifyMinSjonResponse result = kycVerify.verify(request);
-
-        logger.info("UserController => verifyMinSjon(): {}", result);
-
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping(value = "/accountSave", consumes = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * 최종 계좌정보 등록
+     * @param body
+     * @return ResponseEntity<Map<String, Object>>
+     */
+   @PostMapping(value = "/accountSave", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> accountSave(@RequestBody Map<String, Object> body) {
         logger.info("account/save payload = {}", body);
 
@@ -202,6 +219,10 @@ public class AccountController {
         return ResponseEntity.ok(res);
     }
 
+    /**
+     * 핀등록 여부 확인 : 주민번호 대체
+     * @return ResponseEntity<Map<String, Object>>
+     */
     @PostMapping(value = "/checkPinNumber")
     public ResponseEntity<Map<String, Object>> checkPinNumber() {
         logger.info("checkPinNumber => checkPinNumber()");
@@ -217,6 +238,11 @@ public class AccountController {
         return  ResponseEntity.ok(res);
     }
 
+    /**
+     * 핀등록된 핀 번호 체크
+     * @param pinDto
+     * @return ResponseEntity<Map<String, Object>>
+     */
     @PostMapping(value="/verifyExistingPin")
     public ResponseEntity<Map<String, Object>> verifyExistingPin(@RequestBody PinDto pinDto) {
         logger.info("verifyExistingPin => pinDto = {}", pinDto);

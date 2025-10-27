@@ -1,4 +1,4 @@
-package com.boot.eumbank.deposit.entity.deposit;
+package com.boot.eumbank.product.entity.product;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -63,4 +63,13 @@ public class ProductDepositList {
 
     @Column(name = "dp_rate")
     private String dpRate;
+
+    @Column(name = "dp_feature")
+    private String dpFeature;
+
+    @Column(name = "dp_button_text")
+    private String dpButtonText;
+
+    @Column(name = "dp_href")
+    private String dpHref;
 }

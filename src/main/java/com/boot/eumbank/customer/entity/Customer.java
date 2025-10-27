@@ -1,6 +1,5 @@
 package com.boot.eumbank.customer.entity;
 
-import com.boot.eumbank.customer.dto.SignupRequest;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -54,7 +53,7 @@ public class Customer {
     private String cPhoneHome;
 
     @Column(name = "c_email", nullable = false, length = 150)
-    private String cEmail;
+    private String email;
 
     @Column(name = "c_rrn_hash", length = 256)
     private String cRrnHash;
@@ -118,6 +117,9 @@ public class Customer {
     @Builder.Default
     private String loginType = "EUM";
 
+    @Column(name = "c_naver_id", length = 100)
+    private String naverId;
+
     @Column(name = "c_pin_number")
     private String pinNumber;
 
@@ -126,13 +128,6 @@ public class Customer {
 
     @Column(name = "c_zip_code")
     private String cZipCode;
-
-    public void updateCustomer(SignupRequest signupRequest) {
-        this.cPassword = signupRequest.getC_password();
-        this.cNameKr = signupRequest.getC_name_kr();
-        this.cEmail = signupRequest.getC_email();
-        this.cPhoneMobile = signupRequest.getC_phone_mobile();
-    }
 
     // 비즈니스 메서드들
     public void updateAuthLevel(Integer authLevel) {

@@ -54,7 +54,7 @@ public class MypageCustomer {
     private String cPhoneHome;
 
     @Column(name = "c_email", nullable = false, length = 150)
-    private String cEmail;
+    private String email;
 
     @Column(name = "c_rrn_hash", length = 256)
     private String cRrnHash;

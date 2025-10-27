@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { testmypage } from '../../api/accounts';
 import { updateProfile } from '../../api/accounts';
+import axios from 'axios';
 import React from "react";
 import { Link } from 'react-router-dom';
 // Header Component
@@ -339,7 +340,8 @@ function ProfileTab({initialData}) {
                 // 에러 발생 시 편집 모드를 유지할지 결정할 수 있습니다.
                 // setIsEditing(false);
             });
-    };
+    // return axios.put('../../api/accounts');
+  };
 
   return (
     <div className="space-y-6">

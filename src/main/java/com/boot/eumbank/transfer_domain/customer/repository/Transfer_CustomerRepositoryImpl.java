@@ -86,7 +86,7 @@ public class Transfer_CustomerRepositoryImpl implements Transfer_CustomerReposit
     public Optional<Customer> findActiveCustomerByEmail(String email) {
         Customer result = queryFactory
                 .selectFrom(customer)
-                .where(customer.cEmail.eq(email)
+                .where(customer.email.eq(email)
                         .and(customer.cStatus.eq("ACTIVE")))
                 .fetchOne();
         return Optional.ofNullable(result);

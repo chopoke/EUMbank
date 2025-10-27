@@ -7,8 +7,9 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class AuthResponse {
-    private String accessToken;
     @Builder.Default
     private String tokenType = "Bearer";
+    private String accessToken;
+    private String message;
     private String refreshToken;
 }

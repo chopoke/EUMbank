@@ -1,4 +1,4 @@
-package com.boot.eumbank.deposit.entity.deposit;
+package com.boot.eumbank.product.entity.product;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -60,4 +60,13 @@ public class ProductInstallmentList {
 
     @Column(name = "ip_is_active")
     private String ipIsActive;
+
+    @Column(name= "ip_feature")
+    private String ipFeature;
+
+    @Column(name = "ip_button_text")
+    private String ipButtonText;
+
+    @Column(name = "ip_href")
+    private String ipHref;
 }

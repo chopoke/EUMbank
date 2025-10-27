@@ -1,4 +1,4 @@
-package com.boot.eumbank.deposit.dto.deposit;
+package com.boot.eumbank.product.dto.product;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,9 +26,11 @@ public class ProductDto {
     private String href;        // 상세 페이지 경로
     private String type;        // 상품 타입 코드 (예: "D12345")
     private String category;    // 상품 카테고리 (예: "예금", "적금", "외환")
+    private String feature;
 
     // QueryDSL Projections.constructor 를 사용하기 위한 생성자
-    public ProductDto(String id, String name, String type, String description, String rate, String maxAmount, String minAmount, Integer minMonths, Integer maxMonths, String paymentType, String category) {
+    public ProductDto(String id, String name, String type, String description, String rate,
+                      String maxAmount, String minAmount, Integer minMonths, Integer maxMonths, String paymentType, String feature, String href, String buttonText, String category) {
         this.id = id;
         this.name = name;
         this.type = type;
@@ -39,6 +41,9 @@ public class ProductDto {
         this.minMonths = minMonths;
         this.maxMonths = maxMonths;
         this.paymentType = paymentType;
+        this.feature = feature;
+        this.href = href;
+        this.buttonText = buttonText;
         this.category = category;
         // 나머지 필드들은 서비스 레이어에서 비즈니스 로직에 따라 채워줍니다.
     }

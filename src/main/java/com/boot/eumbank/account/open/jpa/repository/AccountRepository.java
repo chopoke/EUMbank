@@ -151,7 +151,7 @@ public class AccountRepository {
                         qCustomer.customerNo,
                         qCustomer.cNameKr,
                         qCustomer.cBirthDt,
-                        qCustomer.cEmail,
+                        qCustomer.email,
                         qCustomer.cPhoneMobile
                 ))
                 .from(qCustomer)
