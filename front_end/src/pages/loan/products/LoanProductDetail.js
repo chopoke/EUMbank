@@ -15,10 +15,14 @@ export default function LoanProductDetailPage() {
   const [error, setError] = React.useState(null);
 
   React.useEffect(() => {
-    if (stateProduct) return; 
-    setLoading(true);
+    // state로 넘어온 값이 있다면 즉시 표기
+    if (stateProduct){
+      setProduct(stateProduct);
+    }
+    setLoading(!stateProduct);    // 백엔드 항상 동기화
     fetchLoanProductDetail(code)
       .then(res => {
+        console.log("[DETAIL PAYLOAD]", res.data); // 데이터 확인용
         if(!res?.data)throw new Error ("상품을 찾을 수 없습니다.");
         setProduct(res.data);    // 단일객체 그대로 전달
       })
@@ -263,7 +267,7 @@ export default function LoanProductDetailPage() {
       <header className="border-b bg-white">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <a href="/loans" className="text-sm text-gray-600 hover:underline">← 대출 목록</a>
-          <div className="text-sm text-gray-500">상품코드 {product.id}</div>
+          <div className="text-xs text-gray-500">상품코드 [{product.id}]</div>
         </div>
       </header>
 

@@ -152,9 +152,9 @@ public class LoanServiceImpl implements LoanService {
     }
 
     // 유틸 ------------------------------------------
-    // 금리 값 검증
+    // 금리 값 검증 (50보다 크면 버리기)
     private static boolean gt0lt50(BigDecimal v) {
-        return v.compareTo(BigDecimal.ZERO) > 0 && v.compareTo(new BigDecimal("50")) < 0;
+        return v.compareTo(BigDecimal.ZERO) > 0 && v.compareTo(new BigDecimal("70")) < 0;
     }
 
     // 영문-한글 매핑

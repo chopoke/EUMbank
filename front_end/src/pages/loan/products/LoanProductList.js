@@ -170,7 +170,7 @@ export default function LoanProductsListPage(){
 
         <div className="mt-4 flex gap-2">
           <Link
-          to={`/loans/product/${p.id}`}
+          to={`/loan/products/${p.id}`}
           state={{ product: p }}   // 상세에 미리 전달
           className="px-3 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-sm"
         >자세히 보기</Link>

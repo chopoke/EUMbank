@@ -67,6 +67,6 @@ public class LoanController {
     public ResponseEntity<LoanProductDetailDTO> detail(@PathVariable String code) {
         return loanService.getProductDetail(code)               // Optional<LoanProductDetailDTO>
                 .map(ResponseEntity::ok)                        // 200 OK + body
-                .orElseGet(() -> ResponseEntity.notFound().build()); // 404
+                .orElseGet(() -> ResponseEntity.notFound().build()); // 404에렁
     }
 }
