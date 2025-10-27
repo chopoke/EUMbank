@@ -34,13 +34,10 @@ import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
 
 // 주택담보대출
 import LoanProductList from "./pages/loan/products/LoanProductList"
-
 // 대출상품상세
 import LoanProductDetail from "./pages/loan/products/LoanProductDetail"
-
 // 예적금
 import { depositSavingRouteElements } from "./pages/depositSaving/router/depositSavingRouter";
-
 // 계좌개설
 import { accountElements } from "./pages/account/router/accountRouter";
 

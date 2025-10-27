@@ -17,12 +17,10 @@ export default function LoanProductDetailPage() {
   React.useEffect(() => {
     if (stateProduct) return; 
     setLoading(true);
-    fetchLoanProductDetail(code, { topFinGrpNo: "020000", pageNo: 1 })
+    fetchLoanProductDetail(code)
       .then(res => {
-        const items = Array.isArray(res.data) ? res.data : [];
-        const found = items.find(x => String(x.code) === String(code));
-        if (!found) throw new Error("상품을 찾을 수 없습니다.");
-        setProduct(found);
+        if(!res?.data)throw new Error ("상품을 찾을 수 없습니다.");
+        setProduct(res.data);    // 단일객체 그대로 전달
       })
       .catch(e => setError(e.message || "조회 실패"))
       .finally(() => setLoading(false));

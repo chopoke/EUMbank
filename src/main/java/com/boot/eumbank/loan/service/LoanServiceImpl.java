@@ -25,10 +25,11 @@ public class LoanServiceImpl implements LoanService {
     /** 목록 */
     @Override
     public Page<LoanProductDTO> getProducts(String type, int page, int size) {
+        // Jpa 쿼리 status 가 Y(활성화)인 것만 조회 -> laonName이 ASC 순으로
         Page<LoanProduct> products = productRepo.findByLoanTypeAndStatus(
                 type, "Y", PageRequest.of(page, size, Sort.by("loanName").ascending()));
 
-        return products.map(this::toListDTO);
+        return products.map(this::toListDTO);       // toListDTO로 매핑
     }
 
     /** 상세 */
@@ -37,9 +38,9 @@ public class LoanServiceImpl implements LoanService {
         LoanProduct p = productRepo.findByLoanCode(loanCode)
                 .orElseThrow(() -> new NoSuchElementException("상품 없음: " + loanCode));
 
-        List<LoanProductOption> opts = optionRepo.findByProduct(p);
+        List<LoanProductOption> opts = optionRepo.findByProduct(p);         // 해당 상품 옵션 모두 가져오기
 
-        // 배지(금리유형/상환방식)
+        // 배지(금리유형/상환방식) => 중복없이 순서 유지
         LinkedHashSet<String> badges = new LinkedHashSet<>();
         for (var o : opts) {
             if (notBlank(o.getLendRateTypeNm()))        // 금리 타입이 있다면
@@ -48,7 +49,7 @@ public class LoanServiceImpl implements LoanService {
                 badges.add(o.getRpayTypeNm());
         }
 
-        // 옵션 DTO
+        // 옵션 DTO 매핑 (상세옵션 1:1 매핑)
         var optionDtos = opts.stream()
                 .map(o -> LoanProductDetailDTO.RateOption.builder()
                         .lendRateMin(o.getLendRateMin())
@@ -78,7 +79,7 @@ public class LoanServiceImpl implements LoanService {
                 .filter(Objects::nonNull)
                 .filter(r -> gt0lt50(r))
                 .max(BigDecimal::compareTo)
-                .orElse(new BigDecimal("99.900"));
+                .orElse(new BigDecimal("25.900"));
 
         // 기간 목록(옵션에 있으면 distinct 정렬, 없으면 기본값)
         List<Integer> termMonths = opts.stream()
@@ -116,29 +117,31 @@ public class LoanServiceImpl implements LoanService {
                 .build());
     }
 
+    /** 매핑 부분 */
     private LoanProductDTO toListDTO(LoanProduct p) {
-        // 기간 목록(간단 버전: 옵션 조회해서 뽑거나, 없으면 기본값)
+        // 해당 상품의 옵션 조회
         List<Integer> termMonths = optionRepo.findByProduct(p).stream()
-                .map(LoanProductOption::getTermMonth)
+                .map(LoanProductOption::getTermMonth)   // 기간이 있으면 조회
                 .filter(Objects::nonNull)
-                .distinct()
-                .sorted()
+                .distinct()                         // 중복제거 후
+                .sorted()                           // 정렬
                 .toList();
-        if (termMonths.isEmpty()) termMonths = List.of(120, 240, 360);
+        if (termMonths.isEmpty()) termMonths = List.of(120, 240, 360);      // 없으면 기본 기간을 셋 중 하나로 대체
 
-        // 배지(간단 버전: 상위 몇 개만)
-        LinkedHashSet<String> badges = new LinkedHashSet<>();
-        optionRepo.findByProduct(p).forEach(o -> {
+        // 배지 
+        LinkedHashSet<String> badges = new LinkedHashSet<>();       // HashSet의 순서 버전 할당(순서유지)
+        optionRepo.findByProduct(p).forEach(o -> {      // 금리유형/상환방식이 있으면 배지에 담기(중복제거/삽입순서유지)
             if (notBlank(o.getLendRateTypeNm())) badges.add(o.getLendRateTypeNm());
             if (notBlank(o.getRpayTypeNm()))     badges.add(o.getRpayTypeNm());
         });
 
+        // 결과 매핑
         return LoanProductDTO.builder()
                 .id(p.getLoanCode())
                 .name(p.getLoanName())
                 .type(mapTypeKo(p.getLoanType()))
-                .rateMin(nvl(p.getRateMin(), new BigDecimal("0.000")))
-                .rateMax(nvl(p.getRateMax(), new BigDecimal("99.900")))
+                .rateMin(nvl(p.getRateMin(), new BigDecimal("0.000")))      // 유틸 nvl으로 null 보정
+                .rateMax(nvl(p.getRateMax(), new BigDecimal("26.900")))
                 .limitMax(p.getLimitMax()) // BigDecimal 그대로
                 .termMonths(termMonths)
                 .badges(new ArrayList<>(badges))
@@ -149,10 +152,12 @@ public class LoanServiceImpl implements LoanService {
     }
 
     // 유틸 ------------------------------------------
+    // 금리 값 검증
     private static boolean gt0lt50(BigDecimal v) {
         return v.compareTo(BigDecimal.ZERO) > 0 && v.compareTo(new BigDecimal("50")) < 0;
     }
 
+    // 영문-한글 매핑
     private static String mapTypeKo(String type){
         return switch (type == null ? "" : type) {
             case "MORTGAGE" -> "주택담보";
