@@ -52,8 +52,7 @@ public class FinlifeCreditResponseDTO {
         @JsonProperty("lend_rate_min")    private BigDecimal lendRateMin;
         @JsonProperty("lend_rate_max")    private BigDecimal  lendRateMax;
         @JsonProperty("lend_rate_avg")    private BigDecimal  lendRateAvg;
-        @JsonProperty("crdt_prdt_type")       private String crdtPrdtType;         // ★
-        @JsonProperty("crdt_lend_rate_type")  private String crdtLendRateType;     // A/B/C
+        
         // 신용 등급들
         @JsonProperty("crdt_grad_1")  private BigDecimal grad1;
         @JsonProperty("crdt_grad_4")  private BigDecimal grad4;
