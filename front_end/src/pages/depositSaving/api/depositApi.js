@@ -4,11 +4,10 @@ import apiConfig from "../config/appConfig";
  * 초기 입/출금 상품 값 가져오기
  */
 export async function depsoitProductList() {
+
     try {
         const res = await apiConfig.get("/api/productsList");
-
         console.log("데이터 : " + res.data);
-
         return res.data;
     } catch (error) {
         console.error("상품 목록을 불러오는 중 오류 발생:", error);
@@ -24,7 +23,7 @@ export async function depositSave(formData) {
         console.log("========================================");
         console.log("=== API 호출 시작 ===");
         console.log("========================================");
-        
+
         // FormData 내용 상세 출력
         console.log("📦 FormData 내용:");
         for (let [key, value] of formData.entries()) {
@@ -49,7 +48,7 @@ export async function depositSave(formData) {
                 console.log(`  ${key}:`, value);
             }
         }
-        
+
         console.log("========================================");
         console.log("📡 요청 URL:", "/api/depositproductsave");
         console.log("========================================");
@@ -75,13 +74,13 @@ export async function depositSave(formData) {
         console.log("========================================");
 
         return res.data;
-        
+
     } catch (error) {
         console.error("========================================");
         console.error("❌ API 호출 실패");
         console.error("========================================");
         console.error("예금 가입 처리 중 오류:", error);
-        
+
         if (error.response) {
             // 서버가 응답을 반환한 경우
             console.error("📛 응답 상태:", error.response.status);
@@ -96,12 +95,12 @@ export async function depositSave(formData) {
             console.error("📛 요청 설정 오류:", error.message);
         }
         console.error("========================================");
-        
+
         // 에러 메시지 추출
-        const errorMessage = error.response?.data?.message 
-            || error.response?.data 
+        const errorMessage = error.response?.data?.message
+            || error.response?.data
             || "예금 가입 처리 중 오류가 발생했습니다.";
-        
+
         throw new Error(errorMessage);
     }
 }

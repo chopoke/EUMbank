@@ -25,7 +25,6 @@ export const depositSavingRouteElements = React.createElement(
   React.createElement(Route, {
     path: "/deposit/open",
     element: React.createElement(
-      ProtectedRoute, // 1. 보호막 컴포넌트로 감싼다
       null,
       // 2. 보호막을 통과했을 때 보여줄 실제 컴포넌트
       React.createElement(TermAgreements, { productType: "예금" })
