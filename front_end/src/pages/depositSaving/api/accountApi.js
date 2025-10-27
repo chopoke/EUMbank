@@ -1,4 +1,4 @@
-import apiConfig from "../config/appConfig";
+import api from "../../../api/axios";
 
 /**
  * 사용자의 출금 가능 계좌 목록을 조회합니다.
@@ -6,12 +6,12 @@ import apiConfig from "../config/appConfig";
  */
 export async function getAccountList() {
     try {
-        const response = await apiConfig.get("/api/accountList");
+        const response = await api.get("/api/accountList");
 
         return response.data;
 
     } catch (error) {
         console.error("계좌 목록을 불러오는 중 오류가 발생했습니다:", error);
-        return []; 
+        return [];
     }
 }

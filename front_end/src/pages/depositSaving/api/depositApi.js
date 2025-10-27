@@ -1,4 +1,4 @@
-import apiConfig from "../config/appConfig";
+import api from "../../../api/axios";
 
 /**
  * 초기 입/출금 상품 값 가져오기
@@ -6,7 +6,7 @@ import apiConfig from "../config/appConfig";
 export async function depsoitProductList() {
 
     try {
-        const res = await apiConfig.get("/api/productsList");
+        const res = await api.get("/api/productsList");
         console.log("데이터 : " + res.data);
         return res.data;
     } catch (error) {
@@ -53,7 +53,7 @@ export async function depositSave(formData) {
         console.log("📡 요청 URL:", "/api/depositproductsave");
         console.log("========================================");
 
-        const res = await apiConfig.post("/api/depositproductsave", formData, {
+        const res = await api.post("/api/depositproductsave", formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
@@ -112,7 +112,7 @@ export async function depositSave(formData) {
 
 export async function savingsSave() {
     try {
-        const res = await apiConfig.post("/product/savingsSave");
+        const res = await api.post("/product/savingsSave");
     } catch (error) {
 
     }

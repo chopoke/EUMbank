@@ -48,7 +48,6 @@ public class SecurityConfig {
                                 "/api/v1/join/**",
                                 "/api/v1/email/**",
                                 "/api/v1/customers/exists-email",
-                                "/deposit/products",
                                 "/api/loan/products",
                                 "/api/loan/products/**"
                         ).permitAll()
