@@ -32,7 +32,7 @@ public class FssFinlifeService {
         this.apiKey = apiKey;
     }
 
-    // ─────────────── FSS RAW 호출 ───────────────
+    //  FSS RAW 호출 ----------------------
     public String getMortgageProductsRaw(String topFinGrpNo, int pageNo){
         var uri = UriComponentsBuilder.fromPath("/finlifeapi/mortgageLoanProductsSearch.json")
                 .queryParam("auth", apiKey)
@@ -57,6 +57,7 @@ public class FssFinlifeService {
         return body;
     }
 
+    // 전세대출 원본 호출
     public String getJeonseProductsRaw(String topFinGrpNo, int pageNo) {
         var uri = UriComponentsBuilder.fromPath("/finlifeapi/rentHouseLoanProductsSearch.json")
                 .queryParam("auth", apiKey)
@@ -69,6 +70,7 @@ public class FssFinlifeService {
         return body;
     }
 
+    // 신용대출 원본 호출
     public String getCreditProductsRaw(String topFinGrpNo, int pageNo) {
         var uri = UriComponentsBuilder.fromPath("/finlifeapi/creditLoanProductsSearch.json")
                 .queryParam("auth", apiKey)
@@ -81,7 +83,7 @@ public class FssFinlifeService {
         return body;
     }
 
-    // ─────────────── 목록 가공 (주담대) ───────────────
+    //  목록 가공 (주담대) ---------------------
     public List<LoanProductDTO> getMortgageProductsForList(String topFinGrpNo, int pageNo) {
         try {
             String json = getMortgageProductsRaw(topFinGrpNo, pageNo);
@@ -155,7 +157,7 @@ public class FssFinlifeService {
         }
     }
 
-    // ─────────────── 단건 상세 가공 (주담대) ───────────────
+    //  단건 상세 가공 (주담대) =--------------------
     public LoanProductDetailDTO getMortgageProductDetail(String topFinGrpNo, int pageNo, String finPrdtCd) {
         final String json = getMortgageProductsRaw(topFinGrpNo, pageNo);
 
@@ -248,7 +250,7 @@ public class FssFinlifeService {
         }
     }
 
-    // ─────────────── 파서 유틸(문구 → 숫자) ───────────────
+    //  파서 유틸(문구 → 숫자) -----------
     private static final java.util.regex.Pattern P_EOK =
             java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*억(?:원)?");
     private static final java.util.regex.Pattern P_CHEONMAN =

@@ -9,8 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface LoanProductRepository extends JpaRepository<LoanProduct, Integer> {
-    Optional<LoanProduct> findByLoanCode(String loanCode);
 
+    Optional<LoanProduct> findByLoanCode(String loanCode);
     Page<LoanProduct> findByLoanTypeAndStatus(
             String loanType, String status, Pageable pageable);
 }

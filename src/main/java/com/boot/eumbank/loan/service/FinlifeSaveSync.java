@@ -58,7 +58,7 @@ public class FinlifeSaveSync {
         }
     }
 
-    // ===== 각 상품군별 엔트리 =====
+    // ===== 각 상품군별 엔트리 =====-------========
 
     /** 주택담보대출 */
     public void upsertAllPagesMortgage(String topFinGrpNo) {
@@ -178,7 +178,7 @@ public class FinlifeSaveSync {
         });
     }
 
-    // ===== 유틸 =====
+    // ===== 유틸 ================================
 
     /** 상환방식명으로 마이너스한도 여부 추정 */
     private static boolean isOverdraftByRepayName(String repayTypeNm) {

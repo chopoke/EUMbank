@@ -25,6 +25,7 @@ export const testmypage = () =>
 // 대출 상품 리스트
 export const fetchLoanProducts = ({ type="MORTGAGE", page=0, size=20 } = {}) =>
   api.get("/api/loan/products", { params: { type, page, size } });
+
 // 대출상품 상세
 export const fetchLoanProductDetail = (code) =>
   api.get(`/api/loan/products/${code}`);

@@ -148,7 +148,7 @@ public class LoanServiceImpl implements LoanService {
                 .build();
     }
 
-    // ────────────────────────── 유틸 ──────────────────────────
+    // 유틸 ------------------------------------------
     private static boolean gt0lt50(BigDecimal v) {
         return v.compareTo(BigDecimal.ZERO) > 0 && v.compareTo(new BigDecimal("50")) < 0;
     }
