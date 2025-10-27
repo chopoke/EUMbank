@@ -89,7 +89,7 @@ public class FxOpenService {
                 .accountType("외환")
                 .openedAt(LocalDateTime.now())
                 .accountPwd(req.getPin())
-                .pinNumber(req.getPinNumber())
+                //.pinNumber(req.getPinNumber())
                 .status("ACTIVE")
                 .balance(BigDecimal.ZERO)
                 .currency(currency)

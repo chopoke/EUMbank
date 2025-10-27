@@ -1,6 +1,5 @@
 package com.boot.eumbank.foreign.entity;
 
-import com.boot.eumbank.account.open.model.Account;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
