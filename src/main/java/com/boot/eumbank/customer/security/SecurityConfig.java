@@ -55,10 +55,6 @@ public class SecurityConfig {
                                 "/api/healthz"
 
                         ).permitAll()
-                        // 환율 조회만 공개
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/foreign/rates", "/api/foreign/rates/**"
-                        ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
                         // 그 외는 보호

@@ -156,17 +156,36 @@ function AccountHistoryPage(){
         };
 
         // 매핑
-        const mapped = (p.content || []).map(r=> ({
-          id: r.th_transfer_no,
-          ts: parseTs(r.th_transfer_at),
-          time: r.th_transfer_at ? new Date(r.th_transfer_at).toLocaleTimeString('ko-KR', { hour12:false }) : "",
-          type: r.th_transfer_type || "-",  
-          counterparty: r.th_other_bank || "-",
-          memo: r.th_memo || "-",
-          amount: (r.th_transfer_type === "입금" ? +1 : -1) * (r.th_amount ?? 0),
-          balance: Number(r.th_after_balance ?? 0),
-          tsType:r.th_transaction_type      // 실패건 구분용
-        }));
+       const mapped = (p.content || []).map((r) => {
+         const tp = String(r.th_transfer_type || '').toUpperCase(); // FX_IN / FX_OUT / 입금 / 출금 등
+         // 우선순위대로 원금 추출
+         const base =
+           Number(
+             r.th_amount ??
+             r.th_account_in ??
+             r.th_account_out ??
+             0
+           );
+         // 부호 결정: IN=+, OUT=-
+         const isIn  = tp.endsWith('_IN')  || tp === '입금' || tp === 'DEPOSIT' || tp === 'IN';
+         const isOut = tp.endsWith('_OUT') || tp === '출금' || tp === 'WITHDRAWAL' || tp === 'OUT';
+         const signed = isOut ? -Math.abs(base) : Math.abs(base); // 기본은 IN 가정
+
+         // 화면 표시에 쓸 한글 구분값
+         const displayType = isIn ? '입금' : isOut ? '출금' : (r.th_transfer_type || '-');
+
+         return {
+           id: r.th_transfer_no,
+           ts: parseTs(r.th_transfer_at),
+           time: r.th_transfer_at ? new Date(r.th_transfer_at).toLocaleTimeString('ko-KR', { hour12: false }) : '',
+           type: displayType,
+           counterparty: r.th_other_bank || '-',
+           memo: r.th_memo || '-',
+           amount: signed,
+           balance: Number(r.th_after_balance ?? 0),
+           tsType: r.th_transaction_type,
+         };
+       });
 
         setRows(mapped);
         setTotalElements(p.totalElements ?? mapped.length);

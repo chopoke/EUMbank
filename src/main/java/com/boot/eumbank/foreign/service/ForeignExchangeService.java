@@ -2,6 +2,8 @@ package com.boot.eumbank.foreign.service;
 
 import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.account.open.jpa.repository.custom.AccountRepo;
+import com.boot.eumbank.account.select.entity.TransferHistory;
+import com.boot.eumbank.account.select.repository.TransferHistoryRepository;
 import com.boot.eumbank.foreign.dto.FxExchangeCalcRespDto;
 import com.boot.eumbank.foreign.dto.FxExchangeReqDto;
 import com.boot.eumbank.foreign.dto.FxExchangeRespDto;
@@ -30,16 +32,19 @@ public class ForeignExchangeService {
     private final AccountRepo accountRepo;
     private final ForeignHistoryRepo historyRepo;
 
+    // 이체내역 저장용
+    private final TransferHistoryRepository transferHistoryRepository;
+
     // ---------- 정책/유틸 ----------
     private static final String KRW = "KRW";
-    /** 일부 공급원이 100단위로 제공할 수 있는 통화 */
+    /** 100단위로 제공될 수 있는 통화 */
     private static final Set<String> HUNDRED_UNITS = Set.of("JPY", "IDR", "VND");
-    /** 고정 수수료율: 0.02% (0.0002) */
+    /** 고정 수수료율: 0.02% */
     private static final BigDecimal FEE_RATE = new BigDecimal("0.0002");
     /** 표시용 수수료율 라벨 */
     private static final String FEE_RATE_LABEL = "0.02%";
 
-    /** 표시용 통화 단위 라벨 */
+    /** 표시용 통화 라벨 */
     private static final Map<String, String> UNIT_LABELS = Map.ofEntries(
             Map.entry("KRW", "원"),
             Map.entry("USD", "달러"),
@@ -70,7 +75,7 @@ public class ForeignExchangeService {
     private static BigDecimal s2(BigDecimal v){ return v.setScale(2, RoundingMode.HALF_UP); }
     private static BigDecimal s6(BigDecimal v){ return v.setScale(6, RoundingMode.HALF_UP); }
 
-    /** 통화별 소수점 자리수(수취 외화 금액에 적용) */
+    /** 통화별 소수점 자리수(수취 외화금액 절사) */
     private static int currencyScale(String iso3){
         return switch (iso3) {
             case "JPY", "IDR", "VND" -> 0;
@@ -81,7 +86,7 @@ public class ForeignExchangeService {
         return UNIT_LABELS.getOrDefault(iso3, iso3);
     }
 
-    /** KRW<->FX 방향성 검증 (BUY: KRW→FX, SELL: FX→KRW) */
+    /** 유효한 통화쌍인지 체크 (BUY: KRW→FX, SELL: FX→KRW) */
     private static void validatePair(String type, String from, String to){
         if ("BUY".equals(type)) {              // KRW -> FX
             if (!KRW.equals(from) || KRW.equals(to))
@@ -94,11 +99,11 @@ public class ForeignExchangeService {
         }
     }
 
-    /** 1단위 기준(KRW per 1 FX) 레이트를 반환. 공급원이 100단위면 JPY/IDR/VND에 한해 /100 보정 */
+    /** 1단위 기준 레이트(일부 100단위 통화는 /100 보정) */
     private static final class OneUnitRate {
         final BigDecimal base1; // 기준율 (KRW per 1 FX)
-        final BigDecimal ttb1;  // 매입율 (은행이 FX 사는 값, 고객 SELL 기준)
-        final BigDecimal tts1;  // 매도율 (은행이 FX 파는 값, 고객 BUY 기준)
+        final BigDecimal ttb1;  // 매입율 (고객 SELL)
+        final BigDecimal tts1;  // 매도율 (고객 BUY)
         OneUnitRate(BigDecimal base1, BigDecimal ttb1, BigDecimal tts1) {
             this.base1 = base1; this.ttb1 = ttb1; this.tts1 = tts1;
         }
@@ -106,21 +111,15 @@ public class ForeignExchangeService {
     private OneUnitRate oneUnitRate(String iso3){
         Rate r = fxRateService.get(iso3)
                 .orElseThrow(() -> new IllegalArgumentException(iso3 + " 환율 정보를 찾을 수 없습니다."));
+        BigDecimal base = r.base(), buy = r.buy(), sell = r.sell();
 
-        // 기본: 1단위라고 가정. (예: 1 JPY ≈ 9.x KRW)
-        BigDecimal base = r.base();
-        BigDecimal buy  = r.buy();
-        BigDecimal sell = r.sell();
-
-        // 특정 통화만 100단위 수신 시 /100 보정
         if (HUNDRED_UNITS.contains(iso3)) {
             if (base.compareTo(BigDecimal.valueOf(50)) > 0) {
                 base = base.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
-                buy  = buy.divide (BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+                buy  = buy .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
                 sell = sell.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
             }
         }
-
         return new OneUnitRate(s6(base), s6(buy), s6(sell));
     }
 
@@ -138,18 +137,18 @@ public class ForeignExchangeService {
 
         validatePair(type, from, to);
 
-        // 퍼센트 입력(예: 5.0) → 비율 (우대율/마진을 위한 값; 별도의 수수료(FEE_RATE)와는 별개)
+        // 퍼센트 입력(예: 5.0) → 비율
         BigDecimal comm = nz(req.getCommissionRate())
                 .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
 
         BigDecimal appliedRate;     // 최종 적용 환율 (KRW per 1 FX)
-        BigDecimal fromAmount;      // 출금 금액
+        BigDecimal fromAmount;      // 출금 총액
         BigDecimal expectedReceive; // 수취 금액
-        BigDecimal feeKrw;          // 고정 수수료(항상 KRW)
+        BigDecimal feeKrw;          // 수수료(항상 KRW)
         BigDecimal baseForPanel;    // 패널 표시용 기준율
 
-        String inputUnitLabel;      // 입력칸 단위 라벨
-        String outputUnitLabel;     // 수취 단위 라벨
+        String inputUnitLabel;
+        String outputUnitLabel;
 
         if ("BUY".equals(type)) {
             // KRW -> FX(to)
@@ -157,40 +156,32 @@ public class ForeignExchangeService {
             BigDecimal krw = nz(req.getFxAmount());
             if (krw.signum() <= 0) throw new IllegalArgumentException("환전 금액이 올바르지 않습니다.");
 
-            // 은행 TTS 기준, 우대율만큼 (1 - comm)
             appliedRate = s6(rt.tts1.multiply(BigDecimal.ONE.subtract(comm))); // KRW/1FX
-
-            // 수수료(원화) = 입력 KRW * 0.0002
             feeKrw = s2(krw.multiply(FEE_RATE));
             BigDecimal krwNet = krw.subtract(feeKrw).max(BigDecimal.ZERO);
 
-            // 통화별 소수 자리수로 절사
             int scale = currencyScale(to);
             BigDecimal fxAmt = krwNet.divide(appliedRate, scale, RoundingMode.FLOOR);
 
-            fromAmount = krw;            // KRW 출금(수수료 포함 총지출)
-            expectedReceive = fxAmt;     // FX 수취
+            fromAmount = krw;
+            expectedReceive = fxAmt;
             baseForPanel = rt.base1;
 
             inputUnitLabel  = unitLabel(KRW);
             outputUnitLabel = unitLabel(to);
 
-        } else { // SELL
-            // FX(from) -> KRW
+        } else { // SELL: FX(from) -> KRW
             OneUnitRate rf = oneUnitRate(from);
             BigDecimal fxAmt = nz(req.getFxAmount());
             if (fxAmt.signum() <= 0) throw new IllegalArgumentException("환전 금액이 올바르지 않습니다.");
 
-            // 은행 TTB 기준, (1 + comm)
             appliedRate = s6(rf.ttb1.multiply(BigDecimal.ONE.add(comm))); // KRW/1FX
-
-            // 원화 총액(gross) 계산 후 수수료 0.02% 차감
             BigDecimal grossKrw = fxAmt.multiply(appliedRate);
             feeKrw = s2(grossKrw.multiply(FEE_RATE));
             BigDecimal netKrw = grossKrw.subtract(feeKrw).max(BigDecimal.ZERO);
 
-            fromAmount = fxAmt;           // FX 출금
-            expectedReceive = s0(netKrw); // KRW 수취(정수 절사)
+            fromAmount = fxAmt;
+            expectedReceive = s0(netKrw);
             baseForPanel = rf.base1;
 
             inputUnitLabel  = unitLabel(from);
@@ -203,12 +194,12 @@ public class ForeignExchangeService {
                 .fromAmount(fromAmount)
                 .exchangeRate(baseForPanel)
                 .finalExchangeRate(appliedRate)
-                .expectedCommission(feeKrw)               // 실제 차감되는 수수료(원)
-                .expectedReceiveAmount(expectedReceive)   // 수수료 차감 반영된 수취액
+                .expectedCommission(feeKrw)
+                .expectedReceiveAmount(expectedReceive)
                 .baseRateToKrw(baseForPanel)
                 .inputUnitLabel(inputUnitLabel)
                 .outputUnitLabel(outputUnitLabel)
-                .feeRateLabel(FEE_RATE_LABEL)             // ★ "0.02%" 표시용
+                .feeRateLabel(FEE_RATE_LABEL)
                 .build();
     }
 
@@ -217,25 +208,25 @@ public class ForeignExchangeService {
     public FxExchangeRespDto exchange(FxExchangeReqDto req) {
         FxExchangeCalcRespDto calc = calculateExchange(req);
 
-        // 출금 계좌
+        // 0) 계좌 조회
         Account fromAcc = accountRepo.findByAccountNo(req.getFromAccountNo())
                 .orElseThrow(() -> new IllegalArgumentException("출금 계좌를 찾을 수 없습니다."));
-
-        // 입금 계좌
         if (req.getToAccountNo() == null || req.getToAccountNo().isBlank()) {
             throw new IllegalArgumentException("입금 계좌번호가 필요합니다.");
         }
         Account toAcc = accountRepo.findByAccountNo(req.getToAccountNo())
                 .orElseThrow(() -> new IllegalArgumentException("입금 계좌를 찾을 수 없습니다."));
 
-        // cNo 보정 (요청 없으면 출금계좌 소유주)
         Integer cNo = (req.getCNo() == null) ? fromAcc.getCNo() : req.getCNo().intValue();
         if (cNo == null) throw new IllegalStateException("고객번호(c_no)를 결정할 수 없습니다.");
 
         String type = (req.getTransactionType()==null)
                 ? "BUY" : req.getTransactionType().trim().toUpperCase(Locale.ROOT);
 
-        // 1) 출금 차감
+        // 공통 transferId(20자)
+        String transferId = shortId();
+
+        // 1) 출금 차감 + OUT 이력
         if (fromAcc.getBalance() == null) fromAcc.setBalance(BigDecimal.ZERO);
         if (fromAcc.getBalance().compareTo(calc.getFromAmount()) < 0) {
             throw new IllegalArgumentException("출금 계좌 잔액이 부족합니다.");
@@ -243,13 +234,25 @@ public class ForeignExchangeService {
         fromAcc.setBalance(fromAcc.getBalance().subtract(calc.getFromAmount()));
         accountRepo.save(fromAcc);
 
-        // 2) 입금 가산 (+) 및 통화 검증
+        saveOutHistory(
+                fromAcc.getANo(),
+                calc.getFromAmount(),
+                fromAcc.getBalance(),               // 차감 후 잔액
+                transferId,
+                toAcc.getAccountNo(),
+                req.getMemo(),
+                type                                  // BUY / SELL
+        );
+
+        // 2) 입금 가산 + IN 이력
         if ("BUY".equals(type)) {
+            // 입금은 외화계좌
             if (!calc.getToCurUnit().equalsIgnoreCase(toAcc.getCurrency())) {
                 throw new IllegalArgumentException("입금 계좌 통화가 선택된 외화(" + calc.getToCurUnit() + ")와 다릅니다.");
             }
-            toAcc.setBalance(nz(toAcc.getBalance()).add(calc.getExpectedReceiveAmount())); // 외화 +
+            toAcc.setBalance(nz(toAcc.getBalance()).add(calc.getExpectedReceiveAmount())); // FX +
         } else {
+            // SELL: 입금은 원화계좌
             if (!"KRW".equalsIgnoreCase(toAcc.getCurrency())) {
                 throw new IllegalArgumentException("입금 계좌는 원화(KRW)여야 합니다.");
             }
@@ -257,8 +260,18 @@ public class ForeignExchangeService {
         }
         accountRepo.save(toAcc);
 
-        // 3) 히스토리 적재
-        String exId = UUID.randomUUID().toString();
+        saveInHistory(
+                toAcc.getANo(),
+                calc.getExpectedReceiveAmount(),
+                toAcc.getBalance(),                 // 가산 후 잔액
+                transferId,
+                fromAcc.getAccountNo(),
+                req.getMemo(),
+                type
+        );
+
+        // 3) 외화 모듈 자체 이력(기존 유지)
+        String exId = transferId; // 동일 id 사용
         LocalDateTime now = LocalDateTime.now();
         String fxCodeForHist = "SELL".equals(type) ? calc.getFromCurUnit() : calc.getToCurUnit();
 
@@ -286,9 +299,66 @@ public class ForeignExchangeService {
                 .fromAmount(calc.getFromAmount())
                 .toAmount(calc.getExpectedReceiveAmount())
                 .exchangeRate(calc.getFinalExchangeRate())
-                .commissionKrw(calc.getExpectedCommission()) // 수수료 금액(원)
+                .commissionKrw(calc.getExpectedCommission())
                 .updatedAt(now)
                 .status(hist.getFhStatus())
                 .build();
+    }
+
+    // ====== 이체내역 저장 유틸 ======
+
+    /** 숫자/영문 소문자 20자 id */
+    private static String shortId() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 20);
+    }
+
+    /** 출금 기록: FX_OUT (accountOut만 세팅, accountIn은 null) */
+    private void saveOutHistory(
+            int aNo,
+            BigDecimal amountOut,
+            BigDecimal afterBalance,
+            String transferId,
+            String otherAccount,
+            String memo,
+            String txType // BUY / SELL
+    ) {
+        TransferHistory h = TransferHistory.builder()
+                .transferId(transferId)
+                .accountNo(aNo)
+                .amount(amountOut)
+                .memo(memo)
+                .otherBank("EUM")
+                .otherAccount(otherAccount)
+                .transferType("FX_OUT")
+                .afterBalance(afterBalance)
+                .transactionType(txType)
+                .accountOut(amountOut)   // 출금 금액
+                .build();                // accountIn은 null 유지
+        transferHistoryRepository.save(h);
+    }
+
+    /** 입금 기록: FX_IN (accountIn만 세팅, accountOut은 null) */
+    private void saveInHistory(
+            int aNo,
+            BigDecimal amountIn,
+            BigDecimal afterBalance,
+            String transferId,
+            String otherAccount,
+            String memo,
+            String txType // BUY / SELL
+    ) {
+        TransferHistory h = TransferHistory.builder()
+                .transferId(transferId)
+                .accountNo(aNo)
+                .amount(amountIn)
+                .memo(memo)
+                .otherBank("EUM")
+                .otherAccount(otherAccount)
+                .transferType("FX_IN")
+                .afterBalance(afterBalance)
+                .transactionType(txType)
+                .accountIn(amountIn)     // 입금 금액
+                .build();                // accountOut은 null 유지
+        transferHistoryRepository.save(h);
     }
 }

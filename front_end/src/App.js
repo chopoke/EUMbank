@@ -4,20 +4,6 @@ import BankHome from "./pages/main";
 import { Header } from './common/header';
 import { Footer } from './common/footer';
 import { useEffect, useState } from "react";
-
-// 외화
-import ForeignRatePage from "./pages/foreign/ForeignRatePage";
-import ForeignOpenPage from "./pages/foreign/ForeignOpenPage";
-import ForeignExchangePage from "./pages/foreign/ForeignExchangePage";
-
-// 계좌 개설 단계별 화면
-import Step1Consent from "./pages/account/Step1Consent";
-import Step2IdVerify from "./pages/account/Step2IdVerify";
-import Step3Info from "./pages/account/Step3Info";
-import Step4Product from "./pages/account/Step4Product";
-import Step5Done from "./pages/account/Step5Done";
-import api from "./api/axios";
-
 import { getAccessToken, setAccessToken } from "./api/axios";
 import ProtectedRoute from "./pages/account/component/ProtectedRoute";
 
@@ -37,6 +23,8 @@ import MyPage from "./pages/mypage/my_costomer2";
 import Test from './pages/test';
 import ForeignProductsPage from "./pages/foreign/ForeignProductsPage";
 import ForeignRatePage from "./pages/foreign/ForeignRatePage";
+import ForeignOpenPage from "./pages/foreign/ForeignOpenPage";
+import ForeignExchangePage from "./pages/foreign/ForeignExchangePage";
 import api from "./api/axios";
 
 // 이체 관련 페이지들
@@ -151,18 +139,30 @@ function App() {
         {depositSavingRouteElements}
 
         {/* ✅ 외환 라우팅 */}
+        <Route path="/foreign" element={<Navigate to="/foreign/rate" replace />} />
+        <Route path="/foreign/rate" element={<ForeignRatePage />} />
+        <Route path="/foreign/products" element={<ForeignProductsPage />} />
         <Route
-          path="/foreign/open"
+          path="/foreign/exchange"
           element={
-            <ProtectedRoute isLoggedIn={isLoggedIn}>
-              <ForeignOpenPage />
+            <ProtectedRoute>
+              <ForeignExchangePage />
             </ProtectedRoute>
           }
         />
 
-        <Route path="/foreign" element={<Navigate to="/foreign/rate" replace />} />
-        <Route path="/foreign/rate" element={<ForeignRatePage />} />
-        <Route path="/foreign/exchange" element={<ForeignExchangePage />} />
+        <Route
+          path="/foreign/open-account"
+          element={
+            <ProtectedRoute>
+              <ForeignOpenPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/foreign/open" element={<Navigate to="/foreign/open-account" replace />} />
+
+
+
 
         {/* 이체 관련 라우팅 */}
         <Route path="/transfer" element={

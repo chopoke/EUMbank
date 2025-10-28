@@ -684,7 +684,7 @@ export default function ForeignExchangePage() {
                   className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition duration-150"
                 >
                   <Send className="w-5 h-5 mr-2" />
-                  신청 제출
+                   환전하기
                 </button>
               </div>
             </div>
