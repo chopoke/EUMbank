@@ -205,6 +205,8 @@ function ProfileTab({initialData}) {
     gender:'',
     marketing:'',
     pinnum:'',
+    loginty: '',
+    naverid: '',
   });
 
   const [isTermsPopupOpen, setIsTermsPopupOpen] = useState(false); 
@@ -229,6 +231,8 @@ function ProfileTab({initialData}) {
         const marketingKey = initialData.cagreeMarketing;
         const addressKey = initialData.caddress;
         const pinnumKey = initialData.cpinnumber;
+        const logintyKey = initialData.loginType;
+        const naveridKey = initialData.naverid;
         setProfileData({
             name: nameKey || '', 
             enname: ennameKey || '', 
@@ -242,6 +246,8 @@ function ProfileTab({initialData}) {
             occupation: '정보 없음', // DTO에 해당 필드가 없으므로 기본값 유지
             marketing: marketingKey,
             pinnum: pinnumKey,
+            loginty: logintyKey,
+            naverid: naveridKey,
         });
     } else {
         // 이 로그가 계속 찍히지 않는지 확인하세요. (API 호출이 두 번 성공해야 합니다.)
@@ -380,7 +386,8 @@ function ProfileTab({initialData}) {
             </div>
             <div>
               <h3 className="text-xl font-semibold text-gray-800">{profileData.name}</h3>
-              <p className="text-gray-600">프리미엄 회원</p>
+              {/* <p className="text-gray-600">프리미엄 회원</p> */}
+              {profileData.naverid != null || profileData.loginty === 'NAVER' ? <p className="text-gray-600">통합아이디 회원</p> : 'ㅅㄷㄴㅅ'}
               <div className="flex items-center mt-2">
                 <div className="flex text-yellow-400">
                   {[...Array(5)].map((_, i) => (
