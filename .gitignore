@@ -35,3 +35,21 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Node (frontend)
+front_end/node_modules/
+front_end/dist/
+node_modules/
+dist/
+
+# Env / Secrets
+.env
+.env.*
+*.env
+
+# OS / Etc
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.zip
