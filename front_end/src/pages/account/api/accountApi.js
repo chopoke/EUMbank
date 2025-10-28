@@ -1,4 +1,4 @@
-import apiConfig from "../config/appConfig"
+import api from "../../../api/axios";
 
 /**
  * 최종적으로 저장하기
@@ -7,7 +7,7 @@ import apiConfig from "../config/appConfig"
  */
 export async function saveAccount(params) {
   try {
-    const res = await apiConfig.post("/api/accountSave", params);
+    const res = await api.post("/api/accountSave", params);
 
     console.log(res);
 
@@ -29,7 +29,7 @@ export async function ocrCheck(file, message) {
   form.append("message", JSON.stringify(message));
 
   try {
-    const res = await apiConfig.post("/api/ocr-file", form);
+    const res = await api.post("/api/ocr-file", form);
     return res.data;
   } catch (error) {
     console.error("OCR 요청 실패:", error.response?.data || error.message);
@@ -45,7 +45,7 @@ export async function ocrCheck(file, message) {
  */
 export async function verifyMinSjon(params) {
   try {
-    const res = await apiConfig.post("/api/verifyminsjon", params);
+    const res = await api.post("/api/verifyminsjon", params);
     return res.data;
   } catch (error) {
     console.error("검증 요청 실패:", error.response?.data || error.message);
@@ -60,7 +60,7 @@ export async function verifyMinSjon(params) {
  */
 export async function checkPinNumber() {
   try {
-    const res = await apiConfig.post("/api/checkPinNumber");
+    const res = await api.post("/api/checkPinNumber");
     return res.data;
   } catch (error) {
     console.error("검증 요청 실패:", error.response?.data || error.message);
@@ -75,7 +75,7 @@ export async function checkPinNumber() {
  */
 export async function verifyExistingPin(data) {
 
-  const res = await apiConfig.post("/api/verifyExistingPin", data);
+  const res = await api.post("/api/verifyExistingPin", data);
   return res.data;
 
 }

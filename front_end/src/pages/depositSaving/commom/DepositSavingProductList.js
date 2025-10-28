@@ -27,19 +27,19 @@ const Deposit = () => {
     };
 
     // 변경점 2: 필터링 로직을 단일 배열 기준으로 변경
-   const filteredProducts = useMemo(() => {
-            // 초기 로딩 중이거나 데이터가 없으면 빈 배열 반환
-            if (!products || products.length === 0) {
+    const filteredProducts = useMemo(() => {
+        // 초기 로딩 중이거나 데이터가 없으면 빈 배열 반환
+        if (!products || products.length === 0) {
             return [];
-            }
+        }
 
-            // 검색어가 없으면 전체 반환
-            if (!searchTerm) {
+        // 검색어가 없으면 전체 반환
+        if (!searchTerm) {
             return products;
-            }
+        }
 
-            // 안전한 필터링
-            return products.filter(product => {
+        // 안전한 필터링
+        return products.filter(product => {
             // product가 null이면 제외
             if (!product) return false;
 
@@ -49,10 +49,12 @@ const Deposit = () => {
             const search = searchTerm.toLowerCase();
 
             return name.includes(search) || description.includes(search);
-            });
-        }, [products, searchTerm]);
+        });
+    }, [products, searchTerm]);
+
+         
     const handleCardClick = (product) => {
-        
+
         sessionStorage.setItem('selectedProduct', JSON.stringify(product));
 
         navigate(product.href, { state: { productData: product } });
