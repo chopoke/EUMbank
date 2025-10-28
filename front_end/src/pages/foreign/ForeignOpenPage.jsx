@@ -6,51 +6,52 @@ import NoticeBar from "../../components/NoticeBar";
 import Modal from "../account/component/pinConponent/Modal";
 import { PinPadModal } from "../account/component/pinConponent/PinPadModal"; // default export라면 {} 제거
 import "../account/component/pinConponent/modal.css";
+import api from "../../api/axios";
 
-/* ===================== 서버 주소 ===================== */
-const API_BASE = "http://localhost:8081";
+// /* ===================== 서버 주소 ===================== */
+// const API_BASE = "http://localhost:8081";
 
-/* ===================== 공통 fetch 래퍼 ===================== */
-const getAccessToken = () => localStorage.getItem("access");
-const getRefreshToken = () => localStorage.getItem("refresh");
+// /* ===================== 공통 fetch 래퍼 ===================== */
+// const getAccessToken = () => localStorage.getItem("access");
+// const getRefreshToken = () => localStorage.getItem("refresh");
 
-async function apiFetch(url, options = {}) {
-  const fullUrl = /^https?:\/\//i.test(url) ? url : API_BASE + url.replace(/^\/?/, "/");
-  const access = getAccessToken();
-  const headers = {
-    ...(options.headers || {}),
-    ...(access ? { Authorization: `Bearer ${access}` } : {}),
-  };
+// async function apiFetch(url, options = {}) {
+//   const fullUrl = /^https?:\/\//i.test(url) ? url : API_BASE + url.replace(/^\/?/, "/");
+//   const access = getAccessToken();
+//   const headers = {
+//     ...(options.headers || {}),
+//     ...(access ? { Authorization: `Bearer ${access}` } : {}),
+//   };
 
-  const res = await fetch(fullUrl, { credentials: "include", ...options, headers });
+//   const res = await fetch(fullUrl, { credentials: "include", ...options, headers });
 
-  try {
-    const cloned = res.clone();
-    const txt = await cloned.text();
-    console.log("[apiFetch]", options.method || "GET", fullUrl, "→", res.status, res.statusText, "\n", txt);
-  } catch {}
+//   try {
+//     const cloned = res.clone();
+//     const txt = await cloned.text();
+//     console.log("[apiFetch]", options.method || "GET", fullUrl, "→", res.status, res.statusText, "\n", txt);
+//   } catch {}
 
-  // 토큰 리프레시
-  if (res.status !== 401 || options._retry) return res;
-  const refresh = getRefreshToken();
-  if (!refresh) return res;
+//   // 토큰 리프레시
+//   if (res.status !== 401 || options._retry) return res;
+//   const refresh = getRefreshToken();
+//   if (!refresh) return res;
 
-  try {
-    const r = await fetch(API_BASE + "/api/auth/refresh", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ refresh }),
-    });
-    if (!r.ok) return res;
-    const data = await r.json();
-    if (!data?.access) return res;
-    localStorage.setItem("access", data.access);
-    return apiFetch(url, { ...options, _retry: true });
-  } catch {
-    return res;
-  }
-}
+//   try {
+//     const r = await fetch(API_BASE + "/api/auth/refresh", {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       credentials: "include",
+//       body: JSON.stringify({ refresh }),
+//     });
+//     if (!r.ok) return res;
+//     const data = await r.json();
+//     if (!data?.access) return res;
+//     localStorage.setItem("access", data.access);
+//     return apiFetch(url, { ...options, _retry: true });
+//   } catch {
+//     return res;
+//   }
+// }
 
 /* ===================== 초기 상태 ===================== */
 const init = {
@@ -91,12 +92,13 @@ export default function ForeignOpenPage() {
   // 1) 내 정보(고객번호 + 영문이름) 채우기
   useEffect(() => {
     (async () => {
-      const r = await apiFetch("/api/foreign/open/me");
-      if (!r.ok) {
-        console.warn("/api/foreign/open/me 실패:", r.status, await r.text().catch(() => ""));
-        return;
-      }
-      const me = await r.json();
+      // const r = await apiFetch("/api/foreign/open/me");
+      // if (!r.ok) {
+      //   console.warn("/api/foreign/open/me 실패:", r.status, await r.text().catch(() => ""));
+      //   return;
+      // }
+      // const me = await r.json();
+      const { data: me } = await api.get("/api/foreign/open/me");
       const id = me?.customerNo ?? me?.cNo ?? me?.c_no ?? me?.customerId ?? me?.id;
       const num = Number(String(id).replace(/\D+/g, ""));
       const cNameEn = me?.c_name_en ?? me?.cNameEn ?? "";
@@ -126,9 +128,7 @@ export default function ForeignOpenPage() {
   ]);
 
   useEffect(() => {
-    apiFetch("/api/foreign/rates")
-      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-      .then((data) => {
+    api.get("/api/foreign/rates").then(({ data }) => {
         const rows = Array.isArray(data) ? data : data?.rows;
         if (!Array.isArray(rows)) return;
         const list = rows
@@ -163,42 +163,61 @@ export default function ForeignOpenPage() {
 
     setSubmitting(true);
     try {
-      const res = await apiFetch("/api/foreign/open", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          agreeTerms: form.agreeTerms ? "Y" : "N",
-          agreePrivacy: form.agreePrivacy ? "Y" : "N",
-          agreeMarketing: form.agreeMarketing ? "Y" : "N",
-          agreeRisk: form.agreeRisk ? "Y" : "N",
-          agreeProduct: form.agreeProduct ? "Y" : "N",
+      // const res = await apiFetch("/api/foreign/open", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     agreeTerms: form.agreeTerms ? "Y" : "N",
+      //     agreePrivacy: form.agreePrivacy ? "Y" : "N",
+      //     agreeMarketing: form.agreeMarketing ? "Y" : "N",
+      //     agreeRisk: form.agreeRisk ? "Y" : "N",
+      //     agreeProduct: form.agreeProduct ? "Y" : "N",
 
-          // 계좌
-          currency: form.currency,
-          pin: form.pin, // 6자리
-          pinNumber: Number(form.pinNumber), // 6자리
-          nickname: form.nickname || null,
-          preferredAccountNo: form.previewAccountNo || null,
+      //     // 계좌
+      //     currency: form.currency,
+      //     pin: form.pin, // 6자리
+      //     pinNumber: Number(form.pinNumber), // 6자리
+      //     nickname: form.nickname || null,
+      //     preferredAccountNo: form.previewAccountNo || null,
 
-          // 본인확인
-          customerId: Number(form.customerId),
-          name: form.name,
-          englishName: form.englishName,
-          birth: `${form.birth.slice(0, 4)}-${form.birth.slice(4, 6)}-${form.birth.slice(6, 8)}`,
-        }),
+      //     // 본인확인
+      //     customerId: Number(form.customerId),
+      //     name: form.name,
+      //     englishName: form.englishName,
+      //     birth: `${form.birth.slice(0, 4)}-${form.birth.slice(4, 6)}-${form.birth.slice(6, 8)}`,
+      //   }),
+      // });
+
+      // if (!res.ok) {
+      //   let msg = "";
+      //   try {
+      //     const data = await res.clone().json();
+      //     msg = data?.message || JSON.stringify(data);
+      //   } catch {
+      //     msg = await res.text().catch(() => "");
+      //   }
+      //   throw new Error(`HTTP ${res.status} ${msg}`.trim());
+      // }
+      // const data = await res.json();
+      const { data } = await api.post("/api/foreign/open", {
+        agreeTerms: form.agreeTerms ? "Y" : "N",
+        agreePrivacy: form.agreePrivacy ? "Y" : "N",
+        agreeMarketing: form.agreeMarketing ? "Y" : "N",
+        agreeRisk: form.agreeRisk ? "Y" : "N",
+        agreeProduct: form.agreeProduct ? "Y" : "N",
+
+        currency: form.currency,
+        pin: form.pin,
+        pinNumber: Number(form.pinNumber),
+        nickname: form.nickname || null,
+        preferredAccountNo: form.previewAccountNo || null,
+
+        customerId: Number(form.customerId),
+        name: form.name,
+        englishName: form.englishName,
+        birth: `${form.birth.slice(0, 4)}-${form.birth.slice(4, 6)}-${form.birth.slice(6, 8)}`,
       });
-
-      if (!res.ok) {
-        let msg = "";
-        try {
-          const data = await res.clone().json();
-          msg = data?.message || JSON.stringify(data);
-        } catch {
-          msg = await res.text().catch(() => "");
-        }
-        throw new Error(`HTTP ${res.status} ${msg}`.trim());
-      }
-      const data = await res.json();
+      // const { data } = await api.post("/api/foreign/open", { ...payload });
       setResult(data);
       setStep(3);
     } catch (e) {
@@ -286,16 +305,22 @@ function Step1Terms({ form, setForm, next }) {
   useEffect(() => {
     (async () => {
       try {
-        const r = await apiFetch("/api/foreign/terms");
-        if (r.ok) {
-          const data = await r.json();
-          if (Array.isArray(data) && data.length) {
-            setTermsList(data);
-            setLoading(false);
-            return;
-          }
+        // const r = await apiFetch("/api/foreign/terms");
+        // if (r.ok) {
+        //   const data = await r.json();
+        //   if (Array.isArray(data) && data.length) {
+        //     setTermsList(data);
+        //     setLoading(false);
+        //     return;
+        //   }
+        // }
+        // setTermsList(fallbackTerms); // 폴백
+        const { data } = await api.get("/api/foreign/terms");
+        if (Array.isArray(data) && data.length) {
+          setTermsList(data);
+          return;
         }
-        setTermsList(fallbackTerms); // 폴백
+        setTermsList(fallbackTerms);
       } catch {
         setTermsList(fallbackTerms);
       } finally {
@@ -519,38 +544,68 @@ function Step2KYC({ form, setForm, prev, next }) {
 /* ===================== Step 3 ===================== */
 function Step3ReviewOpen({ form, setForm, submitting, prev, onSubmit, result, currencies }) {
   useEffect(() => {
-    if (result) return;
-    if (!form.currency) return;
+  //   if (result) return;
+  //   if (!form.currency) return;
 
-    let cancelled = false;
+  //   let cancelled = false;
 
-    async function fetchPreviewWithRetry(maxTry = 4, delayMs = 300) {
-      for (let i = 0; i < maxTry; i++) {
-        try {
-          const r = await apiFetch(
-            `/api/foreign/open/preview?currency=${encodeURIComponent(form.currency)}`
-          );
-          if (!r.ok) {
-            await new Promise(res => setTimeout(res, delayMs * Math.pow(1.6, i)));
-            continue;
-          }
-          const data = await r.json();
-          const no = data?.accountNo || data?.accNo || data?.account_no || data?.account || "";
-          if (!cancelled && no) {
-            setForm(f => ({ ...f, previewAccountNo: no }));
-            return;
-          }
-        } catch {}
-        await new Promise(res => setTimeout(res, delayMs * Math.pow(1.6, i)));
-      }
-      if (!cancelled) setForm(f => ({ ...f, previewAccountNo: "" }));
+  //   async function fetchPreviewWithRetry(maxTry = 4, delayMs = 300) {
+  //     for (let i = 0; i < maxTry; i++) {
+  //       try {
+  //         const r = await apiFetch(
+  //           `/api/foreign/open/preview?currency=${encodeURIComponent(form.currency)}`
+  //         );
+  //         if (!r.ok) {
+  //           await new Promise(res => setTimeout(res, delayMs * Math.pow(1.6, i)));
+  //           continue;
+  //         }
+  //         const data = await r.json();
+  //         const no = data?.accountNo || data?.accNo || data?.account_no || data?.account || "";
+  //         if (!cancelled && no) {
+  //           setForm(f => ({ ...f, previewAccountNo: no }));
+  //           return;
+  //         }
+  //       } catch {}
+  //       await new Promise(res => setTimeout(res, delayMs * Math.pow(1.6, i)));
+  //     }
+  //     if (!cancelled) setForm(f => ({ ...f, previewAccountNo: "" }));
+  //   }
+
+  //   setForm(f => ({ ...f, previewAccountNo: "" }));
+  //   fetchPreviewWithRetry();
+
+  //   return () => { cancelled = true; };
+  // }, [form.currency, result, setForm]);
+  if (result || !form.currency) return;
+
+  let alive = true;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  setForm((f) => ({ ...f, previewAccountNo: "" }));
+
+  (async function fetchPreviewWithRetry(maxTry = 4, delayMs = 300) {
+    for (let i = 0; i < maxTry; i++) {
+      try {
+        const { data } = await api.get("/api/foreign/open/preview", {
+          params: { currency: form.currency },
+        });
+        const no =
+          data?.accountNo || data?.accNo || data?.account_no || data?.account || "";
+        if (alive && no) {
+          setForm((f) => ({ ...f, previewAccountNo: no }));
+          return;
+        }
+      } catch {}
+      await sleep(delayMs * Math.pow(1.6, i));
+      if (!alive) return;
     }
+    if (alive) setForm((f) => ({ ...f, previewAccountNo: "" }));
+  })();
 
-    setForm(f => ({ ...f, previewAccountNo: "" }));
-    fetchPreviewWithRetry();
-
-    return () => { cancelled = true; };
-  }, [form.currency, result, setForm]);
+  return () => {
+    alive = false;
+  };
+}, [form.currency, result, setForm]);
 
   const done = !!result;
 
