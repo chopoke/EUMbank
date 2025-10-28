@@ -43,6 +43,7 @@ import { depositSavingRouteElements } from "./pages/depositSaving/router/deposit
 
 // 계좌개설
 import { accountElements } from "./pages/account/router/accountRouter";
+import AdminPage from "./pages/admin/page";
 
 function AppWrapper() {
   return <App />;
@@ -172,6 +173,13 @@ function App() {
         <Route path="/mypage" element={
           <ProtectedRoute>
             <MyPage />
+          </ProtectedRoute>
+        } />
+
+        {/* 관리자페이지 진입 */}
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <AdminPage />
           </ProtectedRoute>
         } />
 

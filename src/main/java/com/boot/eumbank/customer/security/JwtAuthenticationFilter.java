@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -56,10 +57,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String userId = jwt.getUserIdFromAccess(token); // 토큰에서 userId(subject) 추출
 
                 customers.findByUserId(userId).ifPresent(c -> {
+                    String raw = c.getRole();                       // "USER" / "ADMIN" / null
+                    String role = (raw == null || raw.isBlank()) ? "USER" : raw.toUpperCase();
+                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
                     var auth = new UsernamePasswordAuthenticationToken(
                             c,                       // Principal (원하면 UserDetails로 교체 가능)
                             null,                    // Credentials
-                            List.of()                // 권한(필요 시 매핑)
+                            authorities                // 권한(필요 시 매핑)
                     );
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 });
