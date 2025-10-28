@@ -23,6 +23,8 @@ import MyPage from "./pages/mypage/my_costomer2";
 import Test from './pages/test';
 import ForeignProductsPage from "./pages/foreign/ForeignProductsPage";
 import ForeignRatePage from "./pages/foreign/ForeignRatePage";
+import ForeignOpenPage from "./pages/foreign/ForeignOpenPage";
+import ForeignExchangePage from "./pages/foreign/ForeignExchangePage";
 import api from "./api/axios";
 
 // 이체 관련 페이지들
@@ -140,6 +142,27 @@ function App() {
         <Route path="/foreign" element={<Navigate to="/foreign/rate" replace />} />
         <Route path="/foreign/rate" element={<ForeignRatePage />} />
         <Route path="/foreign/products" element={<ForeignProductsPage />} />
+        <Route
+          path="/foreign/exchange"
+          element={
+            <ProtectedRoute>
+              <ForeignExchangePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/foreign/open-account"
+          element={
+            <ProtectedRoute>
+              <ForeignOpenPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/foreign/open" element={<Navigate to="/foreign/open-account" replace />} />
+
+
+
 
         {/* 이체 관련 라우팅 */}
         <Route path="/transfer" element={
