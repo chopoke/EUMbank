@@ -138,7 +138,7 @@ export default function AssetDashboard() {
       pct: shares[topIdx] || 0,
       color: colors[topIdx] || "#9ca3af",
     } : null;
-    
+
     return {
       total: total || 1,
       shares, labels, colors,
@@ -223,7 +223,7 @@ export default function AssetDashboard() {
     },
     scales: {
       x: {
-        ticks: { 
+        ticks: {
           autoSkip: false,
           maxRotation: 0 ,
           callback: (value, index) =>
@@ -399,7 +399,7 @@ export default function AssetDashboard() {
                   가장 잔액이 큰 상품만 보여줍니다.
                 </div>
               </div>
-              
+
               <div className="divide-y divide-gray-200 text-sm">
                 {/* 적금 */}
               {loading ? (<div className="h-16 grid place-items-center text-sm text-gray-500">로딩 중…</div>)
@@ -448,7 +448,7 @@ export default function AssetDashboard() {
                 )
               }
               </div>
-              
+
             </div>
 
             {/* 대출 현황 */}

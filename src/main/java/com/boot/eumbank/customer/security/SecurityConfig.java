@@ -95,7 +95,8 @@ public class SecurityConfig {
                                 "/api/foreign/rates/**",
                                 "/api/healthz",
                                 "/actuator/**",
-                                "/actuator/health"
+                                "/actuator/health",
+                                "/api/foreign/rates/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

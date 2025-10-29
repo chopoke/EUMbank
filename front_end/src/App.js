@@ -68,6 +68,13 @@ import BillsLanding from "./pages/bills/BillsLanding";
 // 쳇봇
 import FloatingChatButton from "./pages/chat/page/FloatingChatButton";
 
+// 자산관리
+import AssetAnalysis from "./pages/assetManagement/page/AssetAnalysis";
+import AssetDashboard from "./pages/assetManagement/page/AssetDashboard";
+import AssetPeerComparison from "./pages/assetManagement/page/AssetPeerComparison";
+import AssetRecommendation from "./pages/assetManagement/page/AssetRecommendation";
+import AssetReport from "./pages/assetManagement/page/AssetReport";
+
 function AppWrapper() {
   return <App />;
 }
@@ -155,7 +162,7 @@ function App() {
 
         {/* 주택담보대출 상품 목록 */}
         <Route path="/loan/products" element={<LoanProductList />} />
-        
+
         {/* 상품 상세 */}
         <Route path="/loan/products/:code" element={<LoanProductDetail />} />
 
@@ -217,6 +224,59 @@ function App() {
             <BulkTransferComplete />
           </ProtectedRoute>
         } />
+
+        {/* 자산관리 */}
+        <Route path="/asset" element={<Navigate to="/asset/dashboard" replace />}/>
+
+         {/* 자산 대시보드 (자산 현황) */}
+        <Route
+          path="/asset/dashboard"
+          element={
+            <ProtectedRoute>
+              <AssetDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 자산 분석 */}
+        <Route
+          path="/asset/analysis"
+          element={
+            <ProtectedRoute>
+              <AssetAnalysis />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 또래 비교 */}
+        <Route
+          path="/asset/peer"
+          element={
+            <ProtectedRoute>
+              <AssetPeerComparison />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 맞춤형 추천 */}
+        <Route
+          path="/asset/recommend"
+          element={
+            <ProtectedRoute>
+              <AssetRecommendation />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 월간 리포트 */}
+        <Route
+          path="/asset/report"
+          element={
+            <ProtectedRoute>
+              <AssetReport />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/transfer/auto" element={
           <ProtectedRoute>
             <Navigate to="/transfer" replace />
