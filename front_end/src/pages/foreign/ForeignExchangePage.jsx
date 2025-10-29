@@ -135,7 +135,6 @@ export default function ForeignExchangePage() {
     toKrwAccountNo:   '',
     toFxAccountNo:    '',
     fxAmount: '',
-    exchangeType: '송금',
     memo: '',
   });
 
@@ -214,7 +213,7 @@ export default function ForeignExchangePage() {
         }));
 
         if (!onlyKrw.length && !onlyFx.length) {
-          setMessage('계좌를 찾지 못했습니다. (응답 구조/키 확인 필요)');
+          setMessage('계좌를 찾지 못했습니다. (계좌생성 필요)');
         }
       } catch (e) {
         console.error(e);
@@ -268,7 +267,7 @@ export default function ForeignExchangePage() {
         toCurUnit:     selectedFx,
         fxAmount,
         memo: form.memo,
-        exchangeType: form.exchangeType,
+        exchangeType: '송금',                 // ✅ UI 고정
         commissionRate: myPreferentialRate,
       };
     }
@@ -284,7 +283,7 @@ export default function ForeignExchangePage() {
       toCurUnit:     'KRW',
       fxAmount,
       memo: form.memo,
-      exchangeType: form.exchangeType,
+      exchangeType: '송금',                 // ✅ UI 고정
       commissionRate: myPreferentialRate,
     };
   };
@@ -343,7 +342,7 @@ export default function ForeignExchangePage() {
   /* ========== 히스토리 ========== */
   const ExchangeHistory = ({ version = 0 }) => {
     const [history, setHistory] = useState([]);
-    const [historyLoading, setHistoryLoading] = useState(false);
+       const [historyLoading, setHistoryLoading] = useState(false);
 
     const fetchHistory = useCallback(async () => {
       if (!cNo) return;
@@ -628,7 +627,7 @@ export default function ForeignExchangePage() {
                 </label>
               </div>
 
-              {/* 우대율/유형/메모 */}
+              {/* 우대율/메모 */}
               <div className="grid grid-cols-2 gap-6 mb-8">
                 <div className="block">
                   <span className="text-sm font-medium text-gray-700">우대율 (%)</span>
@@ -638,33 +637,18 @@ export default function ForeignExchangePage() {
                   <span className="ml-2 text-xs text-gray-500">(서버 정책에 따라 자동 적용)</span>
                 </div>
 
-                <div className="space-y-4">
-                  <label className="block">
-                    <span className="text-sm font-medium text-gray-700">거래 유형</span>
-                    <select
-                      name="exchangeType"
-                      value={form.exchangeType}
-                      onChange={handleChange}
-                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                    >
-                      <option value="송금">송금 (Transfer)</option>
-                      <option value="현찰">현찰 (Cash)</option>
-                      <option value="여행자수표">여행자수표 (T/C)</option>
-                    </select>
-                  </label>
-
-                  <label className="block">
-                    <span className="text-sm font-medium text-gray-700">메모 (선택)</span>
-                    <input
-                      type="text"
-                      name="memo"
-                      value={form.memo}
-                      onChange={handleChange}
-                      placeholder="예: 여행 경비"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                  </label>
-                </div>
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-700">메모 (선택)</span>
+                  <input
+                    type="text"
+                    name="memo"
+                    value={form.memo}
+                    onChange={handleChange}
+                    placeholder="예: 여행 경비"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"
+                    maxLength={60}
+                  />
+                </label>
               </div>
 
               {/* 버튼 */}

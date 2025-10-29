@@ -54,7 +54,7 @@ public class SecurityConfig {
                                 "/api/foreign/exchange/calculate",
                                 "/api/foreign/exchange",
                                 "/actuator/**",
-                                "/api/foreign/rates",
+                                "/api/foreign/rates/**",
                                 "/api/healthz"
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
