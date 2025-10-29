@@ -23,6 +23,8 @@ import MyPage from "./pages/mypage/my_costomer2";
 import Test from './pages/test';
 import ForeignProductsPage from "./pages/foreign/ForeignProductsPage";
 import ForeignRatePage from "./pages/foreign/ForeignRatePage";
+import ForeignOpenPage from "./pages/foreign/ForeignOpenPage";
+import ForeignExchangePage from "./pages/foreign/ForeignExchangePage";
 import api from "./api/axios";
 
 // 이체 관련 페이지들
@@ -43,6 +45,12 @@ import { depositSavingRouteElements } from "./pages/depositSaving/router/deposit
 
 // 계좌개설
 import { accountElements } from "./pages/account/router/accountRouter";
+
+// 관리자페이지
+import AdminPage from "./pages/admin/page";
+
+// 공과금
+import BillsLanding from "./pages/bills/BillsLanding";
 
 function AppWrapper() {
   return <App />;
@@ -127,6 +135,7 @@ function App() {
 
         {/* 주택담보대출 상품 목록 */}
         <Route path="/loan/products" element={<LoanProductList />} />
+        
         {/* 상품 상세 */}
         <Route path="/loan/products/:code" element={<LoanProductDetail />} />
 
@@ -140,6 +149,27 @@ function App() {
         <Route path="/foreign" element={<Navigate to="/foreign/rate" replace />} />
         <Route path="/foreign/rate" element={<ForeignRatePage />} />
         <Route path="/foreign/products" element={<ForeignProductsPage />} />
+        <Route
+          path="/foreign/exchange"
+          element={
+            <ProtectedRoute>
+              <ForeignExchangePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/foreign/open-account"
+          element={
+            <ProtectedRoute>
+              <ForeignOpenPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/foreign/open" element={<Navigate to="/foreign/open-account" replace />} />
+
+
+
 
         {/* 이체 관련 라우팅 */}
         <Route path="/transfer" element={
@@ -168,10 +198,20 @@ function App() {
           </ProtectedRoute>
         } />
 
+        {/* 공과금페이지 */}
+        <Route path="/bills" element={<BillsLanding />} />
+
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={
           <ProtectedRoute>
             <MyPage />
+          </ProtectedRoute>
+        } />
+
+        {/* 관리자페이지 진입 */}
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <AdminPage />
           </ProtectedRoute>
         } />
 

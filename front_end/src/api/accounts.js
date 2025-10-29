@@ -27,5 +27,5 @@ export const fetchLoanProductDetail = (code) =>
   api.get(`/api/loan/products/${code}`);
 
 export const updateProfile = (profile) => {
-  api.put("/api/mypage", profile);
+  return api.put("/api/mypage", profile);
 };
