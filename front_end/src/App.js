@@ -45,7 +45,12 @@ import { depositSavingRouteElements } from "./pages/depositSaving/router/deposit
 
 // 계좌개설
 import { accountElements } from "./pages/account/router/accountRouter";
+
+// 관리자페이지
 import AdminPage from "./pages/admin/page";
+
+// 공과금
+import BillsLanding from "./pages/bills/BillsLanding";
 
 function AppWrapper() {
   return <App />;
@@ -130,6 +135,7 @@ function App() {
 
         {/* 주택담보대출 상품 목록 */}
         <Route path="/loan/products" element={<LoanProductList />} />
+        
         {/* 상품 상세 */}
         <Route path="/loan/products/:code" element={<LoanProductDetail />} />
 
@@ -191,6 +197,9 @@ function App() {
             <BulkTransferComplete />
           </ProtectedRoute>
         } />
+
+        {/* 공과금페이지 */}
+        <Route path="/bills" element={<BillsLanding />} />
 
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={
