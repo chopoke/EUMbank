@@ -19,6 +19,16 @@ public class QForeignExchange extends EntityPathBase<ForeignExchange> {
 
     public static final QForeignExchange foreignExchange = new QForeignExchange("foreignExchange");
 
+    public final StringPath agreeMarketing = createString("agreeMarketing");
+
+    public final StringPath agreePrivacy = createString("agreePrivacy");
+
+    public final StringPath agreeProduct = createString("agreeProduct");
+
+    public final StringPath agreeRisk = createString("agreeRisk");
+
+    public final StringPath agreeTerms = createString("agreeTerms");
+
     public final NumberPath<Integer> aNo = createNumber("aNo", Integer.class);
 
     public final NumberPath<Integer> cNo = createNumber("cNo", Integer.class);
