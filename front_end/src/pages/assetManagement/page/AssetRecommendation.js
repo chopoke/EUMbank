@@ -1,4 +1,5 @@
 // src/pages/assetManagement/page/Recommendation.js
+import { Link } from "react-router-dom";
 import AssetPageHeader from "../components/AssetPageHeader";
 
 export default function AssetRecommendation() {
@@ -11,6 +12,16 @@ export default function AssetRecommendation() {
       />
 
       <section className="content-container px-6 pt-0 pb-16 md:pb-20">
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-4 flex flex-wrap items-center gap-3">
+          <div className="text-sm font-semibold text-gray-900">자산관리 허브</div>
+          <div className="text-[12px] text-blue-700">분석 · 또래 비교 · 리포트를 한 곳에서</div>
+          <div className="ml-auto flex gap-2">
+            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/analysis">자산 분석</Link>
+            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/peer">또래 비교</Link>
+            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/report">월간 리포트</Link>
+          </div>
+        </div>
+
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-6 flex flex-col gap-8">
 
           {/* 개인화 제안 배너 */}

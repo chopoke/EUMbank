@@ -1,6 +1,7 @@
 // src/pages/assetManagement/page/Analysis.js
 import { PlaceholderChart } from "../components/PlaceholderChart";
 import AssetPageHeader from "../components/AssetPageHeader";
+import { Link } from "react-router-dom";
 
 export default function AssetAnalysis() {
   return (
@@ -11,7 +12,17 @@ export default function AssetAnalysis() {
         current="analysis"
       />
 
-      <section className="content-container px-6 pb-16 md:pb-20">
+      <section className="content-container px-6  pb-16 md:pb-20">
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-4 flex flex-wrap items-center gap-3">
+          <div className="text-sm font-semibold text-gray-900">자산관리 허브</div>
+          <div className="text-[12px] text-blue-700">또래 비교 · 추천 · 리포트를 한 곳에서</div>
+          <div className="ml-auto flex gap-2">
+            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/peer">또래 비교</Link>
+            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/recommend">맞춤 추천</Link>
+            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/report">월간 리포트</Link>
+          </div>
+        </div>
+        
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-6 flex flex-col gap-8">
 
           {/* 상단 3열 그리드 */}
