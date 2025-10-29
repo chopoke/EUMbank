@@ -15,7 +15,6 @@ export default function Step5Done() {
 
     // 2) 액션/빌더는 ref로 고정 (참조 불변)
     const buildPayloadRef = useRef(useAccountOpenStore.getState().buildPayload);
-    const markSubmittedRef = useRef(useAccountOpenStore.getState().markSubmitted);
 
     // 3) StrictMode 이펙트 중복 호출 방지
     const hasPostedRef = useRef(false);

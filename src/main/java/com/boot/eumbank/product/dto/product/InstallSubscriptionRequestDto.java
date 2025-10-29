@@ -1,4 +1,5 @@
 package com.boot.eumbank.product.dto.product;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,12 +12,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DepositSubscriptionRequestDto {
+public class InstallSubscriptionRequestDto {
 
     /**
      * 상품 NO
      */
-    private String dpNo;
+    private String ipNo;
 
     /**
      * 상품명
@@ -41,12 +42,17 @@ public class DepositSubscriptionRequestDto {
     /**
      * 입금 계좌 번호 (신규 생성될 예금 계좌)
      */
-    private String depositAccount;
+    private String savingAccount;
 
     /**
      * 계좌 비밀번호
      */
     private String pin;
+
+    /**
+     * 납입일 (매월 납입할 날짜, 1~31)
+     */
+    private Integer payDay;
 
     /**
      * 서명 날짜

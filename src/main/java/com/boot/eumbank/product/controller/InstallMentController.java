@@ -1,15 +1,17 @@
 package com.boot.eumbank.product.controller;
 
-import com.boot.eumbank.product.dto.product.DepositSubscriptionRequestDto;
-import com.boot.eumbank.product.service.product.DepositService;
-import com.boot.eumbank.product.service.product.Impl.DepositServiceImpl;
+import com.boot.eumbank.product.dto.product.InstallSubscriptionRequestDto;
+import com.boot.eumbank.product.service.product.InstallService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
@@ -18,27 +20,21 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class DepositController {
+public class InstallMentController {
 
-    private Logger logger = LoggerFactory.getLogger(DepositServiceImpl.class);
+    private Logger logger = LoggerFactory.getLogger(InstallMentController.class);
 
-    private final DepositService depositService;
+    private final InstallService installService;
 
-    /**
-     * 예금상품 가입
-     * @param requestDto 가입 요청 정보 (productName, amount, period)
-     * @param signedPdfFile 서명된 PDF 파일
-     * @return 가입 결과
-     */
-    @PostMapping(value = "/depositproductsave",
+    @PostMapping(value = "/savingproductsave",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<String, Object>> depositSave(
-            @RequestPart(value = "subscriptionRequest") DepositSubscriptionRequestDto requestDto,
+    public ResponseEntity<Map<String, Object>> savingSave(
+            @RequestPart(value = "subscriptionRequest") InstallSubscriptionRequestDto requestDto,
             @RequestPart(value = "signedPdf") MultipartFile signedPdfFile) {
 
         logger.info("========================================");
-        logger.info("예금 가입 요청 수신");
+        logger.info("적금 가입 요청 수신");
         logger.info("========================================");
         logger.info("요청 DTO: {}", requestDto);
         logger.info("파일명: {}", signedPdfFile != null ? signedPdfFile.getOriginalFilename() : "null");
@@ -98,18 +94,18 @@ public class DepositController {
 
             // 3. 서비스 레이어 호출 (username 없이)
             logger.info("서비스 레이어 호출 시작");
-            String savedFilePath = depositService.depositSubscription(
+            String savedFilePath = installService.installSubscription(
                     requestDto,
                     signedPdfFile
             );
             logger.info("서비스 레이어 호출 완료. 저장 경로: {}", savedFilePath);
 
-            depositService.depositSave(requestDto);
+            installService.installSave(requestDto);
 
             logger.info("========================================");
             logger.info("예금 테이블 저장 완료 (성공)");
             logger.info("========================================");
-            
+
             // 4. 성공 응답
             response.put("success", true);
             response.put("message", "가입 신청이 성공적으로 완료되었습니다.");
@@ -133,6 +129,8 @@ public class DepositController {
             response.put("message", "처리 중 오류가 발생했습니다: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
+
     }
+
 
 }

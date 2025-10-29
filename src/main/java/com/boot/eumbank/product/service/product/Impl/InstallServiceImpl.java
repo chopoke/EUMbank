@@ -2,11 +2,11 @@ package com.boot.eumbank.product.service.product.Impl;
 
 import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.customer.entity.Customer;
-import com.boot.eumbank.product.dto.product.DepositSubscriptionRequestDto;
+import com.boot.eumbank.product.dto.product.InstallSubscriptionRequestDto;
 import com.boot.eumbank.product.dto.product.ProductDto;
 import com.boot.eumbank.product.jpa.repository.AccountQueryRepository;
-import com.boot.eumbank.product.jpa.repository.DepositQueryRepository;
-import com.boot.eumbank.product.service.product.DepositService;
+import com.boot.eumbank.product.jpa.repository.InstallQueryRepository;
+import com.boot.eumbank.product.service.product.InstallService;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -35,24 +35,22 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class DepositServiceImpl implements DepositService {
+public class InstallServiceImpl implements InstallService {
 
-    private Logger logger = LoggerFactory.getLogger(DepositServiceImpl.class);
-
-    private final DepositQueryRepository depositQueryRepository;
+    private Logger logger = LoggerFactory.getLogger(InstallServiceImpl.class);
 
     private final AccountQueryRepository accountQueryRepository;
+
+    private final InstallQueryRepository installQueryRepository;
 
     // application.properties에서 파일 저장 경로를 주입받음
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-
-
     @Override
     @Transactional
-    public String depositSubscription(
-            DepositSubscriptionRequestDto requestDto,
+    public String installSubscription(
+            InstallSubscriptionRequestDto requestDto,
             MultipartFile signedPdfFile) {
 
         logger.info("=== PDF 처리 시작 ===");
@@ -160,17 +158,17 @@ public class DepositServiceImpl implements DepositService {
     }
 
     @Override
-    public void depositSave(DepositSubscriptionRequestDto requestDto) {
+    public void installSave(InstallSubscriptionRequestDto requestDto) {
 
         // --- 1. 현재 로그인한 사용자(JWT) 정보 가져오기 ---
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
 
-        ProductDto depositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
+        ProductDto installProducts = installQueryRepository.findOneInstallProducts(requestDto.getIpNo());
 
         Account oneAccount = accountQueryRepository.findOneAccount(customer);
 
-        depositQueryRepository.depositSave(requestDto, customer, depositProducts, oneAccount);
+        installQueryRepository.installSave(requestDto, customer, installProducts, oneAccount);
     }
 
     // ✅ 헬퍼 메소드 추가: 지정된 좌표에 텍스트를 추가하는 로직

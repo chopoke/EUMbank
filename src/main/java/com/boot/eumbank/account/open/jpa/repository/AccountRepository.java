@@ -49,6 +49,9 @@ public class AccountRepository {
         Pattern pattern = Pattern.compile("\\((\\d+)\\)$");
         Matcher matcher = pattern.matcher(addressFromId);
 
+        // 성별 체크하는 곳...
+        System.out.println("rrn13FormId" + rrn13FormId);
+
         if (matcher.find()) {
             // 3. 첫 번째 그룹(숫자 부분)의 값을 가져옵니다.
             czipcode = matcher.group(1);

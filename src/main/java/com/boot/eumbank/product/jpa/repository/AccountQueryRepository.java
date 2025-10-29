@@ -2,6 +2,7 @@ package com.boot.eumbank.product.jpa.repository;
 
 import com.boot.eumbank.account.open.controller.AccountController;
 import com.boot.eumbank.account.open.entity.account.Account;
+import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.product.dto.product.AccountDto;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -33,6 +34,21 @@ public class AccountQueryRepository {
         return queryFactory
                 .selectFrom(account)
                 .fetch();
+
+    }
+
+    /**
+     * 예금 상품등록을 위한 특정 게좌 조회
+     * @return
+     */
+    public Account findOneAccount(Customer customer) {
+
+        logger.info("AccountQueryRepository => findOneAccount()");
+
+        return queryFactory
+                .selectFrom(account)
+                .where(account.cNo.eq(customer.getCustomerNo()))
+                .fetchOne();
 
     }
 
