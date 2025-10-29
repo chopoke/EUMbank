@@ -78,7 +78,7 @@ export function Header({ isLoggedIn, user, onLogout }) {
           <nav className="main-nav-links">
             <Link to="/accounts" className="nav-link">개인</Link>
             <Link to="/products" className="nav-link">상품</Link>
-            <Link to="/wealth" className="nav-link nav-link-active">자산관리</Link>
+            <Link to="/asset" className="nav-link nav-link-active">자산관리</Link>
             <Link to="/foreign/rate" className="nav-link">외환/환율</Link>
             <Link to="/mypage" className="nav-link"><img src={myp} className="mypage w-5"/></Link>
             {/* <Link to="/events" className="nav-link">이벤트</Link> */}
