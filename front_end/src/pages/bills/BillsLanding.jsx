@@ -1,6 +1,12 @@
-// src/pages/bills/BillsLanding.jsx
-import React, { useMemo, useState } from "react";
-// import api from "../../api/axios";
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+// API 래퍼는 존재하면 사용, 없으면 안전하게 넘어가도록 동적 import
+let apiFns = {};
+(async () => {
+  try {
+    apiFns = await import("../../api/bills"); // { listInvoices, createAutopay, payInvoice }
+  } catch {}
+})();
 
 const theme = {
   primary: "bg-blue-600 hover:bg-blue-700",
@@ -17,6 +23,10 @@ const theme = {
 };
 
 export default function BillsLanding() {
+  const { ubNo: ubNoParam } = useParams();
+  const ubNo = ubNoParam ? Number(ubNoParam) : null;
+  const USE_API = Number.isInteger(ubNo); // /bills/:ubNo 인 경우 API 연동 모드
+
   const categories = useMemo(
     () => [
       { key: "electric", label: "전기", icon: "ri-flashlight-line" },
@@ -37,42 +47,115 @@ export default function BillsLanding() {
   const [account, setAccount] = useState("");
   const [history, setHistory] = useState(() => mockHistory());
 
+  // API 모드용 상태
+  const [invoices, setInvoices] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("READY");
+  const [autoForm, setAutoForm] = useState({
+    aNo: "1001",
+    payDay: 25,
+    payTime: "09:00:00",
+    startDate: new Date().toISOString().slice(0, 10),
+    endDate: "",
+    memo: "기본 자동이체",
+  });
+
+  // 메인 입력 핸들러
   function onChange(e) {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
   }
 
+  // 조회(좌측 카드) — UI 유지 (Mock). API 모드에서도 화면은 유지하되 납부 동작만 API로 연결.
   async function lookup() {
     setMsg(""); setLoading(true); setResult(null);
     try {
-      // const { data } = await api.get(`/api/bill/${type}/lookup`, { params: form });
-      // setResult(data);
-      await delay(400);
+      await delay(300);
       setResult(mockLookup(type, form));
     } catch {
       setMsg("조회 실패. 입력값을 확인하세요.");
     } finally { setLoading(false); }
   }
 
+  // 납부(조회 카드의 납부 버튼) — API 모드일 땐 해당 월 인보이스 찾아서 실제 결제, 아니면 Mock 이력만 갱신
   async function payNow() {
     if (!result || !account) return;
     setMsg(""); setLoading(true);
     try {
-      // await api.post(`/api/bill/pay`, { type, ...form, accountNo: account });
-      await delay(500);
-      const paid = {
-        id: Math.random().toString(36).slice(2),
-        date: new Date().toISOString().slice(0, 10),
-        item: `${labelOf(type)} ${result.billMonth}`,
-        amount: result.amount,
-        status: "납부완료",
-      };
-      setHistory((h) => [paid, ...h].slice(0, 10));
+      if (USE_API && apiFns?.payInvoice && apiFns?.listInvoices) {
+        // 조회된 청구월과 같은 인보이스 찾기 → 없으면 첫 READY 결제
+        const data = await apiFns.listInvoices(ubNo, { status: statusFilter || undefined });
+        const target = data.find(d => d.ym === result.billMonth) || data.find(d => d.status === "READY");
+        if (!target) throw new Error("해당 월 청구서가 없습니다.");
+        await apiFns.payInvoice(target.biNo, { aNo: onlyDigits(account) || Number(autoForm.aNo) || 0 });
+        alert("납부가 완료되었습니다.");
+        const ref = await apiFns.listInvoices(ubNo, { status: statusFilter || undefined });
+        setInvoices(ref);
+      } else {
+        // Mock
+        await delay(400);
+        const paid = {
+          id: Math.random().toString(36).slice(2),
+          date: new Date().toISOString().slice(0, 10),
+          item: `${labelOf(type)} ${result.billMonth}`,
+          amount: result.amount,
+          status: "납부완료",
+        };
+        setHistory((h) => [paid, ...h].slice(0, 10));
+        alert("납부가 완료되었습니다.");
+      }
       setResult(null); setAccount("");
-      alert("납부가 완료되었습니다.");
-    } catch {
-      setMsg("납부 실패. 다시 시도하세요.");
+    } catch (e) {
+      setMsg(e?.message || "납부 실패. 다시 시도하세요.");
     } finally { setLoading(false); }
+  }
+
+  // ===== API 모드일 때만 인보이스 목록 로드 =====
+  useEffect(() => {
+    if (!USE_API || !apiFns?.listInvoices) return;
+    let alive = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await apiFns.listInvoices(ubNo, { status: statusFilter || undefined });
+        if (alive) setInvoices(data);
+      } catch { setMsg("청구서 조회 실패"); }
+      finally { if (alive) setLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, [USE_API, ubNo, statusFilter]);
+
+  // 인보이스 표에서 직접 납부 (API 모드 전용)
+  async function onPayInvoice(biNo) {
+    if (!USE_API || !apiFns?.payInvoice) return;
+    if (!autoForm.aNo && !account) { setMsg("결제 계좌를 선택/입력하세요."); return; }
+    setLoading(true);
+    try {
+      const aNoVal = onlyDigits(account) || Number(autoForm.aNo) || 0;
+      const res = await apiFns.payInvoice(biNo, { aNo: aNoVal });
+      alert(`결제 상태: ${res.status}`);
+      const data = await apiFns.listInvoices(ubNo, { status: statusFilter || undefined });
+      setInvoices(data);
+    } catch { alert("납부 실패. 다시 시도하세요."); }
+    finally { setLoading(false); }
+  }
+
+  // 자동이체 생성 (API 모드 전용)
+  async function onCreateAutopay(e) {
+    e?.preventDefault?.();
+    if (!USE_API || !apiFns?.createAutopay) return;
+    try {
+      await apiFns.createAutopay(ubNo, {
+        aNo: Number(autoForm.aNo),
+        payDay: Number(autoForm.payDay),
+        payTime: autoForm.payTime,
+        startDate: autoForm.startDate,
+        endDate: autoForm.endDate || null,
+        memo: autoForm.memo || null,
+      });
+      alert("자동이체 스케줄 등록 완료");
+    } catch {
+      alert("자동이체 등록 실패");
+    }
   }
 
   return (
@@ -82,7 +165,7 @@ export default function BillsLanding() {
         <div className="bg-white text-gray-800 rounded-2xl p-6 shadow-sm mb-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">공과금 납부</h1>
+              <h1 className="text-2xl font-bold">공과금 납부 {USE_API ? `(ubNo: ${ubNo})` : ""}</h1>
               <p className="text-gray-500 mt-1 text-sm">
                 전기·수도·가스·통신·세금 청구서를 한 번에 조회하고 납부하세요.
               </p>
@@ -116,6 +199,7 @@ export default function BillsLanding() {
           <div className="flex flex-col lg:flex-row">
             {/* 좌측 */}
             <div className="flex-1 p-6">
+              {/* 조회 카드 (기존 UI 유지) */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                   <i className="ri-search-line text-blue-600 mr-2"></i>요금 조회
@@ -141,6 +225,7 @@ export default function BillsLanding() {
                 {msg && <div className="mt-3 text-sm text-red-600" role="alert">{msg}</div>}
               </div>
 
+              {/* 조회 결과 카드 (기존 UI 유지, 납부 버튼은 API 모드면 실제 결제 시도) */}
               {result && (
                 <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                   <div className="flex items-center justify-between mb-3">
@@ -160,7 +245,7 @@ export default function BillsLanding() {
                     <KV label="청구월" value={result.billMonth} />
                     <KV label="납기일" value={result.dueDate} />
                     <KV label="금액" value={formatKRW(result.amount)} strong />
-                    <KV label="자동이체" value={result.autoPay ? "등록" : "미등록"} />
+                    <KV label="자동이체" value={Math.random() < 0.3 ? "등록" : "미등록"} />
                   </div>
 
                   <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -169,49 +254,132 @@ export default function BillsLanding() {
                       <select value={account} onChange={(e) => setAccount(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent">
                         <option value="">계좌 선택</option>
+                        {/* value는 화면표시 계좌번호여도 되고, API 모드일 땐 숫자만 추출해 a_no로 사용 */}
                         <option value="110-123-456789">입출금통장 110-123-456789</option>
                         <option value="3333-01-9876543">자유예금 3333-01-9876543</option>
+                        {/* 필요시 실제 a_no 목록으로 교체 */}
                       </select>
                     </div>
                     <div className="flex items-end">
                       <button onClick={payNow} disabled={loading || !account}
                         className={`w-full px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 ${theme.accent}`}>
-                        {loading ? "처리 중" : "납부하기"}
+                        {loading ? "처리 중" : USE_API ? "납부하기(실제)" : "납부하기(Mock)"}
                       </button>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* 납부 이력 */}
-              <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <i className="ri-history-line text-blue-600 mr-2"></i>최근 납부 내역
-                  </h3>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <TH>날짜</TH><TH>항목</TH><TH align="right">금액</TH><TH>상태</TH>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
-                      {history.map((h) => (
-                        <tr key={h.id}>
-                          <TD>{h.date}</TD>
-                          <TD>{h.item}</TD>
-                          <TD align="right">{formatKRW(h.amount)}</TD>
-                          <TD><span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">{h.status}</span></TD>
+              {/* 납부 이력 (기존 UI 유지) */}
+              {!USE_API && (
+                <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200">
+                  <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                      <i className="ri-history-line text-blue-600 mr-2"></i>최근 납부 내역
+                    </h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <TH>날짜</TH><TH>항목</TH><TH align="right">금액</TH><TH>상태</TH>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {history.map((h) => (
+                          <tr key={h.id}>
+                            <TD>{h.date}</TD>
+                            <TD>{h.item}</TD>
+                            <TD align="right">{formatKRW(h.amount)}</TD>
+                            <TD><span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">{h.status}</span></TD>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* 하단 바로가기 */}
+              {/* ===== API 모드 전용: 인보이스 표 + 자동이체 등록 섹션 ===== */}
+              {USE_API && (
+                <>
+                  {/* 자동이체 등록 */}
+                  <form onSubmit={onCreateAutopay} className="mt-6 p-5 border rounded-xl shadow-sm">
+                    <h2 className="font-semibold mb-3">자동이체 등록</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <input className="border rounded p-2" value={autoForm.aNo}
+                        onChange={e => setAutoForm(f => ({ ...f, aNo: e.target.value }))}
+                        placeholder="a_no (숫자)" />
+                      <input className="border rounded p-2" value={autoForm.payDay}
+                        onChange={e => setAutoForm(f => ({ ...f, payDay: e.target.value }))}
+                        placeholder="납부일(1~31)" />
+                      <input className="border rounded p-2" value={autoForm.payTime}
+                        onChange={e => setAutoForm(f => ({ ...f, payTime: e.target.value }))}
+                        placeholder="HH:MM:SS" />
+                      <input className="border rounded p-2" value={autoForm.startDate}
+                        onChange={e => setAutoForm(f => ({ ...f, startDate: e.target.value }))}
+                        placeholder="YYYY-MM-DD" />
+                      <input className="border rounded p-2" value={autoForm.endDate}
+                        onChange={e => setAutoForm(f => ({ ...f, endDate: e.target.value }))}
+                        placeholder="종료일(선택)" />
+                      <input className="border rounded p-2 md:col-span-2" value={autoForm.memo}
+                        onChange={e => setAutoForm(f => ({ ...f, memo: e.target.value }))} placeholder="메모" />
+                    </div>
+                    <button type="submit" className={`mt-3 px-4 py-2 rounded text-white ${theme.primary}`}>등록</button>
+                  </form>
+
+                  {/* 인보이스 목록 */}
+                  <div className="mt-6 border rounded-xl shadow-sm p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="font-semibold">청구서 목록</h2>
+                      <select className="border p-2 rounded"
+                              value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                        <option value="">전체</option>
+                        <option value="READY">READY</option>
+                        <option value="PAID">PAID</option>
+                        <option value="FAILED">FAILED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                      </select>
+                    </div>
+                    {loading ? <p>로딩중...</p> : (
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-2">월</th>
+                            <th className="text-right">금액</th>
+                            <th>납기</th>
+                            <th>상태</th>
+                            <th>작업</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {invoices.map(row => (
+                            <tr key={row.biNo} className="border-b">
+                              <td className="py-2">{row.ym}</td>
+                              <td className="text-right">{Number(row.amount).toLocaleString()}</td>
+                              <td>{row.dueAt?.replace("T"," ").slice(0,19) ?? "-"}</td>
+                              <td>{row.status}</td>
+                              <td>
+                                {row.status === "READY" ? (
+                                  <button className={`px-3 py-1 rounded text-white ${theme.accent}`}
+                                          onClick={() => onPayInvoice(row.biNo)}>
+                                    납부
+                                  </button>
+                                ) : <span>-</span>}
+                              </td>
+                            </tr>
+                          ))}
+                          {invoices.length === 0 && (
+                            <tr><td colSpan={5} className="text-center py-4 text-gray-500">데이터 없음</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* 하단 바로가기 (그대로 유지) */}
               <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-5">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3">자주 쓰는 바로가기</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -269,7 +437,6 @@ function Field({ label, children }) {
     </div>
   );
 }
-
 function Card({ title, icon, children, iconColor = "text-gray-600" }) {
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
@@ -280,7 +447,6 @@ function Card({ title, icon, children, iconColor = "text-gray-600" }) {
     </div>
   );
 }
-
 function KV({ label, value, strong }) {
   return (
     <div>
@@ -289,7 +455,6 @@ function KV({ label, value, strong }) {
     </div>
   );
 }
-
 function TH({ children, align = "left" }) {
   return (
     <th className={`px-4 py-2 text-xs font-medium text-gray-500 ${align === "right" ? "text-right" : "text-left"}`}>
@@ -297,7 +462,6 @@ function TH({ children, align = "left" }) {
     </th>
   );
 }
-
 function TD({ children, align = "left" }) {
   return (
     <td className={`px-4 py-2 text-sm text-gray-700 ${align === "right" ? "text-right" : "text-left"}`}>
@@ -312,7 +476,6 @@ function chipOf(k) {
   const m = theme.chip;
   return m[k] || "bg-gray-100 text-gray-800";
 }
-
 function formatKRW(n) {
   const v = Number(n || 0);
   return v.toLocaleString("ko-KR") + "원";
@@ -328,6 +491,10 @@ function labelOf(key) {
     case "loc_tax": return "지방세";
     default: return key;
   }
+}
+function onlyDigits(s) {
+  if (!s) return "";
+  return String(s).replace(/\D/g, "");
 }
 function mockLookup(type, form) {
   return {
