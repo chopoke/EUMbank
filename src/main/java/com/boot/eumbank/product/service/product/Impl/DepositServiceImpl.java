@@ -87,7 +87,7 @@ public class DepositServiceImpl implements DepositService {
                     document, firstPage, PDPageContentStream.AppendMode.APPEND, true, true)) {
 
                 // 기본 좌표 및 폰트 크기 설정
-                float yPosition = 650; // 시작 Y 좌표 (페이지 상단 근처)
+                float yPosition = 1100; // 시작 Y 좌표 (페이지 상단 근처)
                 float lineHeight = 20;  // 각 라인의 간격
                 float labelX = 50;      // '상품명:' 같은 라벨의 X 좌표
                 float valueX = 150;     // 실제 데이터 값의 X 좌표

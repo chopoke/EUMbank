@@ -18,13 +18,13 @@ const TermsAgreement = ({ productType }) => {
     // 대칭키 DES 방식으로 암호화해서 넘기기 sessionStorage에서 데이터를 가져옵니다.
     useEffect(() => {
         const encrypted = sessionStorage.getItem('product');
-    
+
         if (encrypted) {
             const decrypted = CryptoJS.DES.decrypt(encrypted, SECRET_KEY);
             const product = JSON.parse(decrypted.toString(CryptoJS.enc.Utf8));
             setProduct(product);
         }
-        
+
     }, [location.state, navigate]); // 의존성 배열에 location.state와 navigate를 추가
 
     const terms = termsData[productType];
@@ -96,7 +96,7 @@ const TermsAgreement = ({ productType }) => {
     return (
         <div className="containerdepart">
             <button className="back-button" onClick={handleBack}>← 뒤로가기</button>
-            <div className="terms-box modern">
+            <div className="termsssr-box modern">
                 <h2>{terms.title}</h2>
                 <div className="agreement-list modern">
                     {/* 전체 동의 */}
