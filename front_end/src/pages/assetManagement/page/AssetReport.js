@@ -1,7 +1,7 @@
 // src/pages/assetManagement/page/Report.js
-import { PlaceholderChart } from "../components/PlaceholderChart";
 import AssetPageHeader from "../components/AssetPageHeader";
 import { Link } from "react-router-dom";
+import { CategoryBarsStatic, DonutPercentOnly } from "../components/StaticCharts";
 
 export default function AssetReport() {
   return (
@@ -84,7 +84,22 @@ export default function AssetReport() {
                 </p>
               </div>
 
-              <PlaceholderChart label="파이 차트 (카테고리 비율)" height="h-48" />
+              <div className="border border-gray-200 bg-white rounded-md p-3 flex items-center justify-center h-48">
+                <DonutPercentOnly
+                  size={160}
+                  stroke={18}
+                  segments={[
+                    { value: 42, color: "#2563eb" },
+                    { value: 28, color: "#60a5fa" },
+                    { value: 18, color: "#10b981" },
+                    { value: 7,  color: "#f59e0b" },
+                    { value: 3,  color: "#a78bfa" },
+                    { value: 2,  color: "#9ca3af" },
+                  ]}
+                  minLabelPct={6}
+                />
+              </div>
+              {/* <PlaceholderChart label="파이 차트 (카테고리 비율)" height="h-48" /> */}
 
               <ul className="text-sm text-gray-700 grid grid-cols-2 gap-y-2">
                 <li className="flex flex-col">
@@ -115,7 +130,15 @@ export default function AssetReport() {
                 </p>
               </div>
 
-              <PlaceholderChart label="카테고리 막대 차트 (지출)" height="h-48" />
+              <CategoryBarsStatic
+                items={[
+                  { label: "주거 · 관리비", value: 32 },
+                  { label: "식비", value: 24 },
+                  { label: "교통 · 이동", value: 11 },
+                  { label: "여가 · 취미", value: 9 },
+                 ]}
+              />
+              {/* <PlaceholderChart label="카테고리 막대 차트 (지출)" height="h-48" /> */}
 
               <ul className="text-sm text-gray-700 space-y-3">
                 <li className="flex justify-between">

@@ -1,7 +1,7 @@
 // src/pages/assetManagement/page/PeerComparison.js
-import { PlaceholderChart } from "../components/PlaceholderChart";
 import AssetPageHeader from "../components/AssetPageHeader";
 import { Link } from "react-router-dom";
+import { BarCompareStatic } from "../components/StaticCharts";
 
 export default function AssetPeerComparison() {
   return (
@@ -74,7 +74,14 @@ export default function AssetPeerComparison() {
                 </span>
               </div>
 
-              <PlaceholderChart label="분포 차트 (박스플롯 등)" height="h-40" />
+               <BarCompareStatic
+                  metric="순자산 (백만 원 기준)"
+                  leftLabel="나"
+                  rightLabel="평균"
+                  leftValue={88}   // 88%
+                  rightValue={64}  // 64%
+                />
+              {/* <PlaceholderChart label="분포 차트 (박스플롯 등)" height="h-40" /> */}
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="rounded-md bg-white border border-gray-200 p-4">
@@ -98,7 +105,24 @@ export default function AssetPeerComparison() {
               </p>
             </div>
 
-            <PlaceholderChart label="막대 비교 (나 vs 평균)" height="h-56" />
+            {/* <PlaceholderChart label="막대 비교 (나 vs 평균)" height="h-56" /> */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <BarCompareStatic
+                metric="현금성 자산 비중"
+                leftLabel="나" rightLabel="평균"
+                leftValue={42} rightValue={35}
+              />
+              <BarCompareStatic
+                metric="투자 자산 비중"
+                leftLabel="나" rightLabel="평균"
+                leftValue={18} rightValue={24}
+              />
+              <BarCompareStatic
+                metric="부채 비율"
+                leftLabel="나" rightLabel="평균"
+                leftValue={34} rightValue={41}
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="rounded-md bg-white border border-gray-200 p-4">

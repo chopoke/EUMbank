@@ -1,7 +1,7 @@
 // src/pages/assetManagement/page/Dashboard.js
 import { StatCard } from "../components/StatCard";
-import { PlaceholderChart } from "../components/PlaceholderChart";
 import { Link } from "react-router-dom";
+import { DonutPercentOnly, LineChartWithDatesStatic, TrendFooterStats } from "../components/StaticCharts";
 
 export default function AssetDashboard() {
   
@@ -70,7 +70,21 @@ export default function AssetDashboard() {
                 </span>
               </div>
 
-              <PlaceholderChart label="파이 차트 (자산 비율)" height="h-44" />
+               <DonutPercentOnly
+                  size={140}
+                  stroke={16}
+                  segments={[
+                    { value: 42, color: "#2563eb" }, // 현금성
+                    { value: 28, color: "#60a5fa" }, // 적금·예금
+                    { value: 18, color: "#10b981" }, // 투자
+                    { value: 7,  color: "#f59e0b" }, // 외화
+                    { value: 3,  color: "#a78bfa" }, // 보험
+                    { value: 2,  color: "#9ca3af" }, // 기타
+                  ]}
+                  minLabelPct={6}   // 필요하면 조정
+                  gapDeg={1.5}
+                />
+              {/* <PlaceholderChart label="파이 차트 (자산 비율)" height="h-44" /> */}
 
               <ul className="text-sm text-gray-700 grid grid-cols-2 gap-y-2">
                 <li className="flex flex-col">
@@ -114,7 +128,21 @@ export default function AssetDashboard() {
                 </button>
               </div>
 
-              <PlaceholderChart label="라인 차트 (순자산 추이)" height="h-52" />
+              <LineChartWithDatesStatic
+                points={[87.3, 87.6, 88.0, 88.2, 88.5, 88.9, 89.3]}
+                labels={["10-01","10-05","10-10","10-15","10-20","10-25","오늘"]}
+                height={200}
+              />
+              {/* <PlaceholderChart label="라인 차트 (순자산 추이)" height="h-52" /> */}
+              <TrendFooterStats
+                stats={[
+                  { label: "최근 30일 증감", value: "+1,240,000원" },
+                  { label: "최고값", value: "89,300,000원" },
+                  { label: "최저값", value: "87,300,000원" },
+                  { label: "변동폭", value: "+2.0%" },
+                ]}
+              />
+
             </div>
           </div>
 

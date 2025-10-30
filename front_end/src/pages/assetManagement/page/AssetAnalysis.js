@@ -1,7 +1,7 @@
 // src/pages/assetManagement/page/Analysis.js
-import { PlaceholderChart } from "../components/PlaceholderChart";
 import AssetPageHeader from "../components/AssetPageHeader";
 import { Link } from "react-router-dom";
+import { CompactMonthlyChart, GoalGaugeStatic, WeeklyDeltaBarsStatic } from "../components/StaticCharts";
 
 export default function AssetAnalysis() {
   return (
@@ -37,7 +37,10 @@ export default function AssetAnalysis() {
                 </p>
               </div>
 
-              <PlaceholderChart label="원형 게이지 (달성률 68%)" height="h-40" />
+              {/* <PlaceholderChart label="원형 게이지 (달성률 68%)" height="h-40" /> */}
+              <div className="border border-gray-200 bg-white rounded-md p-2">
+                <GoalGaugeStatic value={68} />
+              </div>
 
               <div className="text-sm text-gray-700">
                 <div className="flex justify-between">
@@ -93,7 +96,11 @@ export default function AssetAnalysis() {
                 </p>
               </div>
 
-              <PlaceholderChart label="막대 차트 (주간 증가/감소)" height="h-32" />
+              {/* <PlaceholderChart label="막대 차트 (주간 증가/감소)" height="h-32" /> */}
+              <WeeklyDeltaBarsStatic
+                data={[+420, -180, +360, +640]} // 천원 단위 예시 값 (원하면 수정)
+                labels={["1주", "2주", "3주", "4주"]}
+              />
 
               <div className="text-sm">
                 <div className="text-gray-900 font-semibold text-base">
@@ -126,7 +133,20 @@ export default function AssetAnalysis() {
               </button>
             </div>
 
-            <PlaceholderChart label="누적 막대 + 라인 복합 차트" height="h-64" />
+            <CompactMonthlyChart
+              data={[
+                {m : "7월", save:350, invest:120, net:420},
+                { m: "8월",  save: 300, invest: 140, net: 360 },
+                { m: "9월",  save: 320, invest:  90, net: 280 },
+                { m: "10월", save: 330, invest: 110, net: 410 },
+              ]}
+               height={420}   // 180~220 추천
+               yMode="bar"     // ⬅ 막대 합계만 보고 스케일 → 더 크게
+               yUnitLabel="억"   // 라벨 텍스트
+               yTicks={4}
+            />
+            {/* <StackedBarMonthlyStatic /> */}
+            {/* <PlaceholderChart label="누적 막대 + 라인 복합 차트" height="h-64" /> */}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
               <div className="rounded-md bg-gray-50 border border-gray-200 p-4">

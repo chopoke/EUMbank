@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState} from "react";
 import TermsStep from "./TermsStep";            // New
 import api from "../../api/axios";
 import maintxt from '../../resources/img/e-um.png'
@@ -6,7 +6,6 @@ import { refreshOnce } from "../../api/authApi";
 import { getAccessToken } from "../../api/axios";
 
 export default function SocialAgree() {
-  const [ready, setReady] = useState(false);
   const [formData, setFormData] = useState({
     // 약관동의
     terms: {
@@ -16,18 +15,18 @@ export default function SocialAgree() {
     },
   });
 
-  // 새로고침 시 RT→AT 복구. 복구 전 렌더 차단.
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      await refreshOnce();
-      if (!alive) return;
-      // 헤더 등 전역 갱신용 이벤트
-      window.dispatchEvent(new Event("auth:changed"));
-      setReady(true);
-    })();
-    return () => { alive = false; };
-  }, []);
+  // // 새로고침 시 RT→AT 복구. 복구 전 렌더 차단.
+  // useEffect(() => {
+  //   let alive = true;
+  //   (async () => {
+  //     await refreshOnce();
+  //     if (!alive) return;
+  //     // 헤더 등 전역 갱신용 이벤트
+  //     window.dispatchEvent(new Event("auth:changed"));
+  //     setReady(true);
+  //   })();
+  //   return () => { alive = false; };
+  // }, []);
 
   const updateFormData = (data) =>
     setFormData((prev) => ({ ...prev, ...data }));
@@ -75,7 +74,7 @@ export default function SocialAgree() {
 
   };
   
-  if (!ready) return null; // 복구되기 전 화면 렌더 금지
+  // if (!ready) return null; // 복구되기 전 화면 렌더 금지
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">

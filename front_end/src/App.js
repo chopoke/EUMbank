@@ -65,7 +65,7 @@ function App() {
 
   // 최초 1회: RT로 AT 복구
   useEffect(() => {
-    const isSocial = window.location.pathname.startsWith("/social/");
+    const isSocial = window.location.pathname.startsWith("/social/") && window.location.pathname !== "/social/agree";
     if (isSocial) {
       setIsLoggedIn(!!getAccessToken());
       setReady(true);
@@ -120,7 +120,10 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/social/cookie" element={<Cookie />} />
-        <Route path="/social/agree" element={<SocialAgree />} />
+        <Route path="/social/agree" element={
+          <ProtectedRoute>
+            <SocialAgree />
+          </ProtectedRoute>} />
         <Route path="/social/link" element={<NaverLink />} />
 
         {/* 계좌 목록 */}
