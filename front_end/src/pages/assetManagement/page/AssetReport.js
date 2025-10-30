@@ -5,41 +5,9 @@ import AssetPageHeader from "../components/AssetPageHeader";
 import AssetCashflowCalendar from "./AssetCashflowCalendar";
 import { CategoryBarsStatic } from "../components/StaticCharts";
 import { Link } from "react-router-dom";
+import { CategoryBarsStatic, DonutPercentOnly } from "../components/StaticCharts";
 
 export default function AssetReport() {
-  // 데모 데이터 (원단위)
-  const tx = [
-    { date: "2025-10-01", type: "income",  amount: 3200000, title: "급여" },
-    { date: "2025-10-03", type: "expense", amount: 120000,  title: "식비" },
-    { date: "2025-10-05", type: "expense", amount: 45000,   title: "교통" },
-    { date: "2025-10-10", type: "expense", amount: 330000,  title: "쇼핑" },
-    { date: "2025-10-15", type: "income",  amount: 1000000, title: "보너스" },
-    { date: "2025-10-21", type: "expense", amount: 240000,  title: "여가" },
-    { date: "2025-10-28", type: "expense", amount: 75000,   title: "구독" },
-  ];
-
-  const income = useMemo(
-    () => tx.filter(t => t.type === "income").reduce((a, b) => a + b.amount, 0),
-    [tx]
-  );
-  const expense = useMemo(
-    () => tx.filter(t => t.type === "expense").reduce((a, b) => a + b.amount, 0),
-    [tx]
-  );
-  const net = income - expense;
-
-  // 월간 지출 카테고리(예시)
-  const spendCategories = [
-    { label: "주거 · 관리비", value: 32 },
-    { label: "식비",        value: 24 },
-    { label: "교통 · 이동",  value: 11 },
-    { label: "여가 · 취미",  value: 9  },
-  ];
-
-  // 디자인 일관화를 위한 공통 카드 클래스
-  const card = "rounded-2xl border border-gray-100 bg-white shadow-sm";
-  const subtle = "text-[12px] text-gray-500";
-
   return (
     <main className="bg-gray-50 text-gray-900 min-h-screen">
       <AssetPageHeader
@@ -48,7 +16,17 @@ export default function AssetReport() {
         current="report"
       />
 
-      <section className="content-container px-6 pb-16 md:pb-20">
+      <section className="content-container px-6 pt-0 pb-16 md:pb-20">
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-4 flex flex-wrap items-center gap-3">
+          <div className="text-sm font-semibold text-gray-900">자산관리 허브</div>
+          <div className="text-[12px] text-blue-700">분석 · 또래 비교 · 추천를 한 곳에서</div>
+          <div className="ml-auto flex gap-2">
+            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/analysis">자산 분석</Link>
+            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/peer">또래 비교</Link>
+            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/recommend">맞춤 추천</Link>
+          </div>
+        </div>
+
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-6 flex flex-col gap-8">
 
           {/* 상단 액션 (PDF / 상담예약) */}
@@ -178,32 +156,4 @@ export default function AssetReport() {
       </section>
     </main>
   );
-}
-
-function LegendDot({ color, label }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-0.5">
-      <span className={`w-2 h-2 rounded-full ${color}`} />
-      {label}
-    </span>
-  );
-}
-
-function StatCard({ label, value, tone = "gray" }) {
-  const tones = {
-    gray:    "text-gray-900",
-    red:     "text-red-600",
-    blue:    "text-blue-700",
-    emerald: "text-emerald-600",
-  };
-  return (
-    <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
-      <div className="text-[12px] text-gray-500">{label}</div>
-      <div className={`font-semibold ${tones[tone]}`}>{value}</div>
-    </div>
-  );
-}
-
-function fmt(n) {
-  return (n ?? 0).toLocaleString();
 }

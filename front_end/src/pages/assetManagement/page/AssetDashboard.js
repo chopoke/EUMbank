@@ -1,5 +1,6 @@
 // src/pages/assetManagement/page/Dashboard.js
 import { StatCard } from "../components/StatCard";
+import { PlaceholderChart } from "../components/PlaceholderChart";
 import { Link } from "react-router-dom";
 import { DonutPercentOnly, LineChartWithDatesStatic, TrendFooterStats } from "../components/StaticCharts";
 import { useEffect, useMemo, useState } from "react";

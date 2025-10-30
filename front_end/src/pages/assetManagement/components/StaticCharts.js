@@ -88,40 +88,52 @@ export function LineChartWithDatesStatic({
   labels = ["10-01", "10-15", "오늘"],
   height = 240,
   showGrid = true,
-  // ⬇️ 추가 옵션
   showYAxis = true,
-  yTicks = 3,                                   // 0 포함 총 yTicks+1개 눈금
-  yFormatter = (v) => v.toLocaleString(),       // y축 라벨 포맷터
+  yTicks = 3,
+  yFormatter = (v) => v.toLocaleString(),
 }) {
-  const H = height, W = 640;
-  const padLeft = showYAxis ? 56 : 24;          // y축 보일 때 왼쪽 여백 확장
-  const padRight = 16, padTop = 14, padBottom = 36;
-  const innerW = W - padLeft - padRight, innerH = H - padTop - padBottom;
+  const H = height;
+  const W = 640;
+  const padRight = 16;
+  const padTop = 14;
+  const padBottom = 36;
+  const padLeft = showYAxis ? 56 : 24;
 
-  // ===== 스케일 계산(예쁜 눈금) =====
+  const innerW = W - padLeft - padRight;
+  const innerH = H - padTop - padBottom;
+
   const pMin = Math.min(...points);
   const pMax = Math.max(...points);
   const rawStep = (pMax - pMin) / Math.max(1, yTicks);
   const mag = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
   const steps = [1, 2, 2.5, 5, 10];
-  const step = (steps.find(s => s * mag >= rawStep) || 10) * mag;
+  const step = (steps.find((s) => s * mag >= rawStep) || 10) * mag;
   const niceMin = Math.floor(pMin / step) * step;
   const niceMax = Math.ceil(pMax / step) * step;
+  const safeRange = Math.max(1e-6, niceMax - niceMin);
 
   const toX = (i) => padLeft + (innerW / (points.length - 1)) * i;
-  const toY = (v) => padTop + innerH - ((v - niceMin) / Math.max(1e-6, (niceMax - niceMin))) * innerH;
+  const toY = (v) => padTop + innerH - ((v - niceMin) / safeRange) * innerH;
 
-  const poly = points.map((v, i) => `${toX(i)},${toY(v)}`).join(" ");
-  const area =
+  const polyPoints = points.map((v, i) => `${toX(i)},${toY(v)}`).join(" ");
+  const areaPath =
     `M ${toX(0)} ${toY(points[0])} ` +
-    points.slice(1).map((v, i) => `L ${toX(i + 1)} ${toY(v)}`).join(" ") +
+    points
+      .slice(1)
+      .map((v, i) => `L ${toX(i + 1)} ${toY(v)}`)
+      .join(" ") +
     ` L ${toX(points.length - 1)} ${padTop + innerH}` +
     ` L ${toX(0)} ${padTop + innerH} Z`;
 
   const labelXs = [padLeft, padLeft + innerW / 2, padLeft + innerW];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H, display: "block" }} preserveAspectRatio="xMidYMid meet" aria-label="순자산 추이">
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      style={{ width: "100%", height: H, display: "block" }}
+      preserveAspectRatio="xMidYMid meet"
+      aria-label="순자산 추이"
+    >
       <defs>
         <linearGradient id="nwArea" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="rgba(37,99,235,0.25)" />
@@ -129,38 +141,96 @@ export function LineChartWithDatesStatic({
         </linearGradient>
       </defs>
 
-      {/* === Y축/그리드 === */}
       {showYAxis && (
         <>
-          {[...Array(yTicks + 1)].map((_, i) => {
-            const v = niceMin + step * i;
-            const y = toY(v);
+          {[...Array(yTicks + 1)].map((_, idx) => {
+            const value = niceMin + step * idx;
+            const y = toY(value);
             return (
-              <g key={i}>
+              <g key={`grid-${idx}`}>
                 {showGrid && (
-                  <line x1={padLeft} y1={y} x2={W - padRight} y2={y}
-                        stroke={i === 0 ? "#E5E7EB" : "#F3F4F6"} />
+                  <line
+                    x1={padLeft}
+                    y1={y}
+                    x2={W - padRight}
+                    y2={y}
+                    stroke={idx === 0 ? "#E5E7EB" : "#F3F4F6"}
+                  />
                 )}
-                <text x={padLeft - 8} y={y + 4} textAnchor="end" fontSize="11" fill="#9CA3AF">
-                  {yFormatter(v)}
+                <text
+                  x={padLeft - 8}
+                  y={y + 4}
+                  textAnchor="end"
+                  fontSize="11"
+                  fill="#9CA3AF"
+                >
+                  {yFormatter(value)}
                 </text>
               </g>
             );
           })}
-          {/* y축 본선 */}
-          <line x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + innerH} stroke="#E5E7EB" />
+          <line
+            x1={padLeft}
+            y1={padTop}
+            x2={padLeft}
+            y2={padTop + innerH}
+            stroke="#E5E7EB"
+          />
         </>
       )}
 
-      {/* 영역/라인 */}
-      <path d={area} fill="url(#nwArea)" />
-      <polyline points={poly} fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      <circle cx={toX(points.length - 1)} cy={toY(points[points.length - 1])} r="3.2" fill="#2563eb" />
+      {!showYAxis && showGrid && (
+        <>
+          <line
+            x1="0"
+            y1={padTop + innerH}
+            x2={W}
+            y2={padTop + innerH}
+            stroke="#E5E7EB"
+          />
+          <line
+            x1="0"
+            y1={padTop + innerH * 0.66}
+            x2={W}
+            y2={padTop + innerH * 0.66}
+            stroke="#F3F4F6"
+          />
+          <line
+            x1="0"
+            y1={padTop + innerH * 0.33}
+            x2={W}
+            y2={padTop + innerH * 0.33}
+            stroke="#F3F4F6"
+          />
+        </>
+      )}
 
-      {/* X 라벨 (좌/중/우) */}
-      {labels.slice(0, 3).map((t, i) => (
-        <text key={i} x={labelXs[i]} y={H - 10} textAnchor="middle" fontSize="11" fill="#9CA3AF">
-          {t}
+      <path d={areaPath} fill="url(#nwArea)" />
+      <polyline
+        points={polyPoints}
+        fill="none"
+        stroke="#2563eb"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      <circle
+        cx={toX(points.length - 1)}
+        cy={toY(points[points.length - 1])}
+        r="3.2"
+        fill="#2563eb"
+      />
+
+      {labels.slice(0, 3).map((text, idx) => (
+        <text
+          key={idx}
+          x={labelXs[idx]}
+          y={H - 10}
+          textAnchor="middle"
+          fontSize="11"
+          fill="#9CA3AF"
+        >
+          {text}
         </text>
       ))}
     </svg>
