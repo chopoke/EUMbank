@@ -23,7 +23,7 @@ public class TransferRequestDto {
     private String toBank;              // 수취 은행명
     private String toAccount;           // 수취 계좌번호
     private String toName;              // 수취인명
-    private Integer amount;             // 이체 금액
+    private Long amount;             // 이체 금액
     private String memo;                // 이체 메모
     private String password;            // 계좌 비밀번호
     private Boolean reserveTransfer;    // 예약 이체 여부 (선택사항)
