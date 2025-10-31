@@ -12,6 +12,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 public class ProductDto {
+    private Integer no;
     private String id;          // 상품 고유 ID (예: "deposit-1", "savings-1")
     private String name;        // 상품명 (예: "고수익 예금")
     private String description;
@@ -28,9 +29,16 @@ public class ProductDto {
     private String category;    // 상품 카테고리 (예: "예금", "적금", "외환")
     private String feature;
 
+
+    public ProductDto(Integer no, String id) {
+        this.no = no;
+        this.id = id;
+    }
+
     // QueryDSL Projections.constructor 를 사용하기 위한 생성자
-    public ProductDto(String id, String name, String type, String description, String rate,
+    public ProductDto(Integer no, String id, String name, String type, String description, String rate,
                       String maxAmount, String minAmount, Integer minMonths, Integer maxMonths, String paymentType, String feature, String href, String buttonText, String category) {
+        this.no = no;
         this.id = id;
         this.name = name;
         this.type = type;

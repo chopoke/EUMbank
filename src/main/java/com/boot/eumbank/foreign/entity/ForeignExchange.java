@@ -69,4 +69,24 @@ public class ForeignExchange {
 
     @Column(name = "fe_memo", length = 200, columnDefinition = "VARCHAR(200) NULL COMMENT '메모'")
     private String feMemo;
+
+    @Builder.Default
+    @Column(name = "fe_agree_terms", nullable = false, length = 1)
+    private String agreeTerms = "N";
+
+    @Builder.Default
+    @Column(name = "fe_agree_privacy", nullable = false, length = 1)
+    private String agreePrivacy = "N";
+
+    @Builder.Default
+    @Column(name = "fe_agree_risk", nullable = false, length = 1)
+    private String agreeRisk = "N";
+
+    @Builder.Default
+    @Column(name = "fe_agree_product", nullable = false, length = 1)
+    private String agreeProduct = "N";
+
+    @Builder.Default
+    @Column(name = "fe_agree_marketing", nullable = false, length = 1)
+    private String agreeMarketing = "N";
 }

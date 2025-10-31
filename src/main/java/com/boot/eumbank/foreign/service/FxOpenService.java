@@ -1,3 +1,4 @@
+// src/main/java/com/boot/eumbank/foreign/service/FxOpenService.java
 package com.boot.eumbank.foreign.service;
 
 import com.boot.eumbank.account.open.entity.account.Account;
@@ -6,6 +7,8 @@ import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.customer.repo.CustomerRepo;
 import com.boot.eumbank.foreign.dto.FxOpenReqDto;
 import com.boot.eumbank.foreign.dto.FxOpenRespDto;
+import com.boot.eumbank.foreign.entity.ForeignExchange;
+import com.boot.eumbank.foreign.repo.ForeignExchangeRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +28,7 @@ public class FxOpenService {
 
     private final AccountRepo accountRepo;
     private final CustomerRepo customerRepo;
+    private final ForeignExchangeRepo foreignExchangeRepo;
 
     /** 저장 없이 “사용 가능한 계좌번호”만 만들어서 반환 */
     @Transactional(readOnly = true)
@@ -36,23 +40,34 @@ public class FxOpenService {
         return acctNo;
     }
 
-    /** 외화 입출금 계좌 개설 (토큰에서 받은 cNo 사용) */
+    /** 외화 입출금 계좌 개설 */
     @Transactional
-    public FxOpenRespDto openFxAccount(int cNo, FxOpenReqDto req) {
+    public FxOpenRespDto openUsdAccount(FxOpenReqDto req) {
         // 1) 기본 검증
+        if (req.getCustomerNo() == null) {
+            throw new IllegalArgumentException("고객번호(c_no) 필요");
+        }
         if (req.getPin() == null || !req.getPin().matches("\\d{6}")) {
             throw new IllegalArgumentException("계좌 비밀번호는 숫자 6자리여야 합니다.");
         }
         if (req.getPinNumber() == null || !String.valueOf(req.getPinNumber()).matches("\\d{6}")) {
             throw new IllegalArgumentException("거래 PIN은 숫자 6자리여야 합니다.");
         }
-        if (!"Y".equalsIgnoreCase(req.getAgreeTerms()) ||
-                !"Y".equalsIgnoreCase(req.getAgreePrivacy())) {
+
+        // 약관을 boolean/문자 어떤 형식으로 받아도 Y/N으로 통일
+        final String agreeTerms      = yn(req.getAgreeTerms());
+        final String agreePrivacy    = yn(req.getAgreePrivacy());
+        final String agreeRisk       = yn(req.getAgreeRisk());       // 없으면 N 처리
+        final String agreeProduct    = yn(req.getAgreeProduct());    // 없으면 N 처리
+        final String agreeMarketing  = yn(req.getAgreeMarketing());  // 선택값: null->N
+
+        // 필수 검증
+        if (!"Y".equals(agreeTerms) || !"Y".equals(agreePrivacy)) {
             throw new IllegalArgumentException("필수 약관 동의 필요");
         }
 
         // 1-1) 고객의 영문이름 최초 1회만 저장
-        maybeSaveEnglishNameOnce(cNo, req.getEnglishName());
+        maybeSaveEnglishNameOnce(req.getCustomerNo(), req.getEnglishName());
 
         // 2) 통화 정규화 (DB에는 3자리 코드)
         String currency = normalizeCurrency(req.getCurrency());
@@ -75,33 +90,55 @@ public class FxOpenService {
         // 3-2) 외화 상품코드(F + 5자리 숫자) 생성 + 중복회피
         String fxProductCode = genFxProductCode();
 
-        // 4) 엔티티 생성
+        // 4) 엔티티 생성 (ACCOUNT_TBL)
         Account entity = Account.builder()
                 .aId(aId)
-                .cNo(cNo)
+                .cNo(req.getCustomerNo().intValue())
                 .accountNo(acctNo)
                 .appId(1)
                 .productCode(fxProductCode)
                 .accountType("외환")
                 .openedAt(LocalDateTime.now())
                 .accountPwd(req.getPin())
-                // .pinNumber(req.getPinNumber()) // 컬럼 있으면 주석 해제
                 .status("ACTIVE")
                 .balance(BigDecimal.ZERO)
                 .currency(currency)
                 .nickname(req.getNickname())
                 .createdBy("SYSTEM")
                 .updatedAt(LocalDateTime.now())
-                .agreeTerms("Y")
-                .agreePrivacy("Y")
-                .agreeMarketing(req.getAgreeMarketing())
+                .agreeTerms(agreeTerms)
+                .agreePrivacy(agreePrivacy)
+                .agreeMarketing(agreeMarketing)
                 .rate(BigDecimal.ZERO)
                 .build();
 
-        // 5) 저장
+        // 5) 저장 (ACCOUNT_TBL)
         Account saved = accountRepo.save(entity);
 
-        // 6) 응답
+        // 6) 개설 이벤트를 FOREIGN_EXCHANGE_TBL에도 기록 (금액 0, OPEN 이벤트)
+        ForeignExchange openEvt = ForeignExchange.builder()
+                .fpNo(null)
+                .cNo(saved.getCNo())
+                .aNo(saved.getANo())
+                .feId("OPEN-" + System.currentTimeMillis())
+                .feCurCode(saved.getCurrency())
+                .feAmtFc(BigDecimal.ZERO)
+                .feAmtKrw(BigDecimal.ZERO)
+                .feRateApplied(BigDecimal.ZERO)
+                .feFee(BigDecimal.ZERO)
+                .feStatus("COMPLETED")
+                .feOrderedAt(LocalDateTime.now())
+                .feSide("OPEN")
+                .feMemo("외화계좌 개설")
+                .agreeTerms(agreeTerms)
+                .agreePrivacy(agreePrivacy)
+                .agreeRisk(agreeRisk)
+                .agreeProduct(agreeProduct)
+                .agreeMarketing(agreeMarketing)
+                .build();
+        foreignExchangeRepo.save(openEvt);
+
+        // 7) 응답
         return new FxOpenRespDto(
                 saved.getAccountNo(),
                 saved.getCurrency(),
@@ -111,9 +148,21 @@ public class FxOpenService {
         );
     }
 
+    /** 다양한 형태(boolean/String/null)의 입력을 'Y'/'N'으로 통일 */
+    private String yn(Object... candidates) {
+        for (Object c : candidates) {
+            if (c == null) continue;
+            if (c instanceof Boolean b) return b ? "Y" : "N";
+            String s = c.toString().trim();
+            if (s.equalsIgnoreCase("Y") || s.equalsIgnoreCase("YES") || s.equalsIgnoreCase("true"))  return "Y";
+            if (s.equalsIgnoreCase("N") || s.equalsIgnoreCase("NO")  || s.equalsIgnoreCase("false")) return "N";
+        }
+        return "N";
+    }
+
     /** c_name_en이 비어있을 때만 한 번 저장 */
-    private void maybeSaveEnglishNameOnce(int cNo, String englishNameRaw) {
-        if (englishNameRaw == null || englishNameRaw.isBlank()) return;
+    private void maybeSaveEnglishNameOnce(Integer cNo, String englishNameRaw) {
+        if (cNo == null || englishNameRaw == null || englishNameRaw.isBlank()) return;
 
         Customer cust = customerRepo.findById(cNo).orElse(null);
         if (cust == null) return;
@@ -182,9 +231,9 @@ public class FxOpenService {
         return s;
     }
 
-    /** (참고) 필요 시 남겨두는 유틸 – 현재는 사용 안 함 */
+    /** 프런트에서 고객정보(번호 + 영문이름) 필요할 때 */
     @Transactional(readOnly = true)
-    public Map<String, Object> getNoForDebug() {
+    public Map<String, Object> getNo() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated())
             throw new IllegalArgumentException("로그인이 필요합니다.");

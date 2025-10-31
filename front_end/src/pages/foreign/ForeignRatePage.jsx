@@ -41,9 +41,15 @@ export default function ForeignRatePage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get("/api/foreign/rates", {
-         validateStatus: () => true,
-       });
+      // const res = await fetch("/api/foreign/rates");
+      // if (!res.ok) {
+      //   const text = await res.text();
+      //   console.error("GET /api/foreign/rates FAILED:", res.status, text);
+      //   setRows([]);
+      //   return;
+      // }
+      // const data = await res.json();
+      const { data } = await api.get("/api/foreign/rates");
 
       const rateRows = Array.isArray(data.rows) ? data.rows : [];
       setRows(rateRows);
@@ -285,11 +291,18 @@ function CalcModal({ onClose, base, ttb, tts, cur }) {
         setSeriesErr("");
 
         const curCode = (cur || "").replace(/\(.+\)/, "");
-        const { data: body, status } = await api.get("/api/foreign/rates/series", {
-           params: { cur: curCode, days: 60 },
-           validateStatus: () => true,
-         });
-         if (status !== 200) throw new Error(`HTTP ${status}`);
+        // const res = await fetch(
+        //   `/api/foreign/rates/series?cur=${encodeURIComponent(curCode)}&days=60`,
+        //   { headers: { Accept: "application/json" } }
+        // );
+        // if (!res.ok) {
+        //   const t = await res.text();
+        //   throw new Error(`HTTP ${res.status} ${t}`);
+        // }
+        // const body = await res.json();
+        const { data: body } = await api.get("/api/foreign/rates/series", {
+          params: { cur: curCode, days: 60 },
+        });
 
         // 허용 형식:
         // 1) [{date:"YYYY-MM-DD", rate: 1380.12}, ...]

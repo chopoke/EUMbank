@@ -1,5 +1,8 @@
 package com.boot.eumbank.customer.security;
 
+import com.boot.eumbank.customer.security.CorsProperties;
+import com.boot.eumbank.customer.security.JwtAuthenticationEntryPoint;
+import com.boot.eumbank.customer.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,7 +28,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtFilter;
     private final JwtAuthenticationEntryPoint entryPoint;
     private final AuthenticationSuccessHandler socialSuccessHandler;
-    private final CorsProperties corsProps; // app.cors.allowed-origins 사용
+//    private final CorsProperties corsProps; // app.cors.allowed-origins 사용
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -51,11 +54,10 @@ public class SecurityConfig {
                                 "/api/foreign/exchange/calculate",
                                 "/api/foreign/exchange",
                                 "/actuator/**",
-                                "/api/foreign/rates",
-                                "/api/healthz",
-                                "/api/foreign/open/preview"
-
+                                "/api/foreign/rates/**",
+                                "/api/healthz"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
                         // 그 외는 보호
