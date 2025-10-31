@@ -73,6 +73,11 @@ public class TransferServiceImpl implements TransferService {
             throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
         }
 
+        // 0-1. 출금 계좌 통화 검증 (원화 계좌만 이체 가능)
+        Account fromAccount = accountRepository.findById(request.getFromAccountNo())
+                .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
+        validateKRWAccount(fromAccount, request.getFromAccountNo().toString());
+
         // 1. 기본 검증
         validateTransferRequest(request);
 
@@ -140,6 +145,11 @@ public class TransferServiceImpl implements TransferService {
                 throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
             }
 
+            // 0-0. 출금 계좌 통화 검증 (원화 계좌만 이체 가능)
+            Account fromAccountForValidation = accountRepository.findById(request.getAccountNo())
+                    .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
+            validateKRWAccount(fromAccountForValidation, request.getAccountNo().toString());
+
             // 0-1. 계좌 비밀번호 검증 (예약 이체 등록 시 필수)
             log.info("0-1. 계좌 비밀번호 검증 시작");
             if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
@@ -195,6 +205,11 @@ public class TransferServiceImpl implements TransferService {
             
             log.info("2-1. 수취 계좌 검증 완료 - 계좌: {}, 상태: {}, 약관동의: {}, 개인정보동의: {}", 
                 toAccount.getAccountNo(), toAccount.getStatus(), toAccount.getAgreeTerms(), toAccount.getAgreePrivacy());
+
+            // 2-1-1. 수취 계좌 통화 검증 (원화 계좌만 이체 가능)
+            log.info("2-1-1. 수취 계좌 통화 검증 시작 - 계좌: {}", toAccount.getAccountNo());
+            validateKRWAccount(toAccount, toAccount.getAccountNo());
+            log.info("2-1-1. 수취 계좌 통화 검증 완료");
 
             // 2-2. 이체 한도 확인 (예약 이체 등록 시점에 검증)
             log.info("2-2. 이체 한도 확인 시작 - 계좌: {}, 금액: {}", request.getAccountNo(), request.getAmount());
@@ -292,6 +307,11 @@ public class TransferServiceImpl implements TransferService {
         if (!validateAccountOwnership(request.getFromAccountNo(), customer.getCustomerNo())) {
             throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
         }
+
+        // 0-1. 출금 계좌 통화 검증 (원화 계좌만 이체 가능)
+        Account fromAccount = accountRepository.findById(request.getFromAccountNo())
+                .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
+        validateKRWAccount(fromAccount, request.getFromAccountNo().toString());
 
         // 1. 기본 검증
         validateBulkTransferRequest(request);
@@ -702,6 +722,12 @@ public class TransferServiceImpl implements TransferService {
             throw new AccountStatusException("수취 계좌가 거래 불가능한 상태입니다. 상태: " + toAccount.getStatus());
         }
         
+        // === 3-1단계: 통화 검증 (출금/입금 계좌 모두 원화 계좌여야 함) ===
+        log.info("통화 검증 시작 - 출금계좌: {}, 수취계좌: {}", fromAccount.getAccountNo(), toAccount.getAccountNo());
+        validateKRWAccount(fromAccount, fromAccount.getAccountNo());
+        validateKRWAccount(toAccount, toAccount.getAccountNo());
+        log.info("통화 검증 완료 - 모든 계좌가 원화 계좌입니다.");
+        
         log.info("계좌 상태 검증 완료 - 출금계좌: {}, 수취계좌: {}", fromAccount.getAccountNo(), toAccount.getAccountNo());
         
         // === 7단계: 출금 처리 (수취 계좌 검증 완료 후) ===
@@ -955,6 +981,29 @@ public class TransferServiceImpl implements TransferService {
         return password.equals(account.getAccountPwd());
     }
 
+    /**
+     * 계좌가 원화 계좌인지 검증
+     * - currency가 'KRW'이거나 null인 경우만 원화 계좌로 판단
+     * 
+     * @param account 검증할 계좌
+     * @param accountNo 계좌번호 (에러 메시지용)
+     * @throws CurrencyMismatchException 원화 계좌가 아닌 경우
+     */
+    private void validateKRWAccount(Account account, String accountNo) {
+        if (account == null) {
+            throw new AccountNotFoundException("계좌를 찾을 수 없습니다: " + accountNo);
+        }
+        
+        String currency = account.getCurrency();
+        // currency가 null이거나 "KRW"가 아니면 외화 계좌
+        if (currency != null && !currency.equals("KRW")) {
+            log.warn("원화 계좌 아님 - 계좌: {}, 통화: {}", account.getAccountNo(), currency);
+            throw new CurrencyMismatchException(account.getAccountNo(), currency);
+        }
+        
+        log.debug("원화 계좌 검증 통과 - 계좌: {}, 통화: {}", account.getAccountNo(), currency != null ? currency : "null (기본값)");
+    }
+
     public boolean checkAccountStatus(Integer accountNo) {
         log.info("checkAccountStatus 시작 - 계좌번호: {}", accountNo);
         
@@ -1153,9 +1202,9 @@ public class TransferServiceImpl implements TransferService {
             Customer customer = (Customer) authentication.getPrincipal();
             log.info("인증된 고객: {}", customer.getCId());
             
-            // 고객의 실제 계좌 목록 조회
-            List<Account> accounts = accountRepository.findByCNo(customer.getCustomerNo());
-            log.info("조회된 계좌 수: {}", accounts.size());
+            // 고객의 원화 계좌만 조회 (이체 가능한 계좌만)
+            List<Account> accounts = accountRepository.findByCNoAndCurrencyKRW(customer.getCustomerNo());
+            log.info("조회된 원화 계좌 수: {}", accounts.size());
             
             List<Map<String, Object>> accountList = accounts.stream()
                 .map(account -> {
@@ -1307,7 +1356,16 @@ public class TransferServiceImpl implements TransferService {
             Optional<Account> account = accountRepository.findByAccountNo(accountNumber);
             if (account.isPresent()) {
                 Account foundAccount = account.get();
-                log.info("계좌 조회 성공 - 계좌번호: {}, 상태: {}", accountNumber, foundAccount.getStatus());
+                log.info("계좌 조회 성공 - 계좌번호: {}, 상태: {}, 통화: {}", accountNumber, foundAccount.getStatus(), foundAccount.getCurrency());
+                
+                // 통화 검증 (원화 계좌만 이체 가능)
+                try {
+                    validateKRWAccount(foundAccount, accountNumber);
+                } catch (CurrencyMismatchException e) {
+                    // 외화 계좌인 경우 존재하지 않는 계좌로 처리 (사용자 경험을 위해)
+                    log.warn("외화 계좌는 이체 불가 - 계좌번호: {}, 통화: {}", accountNumber, foundAccount.getCurrency());
+                    throw new AccountNotFoundException("존재하지 않는 계좌입니다.");
+                }
                 
                 // 계좌 상태 검증
                 if (!"ACTIVE".equals(foundAccount.getStatus())) {

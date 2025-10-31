@@ -651,6 +651,9 @@ export default function TransferPage() {
               case 'UNAUTHORIZED':
                 errorMessage = '권한이 없습니다.';
                 break;
+              case 'CURRENCY_MISMATCH':
+                errorMessage = '이체는 원화 계좌만 사용 가능합니다.';
+                break;
             }
           }
           
@@ -766,6 +769,9 @@ export default function TransferPage() {
             break;
           case 'INVALID_REQUEST':
             userFriendlyMessage = '잘못된 요청입니다.';
+            break;
+          case 'CURRENCY_MISMATCH':
+            userFriendlyMessage = '이체는 원화 계좌만 사용 가능합니다.';
             break;
           default:
             userFriendlyMessage = errorMessage;

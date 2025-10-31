@@ -360,6 +360,9 @@ export default function BulkTransferPage() {
           case 'INVALID_REQUEST':
             userFriendlyMessage = '잘못된 요청입니다.';
             break;
+          case 'CURRENCY_MISMATCH':
+            userFriendlyMessage = '이체는 원화 계좌만 사용 가능합니다. 외화 계좌가 포함되어 있습니다.';
+            break;
           default:
             userFriendlyMessage = errorMessage;
         }
