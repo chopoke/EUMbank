@@ -7,6 +7,7 @@ import com.boot.eumbank.fcm.entity.NotificationMessage;
 import com.boot.eumbank.fcm.repository.FcmTokenRepository;
 import com.boot.eumbank.fcm.repository.NotificationMessageRepository;
 import com.boot.eumbank.transfer_domain.transfer.event.TransferCompletedEvent;
+import com.boot.eumbank.transfer_domain.transfer.event.TransferFailedEvent;
 import com.google.firebase.messaging.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +22,8 @@ import java.util.stream.Collectors;
 
 /**
  * 알림 서비스 구현체
- * 
+ * 메시지를 생성하며, DB에 저장하고, 사용자에 전달하는 클래스
+ *
  * @author EUMbank Team
  * @since 2025-01-15
  */
@@ -48,6 +50,85 @@ public class NotificationServiceImpl implements NotificationService {
         if (event.isInternalTransfer() && !event.isSelfTransfer()) {
             sendDepositNotification(event);
         }
+    }
+
+    @Override
+    public void sendTransferFailureNotification(TransferFailedEvent event) {
+        log.info("이체 실패 알림 발송 시작 - 출금자: {}, 금액: {}, 실패사유: {}", 
+                event.getFromCustomerNo(), event.getAmount(), event.getFailureReason());
+
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy년 M월 d일");
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("H시 m분");
+
+        String dateStr = now.format(dateFormatter);
+        String timeStr = now.format(timeFormatter);
+
+        // 실패 사유에 따른 메시지 구성
+        String reasonText = getFailureReasonText(event.getFailureReason(), event.getFailureMessage());
+        
+        String title = event.isReservedTransfer() ? "예약 이체 실패" : "이체 실패";
+        String body = String.format("%s %s %s님께 %,d원 이체를 실패했습니다. %s", 
+                dateStr, timeStr, event.getRecipientName(), event.getAmount(), reasonText);
+        
+        Map<String, String> data = Map.of("click_action", event.isReservedTransfer() 
+                ? "/transfer/reserve" : "/account/history");
+
+        processAndSend(event.getFromCustomerNo(), title, body, data);
+    }
+
+    /**
+     * 실패 사유 코드를 사용자 친화적인 텍스트로 변환
+     */
+    private String getFailureReasonText(String failureReason, String failureMessage) {
+        if (failureReason == null) {
+            return "알 수 없는 오류가 발생했습니다.";
+        }
+
+        switch (failureReason) {
+            case "INSUFFICIENT_BALANCE":
+                return String.format("잔액이 부족합니다. 현재 잔액: %,d원", 
+                        failureMessage.contains("현재 잔액") 
+                                ? extractBalanceFromMessage(failureMessage) 
+                                : 0);
+            case "LIMIT_EXCEEDED":
+                return "이체 한도를 초과했습니다.";
+            case "ACCOUNT_NOT_FOUND":
+                return "계좌를 찾을 수 없습니다.";
+            case "ACCOUNT_SUSPENDED":
+                return "계좌가 거래 불가능한 상태입니다.";
+            case "PASSWORD_MISMATCH":
+                return "비밀번호가 일치하지 않습니다.";
+            case "INVALID_AMOUNT":
+                return "이체 금액이 올바르지 않습니다.";
+            case "SAME_ACCOUNT":
+                return "자기 계좌로는 이체할 수 없습니다.";
+            case "UNAUTHORIZED":
+                return "권한이 없습니다.";
+            default:
+                return failureMessage != null && !failureMessage.isEmpty() 
+                        ? failureMessage 
+                        : "이체 처리 중 오류가 발생했습니다.";
+        }
+    }
+
+    /**
+     * 메시지에서 잔액 숫자 추출 (간단한 구현)
+     */
+    private long extractBalanceFromMessage(String message) {
+        try {
+            // "현재 잔액: ₩123,456원" 형태에서 숫자 추출
+            String[] parts = message.split("₩|원");
+            for (String part : parts) {
+                String cleaned = part.replace(",", "").trim();
+                if (!cleaned.isEmpty() && cleaned.matches("\\d+")) {
+                    return Long.parseLong(cleaned);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("잔액 추출 실패: {}", message);
+        }
+        return 0;
     }
 
     /**

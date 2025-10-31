@@ -10,6 +10,7 @@ import com.boot.eumbank.transfer_domain.customer.repository.Transfer_CustomerRep
 import com.boot.eumbank.transfer_domain.transfer.dto.*;
 import com.boot.eumbank.transfer_domain.transfer.entity.TransferOrder;
 import com.boot.eumbank.transfer_domain.transfer.event.TransferCompletedEvent;
+import com.boot.eumbank.transfer_domain.transfer.event.TransferFailedEvent;
 import com.boot.eumbank.transfer_domain.transfer.exception.*;
 import com.boot.eumbank.transfer_domain.transfer.repository.Transfer_TransferHistoryRepository;
 import com.boot.eumbank.transfer_domain.transfer.repository.Transfer_TransferOrderRepository;
@@ -798,6 +799,34 @@ public class TransferServiceImpl implements TransferService {
             
             // 실패한 이체 시도 기록을 별도 트랜잭션으로 저장
             saveFailedTransferHistory(e, fromAccountNo, toAccountNo, toBankName, toName, amount, memo);
+            
+            // === 🚀 이벤트 발행: 이체 실패 알림 자동화 (일반 이체만) ===
+            // 예약이체 실패는 TransferSchedulerService에서 처리
+            try {
+                Account failedFromAccount = accountRepository.findById(fromAccountNo).orElse(null);
+                if (failedFromAccount != null) {
+                    String failureReason = getFailureReason(e);
+                    String failureMessage = e.getMessage();
+                    long currentBalance = failedFromAccount.getBalance().longValue();
+                    
+                    TransferFailedEvent failedEvent = new TransferFailedEvent(
+                            failedFromAccount.getCNo(),
+                            toName != null ? toName : "수취인",
+                            amount,
+                            currentBalance,
+                            failureReason,
+                            failureMessage != null ? failureMessage : "이체 처리 중 오류가 발생했습니다.",
+                            false // 일반 이체는 false
+                    );
+                    
+                    eventPublisher.publishEvent(failedEvent);
+                    log.info("✅ 이체 실패 이벤트 발행 성공 - 고객번호: {}, 실패사유: {}", 
+                            failedFromAccount.getCNo(), failureReason);
+                }
+            } catch (Exception eventException) {
+                // 실패 이벤트 발행 실패는 로그만 기록 (이체 실패는 이미 처리됨)
+                log.warn("⚠️ 이체 실패 후 이벤트 발행 실패: {}", eventException.getMessage());
+            }
             
             // 실패 시 예외를 다시 던져서 프론트엔드에서 catch 블록으로 처리하도록 함
             throw e;
