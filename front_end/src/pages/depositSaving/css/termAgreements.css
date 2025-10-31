@@ -4,7 +4,7 @@
 /* 전체 컨테이너 (약관 페이지에 맞게 너비 조정) */
 .containerdepart {
     width: 100%;
-    max-width: 800px; /* 상품 목록보다 약간 좁게 설정 */
+    max-width: 1280px; /* 상품 목록보다 약간 좁게 설정 */
     margin: 0 auto;
     background-color: #fff;
     padding: 8rem 2.5rem;

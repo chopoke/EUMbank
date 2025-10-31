@@ -37,19 +37,6 @@ public class AccountQueryRepository {
 
     }
 
-    /**
-     * 예금 상품등록을 위한 특정 게좌 조회
-     * @return
-     */
-    public Account findOneAccount(Customer customer) {
 
-        logger.info("AccountQueryRepository => findOneAccount()");
-
-        return queryFactory
-                .selectFrom(account)
-                .where(account.cNo.eq(customer.getCustomerNo()))
-                .fetchOne();
-
-    }
 
 }
