@@ -140,6 +140,18 @@ public class TransferServiceImpl implements TransferService {
                 throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
             }
 
+            // 0-1. 계좌 비밀번호 검증 (예약 이체 등록 시 필수)
+            log.info("0-1. 계좌 비밀번호 검증 시작");
+            if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+                log.error("계좌 비밀번호가 제공되지 않았습니다.");
+                throw new PasswordMismatchException("계좌 비밀번호를 입력해주세요.");
+            }
+            if (!validateAccountPassword(request.getAccountNo(), request.getPassword())) {
+                log.error("계좌 비밀번호가 일치하지 않습니다.");
+                throw new PasswordMismatchException();
+            }
+            log.info("0-1. 계좌 비밀번호 검증 완료");
+
             // 1. 기본 검증
             log.info("1. 기본 검증 시작");
             validateReserveTransferRequest(request);
@@ -183,6 +195,14 @@ public class TransferServiceImpl implements TransferService {
             
             log.info("2-1. 수취 계좌 검증 완료 - 계좌: {}, 상태: {}, 약관동의: {}, 개인정보동의: {}", 
                 toAccount.getAccountNo(), toAccount.getStatus(), toAccount.getAgreeTerms(), toAccount.getAgreePrivacy());
+
+            // 2-2. 이체 한도 확인 (예약 이체 등록 시점에 검증)
+            log.info("2-2. 이체 한도 확인 시작 - 계좌: {}, 금액: {}", request.getAccountNo(), request.getAmount());
+            if (!checkTransferLimit(request.getAccountNo(), request.getAmount())) {
+                log.error("이체 한도 초과 - 계좌: {}, 금액: {}", request.getAccountNo(), request.getAmount());
+                throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), request.getAmount());
+            }
+            log.info("2-2. 이체 한도 확인 완료");
 
             // 3. 예약 이체 엔티티 생성
             log.info("3. 예약 이체 엔티티 생성 시작");
@@ -846,6 +866,13 @@ public class TransferServiceImpl implements TransferService {
         }
 
         try {
+            // 예약 이체 실행 시점에 이체 한도 확인 (등록 후 한도가 변경되었을 수 있음)
+            log.info("예약 이체 실행 시점 이체 한도 확인 - 계좌: {}, 금액: {}", order.getA_no(), order.getTo_amount());
+            if (!checkTransferLimit(order.getA_no(), order.getTo_amount().longValue())) {
+                log.error("예약 이체 실행 시 이체 한도 초과 - 계좌: {}, 금액: {}", order.getA_no(), order.getTo_amount());
+                throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), order.getTo_amount().longValue());
+            }
+            
             // 이체 실행
             executeTransfer(
                     order.getA_no(),

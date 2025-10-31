@@ -594,7 +594,8 @@ export default function TransferPage() {
           scheduleExpr: '0 0 9 * * ?',                      // String (cron 표현식)
           startAt: `${reserveDate}T${reserveTime}:00`,       // String (시작 시간)
           endAt: `${reserveDate}T${reserveTime}:00`,         // String (종료 시간)
-          memo: memo                                         // String (메모)
+          memo: memo,                                        // String (메모)
+          password: transferData.password                    // String (계좌 비밀번호 - 예약 이체 등록 시 검증용)
         };
         
         // 예약 이체 생성 API 호출
@@ -615,11 +616,44 @@ export default function TransferPage() {
             memo: memo
           };
           
+          setIsModalOpen(false);
           navigate('/transfer/reserve/complete', { state: { reserveData } });
           return;
         } else {
           // 예약이체 실패 시 alert로 에러 메시지 표시하고 완료 페이지로 이동하지 않음
-          const errorMessage = scheduleResponse.data?.message || scheduleResponse.data?.error || '예약 이체 등록에 실패했습니다.';
+          let errorMessage = scheduleResponse.data?.message || scheduleResponse.data?.error || '예약 이체 등록에 실패했습니다.';
+          const errorCode = scheduleResponse.data?.errorCode;
+          
+          // 에러 코드에 따른 사용자 친화적인 메시지 표시
+          if (errorCode) {
+            switch (errorCode) {
+              case 'PASSWORD_MISMATCH':
+                errorMessage = '계좌 비밀번호가 일치하지 않습니다.';
+                break;
+              case 'ACCOUNT_NOT_FOUND':
+                errorMessage = '존재하지 않는 계좌입니다.';
+                break;
+              case 'INSUFFICIENT_BALANCE':
+                errorMessage = '잔액이 부족합니다.';
+                break;
+              case 'ACCOUNT_SUSPENDED':
+                errorMessage = '거래가 제한된 계좌입니다.';
+                break;
+              case 'PER_TRANSFER_LIMIT_EXCEEDED':
+                errorMessage = '1회 이체 한도를 초과했습니다.';
+                break;
+              case 'DAILY_LIMIT_EXCEEDED':
+                errorMessage = '일일 이체 한도를 초과했습니다.';
+                break;
+              case 'MONTHLY_LIMIT_EXCEEDED':
+                errorMessage = '월간 이체 한도를 초과했습니다.';
+                break;
+              case 'UNAUTHORIZED':
+                errorMessage = '권한이 없습니다.';
+                break;
+            }
+          }
+          
           console.error('예약이체 실패 응답:', scheduleResponse.data);
           alert(`예약이체 실패: ${errorMessage}`);
           setIsModalOpen(false); // 모달 닫기
