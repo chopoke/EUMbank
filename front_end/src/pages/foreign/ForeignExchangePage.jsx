@@ -1,12 +1,14 @@
 // src/pages/foreign/ForeignExchangePage.jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import api from '../../api/axios';
 import { RefreshCw, Calculator, Send, List } from 'lucide-react';
 
 const API_BASE_URL = '/api/foreign/exchange';
 const RATES_URL    = '/api/foreign/rates';
+const HISTORY_URL  = `${API_BASE_URL}/history`;
 const ME_URLS      = ['/api/foreign/me', '/api/foreign/open/me'];
-const ACCOUNT_URLS = ['/api/account/list', '/api/accounts', '/api/accounts/me'];
+// me 기반 우선 → 파라미터 필요 없는 순으로
+const ACCOUNT_URLS = ['/api/accounts/me', '/api/accounts', '/api/account/list'];
 
 /* ========== 공통 유틸 ========== */
 const normalizeNumber = (v) => {
@@ -19,13 +21,11 @@ const normalizeNumber = (v) => {
   return null;
 };
 
-/** 통화코드 정규화: 'JPY(100)' -> 'JPY', 'IDR(100)' -> 'IDR' */
 const normalizeCurUnitCode = (s) => {
   const m = String(s ?? '').toUpperCase().match(/[A-Z]{3}/);
   return m ? m[0] : String(s ?? '').toUpperCase();
 };
 
-/** 자주 쓰는 ISO 통화 -> 한국어 명(국가/통화) 기본표 */
 const ISO_KO = {
   KRW: '대한민국 원',
   USD: '미국 달러',
@@ -43,7 +43,6 @@ const ISO_KO = {
   JPY100: '일본 엔(100)',
 };
 
-/** 응답 안 어디에 있어도 계좌 배열을 뽑아내기 */
 function extractAccountsFromAny(obj) {
   if (!obj) return [];
   const buckets = [];
@@ -57,7 +56,6 @@ function extractAccountsFromAny(obj) {
   return buckets.flat().filter(Boolean);
 }
 
-/** DB/백엔드 응답을 화면에서 쓰기 좋게 변환 */
 function normalizeAccounts(raw = []) {
   const guessCur = (s = '') => {
     const C = String(s).toUpperCase();
@@ -177,19 +175,34 @@ export default function ForeignExchangePage() {
         }
         if (!meRes) { setMessage('고객 정보를 불러오지 못했습니다.'); return; }
         const me = meRes.data || {};
-        const meCNo = me.cNo ?? me.c_no ?? me.customerId ?? me.id ?? null;
+
+        // 다양한 키에서 cNo 추출 (cCustomerNo 포함)
+        const meCNo =
+          me.cNo ??
+          me.c_no ??
+          me.customerNo ??
+          me.customer_no ??
+          me.cCustomerNo ??
+          me.customerId ??
+          me.id ??
+          null;
+
         setCNo(meCNo);
         setMyPreferentialRate(Number(me.preferentialRate ?? me.prefRate ?? 0));
 
         // accounts
         let rawAccs = extractAccountsFromAny(me);
+
         if (!rawAccs.length) {
           for (const url of ACCOUNT_URLS) {
+            if (url === '/api/account/list' && !meCNo) continue; // cNo 필수 엔드포인트는 스킵
+
             // eslint-disable-next-line no-await-in-loop
             const r = await api.get(url, {
-              params: meCNo ? { cNo: meCNo } : undefined,
+              params: url === '/api/account/list' ? { cNo: meCNo } : undefined,
               validateStatus: () => true
             });
+
             if (r.status === 200) {
               rawAccs = extractAccountsFromAny(r.data);
               if (rawAccs.length) break;
@@ -215,6 +228,8 @@ export default function ForeignExchangePage() {
         if (!onlyKrw.length && !onlyFx.length) {
           setMessage('계좌를 찾지 못했습니다. (계좌생성 필요)');
         }
+
+        console.log('[FX] me=', me, 'cNo=', meCNo, 'KRW/FX=', onlyKrw.length, onlyFx.length);
       } catch (e) {
         console.error(e);
         setMessage('초기 정보를 불러오지 못했습니다.');
@@ -267,7 +282,7 @@ export default function ForeignExchangePage() {
         toCurUnit:     selectedFx,
         fxAmount,
         memo: form.memo,
-        exchangeType: '송금',                 // ✅ UI 고정
+        exchangeType: '송금',
         commissionRate: myPreferentialRate,
       };
     }
@@ -283,7 +298,7 @@ export default function ForeignExchangePage() {
       toCurUnit:     'KRW',
       fxAmount,
       memo: form.memo,
-      exchangeType: '송금',                 // ✅ UI 고정
+      exchangeType: '송금',
       commissionRate: myPreferentialRate,
     };
   };
@@ -342,49 +357,57 @@ export default function ForeignExchangePage() {
   /* ========== 히스토리 ========== */
   const ExchangeHistory = ({ version = 0 }) => {
     const [history, setHistory] = useState([]);
-       const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyError, setHistoryError] = useState('');
+    // 연속 호출 방지
+    const inFlightRef = useRef(false);
 
     const fetchHistory = useCallback(async () => {
-      if (!cNo) return;
+      if (!cNo || inFlightRef.current) return;
+      inFlightRef.current = true;
       setHistoryLoading(true);
+      setHistoryError('');
       try {
-        const r = await api.get(`${API_BASE_URL}/history`, {
+        const r = await api.get(HISTORY_URL, {
           params: { cNo },
           validateStatus: () => true,
         });
-        const rows = Array.isArray(r.data) ? r.data : (
-          r.data?.rows ?? r.data?.content ?? r.data?.items ?? []
-        );
-        const normalized = (Array.isArray(rows) ? rows : []).map((r, idx) => ([
-          r.exId ?? r.feId ?? r.fhExId ?? idx,
-          r.eventType ?? r.feSide ?? r.fhEventType ?? 'SELL',
-          r.curCode ?? r.feCurCode ?? r.fhFxCurCode ?? '',
-          normalizeNumber(r.fxAmt ?? r.feAmtFc ?? r.fhFxAmtFc),
-          normalizeNumber(r.amtKrw ?? r.feAmtKrw ?? r.fhAmtKrw),
-          normalizeNumber(r.rate ?? r.feRateApplied ?? r.fhFxRateApplied),
-          r.status ?? r.feStatus ?? r.fhStatus ?? '-',
-          r.orderedAt ?? r.feOrderedAt ?? r.fhOrderedAt ?? null,
-        ])).map((a) => ({
-          id: a[0], side: a[1], curCode: a[2], amtFc: a[3], amtKrw: a[4],
-          rate: a[5], status: a[6], orderedAt: a[7]
-        }));
-        setHistory(normalized);
+        if (r.status !== 200) {
+          setHistory([]);
+          setHistoryError(`환전 내역 조회 실패 (status=${r.status})`);
+        } else {
+          const rows = Array.isArray(r.data) ? r.data : (
+            r.data?.rows ?? r.data?.content ?? r.data?.items ?? []
+          );
+          const normalized = (Array.isArray(rows) ? rows : []).map((row, idx) => ([
+            row.exId ?? row.feId ?? row.fhExId ?? idx,
+            row.eventType ?? row.feSide ?? row.fhEventType ?? 'SELL',
+            row.curCode ?? row.feCurCode ?? row.fhFxCurCode ?? '',
+            normalizeNumber(row.fxAmt ?? row.feAmtFc ?? row.fhFxAmtFc),
+            normalizeNumber(row.amtKrw ?? row.feAmtKrw ?? row.fhAmtKrw),
+            normalizeNumber(row.rate ?? row.feRateApplied ?? row.fhFxRateApplied),
+            row.status ?? row.feStatus ?? row.fhStatus ?? '-',
+            row.orderedAt ?? row.feOrderedAt ?? row.fhOrderedAt ?? null,
+          ])).map((a) => ({
+            id: a[0], side: a[1], curCode: a[2], amtFc: a[3], amtKrw: a[4],
+            rate: a[5], status: a[6], orderedAt: a[7]
+          }));
+          setHistory(normalized);
+        }
       } catch (e) {
-        setMessage('환전 내역 조회 중 오류가 발생했습니다.');
+        console.error('[FX] history error', e);
         setHistory([]);
+        setHistoryError('환전 내역 조회 중 오류가 발생했습니다.');
       } finally {
         setHistoryLoading(false);
+        // 약간의 디바운스: 다음 호출까지 짧은 텀
+        setTimeout(() => { inFlightRef.current = false; }, 250);
       }
     }, [cNo]);
 
     useEffect(() => {
       if (activeTab === 'history' && cNo) fetchHistory();
-    }, [activeTab, cNo, fetchHistory]);
-
-    useEffect(() => {
-      if (activeTab === 'history' && cNo) fetchHistory();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [version]);
+    }, [activeTab, cNo, version, fetchHistory]);
 
     const formatCurrency = (amount, currency) =>
       amount == null
@@ -431,6 +454,8 @@ export default function ForeignExchangePage() {
           <div className="text-center py-8 text-gray-500">로그인 후 이용해 주세요.</div>
         ) : historyLoading ? (
           <div className="text-center py-8">로딩 중...</div>
+        ) : historyError ? (
+          <div className="text-center py-8 text-red-600 bg-red-50 rounded-md">{historyError}</div>
         ) : history.length === 0 ? (
           <div className="text-center py-8 text-gray-500">조회된 환전 내역이 없습니다.</div>
         ) : (
@@ -485,7 +510,6 @@ export default function ForeignExchangePage() {
   };
 
   /* ========== 화면 ========== */
-  // 왼쪽은 항상 KRW, 오른쪽은 항상 FX
   const leftLabel  = isBuy ? '출금 계좌 (KRW)' : '입금 계좌 (KRW)';
   const rightLabel = isBuy ? '입금 계좌 (외화)' : '출금 계좌 (외화)';
 
@@ -668,7 +692,7 @@ export default function ForeignExchangePage() {
                   className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition duration-150"
                 >
                   <Send className="w-5 h-5 mr-2" />
-                   환전하기
+                  환전하기
                 </button>
               </div>
             </div>
@@ -678,7 +702,6 @@ export default function ForeignExchangePage() {
               <h2 className="text-xl font-bold mb-6 text-gray-800">환전 정보 및 결과 요약</h2>
 
               <dl className="space-y-4">
-                {/* 매매기준율 */}
                 <div className="flex justify-between border-b pb-2">
                   <dt className="text-sm font-medium text-gray-500">매매 기준율 (1 {selectedFx} → KRW)</dt>
                   <dd className="text-lg font-bold text-gray-900">
@@ -686,7 +709,6 @@ export default function ForeignExchangePage() {
                   </dd>
                 </div>
 
-                {/* 거래 기준 환율 (TTS/TTB) */}
                 <div className="flex justify-between border-b pb-2">
                   <dt className="text-sm font-medium text-gray-500">
                     {isBuy
@@ -704,15 +726,12 @@ export default function ForeignExchangePage() {
                   </dd>
                 </div>
 
-                {/* 우대율 */}
                 <div className="flex justify-between">
                   <dt className="text-sm font-medium text-gray-500">우대율</dt>
                   <dd className="text-md font-semibold text-gray-700">{myPreferentialRate}%</dd>
                 </div>
 
-                {/* 결과 섹션 */}
                 <div className="pt-4 border-t border-indigo-200 space-y-3">
-                  {/* 환전 원/외화 금액 */}
                   <div className="flex justify-between">
                     <dt className="text-sm font-medium text-gray-500">
                       {isBuy ? '환전 원화 금액 (KRW)' : `환전 외화 금액 (${selectedFx})`}
@@ -726,7 +745,6 @@ export default function ForeignExchangePage() {
                     </dd>
                   </div>
 
-                  {/* 적용 환율 */}
                   <div className="flex justify-between">
                     <dt className="text-sm font-medium text-gray-500">적용 환율</dt>
                     <dd className="text-md font-semibold text-gray-700">
@@ -736,7 +754,6 @@ export default function ForeignExchangePage() {
                     </dd>
                   </div>
 
-                  {/* 수수료 */}
                   <div className="flex justify-between">
                     <dt className="text-sm font-medium text-gray-500">수수료 (KRW 환산)</dt>
                     <dd className="text-md font-semibold text-red-600">
@@ -746,7 +763,6 @@ export default function ForeignExchangePage() {
                     </dd>
                   </div>
 
-                  {/* 최종 수취 */}
                   <div className="flex justify-between pt-2 border-t mt-3">
                     <dt className="text-base font-bold text-gray-900">
                       {isBuy ? `최종 수취 외화 금액 (${selectedFx})` : '최종 수취 원화 금액 (KRW)'}

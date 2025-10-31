@@ -28,9 +28,6 @@ public class ForeignExchange {
     @Column(name = "fe_no", columnDefinition = "INT COMMENT '외화번호(PK)'")
     private Integer feNo;
 
-    @Column(name = "fp_no", nullable = false, columnDefinition = "INT COMMENT '외화상품번호'")
-    private Integer fpNo; // ForeignProduct. 현재는 임시값 1
-
     @Column(name = "c_no", nullable = false, columnDefinition = "INT COMMENT '고객번호'")
     private Integer cNo;
 
