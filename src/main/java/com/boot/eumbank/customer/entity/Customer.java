@@ -129,6 +129,10 @@ public class Customer {
     @Column(name = "c_zip_code")
     private String cZipCode;
 
+    @Column(name = "c_role", nullable = false, length = 20)
+    @Builder.Default
+    private String role = "USER";
+
     // 비즈니스 메서드들
     public void updateAuthLevel(Integer authLevel) {
         this.cAuthLevel = authLevel;

@@ -1,41 +1,36 @@
 package com.boot.eumbank.product.service.product.Impl;
 
-import com.boot.eumbank.account.open.dto.account.AccountDTO;
 import com.boot.eumbank.account.open.entity.account.Account;
-import com.boot.eumbank.product.dto.product.AccountDto;
+import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.product.dto.product.DepositSubscriptionRequestDto;
 import com.boot.eumbank.product.dto.product.ProductDto;
-import com.boot.eumbank.product.jpa.repository.AccountQueryRepository;
-import com.boot.eumbank.product.jpa.repository.ProductQueryRepository;
+import com.boot.eumbank.product.jpa.repository.DepositQueryRepository;
 import com.boot.eumbank.product.service.product.DepositService;
 import lombok.RequiredArgsConstructor;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -44,49 +39,17 @@ public class DepositServiceImpl implements DepositService {
 
     private Logger logger = LoggerFactory.getLogger(DepositServiceImpl.class);
 
-    private final ProductQueryRepository productQueryRepository;
-
-    private final AccountQueryRepository accountQueryRepository;
+    private final DepositQueryRepository depositQueryRepository;
 
     // application.properties에서 파일 저장 경로를 주입받음
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    public List<ProductDto> findAllProducts() {
-        // 각 Repository 메소드를 호출하여 상품 종류별로 데이터를 조회합니다.
-        List<ProductDto> depositProducts = productQueryRepository.findDepositProducts();
-        List<ProductDto> installmentProducts = productQueryRepository.findInstallmentProducts();
-        List<ProductDto> foreignProducts = productQueryRepository.findForeignProducts();
 
-        // 조회된 모든 상품을 하나의 리스트로 합칩니다.
-        List<ProductDto> allProducts = new ArrayList<>();
-        allProducts.addAll(depositProducts);
-        allProducts.addAll(installmentProducts);
-        allProducts.addAll(foreignProducts);
-
-        // 프론트엔드에서 섞는 로직이 있지만, 백엔드에서 섞어서 내려주는 것도 좋은 방법입니다.
-        Collections.shuffle(allProducts);
-
-        return allProducts;
-    }
-
-    @Override
-    public List<AccountDTO> findAllAccounts() {
-
-        logger.info("DepositServiceImpl => findAllAccounts()");
-
-        List<Account> allAccount = accountQueryRepository.findAllAccount();
-
-        logger.info("" + allAccount);
-
-        return allAccount.stream()
-                .map(AccountDto::from)  // 또는 .map(account -> AccountDto.from(account))
-                .collect(Collectors.toList());
-    }
 
     @Override
     @Transactional
-    public String processSubscription(
+    public String depositSubscription(
             DepositSubscriptionRequestDto requestDto,
             MultipartFile signedPdfFile) {
 
@@ -117,38 +80,79 @@ public class DepositServiceImpl implements DepositService {
                 throw new RuntimeException("PDF 생성을 위한 한글 폰트 로드에 실패했습니다.", e);
             }
 
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Customer customer = (Customer) authentication.getPrincipal();
+
             // ✅ PDF에 정보 추가 로직 변경
             try (PDPageContentStream contentStream = new PDPageContentStream(
                     document, firstPage, PDPageContentStream.AppendMode.APPEND, true, true)) {
 
                 // 기본 좌표 및 폰트 크기 설정
-                float yPosition = 650; // 시작 Y 좌표 (페이지 상단 근처)
-                float lineHeight = 20;  // 각 라인의 간격
-                float labelX = 50;      // '상품명:' 같은 라벨의 X 좌표
-                float valueX = 150;     // 실제 데이터 값의 X 좌표
+                float yPosition = 683; // 시작 Y 좌표 (페이지 상단 근처)
+                float lineHeight = 27;  // 각 라인의 간격
+                float valueX = 180;     // 실제 데이터 값의 X 좌표
                 int fontSize = 10;      // 폰트 크기
 
-                // 1. 상품명 추가
-                addText(contentStream, font, fontSize, labelX, yPosition, "상 품 명:");
-                addText(contentStream, font, fontSize, valueX, yPosition, requestDto.getProductName());
-                yPosition -= lineHeight; // 다음 라인을 위해 y 좌표 감소
 
-                // 2. 가입금액 추가 (포맷 적용)
+                // 성명
+                addText(contentStream, font, fontSize, valueX, yPosition, customer.getCNameKr());
+                yPosition -= lineHeight;
+
+                // 주민등록번호
+                addText(contentStream, font, fontSize, valueX, yPosition, customer.getCRrnHash());
+                yPosition -= lineHeight;
+
+                // 연락처
+                addText(contentStream, font, fontSize, valueX, yPosition, customer.getCPhoneMobile());
+                yPosition -= lineHeight;
+
+                // 주소
+                addText(contentStream, font, fontSize, valueX, yPosition, customer.getCAddress());
+                yPosition -= lineHeight;
+
+                // -----------------------------------------------
+
+                float underyPosition = 530; // 시작 Y 좌표 (페이지 상단 근처)
+                float underlineHeight = 28;  // 각 라인의 간격
+                float undervalueX = 180;     // 실제 데이터 값의 X 좌표
+                int underfontSize = 10;      // 폰트 크기
+
+                // 상품명
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, requestDto.getProductName());
+                underyPosition -= underlineHeight; // 다음 라인을 위해 y 좌표 감소
+
+                // 계좌번호
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, requestDto.getDepositAccount());
+                underyPosition -= underlineHeight;
+
+                // 신규 가입일
+                String formattedDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, formattedDate);
+                underyPosition -= underlineHeight;
+
+                // 만기일
+                LocalDate today = LocalDate.now();
+                int period = requestDto.getPeriod();
+                LocalDate maturityDate = today.plusMonths(period);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                String formattedMaturityDate = maturityDate.format(formatter);
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, formattedMaturityDate);
+                underyPosition -= underlineHeight;
+
+                // 가입금액;
                 String formattedAmount = NumberFormat.getInstance().format(requestDto.getAmount()) + " 원";
-                addText(contentStream, font, fontSize, labelX, yPosition, "가입금액:");
-                addText(contentStream, font, fontSize, valueX, yPosition, formattedAmount);
-                yPosition -= lineHeight;
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, formattedAmount);
+                underyPosition -= underlineHeight;
 
-                // 3. 가입기간 추가
-                String formattedPeriod = requestDto.getPeriod() + " 개월";
-                addText(contentStream, font, fontSize, labelX, yPosition, "가입기간:");
-                addText(contentStream, font, fontSize, valueX, yPosition, formattedPeriod);
-                yPosition -= lineHeight;
+                // 가입기간
+                String formattedPeriod = formattedDate + " ~ " + formattedMaturityDate;
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, formattedPeriod);
+                underyPosition -= underlineHeight;
 
-                // 4. 가입일자 추가
-                String formattedDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-                addText(contentStream, font, fontSize, labelX, yPosition, "가입일자:");
-                addText(contentStream, font, fontSize, valueX, yPosition, formattedDate);
+                // 적용이율
+                ProductDto oneDepositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, oneDepositProducts.getRate());
+                underyPosition -= underlineHeight;
 
                 logger.info("PDF에 세분화된 정보 추가 완료");
             }
@@ -192,6 +196,20 @@ public class DepositServiceImpl implements DepositService {
             logger.error("PDF 처리 중 예외 발생", e);
             throw new RuntimeException("처리 중 오류가 발생했습니다: " + e.getMessage(), e);
         }
+    }
+
+    @Override
+    public void depositSave(DepositSubscriptionRequestDto requestDto) {
+
+        // --- 1. 현재 로그인한 사용자(JWT) 정보 가져오기 ---
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Customer customer = (Customer) authentication.getPrincipal();
+
+        ProductDto depositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
+
+        Account oneAccount = depositQueryRepository.findOneAccount(customer, requestDto);
+
+        depositQueryRepository.depositSave(requestDto, customer, depositProducts, oneAccount);
     }
 
     // ✅ 헬퍼 메소드 추가: 지정된 좌표에 텍스트를 추가하는 로직

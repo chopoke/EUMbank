@@ -53,6 +53,12 @@ import AssetPeerComparison from "./pages/assetManagement/page/AssetPeerCompariso
 import AssetRecommendation from "./pages/assetManagement/page/AssetRecommendation";
 import AssetReport from "./pages/assetManagement/page/AssetReport";
 
+// 관리자페이지
+import AdminPage from "./pages/admin/page";
+
+// 공과금
+import BillsLanding from "./pages/bills/BillsLanding";
+
 function AppWrapper() {
   return <App />;
 }
@@ -202,6 +208,9 @@ function App() {
           </ProtectedRoute>
         } />
 
+        {/* 공과금페이지 */}
+        <Route path="/bills" element={<BillsLanding />} />
+
         {/* 자산관리 */}
         <Route path="/asset" element={<Navigate to="/asset/dashboard" replace />}/>
 
@@ -259,6 +268,13 @@ function App() {
         <Route path="/mypage" element={
           <ProtectedRoute>
             <MyPage />
+          </ProtectedRoute>
+        } />
+
+        {/* 관리자페이지 진입 */}
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <AdminPage />
           </ProtectedRoute>
         } />
 

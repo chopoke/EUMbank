@@ -7,6 +7,8 @@ import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.customer.repo.CustomerRepo;
 import com.boot.eumbank.foreign.dto.FxOpenReqDto;
 import com.boot.eumbank.foreign.dto.FxOpenRespDto;
+import com.boot.eumbank.foreign.entity.ForeignExchange;
+import com.boot.eumbank.foreign.repo.ForeignExchangeRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +28,7 @@ public class FxOpenService {
 
     private final AccountRepo accountRepo;
     private final CustomerRepo customerRepo;
+    private final ForeignExchangeRepo foreignExchangeRepo;
 
     /** 저장 없이 “사용 가능한 계좌번호”만 만들어서 반환 */
     @Transactional(readOnly = true)
@@ -50,8 +53,16 @@ public class FxOpenService {
         if (req.getPinNumber() == null || !String.valueOf(req.getPinNumber()).matches("\\d{6}")) {
             throw new IllegalArgumentException("거래 PIN은 숫자 6자리여야 합니다.");
         }
-        if (!"Y".equalsIgnoreCase(req.getAgreeTerms()) ||
-                !"Y".equalsIgnoreCase(req.getAgreePrivacy())) {
+
+        // 약관을 boolean/문자 어떤 형식으로 받아도 Y/N으로 통일
+        final String agreeTerms      = yn(req.getAgreeTerms());
+        final String agreePrivacy    = yn(req.getAgreePrivacy());
+        final String agreeRisk       = yn(req.getAgreeRisk());       // 없으면 N 처리
+        final String agreeProduct    = yn(req.getAgreeProduct());    // 없으면 N 처리
+        final String agreeMarketing  = yn(req.getAgreeMarketing());  // 선택값: null->N
+
+        // 필수 검증
+        if (!"Y".equals(agreeTerms) || !"Y".equals(agreePrivacy)) {
             throw new IllegalArgumentException("필수 약관 동의 필요");
         }
 
@@ -79,7 +90,7 @@ public class FxOpenService {
         // 3-2) 외화 상품코드(F + 5자리 숫자) 생성 + 중복회피
         String fxProductCode = genFxProductCode();
 
-        // 4) 엔티티 생성
+        // 4) 엔티티 생성 (ACCOUNT_TBL)
         Account entity = Account.builder()
                 .aId(aId)
                 .cNo(req.getCustomerNo().intValue())
@@ -89,23 +100,45 @@ public class FxOpenService {
                 .accountType("외환")
                 .openedAt(LocalDateTime.now())
                 .accountPwd(req.getPin())
-                //.pinNumber(req.getPinNumber())
                 .status("ACTIVE")
                 .balance(BigDecimal.ZERO)
                 .currency(currency)
                 .nickname(req.getNickname())
                 .createdBy("SYSTEM")
                 .updatedAt(LocalDateTime.now())
-                .agreeTerms("Y")
-                .agreePrivacy("Y")
-                .agreeMarketing(req.getAgreeMarketing())
+                .agreeTerms(agreeTerms)
+                .agreePrivacy(agreePrivacy)
+                .agreeMarketing(agreeMarketing)
                 .rate(BigDecimal.ZERO)
                 .build();
 
-        // 5) 저장
+        // 5) 저장 (ACCOUNT_TBL)
         Account saved = accountRepo.save(entity);
 
-        // 6) 응답
+        // 6) 개설 이벤트를 FOREIGN_EXCHANGE_TBL에도 기록 (금액 0, OPEN 이벤트)
+        ForeignExchange openEvt = ForeignExchange.builder()
+                .fpNo(null)
+                .cNo(saved.getCNo())
+                .aNo(saved.getANo())
+                .feId("OPEN-" + System.currentTimeMillis())
+                .feCurCode(saved.getCurrency())
+                .feAmtFc(BigDecimal.ZERO)
+                .feAmtKrw(BigDecimal.ZERO)
+                .feRateApplied(BigDecimal.ZERO)
+                .feFee(BigDecimal.ZERO)
+                .feStatus("COMPLETED")
+                .feOrderedAt(LocalDateTime.now())
+                .feSide("OPEN")
+                .feMemo("외화계좌 개설")
+                .agreeTerms(agreeTerms)
+                .agreePrivacy(agreePrivacy)
+                .agreeRisk(agreeRisk)
+                .agreeProduct(agreeProduct)
+                .agreeMarketing(agreeMarketing)
+                .build();
+        foreignExchangeRepo.save(openEvt);
+
+        // 7) 응답
         return new FxOpenRespDto(
                 saved.getAccountNo(),
                 saved.getCurrency(),
@@ -113,6 +146,18 @@ public class FxOpenService {
                 saved.getAccountType(),
                 saved.getOpenedAt()
         );
+    }
+
+    /** 다양한 형태(boolean/String/null)의 입력을 'Y'/'N'으로 통일 */
+    private String yn(Object... candidates) {
+        for (Object c : candidates) {
+            if (c == null) continue;
+            if (c instanceof Boolean b) return b ? "Y" : "N";
+            String s = c.toString().trim();
+            if (s.equalsIgnoreCase("Y") || s.equalsIgnoreCase("YES") || s.equalsIgnoreCase("true"))  return "Y";
+            if (s.equalsIgnoreCase("N") || s.equalsIgnoreCase("NO")  || s.equalsIgnoreCase("false")) return "N";
+        }
+        return "N";
     }
 
     /** c_name_en이 비어있을 때만 한 번 저장 */
@@ -128,15 +173,11 @@ public class FxOpenService {
         String normalized = normalizeEnglishName(englishNameRaw);
         if (normalized.isBlank()) return;
 
-        // 엔티티 업데이트
         cust.setCNameEn(normalized);
-        // Customer 엔티티의 타입이 TIMESTAMP/LocalDateTime이 아닌 Instant면 아래 유지.
-        // 컬럼이 LocalDateTime 매핑이면 LocalDateTime.now()로 바꿔줘.
         cust.setCUpdatedAt(Instant.now());
         cust.setCUpdatedBy("FX-OPEN");
         customerRepo.save(cust);
 
-        // 현재 로그인 세션의 Principal에도 즉시 반영(있다면)
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Customer p && p.getCustomerNo() == cNo) {
             p.setCNameEn(normalized);
@@ -144,7 +185,6 @@ public class FxOpenService {
     }
 
     private String normalizeEnglishName(String s) {
-        // 영문/공백만 허용, 다중 공백 정리, 대문자화, 최대 100자
         String t = s.trim()
                 .replaceAll("[^A-Za-z ]", " ")
                 .replaceAll("\\s+", " ")
@@ -206,8 +246,6 @@ public class FxOpenService {
         Map<String, Object> map = new HashMap<>();
         map.put("c_no", cno);
         map.put("c_name_en", customer.getCNameEn());
-        // 필요 시 한글 이름 등 추가 가능:
-        // map.put("c_name_kr", customer.getCNameKr());
         return map;
     }
 }

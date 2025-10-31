@@ -10,7 +10,7 @@ import static com.boot.eumbank.customer.entity.QCustomer.customer;
 
 @Repository
 @RequiredArgsConstructor
-public class CustomerRepositoryImpl {
+public class CustomerRepositoryImpl implements CustomerRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 
@@ -25,11 +25,13 @@ public class CustomerRepositoryImpl {
                 .from(customer)
                 .where(
                         customer.cId.eq(userId),
-                        customer.pinNumber.isNotNull() // pinNumber 컬럼이 NULL이 아닌지 확인
+                        customer.pinNumber.isNotEmpty() // pinNumber 컬럼이 빈값이 아닌지 확인
                 )
                 .fetchFirst(); // 결과가 있으면 1개만 가져오고, 없으면 null을 반환 (성능 최적화)
 
         // fetchFirst() 결과가 null이 아니면(존재하면) true 반환
+
+        System.out.println(fetchFirst);
         return fetchFirst != null;
     }
 }

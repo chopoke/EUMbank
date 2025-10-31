@@ -4,10 +4,10 @@
 /* 전체 컨테이너 (약관 페이지에 맞게 너비 조정) */
 .containerdepart {
     width: 100%;
-    max-width: 800px; /* 상품 목록보다 약간 좁게 설정 */
+    max-width: 1280px; /* 상품 목록보다 약간 좁게 설정 */
     margin: 0 auto;
     background-color: #fff;
-    padding: 2rem 2.5rem;
+    padding: 8rem 2.5rem;
     border-radius: 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
@@ -25,12 +25,12 @@
 }
 
 /* 약관 내용 전체를 감싸는 박스 */
-.terms-box.modern {
+.termsssr-box.modern {
     border: none;
     padding: 0;
 }
 
-.terms-box.modern h2 {
+.termsssr-box.modern h2 {
     font-size: 1.8rem; /* 상품 섹션 h2와 통일 */
     font-weight: 700; /* 제목은 더 강조 */
     color: #333;

@@ -1,0 +1,200 @@
+/* ========================================
+   React DatePicker 커스텀 스타일
+======================================== */
+
+/* 달력 전체 컨테이너 */
+.react-datepicker {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 0.9rem;
+    background-color: #fff;
+    color: #000;
+    border: 1px solid #aeaeae;
+    border-radius: 8px;
+    display: inline-block;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 인라인 달력 */
+.react-datepicker--inline {
+    width: 100%;
+    border: 1px solid #ddd;
+}
+
+/* 달력 헤더 */
+.react-datepicker__header {
+    text-align: center;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    padding: 12px 0;
+    position: relative;
+}
+
+/* 현재 월 표시 */
+.react-datepicker__current-month {
+    margin-top: 0;
+    color: #333;
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+/* 이전/다음 월 버튼 */
+.react-datepicker__navigation {
+    background: none;
+    line-height: 1.7rem;
+    text-align: center;
+    cursor: pointer;
+    position: absolute;
+    top: 12px;
+    width: 0;
+    padding: 0;
+    border: 0.45rem solid transparent;
+    z-index: 1;
+    height: 10px;
+    width: 10px;
+    text-indent: -999em;
+    overflow: hidden;
+}
+
+.react-datepicker__navigation--previous {
+    left: 15px;
+    border-right-color: #ccc;
+}
+
+.react-datepicker__navigation--previous:hover {
+    border-right-color: #007bff;
+}
+
+.react-datepicker__navigation--next {
+    right: 15px;
+    border-left-color: #ccc;
+}
+
+.react-datepicker__navigation--next:hover {
+    border-left-color: #007bff;
+}
+
+/* 요일 헤더 */
+.react-datepicker__day-names {
+    display: flex;
+    justify-content: space-around;
+    background-color: #f8f9fa;
+    padding: 8px 0;
+    margin-bottom: 0;
+}
+
+.react-datepicker__day-name {
+    color: #666;
+    display: inline-block;
+    width: 2.5rem;
+    line-height: 2.5rem;
+    text-align: center;
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* 주(week) */
+.react-datepicker__week {
+    display: flex;
+    justify-content: space-around;
+}
+
+/* 날짜 셀 */
+.react-datepicker__day {
+    cursor: pointer;
+    display: inline-block;
+    width: 2.5rem;
+    line-height: 2.5rem;
+    text-align: center;
+    margin: 0.2rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.react-datepicker__day:hover:not(.react-datepicker__day--disabled) {
+    background-color: #e9ecef;
+}
+
+/* 선택된 날짜 */
+.react-datepicker__day--selected,
+.react-datepicker__day--selected:hover {
+    background-color: #007bff !important;
+    color: white !important;
+    font-weight: bold;
+}
+
+/* 오늘 날짜 */
+.react-datepicker__day--today {
+    font-weight: bold;
+    color: #007bff;
+}
+
+/* 비활성화된 날짜 (과거 날짜, 29~31일) */
+.react-datepicker__day--disabled {
+    cursor: not-allowed;
+    color: #ccc !important;
+    background-color: #f9f9f9;
+    text-decoration: line-through;
+}
+
+.react-datepicker__day--disabled:hover {
+    background-color: #f9f9f9 !important;
+}
+
+/* 다른 월의 날짜 */
+.react-datepicker__day--outside-month {
+    color: #ccc;
+    pointer-events: none;
+}
+
+/* 달력 본문 */
+.react-datepicker__month {
+    margin: 0.4rem;
+    text-align: center;
+}
+
+/* 커스텀 클래스: 납입일 선택 달력 */
+.payment-day-calendar {
+    width: 100% !important;
+}
+
+.payment-day-calendar .react-datepicker__month-container {
+    width: 100%;
+}
+
+/* 달력 너비 조정 */
+.react-datepicker--inline .react-datepicker__month-container {
+    width: 100%;
+}
+
+/* 주말 강조 (선택사항) */
+.react-datepicker__day--weekend {
+    color: #e74c3c;
+}
+
+/* 키보드 선택 */
+.react-datepicker__day--keyboard-selected {
+    background-color: #d4edff;
+    color: #000;
+}
+
+.react-datepicker__day--keyboard-selected:hover {
+    background-color: #9dd4ff;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    .react-datepicker {
+        font-size: 0.8rem;
+    }
+    
+    .react-datepicker__day,
+    .react-datepicker__day-name {
+        width: 2rem;
+        line-height: 2rem;
+    }
+}

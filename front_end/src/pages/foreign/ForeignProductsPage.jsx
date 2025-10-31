@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "../../resources/css/foreign.css";
+import api from "../../api/axios";
 
 const TYPE_LABEL = {
   TERM_DEPOSIT: "정기예금",
@@ -113,8 +114,11 @@ export default function ForeignProductsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/foreign/products?size=20&sort=id,asc");
-        const data = await res.json();
+        // const res = await fetch("/api/foreign/products?size=20&sort=id,asc");
+        // const data = await res.json();
+        const { data } = await api.get("/api/foreign/products", {
+          params: { size: 20, sort: "id,asc" },
+        });
         setRows(Array.isArray(data?.content) ? data.content : []);
       } catch (e) {
         console.error(e);

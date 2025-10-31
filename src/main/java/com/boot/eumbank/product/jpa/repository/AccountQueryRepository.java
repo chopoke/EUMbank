@@ -2,6 +2,7 @@ package com.boot.eumbank.product.jpa.repository;
 
 import com.boot.eumbank.account.open.controller.AccountController;
 import com.boot.eumbank.account.open.entity.account.Account;
+import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.product.dto.product.AccountDto;
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -35,5 +36,7 @@ public class AccountQueryRepository {
                 .fetch();
 
     }
+
+
 
 }

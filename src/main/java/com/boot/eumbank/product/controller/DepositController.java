@@ -1,8 +1,6 @@
 package com.boot.eumbank.product.controller;
 
-import com.boot.eumbank.account.open.dto.account.AccountDTO;
 import com.boot.eumbank.product.dto.product.DepositSubscriptionRequestDto;
-import com.boot.eumbank.product.dto.product.ProductDto;
 import com.boot.eumbank.product.service.product.DepositService;
 import com.boot.eumbank.product.service.product.Impl.DepositServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -26,20 +23,6 @@ public class DepositController {
     private Logger logger = LoggerFactory.getLogger(DepositServiceImpl.class);
 
     private final DepositService depositService;
-
-    @GetMapping("/productsList")
-    public ResponseEntity<List<ProductDto>> getAllProducts() {
-        List<ProductDto> products = depositService.findAllProducts();
-        return ResponseEntity.ok(products);
-    }
-
-    @GetMapping("/accountList")
-    public ResponseEntity<List<AccountDTO>> getAllAccounts() {
-
-        logger.info("DepositController => getAllAccounts()");
-        List<AccountDTO> allAccounts = depositService.findAllAccounts();
-        return ResponseEntity.ok(allAccounts);
-    }
 
     /**
      * 예금상품 가입
@@ -115,12 +98,18 @@ public class DepositController {
 
             // 3. 서비스 레이어 호출 (username 없이)
             logger.info("서비스 레이어 호출 시작");
-            String savedFilePath = depositService.processSubscription(
+            String savedFilePath = depositService.depositSubscription(
                     requestDto,
                     signedPdfFile
             );
             logger.info("서비스 레이어 호출 완료. 저장 경로: {}", savedFilePath);
 
+            depositService.depositSave(requestDto);
+
+            logger.info("========================================");
+            logger.info("예금 테이블 저장 완료 (성공)");
+            logger.info("========================================");
+            
             // 4. 성공 응답
             response.put("success", true);
             response.put("message", "가입 신청이 성공적으로 완료되었습니다.");

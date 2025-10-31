@@ -33,6 +33,7 @@ const paths = {
 export function Header({ isLoggedIn, user, onLogout }) {
     const navigate = useNavigate();
     const displayName = user?.c_user_id||"고객";
+    const isAdmin = Array.isArray(user?.roles) && user.roles.includes("ADMIN");
     const handleLogoutClick = () => {
         // 부모로부터 받은 onLogout 함수를 호출합니다.
         onLogout();
@@ -41,7 +42,7 @@ export function Header({ isLoggedIn, user, onLogout }) {
 
     useEffect(() => {
       if (isLoggedIn && !user) {
-        api.get("/api/me").then(r => {/* setUser는 상위에서 내려주도록 구성 */}).catch(()=>{});
+        api.get("/api/me").catch(() => {});
       }
     }, [isLoggedIn, user]);
 
@@ -80,7 +81,10 @@ export function Header({ isLoggedIn, user, onLogout }) {
             <Link to="/products" className="nav-link">상품</Link>
             <Link to="/asset" className="nav-link nav-link-active">자산관리</Link>
             <Link to="/foreign/rate" className="nav-link">외환/환율</Link>
-            <Link to="/mypage" className="nav-link"><img src={myp} className="mypage w-5"/></Link>
+            {/* 마이페이지 or 관리자페이지 이동 */}
+            <Link to={isAdmin ? "/admin" : "/mypage"} className="nav-link">
+              <img src={myp} className="mypage w-5" />
+            </Link>
             {/* <Link to="/events" className="nav-link">이벤트</Link> */}
             <button className="notification-button" aria-label="알림">
             <Icon path={paths.bell} />
@@ -98,6 +102,11 @@ export function Header({ isLoggedIn, user, onLogout }) {
             {/* absolute left-3 top-2.5 text-gray-500 */}
             {/* <span className="search-icon"><Icon path={paths.search} /></span> */}
           {/* </label> */}
+          {isLoggedIn && isAdmin && (
+            <Link to="/admin">
+              <button className="login-button">관리자</button>
+            </Link>
+          )}
           {!isLoggedIn ? (
             <>
               <Link to='/signup'><button className="login-button">회원가입</button></Link>
