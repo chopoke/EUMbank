@@ -9,11 +9,13 @@ import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountRepos
 import com.boot.eumbank.transfer_domain.customer.repository.Transfer_CustomerRepository;
 import com.boot.eumbank.transfer_domain.transfer.dto.*;
 import com.boot.eumbank.transfer_domain.transfer.entity.TransferOrder;
+import com.boot.eumbank.transfer_domain.transfer.event.TransferCompletedEvent;
 import com.boot.eumbank.transfer_domain.transfer.exception.*;
 import com.boot.eumbank.transfer_domain.transfer.repository.Transfer_TransferHistoryRepository;
 import com.boot.eumbank.transfer_domain.transfer.repository.Transfer_TransferOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -49,6 +51,9 @@ public class TransferServiceImpl implements TransferService {
     private final Transfer_TransferHistoryRepository transferHistoryRepository;
     private final Transfer_TransferOrderRepository transferOrderRepository;
     private final Transfer_CustomerRepository transferCustomerRepository;
+
+    //웹 푸시알람을 위한 이벤트 발행기능
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -743,8 +748,38 @@ public class TransferServiceImpl implements TransferService {
         
         log.info("이체 완료 - 이체ID: {}, 출금계좌: {}, 금액: {}, 수취은행: {}, 수취계좌: {}", 
                 transferId, fromAccountNo, amount, toBankName, toAccountNo);
-        
-        // === 10단계: 결과 반환 ===
+
+            // === 🚀 이벤트 발행: 이체 완료 알림 자동화 ===
+            try {
+                TransferCompletedEvent event;
+                if (toAccount != null) {
+                    // 내부 이체: 출금자와 입금자 모두에게 알림
+                    event = new TransferCompletedEvent(
+                            fromAccount.getCNo(),
+                            toAccount.getCNo(),
+                            amount,
+                            fromAccount.getBalance().longValue(),
+                            toAccount.getBalance().longValue()
+                    );
+                } else {
+                    // 타행 이체: 출금자에게만 알림
+                    event = new TransferCompletedEvent(
+                            fromAccount.getCNo(),
+                            amount,
+                            fromAccount.getBalance().longValue()
+                    );
+                }
+
+                // "이체 완료" 방송!
+                eventPublisher.publishEvent(event);
+                log.info("✅ 이체 완료 이벤트 발행 성공 - 고객번호: {}", fromAccount.getCNo());
+
+            } catch (Exception e) {
+                // 알림 발송 실패해도 이체는 정상 완료 (비즈니스 로직 분리)
+                log.error("⚠️ 이체 성공 후 이벤트 발행 실패 (알림 누락 가능성): {}", e.getMessage());
+            }
+
+            // === 10단계: 결과 반환 ===
         return TransferResultDto.builder()
                 .transferId(transferId)
                 .transferNo(savedHistory.getTransferNo())

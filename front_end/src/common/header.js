@@ -86,11 +86,8 @@ export function Header({ isLoggedIn, user, onLogout }) {
               <img src={myp} className="mypage w-5" />
             </Link>
             {/* <Link to="/events" className="nav-link">이벤트</Link> */}
-            <button className="notification-button" aria-label="알림">
-            <Icon path={paths.bell} />
-            {/* absolute -top-1 -right-1 bg-red-500 text-white text-[10px] leading-none rounded-full px-1 */}
-            <span className="notification-count">3</span>
-            </button>
+            {/* FCM 알림 종모양 아이콘 */}
+            {isLoggedIn && <NotificationBell />}
           </nav>
         </div>
         {/* flex items-center gap-3 */}
