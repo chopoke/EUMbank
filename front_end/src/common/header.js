@@ -4,6 +4,7 @@ import '../resources/css/main.css';
 import mainlogo from '../resources/img/eumonly.png'
 import myp from '../resources/img/mypage.png'
 import api from '../api/axios';
+import NotificationBell from '../fcm/components/NotificationBell';
 
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
