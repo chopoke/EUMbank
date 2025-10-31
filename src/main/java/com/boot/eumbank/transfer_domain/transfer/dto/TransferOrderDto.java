@@ -20,7 +20,7 @@ public class TransferOrderDto {
     private Integer accountNo;            // 출금 계좌 번호 (a_no)
     private String bankCode;              // 수취 은행 코드
     private String destAccountNo;         // 수취 계좌번호
-    private Integer amount;               // 이체 금액
+    private Long amount;               // 이체 금액
     private String scheduleType;          // 스케줄 유형 (ONCE, RECURRING)
     private String scheduleExpr;          // 스케줄 표현식 (cron 등)
     private String startAt;               // 시작 시간

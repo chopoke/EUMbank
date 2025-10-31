@@ -355,7 +355,7 @@ public class TransferController {
                 return ResponseEntity.status(401).body(result);
             }
             
-            Integer balance = transferService.getAccountBalance(accountNo);
+            Long balance = transferService.getAccountBalance(accountNo);
             
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
