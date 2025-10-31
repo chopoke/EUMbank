@@ -225,7 +225,7 @@ function ProfileTab({initialData}) {
         // 옵셔널 체이닝과 OR 연산자를 사용하여 가장 확실한 키를 찾습니다.
         const nameKey = initialData.cnameKr; 
         const ennameKey = initialData.cnameEn; 
-        const emailKey = initialData.cemail;
+        const emailKey = initialData.email;
         const phoneKey = initialData.cphoneMobile;
         const birthKey = initialData.cbirthDt;
         const marketingKey = initialData.cagreeMarketing;
@@ -312,7 +312,7 @@ function ProfileTab({initialData}) {
             //    (백엔드 DTO 필드명 cNameKr, cEmail 등과 일치시켜야 합니다.)
             cnameKr: profileData.name, 
             cnameEn: profileData.enname,
-            cemail: profileData.email,
+            email: profileData.email,
             cphoneMobile: profileData.phone,
             cBirthDt: profileData.birthDate,
             cGenderCd: profileData.gender,
@@ -387,7 +387,7 @@ function ProfileTab({initialData}) {
             <div>
               <h3 className="text-xl font-semibold text-gray-800">{profileData.name}</h3>
               {/* <p className="text-gray-600">프리미엄 회원</p> */}
-              {profileData.naverid != null || profileData.loginty === 'NAVER' ? <p className="text-gray-600">통합아이디 회원</p> : 'ㅅㄷㄴㅅ'}
+              {profileData.naverid != null || profileData.loginty === 'NAVER' ? (<p className="text-gray-600">통합아이디 로그인 중</p>) : (profileData.loginty === 'NAVER' ? '네이버로그인 중' : '이음은행로그인 중')}
               <div className="flex items-center mt-2">
                 <div className="flex text-yellow-400">
                   {[...Array(5)].map((_, i) => (
@@ -412,6 +412,7 @@ function ProfileTab({initialData}) {
                   value={profileData.name}
                   onChange={(e) => setProfileData({...profileData, name: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled
                 />
               ) : (
                 <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.name}</div>
@@ -425,6 +426,7 @@ function ProfileTab({initialData}) {
                   value={profileData.email}
                   onChange={(e) => setProfileData({...profileData, email: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled
                 />
               ) : (
                 <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.email}</div>
@@ -438,9 +440,10 @@ function ProfileTab({initialData}) {
                   value={profileData.enname}
                   onChange={(e) => setProfileData({...profileData, enname: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled
                 />
               ) : (
-                <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.enname}</div>
+                <div className="px-3 py-2 bg-gray-50 rounded-lg"><a className="text-gray-300">외화 계좌 개설시 표시됩니다.</a></div>
               )}
             </div>
             <div>
@@ -504,6 +507,7 @@ function ProfileTab({initialData}) {
                   value={profileData.birthDate}
                   onChange={(e) => setProfileData({...profileData, birthDate: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled
                 />
               ) : (
                 <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.birthDate}</div>

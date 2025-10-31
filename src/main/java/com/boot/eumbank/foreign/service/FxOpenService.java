@@ -1,4 +1,3 @@
-// src/main/java/com/boot/eumbank/foreign/service/FxOpenService.java
 package com.boot.eumbank.foreign.service;
 
 import com.boot.eumbank.account.open.entity.account.Account;
@@ -37,13 +36,10 @@ public class FxOpenService {
         return acctNo;
     }
 
-    /** 외화 입출금 계좌 개설 */
+    /** 외화 입출금 계좌 개설 (토큰에서 받은 cNo 사용) */
     @Transactional
-    public FxOpenRespDto openUsdAccount(FxOpenReqDto req) {
+    public FxOpenRespDto openFxAccount(int cNo, FxOpenReqDto req) {
         // 1) 기본 검증
-        if (req.getCustomerNo() == null) {
-            throw new IllegalArgumentException("고객번호(c_no) 필요");
-        }
         if (req.getPin() == null || !req.getPin().matches("\\d{6}")) {
             throw new IllegalArgumentException("계좌 비밀번호는 숫자 6자리여야 합니다.");
         }
@@ -56,7 +52,7 @@ public class FxOpenService {
         }
 
         // 1-1) 고객의 영문이름 최초 1회만 저장
-        maybeSaveEnglishNameOnce(req.getCustomerNo(), req.getEnglishName());
+        maybeSaveEnglishNameOnce(cNo, req.getEnglishName());
 
         // 2) 통화 정규화 (DB에는 3자리 코드)
         String currency = normalizeCurrency(req.getCurrency());
@@ -82,14 +78,14 @@ public class FxOpenService {
         // 4) 엔티티 생성
         Account entity = Account.builder()
                 .aId(aId)
-                .cNo(req.getCustomerNo().intValue())
+                .cNo(cNo)
                 .accountNo(acctNo)
                 .appId(1)
                 .productCode(fxProductCode)
                 .accountType("외환")
                 .openedAt(LocalDateTime.now())
                 .accountPwd(req.getPin())
-                //.pinNumber(req.getPinNumber())
+                // .pinNumber(req.getPinNumber()) // 컬럼 있으면 주석 해제
                 .status("ACTIVE")
                 .balance(BigDecimal.ZERO)
                 .currency(currency)
@@ -116,8 +112,8 @@ public class FxOpenService {
     }
 
     /** c_name_en이 비어있을 때만 한 번 저장 */
-    private void maybeSaveEnglishNameOnce(Integer cNo, String englishNameRaw) {
-        if (cNo == null || englishNameRaw == null || englishNameRaw.isBlank()) return;
+    private void maybeSaveEnglishNameOnce(int cNo, String englishNameRaw) {
+        if (englishNameRaw == null || englishNameRaw.isBlank()) return;
 
         Customer cust = customerRepo.findById(cNo).orElse(null);
         if (cust == null) return;
@@ -128,15 +124,11 @@ public class FxOpenService {
         String normalized = normalizeEnglishName(englishNameRaw);
         if (normalized.isBlank()) return;
 
-        // 엔티티 업데이트
         cust.setCNameEn(normalized);
-        // Customer 엔티티의 타입이 TIMESTAMP/LocalDateTime이 아닌 Instant면 아래 유지.
-        // 컬럼이 LocalDateTime 매핑이면 LocalDateTime.now()로 바꿔줘.
         cust.setCUpdatedAt(Instant.now());
         cust.setCUpdatedBy("FX-OPEN");
         customerRepo.save(cust);
 
-        // 현재 로그인 세션의 Principal에도 즉시 반영(있다면)
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof Customer p && p.getCustomerNo() == cNo) {
             p.setCNameEn(normalized);
@@ -144,7 +136,6 @@ public class FxOpenService {
     }
 
     private String normalizeEnglishName(String s) {
-        // 영문/공백만 허용, 다중 공백 정리, 대문자화, 최대 100자
         String t = s.trim()
                 .replaceAll("[^A-Za-z ]", " ")
                 .replaceAll("\\s+", " ")
@@ -191,9 +182,9 @@ public class FxOpenService {
         return s;
     }
 
-    /** 프런트에서 고객정보(번호 + 영문이름) 필요할 때 */
+    /** (참고) 필요 시 남겨두는 유틸 – 현재는 사용 안 함 */
     @Transactional(readOnly = true)
-    public Map<String, Object> getNo() {
+    public Map<String, Object> getNoForDebug() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated())
             throw new IllegalArgumentException("로그인이 필요합니다.");
@@ -206,8 +197,6 @@ public class FxOpenService {
         Map<String, Object> map = new HashMap<>();
         map.put("c_no", cno);
         map.put("c_name_en", customer.getCNameEn());
-        // 필요 시 한글 이름 등 추가 가능:
-        // map.put("c_name_kr", customer.getCNameKr());
         return map;
     }
 }

@@ -76,9 +76,6 @@ const init = {
 
   // 미리보기 계좌번호
   previewAccountNo: "",
-
-  // 서버에서 채워질 값
-  customerId: "",
 };
 
 /* ===================== 메인 페이지 ===================== */
@@ -88,28 +85,7 @@ export default function ForeignOpenPage() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
 
-  // 1) 내 정보(고객번호 + 영문이름) 채우기
-  useEffect(() => {
-    (async () => {
-      const r = await apiFetch("/api/foreign/open/me");
-      if (!r.ok) {
-        console.warn("/api/foreign/open/me 실패:", r.status, await r.text().catch(() => ""));
-        return;
-      }
-      const me = await r.json();
-      const id = me?.customerNo ?? me?.cNo ?? me?.c_no ?? me?.customerId ?? me?.id;
-      const num = Number(String(id).replace(/\D+/g, ""));
-      const cNameEn = me?.c_name_en ?? me?.cNameEn ?? "";
-      if (!Number.isNaN(num)) {
-        setForm((f) => ({
-          ...f,
-          customerId: num,
-          englishName: cNameEn || f.englishName,
-          englishNameLocked: !!cNameEn,
-        }));
-      }
-    })();
-  }, []);
+  // 1) (삭제) 고객번호/영문명 조회: 서버가 principal에서 처리하므로 불필요
 
   // 2) 통화 목록
   const [currencies, setCurrencies] = useState([
@@ -158,9 +134,6 @@ export default function ForeignOpenPage() {
     if (!form.currency) return alert("기본 통화를 선택해 주세요.");
     if (!/^\d{6}$/.test(form.pin)) return alert("계좌 비밀번호는 숫자 6자리여야 합니다.");
 
-    if (!form.customerId || Number.isNaN(Number(form.customerId)))
-      return alert("고객번호가 없습니다. 로그인 상태를 확인해 주세요.");
-
     setSubmitting(true);
     try {
       const res = await apiFetch("/api/foreign/open", {
@@ -180,8 +153,7 @@ export default function ForeignOpenPage() {
           nickname: form.nickname || null,
           preferredAccountNo: form.previewAccountNo || null,
 
-          // 본인확인
-          customerId: Number(form.customerId),
+          // 본인확인(서버는 principal의 cNo 사용, 이 값은 최초 등록/검증용)
           name: form.name,
           englishName: form.englishName,
           birth: `${form.birth.slice(0, 4)}-${form.birth.slice(4, 6)}-${form.birth.slice(6, 8)}`,
@@ -265,12 +237,10 @@ export default function ForeignOpenPage() {
 }
 
 /* ===================== Step 1 ===================== */
-/** 서버/정적에서 약관 본문 로드 + 스크롤 끝까지 내려야 동의 가능 */
 function Step1Terms({ form, setForm, next }) {
   const [loading, setLoading] = useState(true);
   const [termsList, setTermsList] = useState([]);
 
-  // 전체 동의
   const toggleAll = (v) =>
     setForm((f) => ({
       ...f,
@@ -282,7 +252,6 @@ function Step1Terms({ form, setForm, next }) {
       agreeMarketing: v,
     }));
 
-  // 약관 로드 (서버 미구현 시 폴백 사용)
   useEffect(() => {
     (async () => {
       try {
@@ -295,7 +264,7 @@ function Step1Terms({ form, setForm, next }) {
             return;
           }
         }
-        setTermsList(fallbackTerms); // 폴백
+        setTermsList(fallbackTerms);
       } catch {
         setTermsList(fallbackTerms);
       } finally {
@@ -336,7 +305,7 @@ function Step1Terms({ form, setForm, next }) {
               onChange={(v) =>
                 setForm((f) => ({
                   ...f,
-                  agreeAll: false, // 개별 체크 시 전체동의 해제
+                  agreeAll: false,
                   ...(t.key === "terms" && { agreeTerms: v }),
                   ...(t.key === "risk" && { agreeRisk: v }),
                   ...(t.key === "product" && { agreeProduct: v }),
@@ -363,7 +332,6 @@ function Step1Terms({ form, setForm, next }) {
   );
 }
 
-/** 개별 약관 블록 – 스크롤 바닥 감지 후 체크 활성화 */
 function TermsSection({ title, required, body, agreed, onChange }) {
   const [scrolledEnd, setScrolledEnd] = useState(false);
 
@@ -373,7 +341,6 @@ function TermsSection({ title, required, body, agreed, onChange }) {
     if (atBottom && !scrolledEnd) setScrolledEnd(true);
   };
 
-  // ✅ 스크롤도 안 했고 아직 동의도 안 된 경우에만 비활성/희미 처리
   const shouldDisable = required && !scrolledEnd && !agreed;
 
   return (
@@ -419,7 +386,6 @@ function Step2KYC({ form, setForm, prev, next }) {
     /^\d{8}$/.test(form.birth) &&
     /^\d{6}$/.test(form.pinNumber);
 
-  /* PIN 모달 상태 */
   const [pinOpen, setPinOpen] = useState(false);
   const [pinStep, setPinStep] = useState("enter"); // enter | confirm
   const [pinTmp, setPinTmp] = useState("");
@@ -518,6 +484,8 @@ function Step2KYC({ form, setForm, prev, next }) {
 
 /* ===================== Step 3 ===================== */
 function Step3ReviewOpen({ form, setForm, submitting, prev, onSubmit, result, currencies }) {
+  const [previewReloadKey, setPreviewReloadKey] = useState(0);
+
   useEffect(() => {
     if (result) return;
     if (!form.currency) return;
@@ -535,7 +503,9 @@ function Step3ReviewOpen({ form, setForm, submitting, prev, onSubmit, result, cu
             continue;
           }
           const data = await r.json();
-          const no = data?.accountNo || data?.accNo || data?.account_no || data?.account || "";
+          const no =
+            data?.previewAccountNo || data?.accountNo || data?.accNo ||
+            data?.a_account_no || data?.account_no || data?.account || "";
           if (!cancelled && no) {
             setForm(f => ({ ...f, previewAccountNo: no }));
             return;
@@ -550,7 +520,7 @@ function Step3ReviewOpen({ form, setForm, submitting, prev, onSubmit, result, cu
     fetchPreviewWithRetry();
 
     return () => { cancelled = true; };
-  }, [form.currency, result, setForm]);
+  }, [form.currency, result, setForm, previewReloadKey]);
 
   const done = !!result;
 
@@ -613,7 +583,7 @@ function Step3ReviewOpen({ form, setForm, submitting, prev, onSubmit, result, cu
                 <button
                   className="fx-btn fx-btn--small"
                   style={{ marginLeft: 8 }}
-                  onClick={() => setForm(f => ({ ...f, previewAccountNo: "" }))}
+                  onClick={() => setPreviewReloadKey(k => k + 1)}
                 >
                   재조회
                 </button>
@@ -653,19 +623,12 @@ function Step3ReviewOpen({ form, setForm, submitting, prev, onSubmit, result, cu
                 submitting ||
                 !/^\d{6}$/.test(form.pin) ||
                 !/^\d{6}$/.test(form.pinNumber) ||
-                !form.customerId ||
                 !form.currency
               }
             >
               {submitting ? "개설 중..." : "계좌 개설"}
             </button>
           </div>
-
-          {!form.customerId && (
-            <div className="fx-help fx-help--warn" style={{ marginTop: 8 }}>
-              고객번호를 불러오지 못했습니다. 로그인 상태를 확인해 주세요.
-            </div>
-          )}
         </>
       )}
     </>

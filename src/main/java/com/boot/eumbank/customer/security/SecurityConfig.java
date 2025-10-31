@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 "/api/foreign/exchange",
                                 "/actuator/**",
                                 "/api/foreign/rates",
-                                "/api/healthz"
+                                "/api/healthz",
+                                "/api/foreign/open/preview"
 
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
