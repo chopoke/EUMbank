@@ -14,6 +14,10 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.Optional;
 
+/**
+ * 스케줄(지금은 적용x) + 페이지루프 + 역질렬화 + 업서트호출
+ */
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -22,7 +26,7 @@ public class FinlifeSaveSync {
     private final FssFinlifeService fss; // FSS API 호출 서비스
     private final FinlifeUpsert upsertTx;
 
-    // JsonMapper 대신 ObjectMapper 사용 (버전 호환성)
+    // 매핑을 위함
     private final ObjectMapper om = new ObjectMapper()
             .findAndRegisterModules()
             .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
@@ -45,6 +49,7 @@ public class FinlifeSaveSync {
 
     public static record PageResult(int upserted, Integer nowPageNo, Integer maxPageNo) {}
 
+    // 현재페이지, 최대페이지 확인하면서 페이지 루프 
     private void loopPages(String topFinGrpNo, String loanType, PageWorker worker) {
         int page = 1, total = 0;
         while (true) {
@@ -62,14 +67,18 @@ public class FinlifeSaveSync {
 
     /** 주택담보대출 */
     public void upsertAllPagesMortgage(String topFinGrpNo) {
+        // 페이지 돌면서 FssFinlifeService로 Raw(원본) 호출하면서 페이지 처리
+        // 가져온 json은 ObjectMapper로 DTO화(역직렬화) (LoanProduct(Mortgage)ResponseDTO)
         loopPages(topFinGrpNo, "MORTGAGE", (grp, page) -> {
             try {
                 String json = fss.getMortgageProductsRaw(grp, page);
                 var res = om.readValue(json, FinlifeMortgageResponseDTO.class);
                 var r = res.getResult();
 
+                // 저장 트랜잭션 호출(FinlifeUpsert)
                 return upsertTx.upsertOnePageGeneric(
-                        "MORTGAGE", page,
+                        "MORTGAGE",
+                        page,
                         Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getBaseList).orElse(Collections.emptyList()),
                         Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getOptionList).orElse(Collections.emptyList()),
                         FinlifeMortgageResponseDTO.Base::getFinPrdtCd,
@@ -77,19 +86,25 @@ public class FinlifeSaveSync {
                         FinlifeMortgageResponseDTO.Base::getKorCoNm,
                         FinlifeMortgageResponseDTO.Base::getFinCoNo,
                         FinlifeMortgageResponseDTO.Base::getDclsMonth,
-                        FinlifeMortgageResponseDTO.Base::getLoanLmt,
                         FinlifeMortgageResponseDTO.Base::getJoinWay,
+                        FinlifeMortgageResponseDTO.Base::getDclsStrtDay,
+                        FinlifeMortgageResponseDTO.Base::getDclsEndDay,
+                        FinlifeMortgageResponseDTO.Base::getFinCoSubmDay,
+                        FinlifeMortgageResponseDTO.Base::getLoanInciExpn,
+                        FinlifeMortgageResponseDTO.Base::getErlyRpayFee,
+                        FinlifeMortgageResponseDTO.Base::getDlyRate,
+                        FinlifeMortgageResponseDTO.Base::getLoanLmt,
                         FinlifeMortgageResponseDTO.Base::getEtcNote,
                         FinlifeMortgageResponseDTO.Option::getFinPrdtCd,
+                        FinlifeMortgageResponseDTO.Option::getMrtgTypeNm,
+                        FinlifeMortgageResponseDTO.Option::getRpayTypeNm,
+                        FinlifeMortgageResponseDTO.Option::getLendRateTypeNm,
                         FinlifeMortgageResponseDTO.Option::getLendRateMin,
                         FinlifeMortgageResponseDTO.Option::getLendRateMax,
                         FinlifeMortgageResponseDTO.Option::getLendRateAvg,
-                        FinlifeMortgageResponseDTO.Option::getRpayTypeNm,
-                        FinlifeMortgageResponseDTO.Option::getLendRateTypeNm,
                         // 옵션 확장 필드가 스키마에 없으면 null 전달
                         o -> null,                                // termMonth
                         o -> null,                                // dclsMonth (옵션에 없으면 상품 공시월 사용)
-                        o -> isOverdraftByRepayName(o.getRpayTypeNm()), // isOverdraft 추정
                         o -> null,                                // note
                         Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getNowPageNo).orElse(null),
                         Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getMaxPageNo).orElse(null)
@@ -109,7 +124,8 @@ public class FinlifeSaveSync {
                 var r = res.getResult();
 
                 return upsertTx.upsertOnePageGeneric(
-                        "JEONSE", page,
+                        "JEONSE",
+                        page,
                         Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getBaseList).orElse(Collections.emptyList()),
                         Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getOptionList).orElse(Collections.emptyList()),
                         FinlifeJeonseResponseDTO.Base::getFinPrdtCd,
@@ -117,18 +133,24 @@ public class FinlifeSaveSync {
                         FinlifeJeonseResponseDTO.Base::getKorCoNm,
                         FinlifeJeonseResponseDTO.Base::getFinCoNo,
                         FinlifeJeonseResponseDTO.Base::getDclsMonth,
-                        FinlifeJeonseResponseDTO.Base::getLoanLmt,
                         FinlifeJeonseResponseDTO.Base::getJoinWay,
+                        FinlifeJeonseResponseDTO.Base::getDclsStrtDay,
+                        FinlifeJeonseResponseDTO.Base::getDclsEndDay,
+                        FinlifeJeonseResponseDTO.Base::getFinCoSubmDay,
+                        FinlifeJeonseResponseDTO.Base::getLoanInciExpn,
+                        FinlifeJeonseResponseDTO.Base::getErlyRpayFee,
+                        FinlifeJeonseResponseDTO.Base::getDlyRate,
+                        FinlifeJeonseResponseDTO.Base::getLoanLmt,
                         FinlifeJeonseResponseDTO.Base::getEtcNote,
                         FinlifeJeonseResponseDTO.Option::getFinPrdtCd,
+                        FinlifeJeonseResponseDTO.Option::getMrtgTypeNm,
+                        FinlifeJeonseResponseDTO.Option::getRpayTypeNm,
+                        FinlifeJeonseResponseDTO.Option::getLendRateTypeNm,
                         FinlifeJeonseResponseDTO.Option::getLendRateMin,
                         FinlifeJeonseResponseDTO.Option::getLendRateMax,
                         FinlifeJeonseResponseDTO.Option::getLendRateAvg,
-                        FinlifeJeonseResponseDTO.Option::getRpayTypeNm,
-                        FinlifeJeonseResponseDTO.Option::getLendRateTypeNm,
                         o -> null,
                         o -> null,
-                        o -> isOverdraftByRepayName(o.getRpayTypeNm()),
                         o -> null,
                         Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getNowPageNo).orElse(null),
                         Optional.ofNullable(r).map(FinlifeJeonseResponseDTO.Result::getMaxPageNo).orElse(null)
@@ -141,34 +163,16 @@ public class FinlifeSaveSync {
 
     /** 신용대출 */
     public void upsertAllPagesCredit(String topFinGrpNo) {
-        loopPages(topFinGrpNo, "PERSONAL", (grp, page) -> {
+        loopPages(topFinGrpNo, "CREDIT", (grp, page) -> {
             try {
                 String json = fss.getCreditProductsRaw(grp, page);
                 var res = om.readValue(json, FinlifeCreditResponseDTO.class);
                 var r = res.getResult();
 
-                return upsertTx.upsertOnePageGeneric(
-                        "PERSONAL", page,
+                return upsertTx.upsertOnePageCredit(
+                        page,
                         Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getBaseList).orElse(Collections.emptyList()),
                         Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getOptionList).orElse(Collections.emptyList()),
-                        FinlifeCreditResponseDTO.Base::getFinPrdtCd,
-                        FinlifeCreditResponseDTO.Base::getFinPrdtNm,
-                        FinlifeCreditResponseDTO.Base::getKorCoNm,
-                        FinlifeCreditResponseDTO.Base::getFinCoNo,
-                        FinlifeCreditResponseDTO.Base::getDclsMonth,
-                        FinlifeCreditResponseDTO.Base::getLoanLmt,
-                        FinlifeCreditResponseDTO.Base::getJoinWay,
-                        FinlifeCreditResponseDTO.Base::getEtcNote,
-                        FinlifeCreditResponseDTO.Option::getFinPrdtCd,
-                        FinlifeCreditResponseDTO.Option::getLendRateMin,
-                        FinlifeCreditResponseDTO.Option::getLendRateMax,
-                        FinlifeCreditResponseDTO.Option::getLendRateAvg,
-                        FinlifeCreditResponseDTO.Option::getRpayTypeNm,
-                        FinlifeCreditResponseDTO.Option::getLendRateTypeNm,
-                        o -> null,
-                        o -> null,
-                        o -> isOverdraftByRepayName(o.getRpayTypeNm()),
-                        o -> null,
                         Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getNowPageNo).orElse(null),
                         Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getMaxPageNo).orElse(null)
                 );

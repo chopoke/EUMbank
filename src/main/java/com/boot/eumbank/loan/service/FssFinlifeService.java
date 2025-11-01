@@ -16,6 +16,18 @@ import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Finlife (금감원 API) 호출 담당 Service
+ * 각 메서드 역할 
+ * -> API를 호출해서 JSON반환(raw)
+ * getMortgageProductRaw : 주택담보대출 API호출
+ * getJeonseProductRaw : 전세자금대출 API호출
+ * getCreditProductRaw : 신용대출 API 호출
+ * -
+ * topFinGrpNo 은 금융사 코드라고 할 수 있음 지금처럼 020000?은 은행이고 050000은 보험 
+ * -> 일단 은행것만 끌어올라궁
+ */
+
 @Slf4j
 @Service
 public class FssFinlifeService {
@@ -34,15 +46,18 @@ public class FssFinlifeService {
 
     //  FSS RAW 호출 ----------------------
     public String getMortgageProductsRaw(String topFinGrpNo, int pageNo){
+        // Uri 컴포넌트 빌더 : URI를 구성하는 컴포넌트의 조합을 쉽게 만드어주는 클래스
+        // .fromPath("String") : 주어진 경로로 초기화된 URI 주소 빌더(생성)
+        // .queryParam(String name, Optional <value>) 주어진 값이 쿼리 매개변수로 들어감
         var uri = UriComponentsBuilder.fromPath("/finlifeapi/mortgageLoanProductsSearch.json")
                 .queryParam("auth", apiKey)
                 .queryParam("topFinGrpNo", topFinGrpNo)
                 .queryParam("pageNo", pageNo)
-                .build(true).toUri();
+                .build(true).toUri();       // .toUri()로 빌드
 
+        // 로그 마스크용
         String masked = apiKey == null ? "null"
                 : (apiKey.length()>6 ? apiKey.substring(0,3)+"****"+apiKey.substring(apiKey.length()-3):"***");
-
         log.info("[FSS] GET {} (auth={})", uri, masked);
 
         var resp = client.get().uri(uri).retrieve().toEntity(String.class);
@@ -81,173 +96,6 @@ public class FssFinlifeService {
         String body = resp.getBody();
         if (body == null || body.isBlank()) throw new IllegalStateException("FSS empty body (credit)");
         return body;
-    }
-
-    //  목록 가공 (주담대) ---------------------
-    public List<LoanProductDTO> getMortgageProductsForList(String topFinGrpNo, int pageNo) {
-        try {
-            String json = getMortgageProductsRaw(topFinGrpNo, pageNo);
-            FinlifeMortgageResponseDTO res = om.readValue(json, FinlifeMortgageResponseDTO.class);
-
-            var baseList = Optional.ofNullable(res.getResult())
-                    .map(FinlifeMortgageResponseDTO.Result::getBaseList)
-                    .orElse(List.of());
-
-            var optList = Optional.ofNullable(res.getResult())
-                    .map(FinlifeMortgageResponseDTO.Result::getOptionList)
-                    .orElse(List.of());
-
-            var optByPrdt = optList.stream()
-                    .collect(Collectors.groupingBy(FinlifeMortgageResponseDTO.Option::getFinPrdtCd));
-
-            List<Integer> defaultTerms = List.of(120, 240, 360); // 10/20/30년 가정(표시용)
-
-            var list = baseList.stream().map(b -> {
-                var opts = optByPrdt.getOrDefault(b.getFinPrdtCd(), List.of());
-
-                BigDecimal minRate = opts.stream()
-                        .map(FinlifeMortgageResponseDTO.Option::getLendRateMin)
-                        .filter(Objects::nonNull)
-                        .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
-                        .min(BigDecimal::compareTo)
-                        .orElse(new BigDecimal("0.000"));
-
-                BigDecimal maxRate = opts.stream()
-                        .map(FinlifeMortgageResponseDTO.Option::getLendRateMax)
-                        .filter(Objects::nonNull)
-                        .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
-                        .max(BigDecimal::compareTo)
-                        .orElse(new BigDecimal("99.900"));
-
-                // 배지(금리유형/상환방식)
-                var badges = new LinkedHashSet<String>();
-                opts.forEach(o -> {
-                    if (notBlank(o.getLendRateTypeNm())) badges.add(o.getLendRateTypeNm());
-                    if (notBlank(o.getRpayTypeNm()))     badges.add(o.getRpayTypeNm());
-                });
-
-                BigDecimal limitWon = extractMaxWon(b.getLoanLmt());
-                Integer ltvMax = extractMaxLtv(b.getLoanLmt());
-
-                String desc = (b.getKorCoNm() == null ? "" : (b.getKorCoNm()+" "))
-                        + Optional.ofNullable(b.getJoinWay()).orElse("")
-                        + Optional.ofNullable(b.getEtcNote()).map(s -> " " + s).orElse("");
-
-                return LoanProductDTO.builder()
-                        .id(b.getFinPrdtCd())
-                        .name(b.getFinPrdtNm())
-                        .type("주택담보")
-                        .rateMin(minRate)
-                        .rateMax(maxRate)
-                        .limitMax(limitWon)
-                        .termMonths(defaultTerms)
-                        .badges(new ArrayList<>(badges))
-                        .tags(List.of(Optional.ofNullable(b.getKorCoNm()).orElse("")))
-                        .desc(desc.trim())
-                        .link("#")
-                        .build();
-            }).toList();
-
-            log.info("[FSS] mapped products size={}", list.size());
-            return list;
-
-        } catch (Exception e) {
-            log.error("[FSS] mortgage processing error (topFinGrpNo={}, pageNo={})", topFinGrpNo, pageNo, e);
-            throw new RuntimeException("Finlife 응답 파싱 실패", e);
-        }
-    }
-
-    //  단건 상세 가공 (주담대) =--------------------
-    public LoanProductDetailDTO getMortgageProductDetail(String topFinGrpNo, int pageNo, String finPrdtCd) {
-        final String json = getMortgageProductsRaw(topFinGrpNo, pageNo);
-
-        try {
-            final FinlifeMortgageResponseDTO res = om.readValue(json, FinlifeMortgageResponseDTO.class);
-
-            final List<FinlifeMortgageResponseDTO.Base> baseList =
-                    Optional.ofNullable(res.getResult())
-                            .map(FinlifeMortgageResponseDTO.Result::getBaseList)
-                            .orElse(List.of());
-
-            final List<FinlifeMortgageResponseDTO.Option> optList =
-                    Optional.ofNullable(res.getResult())
-                            .map(FinlifeMortgageResponseDTO.Result::getOptionList)
-                            .orElse(List.of());
-
-            final FinlifeMortgageResponseDTO.Base base = baseList.stream()
-                    .filter(b -> finPrdtCd.equals(b.getFinPrdtCd()))
-                    .findFirst()
-                    .orElseThrow(() -> new NoSuchElementException("상품을 찾을 수 없습니다: " + finPrdtCd));
-
-            final List<LoanProductDetailDTO.RateOption> options = optList.stream()
-                    .filter(o -> finPrdtCd.equals(o.getFinPrdtCd()))
-                    .map(o -> LoanProductDetailDTO.RateOption.builder()
-                            .rpayTypeNm(o.getRpayTypeNm())
-                            .lendRateTypeNm(o.getLendRateTypeNm())
-                            .lendRateMin(o.getLendRateMin())
-                            .lendRateMax(o.getLendRateMax())
-                            .lendRateAvg(o.getLendRateAvg())
-                            .build())
-                    .toList();
-
-            final BigDecimal rateMin = options.stream()
-                    .map(LoanProductDetailDTO.RateOption::getLendRateMin)
-                    .filter(Objects::nonNull)
-                    .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
-                    .min(BigDecimal::compareTo)
-                    .orElse(new BigDecimal("0.000"));
-
-            final BigDecimal rateMax = options.stream()
-                    .map(LoanProductDetailDTO.RateOption::getLendRateMax)
-                    .filter(Objects::nonNull)
-                    .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
-                    .max(BigDecimal::compareTo)
-                    .orElse(new BigDecimal("99.900"));
-
-            final LinkedHashSet<String> badges = new LinkedHashSet<>();
-            options.forEach(o -> {
-                if (notBlank(o.getLendRateTypeNm())) badges.add(o.getLendRateTypeNm());
-                if (notBlank(o.getRpayTypeNm()))     badges.add(o.getRpayTypeNm());
-            });
-
-            final BigDecimal limitWon = extractMaxWon(base.getLoanLmt());
-            final Integer ltvMax = extractMaxLtv(base.getLoanLmt());
-
-            final String desc = (base.getKorCoNm()==null? "" : base.getKorCoNm()+" ")
-                    + Optional.ofNullable(base.getJoinWay()).orElse("")
-                    + Optional.ofNullable(base.getEtcNote()).map(s -> " " + s).orElse("");
-
-            return LoanProductDetailDTO.builder()
-                    .id(base.getFinPrdtCd())
-                    .name(base.getFinPrdtNm())
-                    .bankName(base.getKorCoNm())
-                    .type("주택담보")
-                    .desc(desc.trim())
-                    .badges(new ArrayList<>(badges))
-                    .tags(List.of(Optional.ofNullable(base.getKorCoNm()).orElse("")))
-                    .rateMin(rateMin)
-                    .rateMax(rateMax)
-                    .termMonths(List.of(120,240,360)) // FSS 목록 API엔 기간항목이 없어 표시용 기본값
-                    .limitMax(limitWon)
-                    .ltvMax(ltvMax)
-                    .loanLmtRaw(base.getLoanLmt())
-                    .erlyRpayFee(base.getErlyRpayFee())
-                    .dlyRate(base.getDlyRate())
-                    .joinWay(base.getJoinWay())
-                    .etcNote(base.getEtcNote())
-                    .options(options)
-                    .docs(List.of(LoanProductDetailDTO.Doc.builder().label("상품설명서").url("#").build()))
-                    .faq(List.of(LoanProductDetailDTO.Faq.builder()
-                            .q("중도상환수수료가 있나요?")
-                            .a(Optional.ofNullable(base.getErlyRpayFee()).orElse("상품별 상이"))
-                            .build()))
-                    .build();
-
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-            log.error("[FSS] JSON parse error: {}", e.getMessage());
-            log.error("[FSS] RAW (head 500): {}", json.substring(0, Math.min(500, json.length())));
-            throw new RuntimeException("Finlife 응답 파싱 실패(JSON)", e);
-        }
     }
 
     //  파서 유틸(문구 → 숫자) -----------
@@ -311,4 +159,172 @@ public class FssFinlifeService {
     }
 
     private static boolean notBlank(String s){ return s != null && !s.isBlank(); }
+
+
+    //  목록 가공 ---------------------
+//    public List<LoanProductDTO> getMortgageProductsForList(String topFinGrpNo, int pageNo) {
+//        try {
+//            String json = getMortgageProductsRaw(topFinGrpNo, pageNo);
+//            FinlifeMortgageResponseDTO res = om.readValue(json, FinlifeMortgageResponseDTO.class);
+//
+//            var baseList = Optional.ofNullable(res.getResult())
+//                    .map(FinlifeMortgageResponseDTO.Result::getBaseList)
+//                    .orElse(List.of());
+//
+//            var optList = Optional.ofNullable(res.getResult())
+//                    .map(FinlifeMortgageResponseDTO.Result::getOptionList)
+//                    .orElse(List.of());
+//
+//            var optByPrdt = optList.stream()
+//                    .collect(Collectors.groupingBy(FinlifeMortgageResponseDTO.Option::getFinPrdtCd));
+//
+//            List<Integer> defaultTerms = List.of(120, 240, 360); // 10/20/30년 가정(표시용)
+//
+//            var list = baseList.stream().map(b -> {
+//                var opts = optByPrdt.getOrDefault(b.getFinPrdtCd(), List.of());
+//
+//                BigDecimal minRate = opts.stream()
+//                        .map(FinlifeMortgageResponseDTO.Option::getLendRateMin)
+//                        .filter(Objects::nonNull)
+//                        .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
+//                        .min(BigDecimal::compareTo)
+//                        .orElse(new BigDecimal("0.000"));
+//
+//                BigDecimal maxRate = opts.stream()
+//                        .map(FinlifeMortgageResponseDTO.Option::getLendRateMax)
+//                        .filter(Objects::nonNull)
+//                        .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
+//                        .max(BigDecimal::compareTo)
+//                        .orElse(new BigDecimal("99.900"));
+//
+//                // 배지(금리유형/상환방식)
+//                var badges = new LinkedHashSet<String>();
+//                opts.forEach(o -> {
+//                    if (notBlank(o.getLendRateTypeNm())) badges.add(o.getLendRateTypeNm());
+//                    if (notBlank(o.getRpayTypeNm()))     badges.add(o.getRpayTypeNm());
+//                });
+//
+//                BigDecimal limitWon = extractMaxWon(b.getLoanLmt());
+//                Integer ltvMax = extractMaxLtv(b.getLoanLmt());
+//
+//                String desc = (b.getKorCoNm() == null ? "" : (b.getKorCoNm()+" "))
+//                        + Optional.ofNullable(b.getJoinWay()).orElse("")
+//                        + Optional.ofNullable(b.getEtcNote()).map(s -> " " + s).orElse("");
+//
+//                return LoanProductDTO.builder()
+//                        .id(b.getFinPrdtCd())
+//                        .name(b.getFinPrdtNm())
+//                        .type("주택담보")
+//                        .rateMin(minRate)
+//                        .rateMax(maxRate)
+//                        .limitMax(limitWon)
+//                        .termMonths(defaultTerms)
+//                        .badges(new ArrayList<>(badges))
+//                        .tags(List.of(Optional.ofNullable(b.getKorCoNm()).orElse("")))
+//                        .desc(desc.trim())
+//                        .link("#")
+//                        .build();
+//            }).toList();
+//
+//            log.info("[FSS] mapped products size={}", list.size());
+//            return list;
+//
+//        } catch (Exception e) {
+//            log.error("[FSS] mortgage processing error (topFinGrpNo={}, pageNo={})", topFinGrpNo, pageNo, e);
+//            throw new RuntimeException("Finlife 응답 파싱 실패", e);
+//        }
+//    }
+//
+//    //  단건 상세 가공 (주담대) =--------------------
+//    public LoanProductDetailDTO getMortgageProductDetail(String topFinGrpNo, int pageNo, String finPrdtCd) {
+//        final String json = getMortgageProductsRaw(topFinGrpNo, pageNo);
+//
+//        try {
+//            final FinlifeMortgageResponseDTO res = om.readValue(json, FinlifeMortgageResponseDTO.class);
+//
+//            final List<FinlifeMortgageResponseDTO.Base> baseList =
+//                    Optional.ofNullable(res.getResult())
+//                            .map(FinlifeMortgageResponseDTO.Result::getBaseList)
+//                            .orElse(List.of());
+//
+//            final List<FinlifeMortgageResponseDTO.Option> optList =
+//                    Optional.ofNullable(res.getResult())
+//                            .map(FinlifeMortgageResponseDTO.Result::getOptionList)
+//                            .orElse(List.of());
+//
+//            final FinlifeMortgageResponseDTO.Base base = baseList.stream()
+//                    .filter(b -> finPrdtCd.equals(b.getFinPrdtCd()))
+//                    .findFirst()
+//                    .orElseThrow(() -> new NoSuchElementException("상품을 찾을 수 없습니다: " + finPrdtCd));
+//
+//            final List<LoanProductDetailDTO.RateOption> options = optList.stream()
+//                    .filter(o -> finPrdtCd.equals(o.getFinPrdtCd()))
+//                    .map(o -> LoanProductDetailDTO.RateOption.builder()
+//                            .rpayTypeNm(o.getRpayTypeNm())
+//                            .lendRateTypeNm(o.getLendRateTypeNm())
+//                            .lendRateMin(o.getLendRateMin())
+//                            .lendRateMax(o.getLendRateMax())
+//                            .lendRateAvg(o.getLendRateAvg())
+//                            .build())
+//                    .toList();
+//
+//            final BigDecimal rateMin = options.stream()
+//                    .map(LoanProductDetailDTO.RateOption::getLendRateMin)
+//                    .filter(Objects::nonNull)
+//                    .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
+//                    .min(BigDecimal::compareTo)
+//                    .orElse(new BigDecimal("0.000"));
+//
+//            final BigDecimal rateMax = options.stream()
+//                    .map(LoanProductDetailDTO.RateOption::getLendRateMax)
+//                    .filter(Objects::nonNull)
+//                    .filter(r -> r.compareTo(BigDecimal.ZERO) > 0 && r.compareTo(new BigDecimal("50")) < 0)
+//                    .max(BigDecimal::compareTo)
+//                    .orElse(new BigDecimal("99.900"));
+//
+//            final LinkedHashSet<String> badges = new LinkedHashSet<>();
+//            options.forEach(o -> {
+//                if (notBlank(o.getLendRateTypeNm())) badges.add(o.getLendRateTypeNm());
+//                if (notBlank(o.getRpayTypeNm()))     badges.add(o.getRpayTypeNm());
+//            });
+//
+//            final BigDecimal limitWon = extractMaxWon(base.getLoanLmt());
+//            final Integer ltvMax = extractMaxLtv(base.getLoanLmt());
+//
+//            final String desc = (base.getKorCoNm()==null? "" : base.getKorCoNm()+" ")
+//                    + Optional.ofNullable(base.getJoinWay()).orElse("")
+//                    + Optional.ofNullable(base.getEtcNote()).map(s -> " " + s).orElse("");
+//
+//            return LoanProductDetailDTO.builder()
+//                    .id(base.getFinPrdtCd())
+//                    .name(base.getFinPrdtNm())
+//                    .bankName(base.getKorCoNm())
+//                    .type("주택담보")
+//                    .desc(desc.trim())
+//                    .badges(new ArrayList<>(badges))
+//                    .tags(List.of(Optional.ofNullable(base.getKorCoNm()).orElse("")))
+//                    .rateMin(rateMin)
+//                    .rateMax(rateMax)
+//                    .termMonths(List.of(120,240,360)) // FSS 목록 API엔 기간항목이 없어 표시용 기본값
+//                    .limitMax(limitWon)
+//                    .ltvMax(ltvMax)
+//                    .loanLmtRaw(base.getLoanLmt())
+//                    .erlyRpayFee(base.getErlyRpayFee())
+//                    .dlyRate(base.getDlyRate())
+//                    .joinWay(base.getJoinWay())
+//                    .etcNote(base.getEtcNote())
+//                    .options(options)
+//                    .docs(List.of(LoanProductDetailDTO.Doc.builder().label("상품설명서").url("#").build()))
+//                    .faq(List.of(LoanProductDetailDTO.Faq.builder()
+//                            .q("중도상환수수료가 있나요?")
+//                            .a(Optional.ofNullable(base.getErlyRpayFee()).orElse("상품별 상이"))
+//                            .build()))
+//                    .build();
+//
+//        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+//            log.error("[FSS] JSON parse error: {}", e.getMessage());
+//            log.error("[FSS] RAW (head 500): {}", json.substring(0, Math.min(500, json.length())));
+//            throw new RuntimeException("Finlife 응답 파싱 실패(JSON)", e);
+//        }
+//    }
 }

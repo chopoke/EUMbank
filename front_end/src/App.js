@@ -40,6 +40,13 @@ import LoanProductDetail from "./pages/loan/products/LoanProductDetail"
 import { depositSavingRouteElements } from "./pages/depositSaving/router/depositSavingRouter";
 // 계좌개설
 import { accountElements } from "./pages/account/router/accountRouter";
+import LoanQuotePage from "./pages/loan/products/LoanQuotePage";
+import ApplyAgree from "./pages/loan/apply/ApplyAgree";
+import ApplySubmitPage from "./pages/loan/apply/ApplySubmitPage";
+import ApplySignPage from "./pages/loan/apply/ApplySignPage";
+import ApplyFormPage from "./pages/loan/apply/ApplyFormPage";
+import ApplyDocsPage from "./pages/loan/apply/ApplyDocsPage";
+import ApplyCompletePage from "./pages/loan/apply/ApplyCompletePage";
 
 function AppWrapper() {
   return <App />;
@@ -126,6 +133,23 @@ function App() {
         <Route path="/loan/products" element={<LoanProductList />} />
         {/* 상품 상세 */}
         <Route path="/loan/products/:code" element={<LoanProductDetail />} />
+
+        {/* 대출상품 한도/금리조회()
+        <Route path="/loan/:code/quote" element={
+          <ProtectedRoute>
+            <LoanQuotePage />
+          </ProtectedRoute>
+          } /> */}
+        {/* 대출 신청 스탭 */}
+        <Route path="/loan/apply/:code/agree"  element={<ProtectedRoute><ApplyAgree/></ProtectedRoute>} />
+        <Route path="/loan/apply/:code/form"   element={<ProtectedRoute><ApplyFormPage/></ProtectedRoute>} />
+        <Route path="/loan/apply/:code/docs"   element={<ProtectedRoute><ApplyDocsPage/></ProtectedRoute>} />
+        <Route path="/loan/apply/:code/sign"   element={<ProtectedRoute><ApplySignPage/></ProtectedRoute>} />
+        <Route path="/loan/apply/:code/submit" element={<ProtectedRoute><ApplySubmitPage/></ProtectedRoute>} />
+        <Route path="/loan/apply/:code/complete/:laId" element={<ProtectedRoute><ApplyCompletePage/></ProtectedRoute> } />
+
+
+        
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
         {accountElements}

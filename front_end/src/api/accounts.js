@@ -30,6 +30,39 @@ export const fetchLoanProducts = ({ type="MORTGAGE", page=0, size=20 } = {}) =>
 export const fetchLoanProductDetail = (code) =>
   api.get(`/api/loan/products/${encodeURIComponent(code)}`);
 
+// 견적요청
+export const fetchLoanQuote = (code, req) =>
+  api.post(`/api/loan/${encodeURIComponent(code)}/quote`, req);
+
+
+/** 신청 생성: POST /api/loan/:code/applications
+ */
+export const createLoanApplication = (code, payload) =>
+  api.post(`/api/loan/${encodeURIComponent(code)}/applications`, payload);
+
+// 약관 동의 저장
+export const createLoanConsents = (code, payload) =>
+  api.post(`/api/loan/${encodeURIComponent(code)}/consents`, payload);
+
+// 대출 서류 제출
+export const uploadLoanDoc = (code, file) => {
+  // 백엔드 준비 후 실제 구현:
+  // const form = new FormData();
+  // form.append("file", file);
+  // return api.post(`/api/loan/${encodeURIComponent(code)}/attachments`, form, {
+  //   headers: {"Content-Type": "multipart/form-data"}
+  // });
+
+  // 임시 스텁(프론트만 사용): 즉시 성공 형태 흉내
+  return Promise.resolve({
+    fileId: `TEMP-${Date.now()}`,
+    url: URL.createObjectURL(file),
+  });
+};
+
+
+
+
 export const updateProfile = (profile) => {
   return api.put("/api/mypage", profile);
 };
