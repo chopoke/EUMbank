@@ -1,3 +1,4 @@
+// src/main/java/com/boot/eumbank/loan/service/FinlifeSaveSync.java
 package com.boot.eumbank.loan.service;
 
 import com.boot.eumbank.loan.dto.FinlifeCreditResponseDTO;
@@ -17,7 +18,6 @@ import java.util.Optional;
 /**
  * 스케줄(지금은 적용x) + 페이지루프 + 역질렬화 + 업서트호출
  */
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -44,18 +44,18 @@ public class FinlifeSaveSync {
 
     @FunctionalInterface
     private interface PageWorker {
-        PageResult work(String topFinGrpNo, int pageNo);
+        FinlifeUpsert.PageResult work(String topFinGrpNo, int pageNo);
     }
 
-    public static record PageResult(int upserted, Integer nowPageNo, Integer maxPageNo) {}
-
-    // 현재페이지, 최대페이지 확인하면서 페이지 루프 
+    // 현재페이지, 최대페이지 확인하면서 페이지 루프
     private void loopPages(String topFinGrpNo, String loanType, PageWorker worker) {
         int page = 1, total = 0;
         while (true) {
-            PageResult pr = worker.work(topFinGrpNo, page);
-            total += pr.upserted();
-            if (pr.nowPageNo() == null || pr.maxPageNo() == null || pr.nowPageNo() >= pr.maxPageNo()) {
+            FinlifeUpsert.PageResult pr = worker.work(topFinGrpNo, page);
+            total += (pr.getUpserted() == 0 ? 0 : pr.getUpserted());
+            Integer now = pr.getNowPageNo();
+            Integer max = pr.getMaxPageNo();
+            if (now == null || max == null || now >= max) {
                 log.info("[SYNC:{}] 마지막 페이지 {} 완료. 총 upsert {}", loanType, page, total);
                 break;
             }
@@ -63,19 +63,16 @@ public class FinlifeSaveSync {
         }
     }
 
-    // ===== 각 상품군별 엔트리 =====-------========
+    // ===== 각 상품군별 엔트리 =====
 
     /** 주택담보대출 */
     public void upsertAllPagesMortgage(String topFinGrpNo) {
-        // 페이지 돌면서 FssFinlifeService로 Raw(원본) 호출하면서 페이지 처리
-        // 가져온 json은 ObjectMapper로 DTO화(역직렬화) (LoanProduct(Mortgage)ResponseDTO)
         loopPages(topFinGrpNo, "MORTGAGE", (grp, page) -> {
             try {
                 String json = fss.getMortgageProductsRaw(grp, page);
                 var res = om.readValue(json, FinlifeMortgageResponseDTO.class);
                 var r = res.getResult();
 
-                // 저장 트랜잭션 호출(FinlifeUpsert)
                 return upsertTx.upsertOnePageGeneric(
                         "MORTGAGE",
                         page,
@@ -102,10 +99,9 @@ public class FinlifeSaveSync {
                         FinlifeMortgageResponseDTO.Option::getLendRateMin,
                         FinlifeMortgageResponseDTO.Option::getLendRateMax,
                         FinlifeMortgageResponseDTO.Option::getLendRateAvg,
-                        // 옵션 확장 필드가 스키마에 없으면 null 전달
-                        o -> null,                                // termMonth
-                        o -> null,                                // dclsMonth (옵션에 없으면 상품 공시월 사용)
-                        o -> null,                                // note
+                        o -> null, // termMonth
+                        o -> null, // dclsMonth
+                        o -> null, // note
                         Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getNowPageNo).orElse(null),
                         Optional.ofNullable(r).map(FinlifeMortgageResponseDTO.Result::getMaxPageNo).orElse(null)
                 );
@@ -184,7 +180,8 @@ public class FinlifeSaveSync {
 
     // ===== 유틸 ================================
 
-    /** 상환방식명으로 마이너스한도 여부 추정 */
+    /** 상환방식명으로 마이너스한도 여부 추정 (현재 미사용) */
+    @SuppressWarnings("unused")
     private static boolean isOverdraftByRepayName(String repayTypeNm) {
         if (repayTypeNm == null) return false;
         String s = repayTypeNm.replaceAll("\\s+", "");

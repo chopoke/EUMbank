@@ -54,4 +54,16 @@ public class LoanApplicationRequestDTO {
 
     private String channel; // "WEB" 등
     private Map<String,Object> extra;
+
+    // 동의 항목리스트
+    @JsonAlias({"laConsents"})
+    private List<ConsentItem> consents;
+
+    @Data
+    @AllArgsConstructor @NoArgsConstructor
+    public static class ConsentItem {
+        private String code;       // 예: "PERS_INFO", "CREDIT_INQUIRY"
+        private Boolean agreed;    // true/false
+        private String agreedAt;   // ISO-8601 (선택)
+    }
 }

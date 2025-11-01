@@ -4,6 +4,8 @@ import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.loan.dto.LoanProductDTO;
 import com.boot.eumbank.loan.dto.LoanProductDetailDTO;
 import com.boot.eumbank.loan.dto.apply.*;
+import com.boot.eumbank.loan.service.apply.LoanApplicationService;
+import com.boot.eumbank.loan.service.apply.LoanConsentService;
 import com.boot.eumbank.loan.service.apply.LoanQuoteService;
 import com.boot.eumbank.loan.service.LoanService;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +22,19 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LoanController {
 
-    // DB 로드용 서비스
+    // DB 로드용 서비스  (상세조횟)
     private final LoanService loanService;
 
-    // 한도조회 및 신청
+    // 한도조회 (꼐산용)
     private final LoanQuoteService loanQuoteService;
 
-    // 상품 리스트
+    // 신청 저장용
+    private final LoanApplicationService loanApplicationService;
+
+    // 약관 저장용
+    private final LoanConsentService loanConsentService;
+
+    // 상품 리스트 -------------------------------------------------
     @GetMapping("/products")
     public Page<LoanProductDTO> list(
             @RequestParam(defaultValue = "MORTGAGE") String type,
@@ -36,7 +44,7 @@ public class LoanController {
         return loanService.getProducts(type, page, size);
     }
 
-    // 상품 상세
+    // 상품 상세 --------------------------------------------------------
     @GetMapping("/products/{code}")
     public ResponseEntity<LoanProductDetailDTO> detail(@PathVariable String code) {
         return loanService.getProductDetail(code)               // Optional<LoanProductDetailDTO>
@@ -44,7 +52,7 @@ public class LoanController {
                 .orElseGet(() -> ResponseEntity.notFound().build()); // 404에렁
     }
 
-    // 한도/금리 조회계산
+    // 한도/금리 조회계산 ------------------------------------------
     @PostMapping("/{code}/quote")
     public ResponseEntity<LoanQuoteResponseDTO> quote(@PathVariable("code") String loanCode,
                                                       @RequestBody LoanQuoteRequestDTO req,
@@ -52,7 +60,7 @@ public class LoanController {
         return ResponseEntity.ok(loanQuoteService.quote(loanCode, req, customer));
     }
 
-    // 대출 신청 저장
+    // 대출 신청 저장 ----------------------------------------
     @PostMapping("/{code}/applications")
     public ResponseEntity<LoanApplicationResponseDTO> apply(
             @PathVariable("code") String loanCode,
@@ -63,20 +71,21 @@ public class LoanController {
         if (req.getCustomerNo() == null && customer != null) {
             req.setCustomerNo(customer.getCustomerNo()); // 엔티티 필드 이름에 맞는 getter
         }
-        return ResponseEntity.ok(loanQuoteService.apply(loanCode, req));
+        // 프론트 V1/V2 혼용 지원: productCode 없고 route code만 있을 때 대비
+        if (req.getProductCode() == null || req.getProductCode().isBlank()) {
+            req.setProductCode(loanCode);
+        }
+        return ResponseEntity.ok(loanApplicationService.createAndSubmit(req, "WEB"));
     }
 
-    // 대출 신청 저장!
+    // 대출 약관 동의
     @PostMapping("/{code}/consents")
-    public ResponseEntity<Map<String,Object>> consents(
-            @PathVariable("code") String loanCode,
-            @RequestBody LoanSaveConsentsRequestDTO req
-    ){
-        // 필요 시: loanCode와 req.getProductCode() 일치 검증
-        // 지금은 임시 OK만 응답해서 프론트 500 방지
-        return ResponseEntity.ok(Map.of(
-                "ok", true,
-                "count", req.getItems() == null ? 0 : req.getItems().size()
-        ));
+    public ResponseEntity<LoanSaveConsentsResponseDTO> consents(@PathVariable("code") String loanCode,
+                                                       @RequestBody LoanSaveConsentsRequestDTO req,
+                                                       @AuthenticationPrincipal Customer customer){
+        Integer cNo = (customer != null) ? customer.getCustomerNo() : Integer.valueOf(req.getCustomerNo());
+        // la_no는 아직 없을 수도 있음(동의 → 신청 전 단계). 그땐 NULL로 저장해도 됨.
+        LoanSaveConsentsResponseDTO res = loanConsentService.saveConsents(req, null, cNo);
+        return ResponseEntity.ok(res);
     }
 }

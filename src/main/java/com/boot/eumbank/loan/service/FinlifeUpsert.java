@@ -1,3 +1,4 @@
+// src/main/java/com/boot/eumbank/loan/service/FinlifeUpsert.java
 package com.boot.eumbank.loan.service;
 
 import com.boot.eumbank.loan.dto.FinlifeCreditResponseDTO;
@@ -7,6 +8,8 @@ import com.boot.eumbank.loan.entity.LoanRateOption;
 import com.boot.eumbank.loan.repository.LoanCreditRepository;
 import com.boot.eumbank.loan.repository.LoanProductRepository;
 import com.boot.eumbank.loan.repository.LoanRateOptionRepository;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,9 +28,18 @@ import java.util.stream.Stream;
 public class FinlifeUpsert {
 
     private final LoanProductRepository productRepo;
-    //private final LoanProductOptionRepository optionRepo;
     private final LoanRateOptionRepository rateOptRepo;
     private final LoanCreditRepository creditOptRepo;
+
+    // =========================================
+    // 로컬 PageResult (기존 FinlifeSaveSync.PageResult 대체)
+    // =========================================
+    @Data @AllArgsConstructor
+    public static class PageResult {
+        private int upserted;
+        private Integer nowPageNo;
+        private Integer maxPageNo;
+    }
 
     /**
      * FSS 한 페이지 업서트 (상품 + 옵션)
@@ -36,7 +48,7 @@ public class FinlifeUpsert {
      * @param loanType PERSONAL / MORTGAGE / JEONSE
      */
     @Transactional
-    public <B,O> FinlifeSaveSync.PageResult upsertOnePageGeneric(
+    public <B,O> PageResult upsertOnePageGeneric(
             String loanType, int pageNo,
             List<B> baseList, List<O> optList,
             // ─ 상품(base) 추출자
@@ -56,7 +68,7 @@ public class FinlifeUpsert {
             Function<B,String> b_etcNote,
             // ─ 옵션 필드
             Function<O,String>     o_finPrdtCd,
-            Function<O,String>  o_mrtgTypeNm,
+            Function<O,String>     o_mrtgTypeNm,
             Function<O,String>     o_rpayTypeNm,
             Function<O,String>     o_lendRateTypeNm,
             Function<O,BigDecimal> o_lendRateMin,
@@ -74,11 +86,6 @@ public class FinlifeUpsert {
         for (var o : optList) {
             String code = safe(o_finPrdtCd, o);
             if (code == null) continue;
-            /**
-             * computeIfAbsent(Key, Function<Key, Value>, mappingFunction>
-             *     key값이 있다면 해당 value 그대로리턴,
-             *     key가 없다면 mappingFunction 호출해서 새로운 value값 생성.
-             */
             optsByProduct.computeIfAbsent(code, k -> new ArrayList<>()).add(o);
         }
 
@@ -90,14 +97,12 @@ public class FinlifeUpsert {
 
             List<O> opts = optsByProduct.getOrDefault(finPrdtCd, Collections.emptyList());
 
-            // ─ 금리 집계 (0/이상치/더미 제외)
+            // ─ 금리 집계
             BigDecimal rateMin = minFiltered(opts, o_lendRateMin);
             BigDecimal rateMax = maxFiltered(opts, o_lendRateMax);
 
             // ─ 한도/LTV 파싱
             String loanLmtRaw = safe(b_loanLmt, b);
-            BigDecimal limitWon = extractMaxWon(loanLmtRaw); // DECIMAL(18,0)
-            Integer ltvMax = extractMaxLtv(loanLmtRaw);      // 정수 %
 
             // ─ 상품 업서트
             LoanProduct product = productRepo.findByLoanCode(finPrdtCd).orElseGet(LoanProduct::new);
@@ -106,7 +111,7 @@ public class FinlifeUpsert {
             if (isNew) {
                 product.setLoanCode(finPrdtCd);
                 product.setLoanType(loanType);
-                product.setStatus("PUBLISHED");          // 권장 상태
+                product.setStatus("PUBLISHED");
                 product.setIsActive(true);
                 product.setSourceType("API");
             }
@@ -125,22 +130,14 @@ public class FinlifeUpsert {
             product.setErlyRpayFee(safe(b_erlyRpayFee, b));
             product.setDlyRate(safe(b_dlyRate, b));
 
-//            product.setLoanLmtRaw(loanLmtRaw);
-//            product.setLimitMax(limitWon);
-//            product.setLtvMax(ltvMax);
-//            product.setRateMin(rateMin);
-//            product.setRateMax(rateMax);
-//            product.setEtcNote(safe(b_etcNote, b));
-
             // 한도/LTV(집계 및 원문)
-            String loanLmtRaws = safe(b_loanLmt, b);
-            product.setLoanLmtRaw(loanLmtRaws);
-            product.setLimitMax(extractMaxWon(loanLmtRaws));
-            product.setLtvMax(extractMaxLtv(loanLmtRaws));
+            product.setLoanLmtRaw(loanLmtRaw);
+            product.setLimitMax(extractMaxWon(loanLmtRaw));
+            product.setLtvMax(extractMaxLtv(loanLmtRaw));
 
             // 금리 집계(옵션에서)
-            product.setRateMin(minFiltered(opts, o_lendRateMin));
-            product.setRateMax(maxFiltered(opts, o_lendRateMax));
+            product.setRateMin(rateMin);
+            product.setRateMax(rateMax);
 
             product.setEtcNote(safe(b_etcNote, b));
 
@@ -150,25 +147,25 @@ public class FinlifeUpsert {
             var oldRateOpts = rateOptRepo.findByProduct(product);
             if (!oldRateOpts.isEmpty()) rateOptRepo.deleteAll(oldRateOpts);
 
-            if(!opts.isEmpty()){
+            if (!opts.isEmpty()) {
                 List<LoanRateOption> entities = new ArrayList<>(opts.size());
                 for (var o : opts) {
                     LoanRateOption e = new LoanRateOption();
-                        e.setProduct(product);
-                        e.setRpayTypeNm(safe(o_rpayTypeNm, o));
-                        e.setLendRateTypeNm(safe(o_lendRateTypeNm, o));
-                        e.setLendRateMin(safe(o_lendRateMin, o));
-                        e.setLendRateMax(safe(o_lendRateMax, o));
-                        e.setLendRateAvg(safe(o_lendRateAvg, o));
+                    e.setProduct(product);
+                    e.setRpayTypeNm(safe(o_rpayTypeNm, o));
+                    e.setLendRateTypeNm(safe(o_lendRateTypeNm, o));
+                    e.setLendRateMin(safe(o_lendRateMin, o));
+                    e.setLendRateMax(safe(o_lendRateMax, o));
+                    e.setLendRateAvg(safe(o_lendRateAvg, o));
 
-                        // 스키마에 mrtgTypeNm 컬럼이 없다면 note에 병기
-                        String note = safe(o_note, o);
-                        String mrtg = safe(o_mrtgTypeNm, o);
-                        if (mrtg != null && (note == null || !note.contains("담보유형:"))) {
-                            note = (note == null ? "" : note + " | ") + "담보유형:" + mrtg;
-                        }
-                        e.setNote(note);
-                        entities.add(e);
+                    // 스키마에 mrtgTypeNm 컬럼이 없다면 note에 병기
+                    String note = safe(o_note, o);
+                    String mrtg = safe(o_mrtgTypeNm, o);
+                    if (mrtg != null && (note == null || !note.contains("담보유형:"))) {
+                        note = (note == null ? "" : note + " | ") + "담보유형:" + mrtg;
+                    }
+                    e.setNote(note);
+                    entities.add(e);
                 }
 
                 if (!"MORTGAGE".equals(loanType) && !"JEONSE".equals(loanType)) {
@@ -182,23 +179,15 @@ public class FinlifeUpsert {
         }
         log.info("[SYNC:{}] page {} upsert {}건 (now/max={}/{})",
                 loanType, pageNo, upsertCount, nowPageNo, maxPageNo);
-        return new FinlifeSaveSync.PageResult(upsertCount, nowPageNo, maxPageNo);
+        return new PageResult(upsertCount, nowPageNo, maxPageNo);
     }
 
     /**
-     * 신용대출 옵션 업서트 메서드
-     * 옵션을(A/B/C)타입으로 그룹핑
-     * 타입별로 금리 평균/등급별 평균 계산
-     *
-     * @param pageNo
-     * @param baseList
-     * @param optList
-     * @param nowPageNo
-     * @param maxPageNo
-     * @return
+     * 신용대출 옵션 업서트
+     * 옵션을(A/B/C)타입으로 그룹핑 후, 타입별 1행만 upsert
      */
     @Transactional
-    public FinlifeSaveSync.PageResult upsertOnePageCredit(
+    public PageResult upsertOnePageCredit(
             int pageNo,
             List<FinlifeCreditResponseDTO.Base> baseList,
             List<FinlifeCreditResponseDTO.Option> optList,
@@ -215,10 +204,10 @@ public class FinlifeUpsert {
 
             var rawOpts = optsByProduct.getOrDefault(code, Collections.emptyList());
 
-            // 타입(A/B/C) 기준으로 그룹핑 (null/공백은 제외)
+            // 타입(A/B/C) 기준으로 그룹핑 (null/공백 제외)
             Map<String, List<FinlifeCreditResponseDTO.Option>> byType = rawOpts.stream()
                     .map(o -> new AbstractMap.SimpleEntry<>(trimToNull(o.getCrdtLendRateType()), o))
-                    .filter(e -> e.getKey() != null) // 타입 없는 행은 스킵 (또는 로깅)
+                    .filter(e -> e.getKey() != null)
                     .collect(Collectors.groupingBy(
                             e -> e.getKey().toUpperCase(),
                             Collectors.mapping(Map.Entry::getValue, Collectors.toList())
@@ -261,21 +250,20 @@ public class FinlifeUpsert {
             p.setJoinWay(b.getJoinWay());
             p.setEtcNote(b.getEtcNote());
 
-
             p = productRepo.save(p);
 
-            // 타입별로 1행씩만 INSERT (유니크 (lpd_no, rate_type) 보장)
-            List<LoanCreditOption> entities = new ArrayList<>();
+            // 타입별 1행씩 upsert (유니크 (lpd_no, rate_type) 가정)
             for (var entry : byType.entrySet()) {
                 String type = entry.getKey();            // A/B/C
                 var list = entry.getValue();
 
-                var existingOpt = creditOptRepo.findByLoanProductAndRateType(p, type).orElse(null);
+                // ✅ 레포 메서드명 통일
+                var existingOpt = creditOptRepo.findFirstByLoanProductAndRateType(p, type).orElse(null);
 
                 if (existingOpt == null) {
                     existingOpt = new LoanCreditOption();
                     existingOpt.setLoanProduct(p);
-                    existingOpt.setRateType(type); // 유니크키 구성요소
+                    existingOpt.setRateType(type);
                 }
                 existingOpt.setRateTypeNm(pickMostCommonNameCrdt(list));
                 existingOpt.setG1(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad1)));
@@ -288,10 +276,9 @@ public class FinlifeUpsert {
                 existingOpt.setG13(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad13)));
                 existingOpt.setAvg(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGradAvg)));
 
-                creditOptRepo.save(existingOpt); // 존재하면 UPDATE, 없으면 INSERT
+                creditOptRepo.save(existingOpt);
             }
 
-            // 타입 누락된 옵션이 있었다면 로깅
             if (rawOpts.stream().anyMatch(o -> trimToNull(o.getCrdtLendRateType()) == null)) {
                 log.warn("[CREDIT] {} has options with blank lendRateType — skipped", code);
             }
@@ -301,8 +288,9 @@ public class FinlifeUpsert {
 
         log.info("[SYNC:CREDIT] page {} upsert {}건 (now/max={}/{})",
                 pageNo, upsertCount, nowPageNo, maxPageNo);
-        return new FinlifeSaveSync.PageResult(upsertCount, nowPageNo, maxPageNo);
+        return new PageResult(upsertCount, nowPageNo, maxPageNo);
     }
+
     private static String pickMostCommonNameCrdt(List<FinlifeCreditResponseDTO.Option> list) {
         return list.stream().map(FinlifeCreditResponseDTO.Option::getCrdtLendRateTypeNm)
                 .filter(Objects::nonNull)
@@ -311,12 +299,13 @@ public class FinlifeUpsert {
                 .map(Map.Entry::getKey).orElse(null);
     }
 
-    // 헬퍼(공통 유틸)
+    // ===== 공통 유틸 =====
     private static String trimToNull(String s) {
         if (s == null) return null;
         String t = s.trim();
         return t.isEmpty() ? null : t;
     }
+
     private static BigDecimal avgOf(Stream<BigDecimal> s) {
         var list = s.filter(Objects::nonNull).toList();
         if (list.isEmpty()) return null;
@@ -325,20 +314,12 @@ public class FinlifeUpsert {
                 .divide(BigDecimal.valueOf(list.size()), 4, RoundingMode.HALF_UP);
     }
 
-    /**
-     * Null같은 에러 방지형 getter
-     * @param f
-     * @param v
-     * @return
-     * @param <T>
-     * @param <R>
-     */
     private static <T, R> R safe(Function<T, R> f, T v) {
         if (f == null) return null;
         try { return f.apply(v); } catch (Exception ignore) { return null; }
     }
 
-    // 금리 가드: null 제외 + (0,50) 구간만 인정 (필요시 조정)
+    // 금리 가드: null 제외 + (0,50) 구간만 인정
     private static <O> BigDecimal minFiltered(List<O> list, Function<O, BigDecimal> getter) {
         BigDecimal lower = new BigDecimal("0");
         BigDecimal upper = new BigDecimal("50");

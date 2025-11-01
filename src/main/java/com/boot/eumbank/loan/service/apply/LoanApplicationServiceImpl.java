@@ -1,5 +1,7 @@
 package com.boot.eumbank.loan.service.apply;
 
+import com.boot.eumbank.loan.dto.apply.LoanApplicationRequestDTO;
+import com.boot.eumbank.loan.dto.apply.LoanApplicationResponseDTO;
 import com.boot.eumbank.loan.dto.apply.LoanSaveConsentsRequestDTO;
 import com.boot.eumbank.loan.entity.LoanApplication;
 import com.boot.eumbank.loan.entity.LoanProduct;
@@ -14,10 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Random;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -28,14 +27,10 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
     private final LoanProductRepository productRepo;
     private final ObjectMapper om = new ObjectMapper();
 
-    @Override
-    public Map<String, Object> saveConsentsNoop(LoanSaveConsentsRequestDTO req) {
-        return Map.of("ok", true, "count", req.getItems() == null ? 0 : req.getItems().size());
-    }
-
+    // ============================ 신청 저장
     @Override
     @Transactional
-    public CreateApplicationResponseDTO createAndSubmit(CreateApplicationRequestDTO req, String channel) {
+    public LoanApplicationResponseDTO createAndSubmit(LoanApplicationRequestDTO req, String channel) {
         // productCode -> lpd_no 해석
         LoanProduct product = productRepo.findByLoanCode(req.getProductCode())
                 .orElseThrow(() -> new NoSuchElementException("상품 없음: " + req.getProductCode()));
@@ -47,7 +42,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
 
         LoanApplication la = new LoanApplication();
         la.setLaId(laId);
-        la.setCustomerNo(Integer.valueOf(req.getCustomerId()));
+        la.setCustomerNo(Integer.valueOf(req.getCustomerNo()));
         la.setLoanProductNo(product.getLoanNo());
         la.setPayoutAccountNo(req.getPayoutAccountNo());
         la.setRepayAccountNo(req.getRepayAccountNo());
@@ -65,21 +60,28 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
 
         appRepo.save(la);
 
-        return new CreateApplicationResponseDTO(
+        return new LoanApplicationResponseDTO(
                 la.getLaId(),
-                la.getLaNo(),
                 la.getStatus(),
+                la.getLaNo(),
                 la.getSubmittedAt()
         );
     }
 
+    // ================================== 약관 동의
+    @Override
+    public Map<String, Object> saveConsents(LoanSaveConsentsRequestDTO req) {
+        return Map.of("ok", true, "count", req.getItems() == null ? 0 : req.getItems().size());
+    }
+
+    // ================================= 유틸 메서드
     private String nextLaId() {
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String rnd = String.format("%06d", new Random().nextInt(1_000_000));
         return "LA" + date + "-" + rnd;
     }
 
-    private String buildContextJson(CreateApplicationRequestDTO req, LoanProduct p) {
+    private String buildContextJson(LoanApplicationRequestDTO req, LoanProduct p) {
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("schemaVersion", "1.0.0");
         root.put("capturedAt", LocalDateTime.now().toString());

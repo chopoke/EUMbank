@@ -2,8 +2,47 @@ import React from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 import { ApplyLayout } from "./ApplyLayoutGuard";
 import { loadFlow } from "./ApplyStorage";
+import api from "../../../api/axios";
 
 const won = (n)=> Number(n||0).toLocaleString("ko-KR");
+
+//pdf 파일 다눙
+async function downloadConsentsPdf(laId){
+  if (!laId || String(laId).trim() === "") {
+      alert("신청번호(laId)가 비어 있습니다.");
+      return;
+    }
+
+    const url = `/api/loan/applications/${laId}/consents.pdf`;
+    console.log("[PDF] requesting:", url);
+
+    const res = await api.get(url, {
+      responseType: "blob",
+      validateStatus: s => s < 500
+    });
+
+    if (res.status >= 400) {
+      try {
+        const text = await res.data.text(); // blob -> text
+        alert(text || `PDF 생성 실패 (HTTP ${res.status})`);
+      } catch {
+        alert(`PDF 생성 실패 (HTTP ${res.status})`);
+      }
+      return;
+  }
+
+  const blob = new Blob([res.data], { type: "application/pdf" });
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = `loan-consents_${laId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(blobUrl);
+}
+
+
 
 export default function ApplyCompletePage(){
   const { code, laId } = useParams();
@@ -71,6 +110,13 @@ export default function ApplyCompletePage(){
                 onClick={() => nav(`/loan/${encodeURIComponent(code)}/quote`)}
               >
                 같은 상품 다시 조회
+              </button>
+
+              <button
+                onClick={() => downloadConsentsPdf(laId)}
+                className="px-4 py-2 rounded-xl bg-gray-800 text-white hover:bg-black"
+              >
+                약관 동의서(PDF) 다운로드
               </button>
             </div>
 

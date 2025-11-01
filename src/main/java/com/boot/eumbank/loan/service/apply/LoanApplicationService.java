@@ -1,12 +1,16 @@
 package com.boot.eumbank.loan.service.apply;
 
+import com.boot.eumbank.loan.dto.apply.LoanApplicationRequestDTO;
+import com.boot.eumbank.loan.dto.apply.LoanApplicationResponseDTO;
 import com.boot.eumbank.loan.dto.apply.LoanSaveConsentsRequestDTO;
 
 import java.util.Map;
 
 public interface LoanApplicationService {
 
-    public Map<String,Object> saveConsentsNoop(LoanSaveConsentsRequestDTO req);
-    public CreateApplicationResponseDTO createAndSubmit(CreateApplicationRequestDTO req, String channel);
+    // 대출 신청 저장
+    public LoanApplicationResponseDTO createAndSubmit(LoanApplicationRequestDTO req, String channel);
 
+    // 약관저장
+    public Map<String, Object> saveConsents(LoanSaveConsentsRequestDTO req);
 }

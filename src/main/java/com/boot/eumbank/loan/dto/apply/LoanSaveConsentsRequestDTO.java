@@ -14,7 +14,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor @AllArgsConstructor @Builder
 public class LoanSaveConsentsRequestDTO {
-    private String customerId;
-    private String productCode;
+    private String customerNo;          // 유저 번호
+    private String productCode;         // 해당 상품 코드
     private List<LoanConsentItemDTO> items;
+
 }

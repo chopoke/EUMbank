@@ -11,9 +11,11 @@ import lombok.NoArgsConstructor;
 @Builder
 public class LoanConsentItemDTO {
     private String termCode;
+    private String title;
     private String version;
+    private String body;     // 전문(마크다운/텍스트)
     private boolean required;
     private boolean agreed;
-    private String agreedAt; // ISO string
+    private String agreedAt; // ISO-8601
 }
 

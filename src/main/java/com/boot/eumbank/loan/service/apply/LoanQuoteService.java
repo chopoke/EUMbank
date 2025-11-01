@@ -9,5 +9,4 @@ import com.boot.eumbank.loan.dto.apply.LoanQuoteResponseDTO;
 public interface LoanQuoteService {
     public LoanQuoteResponseDTO quote(String loanCode, LoanQuoteRequestDTO req, Customer customer);
 
-    public LoanApplicationResponseDTO apply (String loanCode, LoanApplicationRequestDTO req);
 }

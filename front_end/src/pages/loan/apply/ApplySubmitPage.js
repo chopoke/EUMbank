@@ -47,6 +47,14 @@ export default function ApplySubmitPage() {
       const product = flow.product || {};
       const form = flow.form || {};
       const quote = flow.quote || {};
+      const rawConsents = (flow.consents || form.consents || []).filter(Boolean);   // 동의여부
+
+      // 동의한 시간 저장
+      const consents = rawConsents.map(c => ({
+        code: String(c.code || c.id || "").toUpperCase(),  // 코드 통일
+        agreed: !!c.agreed,
+        agreedAt: c.agreedAt || new Date().toISOString(),
+      }));
 
       const me = JSON.parse(localStorage.getItem("me") || "{}");
       const customerNo = Number(me?.cNo ?? me?.customerNo ?? form?.customerNo ?? 0) || undefined;
@@ -83,6 +91,8 @@ export default function ApplySubmitPage() {
         quoteApprovedTerm:   quote?.approvedTerm   != null ? Number(quote.approvedTerm)   : null,
         quoteMonthlyPayment: quote?.monthlyPayment != null ? Number(quote.monthlyPayment) : null,
 
+        // 동의여부
+        consents, 
         extra: quote?.calcTrace ? { calcTrace: quote.calcTrace } : undefined,
       };
 
@@ -103,6 +113,7 @@ export default function ApplySubmitPage() {
         laRpayType: form.rpayType ?? "원리금균등",
         laRateType: form.rateType ?? "고정금리",
         laRiskScore: quote?.calcTrace?.riskScore ?? null,
+        laConsents: consents,       // DTO의 @JsonAlias ("laConsents")
       };
 
       // 우선 V1 → 실패 시 V2 재시도

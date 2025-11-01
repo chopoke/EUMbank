@@ -8,6 +8,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface LoanCreditRepository extends JpaRepository<LoanCreditOption, Long> {
+
+    // 모든 신용옵션
     List<LoanCreditOption> findByLoanProduct(LoanProduct product);
-    Optional<LoanCreditOption> findByLoanProductAndRateType(LoanProduct product, String rateType);
+
+    //Optional<LoanCreditOption> findByLoanProductAndRateType(LoanProduct product, String rateType);
+
+    // A/B/C 중 하나 정확히 찾기 (엔티티 프로퍼티명: rateType)
+    Optional<LoanCreditOption> findFirstByLoanProductAndRateType(LoanProduct product, String rateType);
+
 }
