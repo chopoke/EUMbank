@@ -14,6 +14,11 @@ import lombok.NoArgsConstructor;
 public class DepositSubscriptionRequestDto {
 
     /**
+     * 상품 NO
+     */
+    private String dpNo;
+
+    /**
      * 상품명
      */
     private String productName;
@@ -52,4 +57,11 @@ public class DepositSubscriptionRequestDto {
      * 원본 PDF 경로 (예: /deposit/sample.pdf)
      */
     private String templatePdfPath;
+
+    /**
+     * 약관 동의
+     */
+    private String agreements;
+
+
 }

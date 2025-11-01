@@ -123,4 +123,7 @@ public class MypageCustomer {
 
     @Column(name = "c_pin_number", nullable = false, length = 300)
     private String cpinnumber;
+
+    @Column(name = "c_naver_id", nullable = false, length = 100)
+    private String cnaverid;
 }

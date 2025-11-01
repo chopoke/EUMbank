@@ -10,7 +10,7 @@ public class InvalidAmountException extends TransferException {
         super("INVALID_AMOUNT", message);
     }
     
-    public InvalidAmountException(Integer amount) {
+    public InvalidAmountException(Long amount) {
         super("INVALID_AMOUNT", 
               String.format("유효하지 않은 이체 금액입니다: %d원", amount));
     }

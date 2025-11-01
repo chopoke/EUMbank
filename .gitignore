@@ -35,3 +35,25 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# Node (frontend)
+front_end/node_modules/
+front_end/dist/
+node_modules/
+dist/
+
+# Env / Secrets
+.env
+.env.*
+*.env
+
+# Firebase Admin SDK (github에 올리면 안됨)
+**/firebase-adminsdk-*.json
+**/*firebase*admin*.json
+
+# OS / Etc
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.zip

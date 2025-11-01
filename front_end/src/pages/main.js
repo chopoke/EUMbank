@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
 import mainacc from '../resources/img/acc_fin.png'
 import { goToAccountOpenPage } from "./account/utils/navigations";
-
 
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
@@ -148,18 +147,18 @@ const Hero = ({ isLoggedIn, name }) => {
   );
 };
 
-const QuickActions = () => {
+const QuickActions = ({ isAdmin = false }) => {
   const navigate = useNavigate();
 
   const items = [
     { id: "transfer", label: "계좌이체", icon: paths.send, href: "/transfer"  },
-    { id: "bill", label: "공과금", icon: paths.bill, href: "/test" },
+    { id: "bill", label: "공과금", icon: paths.bill, href: "/bills" },
     { id: "asset", label: "자산관리", icon: paths.chart, href: "/" },
     { id: "loan", label: "대출", icon: paths.loan, href: "/loan/products" },
     { id: "fx", label: "외화", icon: paths.fx, href: "/foreign/rate" },
     { id: "spot", label: "현물", icon: paths.card, href: "/" },
     { id: "deposit", label: "예적금가입", icon: paths.bank, href: "/depositSavingProductList/open" },
-    { id: "mypage", label: "마이페이지", icon: paths.arrowR, href: "/mypage" },
+    { id: "mypage", label: isAdmin ? "관리자페이지" : "마이페이지", icon: paths.arrowR, href: isAdmin ? "/admin" : "/mypage" },
   ];
 
   const handleActionClick = (href) => {
@@ -474,7 +473,7 @@ function WealthHubSummary() {
 // }
 export default function BankHome({ user }) {
   const summary = mockSummary;
-
+  const isAdmin = Array.isArray(user?.roles) && user.roles.includes("ADMIN");
   const isLoggedIn = !!user;
 
   return (
@@ -482,7 +481,7 @@ export default function BankHome({ user }) {
       <a href="#main" className="skip-nav-link">본문 바로가기</a>
       <main id="main">
         <Hero name={user?.name || user?.id || user?.loginId} />
-        <QuickActions />
+        <QuickActions isAdmin={isAdmin} />
 
         <AccountSnapshot summary={summary} />
         <FundSpotlight />

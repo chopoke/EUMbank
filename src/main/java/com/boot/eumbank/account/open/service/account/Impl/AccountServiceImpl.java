@@ -1,8 +1,8 @@
 package com.boot.eumbank.account.open.service.account.Impl;
 
 import com.boot.eumbank.account.open.dto.account.CustomerDTO;
-import com.boot.eumbank.account.open.jpa.repository.custom.CustomerRepository;
 import com.boot.eumbank.account.open.jpa.repository.AccountRepository;
+import com.boot.eumbank.account.open.jpa.repository.custom.CustomerRepository;
 import com.boot.eumbank.account.open.service.account.AccoutService;
 import com.boot.eumbank.customer.entity.Customer;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,8 +24,6 @@ public class AccountServiceImpl implements AccoutService {
     private final CustomerRepository customerRepository;
 
     private final AccountRepository accountRepository;
-
-    private final PasswordEncoder passwordEncoder;
 
     private Logger logger = LoggerFactory.getLogger(AccoutService.class);
 

@@ -5,6 +5,7 @@ import Step2IdVerify from "../Step2IdVerify";
 import Step3Info from "../Step3Info";
 import Step4Product from "../Step4Product";
 import Step5Done from "../Step5Done";
+import ProtectedRoute from "../component/ProtectedRoute";
 
 export const accountElements = (
 
@@ -12,7 +13,9 @@ export const accountElements = (
         < Route
             path="/account/open"
             element={
-                < Navigate to="/account/open/step1" replace />
+               <ProtectedRoute> 
+                 < Navigate to="/account/open/step1" replace />
+               </ProtectedRoute>
             }
         />
         < Route path="/account/open/step1" element={< Step1Consent />} />

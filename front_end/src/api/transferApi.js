@@ -33,13 +33,9 @@ export const transferApi = {
   // 최근 수취인 조회 (GET /api/transfer/recipients/{accountNo})
   getRecentRecipients: (accountNo) => api.get(`/api/transfer/recipients/${accountNo}`),
   
-  // 자주 쓰는 계좌 (GET /api/transfer/favorites)
-  getFavoriteAccounts: () => api.get('/api/transfer/favorites'),
   
   // === 수수료 ===
   // 이체 수수료 계산 (POST /api/transfer/fee)
   getTransferFee: (data) => api.post('/api/transfer/fee', data),
   
-  // === 은행 목록 ===
-  getBanks: () => api.get('/api/transfer/banks')
 };

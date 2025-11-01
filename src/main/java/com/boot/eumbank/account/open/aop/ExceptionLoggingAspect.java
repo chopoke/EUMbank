@@ -17,7 +17,7 @@ public class ExceptionLoggingAspect {
     private static final Logger log = LoggerFactory.getLogger(ExceptionLoggingAspect.class);
 
     // com.boot.eumbank 패키지 하위의 모든 public 메소드를 대상으로 함
-    @Pointcut("within(com.boot.eumbank.account..*)")
+    @Pointcut("within(com.boot.eumbank.account..*) || within(com.boot.eumbank.product..*)")
     public void applicationPackagePointcut() {
         // Method is empty as this is just a Pointcut, the implementations are in the advices.
     }

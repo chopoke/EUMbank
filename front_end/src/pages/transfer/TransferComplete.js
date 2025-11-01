@@ -50,18 +50,6 @@ export default function TransferComplete() {
     return new Intl.NumberFormat('ko-KR').format(amount);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(`https://neobank.example/transfer/${transactionInfo.transactionId}`);
-      alert('공유 링크가 복사되었습니다.');
-    } catch (e) {
-      alert('복사 실패. 브라우저 권한을 확인하세요.');
-    }
-  };
 
   const handleReTransfer = () => {
     navigate('/transfer', { state: { prefilledData: transferData } });
@@ -144,19 +132,16 @@ export default function TransferComplete() {
 
               <div className="mt-6 flex flex-wrap gap-2">
                 <button 
-                  onClick={handlePrint}
+                  onClick={handleReTransfer}
                   className="rounded-full bg-blue-700 text-white px-5 py-2 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 >
-                  영수증 저장/인쇄
+                  같은 대상 재이체
                 </button>
                 <button 
-                  onClick={handleCopyLink}
+                  onClick={handleGoHome}
                   className="rounded-full border px-5 py-2 text-sm hover:bg-gray-50"
                 >
-                  공유 링크 복사
-                </button>
-                <button className="rounded-full border px-5 py-2 text-sm hover:bg-gray-50">
-                  PDF로 저장
+                  홈으로 가기
                 </button>
               </div>
             </section>

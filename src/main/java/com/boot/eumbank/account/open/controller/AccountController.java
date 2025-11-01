@@ -1,13 +1,11 @@
 package com.boot.eumbank.account.open.controller;
 
-import com.boot.eumbank.account.open.dto.account.CustomerDTO;
-import com.boot.eumbank.account.open.dto.account.PinDto;
-import com.boot.eumbank.account.open.dto.account.VerifyMinSjonRequest;
-import com.boot.eumbank.account.open.dto.account.VerifyMinSjonResponse;
+import com.boot.eumbank.account.open.dto.account.*;
 import com.boot.eumbank.account.open.jpa.repository.AccountRepository;
 import com.boot.eumbank.account.open.service.account.AccoutService;
 import com.boot.eumbank.account.open.util.ImageFormats;
 import com.boot.eumbank.account.open.util.KycVerify;
+import com.boot.eumbank.product.service.product.AccountProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -45,7 +43,21 @@ public class AccountController {
 
     private final AccountRepository accountRepository;
 
+    private final AccountProductService accountProductService;
+
     private final AccoutService accoutService;
+
+    /**
+     * 계좌정보가져오기
+     * @return
+     */
+    @GetMapping("/accountList")
+    public ResponseEntity<List<AccountDTO>> getAllAccounts() {
+
+        logger.info("DepositController => getAllAccounts()");
+        List<AccountDTO> allAccounts = accountProductService.findAllAccounts();
+        return ResponseEntity.ok(allAccounts);
+    }
 
     /**
      * NAVER CLOVA에 주민등록증 O

@@ -50,7 +50,7 @@ public class AccountRepository {
         Matcher matcher = pattern.matcher(addressFromId);
 
         if (matcher.find()) {
-            // 3. 첫 번째 그룹(숫자 부분)의 값을 가져옵니다.
+            // 3. 첫 번째 그룹(숫자 부분)의 값을 가져옵니다. (우편번호)
             czipcode = matcher.group(1);
         }
 
@@ -63,6 +63,19 @@ public class AccountRepository {
 
         if (exists) {
             throw new IllegalStateException("이미 존재하는 계좌번호입니다: " + newAccountNo);
+        }
+
+        // 2.5) 고객 테이블에 gender 컬럼에 데이터 넣기
+        String gender = "";
+        char genderDigit = rrn13FormId.charAt(7);
+        // char를 숫자로 직접 비교하기 위해 '1', '3' 과 같이 따옴표로 감싸서 비교합니다.
+        if (genderDigit == '1' || genderDigit == '3') {
+            gender = "M";
+        } else if (genderDigit == '2' || genderDigit == '4') {
+            gender = "F";
+        } else {
+            // 예외 처리 (규칙에 맞지 않는 경우)
+            gender = "Unknown";
         }
 
         // 3) 엔티티 생성 (INSERT 대상)
@@ -91,8 +104,6 @@ public class AccountRepository {
         // 4) INSERT
         em.persist(accountEntity);   // <-- 여기서 INSERT 예약
 
-        // 고객 테이블
-
         // 5) pinNumber 암호화
         String encryptedMPin = passwordEncoder.encode(pinNumber);
 
@@ -105,6 +116,7 @@ public class AccountRepository {
 
         qf.update(c)
                 .set(c.pinNumber, pinNumber)
+                .set(c.cGenderCd, gender)
                 .set(c.cRrnHash, rrn13FormId)
                 .set(c.cAddress, addressFromId)
                 .set(c.cZipCode, czipcode)
