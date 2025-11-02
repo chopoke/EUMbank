@@ -101,7 +101,8 @@ function AccountHistoryPage(){
           number: d.a_account_no,
           type: d.a_account_type,
           balance: Number(d.a_balance || 0),
-          openAt: parseTs(d.a_opened_at ?? d.a_open_at ?? d.openAt ?? d.open_at)
+          openAt: parseTs(d.a_opened_at ?? d.a_open_at ?? d.openAt ?? d.open_at),
+          rate : d.a_rate,
         });
         setChangeAlias(d.a_nickname || "");
       }).catch(console.error);
@@ -353,7 +354,7 @@ function AccountHistoryPage(){
       {/* 계정정보 / 필터 */}
       <section>
         <div className="mx-auto max-w-screen-xl px-6 py-6 grid grid-cols-12 gap-6">
-          <div className="col-span-12 lg:col-span-6">
+          <div className="col-span-12 lg:col-span-8">
             <div className="rounded-2xl border bg-white p-5 shadow-sm flex items-center justify-between">
               <div>
                    <div className="mt-2 flex items-center gap-2">
@@ -381,6 +382,12 @@ function AccountHistoryPage(){
                       <div className="text-xs text-gray-900 py-1.5"> 
                         개설: {account.openAt ? toISODate(account.openAt) : '-'}
                       </div>
+                      <div className="text-xs text-gray-900 py-1.5 pl-3"> 
+                        이율: {account.rate ? account.rate : '-'}
+                      </div>
+                      <div className="text-xs text-gray-900 py-1.5 pl-3"> 
+                        계좌유형: {account.type ? account.type : '-'}
+                      </div>
                 </div>
               </div>
               <div className="text-right">
@@ -391,7 +398,7 @@ function AccountHistoryPage(){
           </div>
           
           {/* 빠른날짜필터 */}
-          <div className="col-span-12 lg:col-span-6">
+          <div className="col-span-12 lg:col-span-4">
             <div className="rounded-2xl border bg-white p-5 shadow-sm">
               <div className="text-sm font-medium text-gray-800 mb-2">빠른 필터</div>
               <div className="flex flex-wrap gap-2">

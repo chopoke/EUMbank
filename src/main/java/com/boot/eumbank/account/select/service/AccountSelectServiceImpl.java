@@ -83,6 +83,7 @@ public class AccountSelectServiceImpl implements AccountSelectService {
         dto.setA_currency(a.getCurrency());
         dto.setA_balance(a.getBalance());
         dto.setA_status(a.getStatus());
+        dto.setA_rate(a.getRate());
         dto.setA_nickname(a.getNickname());
         dto.setA_opened_at(a.getOpenedAt());
         dto.setA_closed_at(a.getClosedAt());

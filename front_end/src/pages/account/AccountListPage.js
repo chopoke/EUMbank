@@ -45,6 +45,28 @@ function AccountListPage(){
     return `${y}-${m}-${day} ${hh}:${mm}`;
   }
 
+  // 통화코드 유틸ㄹ 추가
+  const CURRENCY_DIGITS = {
+    // 0자리
+    KRW: 0, JPY: 0, IDR: 0,
+    // 3자리
+    BHD: 3, KWD: 3,
+    // 그 외 기본 2자리
+  };
+  function getDigits(code = "KRW") {
+    return CURRENCY_DIGITS[code] ?? 2;
+  }
+  // 톻화 포맷터
+  function formatMoney(amt, code = "KRW", style = "code") {
+    const digits = getDigits(code);
+    // 기본: CODE 12,345.67
+    const num = Number(amt || 0).toLocaleString("en-US", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits
+    });
+    return `${code} ${num}`;
+  }
+
   React.useEffect(()=>{
     let alive = true;
     setLoading(true);
@@ -111,9 +133,12 @@ function AccountListPage(){
     "CHF", "CNH", "DKK", "EUR", "GBP", "HKD", "IDR", "KWD","MYR", "NOK", "NZD","NZD", "SEK"];
 
   // 원화 스케일링
-  const won = (n)=> n.toLocaleString('ko-KR');
-  const formatCurrency = (amt, cur) => 
-    cur === "USD" ? `$ ${amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`: `₩ ${won(amt)}`;
+  // const won = (n)=> n.toLocaleString('ko-KR');
+  // const formatCurrency = (amt, cur) => 
+  //   cur === "USD" ? `$ ${amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`: `₩ ${won(amt)}`;
+
+  // 원화 스케일링에서 -> 통화 표기로 수정
+  const formatCurrency = (amt, cur) => formatMoney(amt, cur, 'code');
 
     // 계좌번호 마스킹
     const maskAcc = (s) =>
@@ -140,7 +165,11 @@ function AccountListPage(){
   // csv 다운로드
   function downloadCsv(rows) {
     const header = ["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"];
-    const body = rows.map((r) => [r.nickname, r.accountType, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity]);
+    const body = rows.map((r) => [
+      r.nickname, r.accountType, r.bank, r.number, r.type,
+      formatMoney(r.balance, r.currency, 'code'), // 예: SAR 12,345.00
+      r.currency, r.status, r.lastActivity
+    ]);
     const csv = [header, ...body].map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -173,7 +202,9 @@ function AccountListPage(){
     // 테이블 구성
     const head = [["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"]];
     const body = rows.map((r) => [
-      r.nickname, r.accountType, r.bank, r.number, r.type, r.balance, r.currency, r.status, r.lastActivity
+      r.nickname, r.accountType, r.bank, r.number, r.type,
+      formatMoney(r.balance, r.currency, 'code'), // 예: SAR 12,345.00
+      r.currency, r.status, r.lastActivity
     ]);
 
     // autoTable 호출

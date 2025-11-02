@@ -516,7 +516,7 @@ export default function ApplySignPage() {
           </div>
 
           <div className="text-xs text-gray-500">
-            ※ 현재는 로컬로 PDF를 저장하고, 서명 이미지는 세션(flow.sign.signatureDataUrl)에만 저장합니다. 서버 저장은 추후 업로드 API로 연결하세요.
+            ※ 현재는 로컬로 PDF를 저장하고, 서명 이미지는 세션(flow.sign.signatureDataUrl)에만 저장합니다.
           </div>
         </div>
       </ApplyLayout>
