@@ -130,8 +130,10 @@ export default function AssetDashboard() {
 
               <LineChartWithDatesStatic
                 points={[87.3, 87.6, 88.0, 88.2, 88.5, 88.9, 89.3]}
-                labels={["10-01","10-05","10-10","10-15","10-20","10-25","오늘"]}
+                labels={["10-01","10-15","오늘"]}
                 height={200}
+                yTicks={4}
+                yFormatter={(v) => `${v.toFixed(1)}억`}   // ← 87.0억, 88.0억 처럼
               />
               {/* <PlaceholderChart label="라인 차트 (순자산 추이)" height="h-52" /> */}
               <TrendFooterStats

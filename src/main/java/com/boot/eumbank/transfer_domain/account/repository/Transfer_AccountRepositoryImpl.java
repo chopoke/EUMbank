@@ -94,4 +94,19 @@ public class Transfer_AccountRepositoryImpl implements Transfer_AccountRepositor
                 .orderBy(account.balance.desc())
                 .fetch();
     }
+
+    /**
+     * 고객의 원화 계좌만 조회 (이체 가능한 계좌)
+     * - currency가 'KRW'이거나 null인 계좌만 조회
+     */
+    @Override
+    public List<Account> findKRWAccountsByCustomerId(Integer customerNo) {
+        return queryFactory
+                .selectFrom(account)
+                .where(account.cNo.eq(customerNo)
+                        .and(account.status.eq("ACTIVE"))
+                        .and(account.currency.isNull().or(account.currency.eq("KRW"))))
+                .orderBy(account.openedAt.desc())
+                .fetch();
+    }
 }

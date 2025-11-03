@@ -79,13 +79,22 @@ export function Header({ isLoggedIn, user, onLogout }) {
           {/* hidden lg:flex items-center gap-6 text-sm text-gray-700 */}
           <nav className="main-nav-links">
             <Link to="/accounts" className="nav-link">개인</Link>
-            <Link to="/products" className="nav-link">상품</Link>
+            <div className="nav-link group relative">상품
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-26 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-300 z-10">
+                <div className="bg-white rounded-lg shadow-xl py-2">
+                  <Link to="/loan/products" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-100">대출 상품</Link>
+                  <Link to="/depositSavingProductList/open" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-100">예금/적금</Link>
+                  {/* <Link to="/products/card" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-100">카드</Link> */}
+                </div>
+              </div>
+            </div>
+
             <Link to="/asset" className="nav-link nav-link-active">자산관리</Link>
             <Link to="/foreign/rate" className="nav-link">외환/환율</Link>
             {/* 마이페이지 or 관리자페이지 이동 */}
-            <Link to={isAdmin ? "/admin" : "/mypage"} className="nav-link">
+            {/* <Link to={isAdmin ? "/admin" : "/mypage"} className="nav-link">
               <img src={myp} className="mypage w-5" />
-            </Link>
+            </Link> */}
             {/* <Link to="/events" className="nav-link">이벤트</Link> */}
             {/* FCM 알림 종모양 아이콘 */}
             {isLoggedIn && <NotificationBell />}
@@ -113,8 +122,11 @@ export function Header({ isLoggedIn, user, onLogout }) {
           ) : (
             <>
               <div className="logged-in-status">
-                <span className="user-chip" aria-label="로그인 사용자">
-                  <Icon path={paths.bank} />
+                <span className="user-chip flex items-center" aria-label="로그인 사용자">
+                  {/* 마이페이지 or 관리자페이지 이동 */}
+                  <Link to={isAdmin ? "/admin" : "/mypage"} className="nav-link">
+                    <img src={myp} className="mypage w-5" />
+                  </Link>
                   <span className='ml-1'>{displayName}님 접속중</span>
                 </span>
                 {/* <span className="hidden-sm">안전한 접속중</span> */}

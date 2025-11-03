@@ -86,7 +86,7 @@ export default function ForeignRatePage() {
   }
 
   return (
-    <div className="fx-page" style={{ maxWidth: 1200 }}>
+    <div className="fx-page" style={{ maxWidth: 1280 }}>
       <div className="fx-page__head">
         <h1>환율 정보</h1>
         <p className="fx-page__hint">
