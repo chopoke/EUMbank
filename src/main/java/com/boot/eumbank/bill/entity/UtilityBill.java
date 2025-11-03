@@ -14,7 +14,8 @@ public class UtilityBill {
     @Id @GeneratedValue(strategy= GenerationType.IDENTITY)
     private Integer ubNo;
 
-    private Integer cNo;                      // FK 그대로
+    @Column(name="c_no")
+    private Integer customerNo;                      // FK 그대로
 
     @ManyToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="bpv_code", referencedColumnName="bpv_code")

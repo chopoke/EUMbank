@@ -2,6 +2,7 @@ package com.boot.eumbank.bill.adapter;
 
 import com.boot.eumbank.bill.model.PayCommand;
 import com.boot.eumbank.bill.model.PayResult;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -9,8 +10,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** 데모용. 여러 기관 코드를 한 구현에서 처리. */
 @Component
+@Profile({"local","dev"})
 public class MockAdapter implements BillProviderAdapter {
-    private static final Set<String> SUPPORTED = Set.of("KEPCO","K_WATER","GAS","TELCO","TAX");
+    private static final Set<String> SUPPORTED = Set.of("KEPCO","K_WATER","GAS","TELCO","TAX","NH_GIRO");
 
     @Override
     public String providerCode() { return "MOCK"; } // 개별 라우팅은 Gateway에서 SUPPORTED로 판정

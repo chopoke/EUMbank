@@ -18,9 +18,9 @@ public class BillPaymentService {
     private final BillInvoiceRepo invRepo;
     private final BillGateway gateway;
 
-    public BillPayment pay(Integer biNo, Integer aNo, String idemKey) {
-        if (idemKey!=null) {
-            payRepo.findByBpIdempotencyKey(idemKey).ifPresent(p -> { throw new DuplicateKeyException("idem"); });
+    public BillPayment pay(Integer biNo, Integer aNo, String idempotencyKey) {
+        if (idempotencyKey!=null) {
+            payRepo.findByBpIdempotencyKey(idempotencyKey).ifPresent(p -> { throw new DuplicateKeyException("idem"); });
         }
         BillInvoice inv = invRepo.findById(biNo).orElseThrow();
         if (!"READY".equals(inv.getBiStatus())) throw new IllegalStateException("이미 처리됨");
@@ -31,10 +31,10 @@ public class BillPaymentService {
         p.setANo(aNo);
         p.setBpAmount(inv.getBiAmount());
         p.setBpStatus("PENDING");
-        p.setBpIdempotencyKey(idemKey);
+        p.setBpIdempotencyKey(idempotencyKey);
         payRepo.saveAndFlush(p);
 
-        var res = gateway.pay(inv.getBill(), inv, inv.getBiAmount(), idemKey);
+        var res = gateway.pay(inv.getBill(), inv, inv.getBiAmount(), idempotencyKey);
         if (res.success()) {
             p.setBpStatus("SUCCESS");
             p.setBpProviderTxId(res.providerTxId());

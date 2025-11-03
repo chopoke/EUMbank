@@ -188,3 +188,13 @@ jobs:
       cron: "0 */2 * * * *"    # 매일 03:00  --> 임시로 15초마다
   timezone: "Asia/Seoul"
 
+# ==================================================================
+# NH 공과금 API
+# ==================================================================
+ext:
+  nh:
+    base-url: ${NH_BASE_URL}
+    api-key: ${NH_API_KEY}
+    org-code: ${NH_ORG_CODE}
+    client-id: ${NH_CLIENT_ID:}
+    client-secret: ${NH_CLIENT_SECRET:}

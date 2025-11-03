@@ -202,7 +202,16 @@ function App() {
         } />
 
         {/* 공과금페이지 */}
-        <Route path="/bills/:ubNo" element={<BillsLanding />} />
+        <Route path="/bills" element={
+          <ProtectedRoute>
+            <BillsLanding />
+          </ProtectedRoute>
+        } />
+        <Route path="/bills/:ubNo" element={
+          <ProtectedRoute>
+            <BillsLanding />
+          </ProtectedRoute>
+        } />
 
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={
