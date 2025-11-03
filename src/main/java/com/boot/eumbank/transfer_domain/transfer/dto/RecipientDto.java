@@ -18,7 +18,7 @@ public class RecipientDto {
     private String bank;        // 수취 은행명
     private String account;     // 수취 계좌번호
     private String name;        // 수취인명
-    private Integer amount;     // 이체 금액
+    private Long amount;     // 이체 금액
     private String memo;        // 이체 메모
     
     // 추가 메서드들
@@ -34,7 +34,7 @@ public class RecipientDto {
         return this.name;
     }
     
-    public Integer getAmount() {
+    public Long getAmount() {
         return this.amount;
     }
     

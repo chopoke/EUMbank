@@ -42,7 +42,7 @@ public interface TransferService {
     Object getAccounts();
     
     // 계좌 잔액 조회 (JWT 토큰 기반)
-    Integer getAccountBalance(Integer accountNo);
+    Long getAccountBalance(Integer accountNo);
     
     // 최근 수취인 조회
     List<Map<String, Object>> getRecentRecipients(Integer accountNo);

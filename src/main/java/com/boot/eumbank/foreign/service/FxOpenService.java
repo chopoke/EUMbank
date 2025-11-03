@@ -117,7 +117,6 @@ public class FxOpenService {
 
         // 6) 개설 이벤트를 FOREIGN_EXCHANGE_TBL에도 기록 (금액 0, OPEN 이벤트)
         ForeignExchange openEvt = ForeignExchange.builder()
-                .fpNo(null)
                 .cNo(saved.getCNo())
                 .aNo(saved.getANo())
                 .feId("OPEN-" + System.currentTimeMillis())
