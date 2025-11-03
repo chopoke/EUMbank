@@ -33,7 +33,6 @@ import TransferComplete from "./pages/transfer/TransferComplete";
 import TransferReserveComplete from "./pages/transfer/TransferReserveComplete";
 import BulkTransferDashboard from "./pages/transfer/BulkTransferDashboard";
 import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
-import AutoTransferPage from "./pages/transfer/AutoTransferPage";
 import AutoTransferComplete from "./pages/transfer/AutoTransferComplete";
 
 // 주택담보대출
