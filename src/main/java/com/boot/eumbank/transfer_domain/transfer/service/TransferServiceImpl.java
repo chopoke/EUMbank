@@ -9,11 +9,14 @@ import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountRepos
 import com.boot.eumbank.transfer_domain.customer.repository.Transfer_CustomerRepository;
 import com.boot.eumbank.transfer_domain.transfer.dto.*;
 import com.boot.eumbank.transfer_domain.transfer.entity.TransferOrder;
+import com.boot.eumbank.transfer_domain.transfer.event.TransferCompletedEvent;
+import com.boot.eumbank.transfer_domain.transfer.event.TransferFailedEvent;
 import com.boot.eumbank.transfer_domain.transfer.exception.*;
 import com.boot.eumbank.transfer_domain.transfer.repository.Transfer_TransferHistoryRepository;
 import com.boot.eumbank.transfer_domain.transfer.repository.Transfer_TransferOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -49,6 +52,9 @@ public class TransferServiceImpl implements TransferService {
     private final Transfer_TransferHistoryRepository transferHistoryRepository;
     private final Transfer_TransferOrderRepository transferOrderRepository;
     private final Transfer_CustomerRepository transferCustomerRepository;
+
+    //웹 푸시알람을 위한 이벤트 발행기능
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -224,7 +230,7 @@ public class TransferServiceImpl implements TransferService {
                     .accountNo(savedOrder.getA_no())
                     .bankCode(savedOrder.getTo_bank_code())
                     .destAccountNo(savedOrder.getTo_dest_account_no())
-                    .amount(savedOrder.getTo_amount().intValue())
+                    .amount(savedOrder.getTo_amount().longValue())
                     .scheduleType(savedOrder.getTo_schedule_type())
                     .scheduleExpr(savedOrder.getTo_schedule_expr())
                     .startAt(formatDateTime(savedOrder.getTo_start_at()))
@@ -281,8 +287,8 @@ public class TransferServiceImpl implements TransferService {
         }
 
         // 4. 총 이체 금액 계산
-        int totalAmount = request.getRecipients().stream()
-                .mapToInt(RecipientDto::getAmount)
+        long totalAmount = request.getRecipients().stream()
+                .mapToLong(RecipientDto::getAmount)
                 .sum();
 
         // 5. 총 이체 한도 확인 (총합 먼저 검증)
@@ -373,7 +379,7 @@ public class TransferServiceImpl implements TransferService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public TransferResultDto executeTransferInSeparateTransaction(
             Integer fromAccountNo, String toAccountNo, String toBankName, 
-            String toAccountHolder, Integer amount, String memo, String password) {
+            String toAccountHolder, Long amount, String memo, String password) {
         
         log.info("개별 이체 실행 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
                 fromAccountNo, toAccountNo, amount);
@@ -434,7 +440,7 @@ public class TransferServiceImpl implements TransferService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveFailedTransferHistory(Exception e, Integer fromAccountNo, String toAccountNo, 
-                                        String toBankName, String toAccountHolder, Integer amount, String memo) {
+                                        String toBankName, String toAccountHolder, Long amount, String memo) {
         try {
             log.info("실패한 이체 시도 기록 저장 시작 - 출금계좌: {}, 수취계좌: {}, 실패사유: {}", 
                     fromAccountNo, toAccountNo, getFailureReason(e));
@@ -568,7 +574,7 @@ public class TransferServiceImpl implements TransferService {
 
     @Transactional
     private TransferResultDto executeTransfer(Integer fromAccountNo, String toAccountNo,
-                                           String toBankName, String toName, Integer amount,
+                                           String toBankName, String toName, Long amount,
                                            String memo, String password) {
         
         log.info("이체 실행 시작 - 출금계좌: {}, 수취은행: {}, 수취계좌: {}, 금액: {}", 
@@ -743,8 +749,38 @@ public class TransferServiceImpl implements TransferService {
         
         log.info("이체 완료 - 이체ID: {}, 출금계좌: {}, 금액: {}, 수취은행: {}, 수취계좌: {}", 
                 transferId, fromAccountNo, amount, toBankName, toAccountNo);
-        
-        // === 10단계: 결과 반환 ===
+
+            // === 🚀 이벤트 발행: 이체 완료 알림 자동화 ===
+            try {
+                TransferCompletedEvent event;
+                if (toAccount != null) {
+                    // 내부 이체: 출금자와 입금자 모두에게 알림
+                    event = new TransferCompletedEvent(
+                            fromAccount.getCNo(),
+                            toAccount.getCNo(),
+                            amount,
+                            fromAccount.getBalance().longValue(),
+                            toAccount.getBalance().longValue()
+                    );
+                } else {
+                    // 타행 이체: 출금자에게만 알림
+                    event = new TransferCompletedEvent(
+                            fromAccount.getCNo(),
+                            amount,
+                            fromAccount.getBalance().longValue()
+                    );
+                }
+
+                // "이체 완료" 방송!
+                eventPublisher.publishEvent(event);
+                log.info("✅ 이체 완료 이벤트 발행 성공 - 고객번호: {}", fromAccount.getCNo());
+
+            } catch (Exception e) {
+                // 알림 발송 실패해도 이체는 정상 완료 (비즈니스 로직 분리)
+                log.error("⚠️ 이체 성공 후 이벤트 발행 실패 (알림 누락 가능성): {}", e.getMessage());
+            }
+
+            // === 10단계: 결과 반환 ===
         return TransferResultDto.builder()
                 .transferId(transferId)
                 .transferNo(savedHistory.getTransferNo())
@@ -763,6 +799,34 @@ public class TransferServiceImpl implements TransferService {
             
             // 실패한 이체 시도 기록을 별도 트랜잭션으로 저장
             saveFailedTransferHistory(e, fromAccountNo, toAccountNo, toBankName, toName, amount, memo);
+            
+            // === 🚀 이벤트 발행: 이체 실패 알림 자동화 (일반 이체만) ===
+            // 예약이체 실패는 TransferSchedulerService에서 처리
+            try {
+                Account failedFromAccount = accountRepository.findById(fromAccountNo).orElse(null);
+                if (failedFromAccount != null) {
+                    String failureReason = getFailureReason(e);
+                    String failureMessage = e.getMessage();
+                    long currentBalance = failedFromAccount.getBalance().longValue();
+                    
+                    TransferFailedEvent failedEvent = new TransferFailedEvent(
+                            failedFromAccount.getCNo(),
+                            toName != null ? toName : "수취인",
+                            amount,
+                            currentBalance,
+                            failureReason,
+                            failureMessage != null ? failureMessage : "이체 처리 중 오류가 발생했습니다.",
+                            false // 일반 이체는 false
+                    );
+                    
+                    eventPublisher.publishEvent(failedEvent);
+                    log.info("✅ 이체 실패 이벤트 발행 성공 - 고객번호: {}, 실패사유: {}", 
+                            failedFromAccount.getCNo(), failureReason);
+                }
+            } catch (Exception eventException) {
+                // 실패 이벤트 발행 실패는 로그만 기록 (이체 실패는 이미 처리됨)
+                log.warn("⚠️ 이체 실패 후 이벤트 발행 실패: {}", eventException.getMessage());
+            }
             
             // 실패 시 예외를 다시 던져서 프론트엔드에서 catch 블록으로 처리하도록 함
             throw e;
@@ -788,7 +852,7 @@ public class TransferServiceImpl implements TransferService {
                     order.getTo_dest_account_no(),
                     order.getTo_bank_code(),
                     "수취인", // 실제로는 수취인명을 별도로 저장해야 함
-                    order.getTo_amount().intValue(),
+                    order.getTo_amount().longValue(),
                     order.getTo_memo(),
                     null // 예약 이체는 비밀번호 검증 생략
             );
@@ -805,7 +869,7 @@ public class TransferServiceImpl implements TransferService {
         }
     }
 
-    public boolean checkTransferLimit(Integer accountNo, Integer amount) {
+    public boolean checkTransferLimit(Integer accountNo, Long amount) {
         // 계좌 한도 정보 조회
         Optional<AccountLimit> limitOpt = accountLimitRepository.findByAccountNo(accountNo);
         
@@ -1012,7 +1076,7 @@ public class TransferServiceImpl implements TransferService {
                 .accountNo(order.getA_no())
                 .bankCode(order.getTo_bank_code())
                 .destAccountNo(order.getTo_dest_account_no())
-                .amount(order.getTo_amount().intValue())
+                .amount(order.getTo_amount().longValue())
                 .scheduleType(order.getTo_schedule_type())
                 .scheduleExpr(order.getTo_schedule_expr())
                 .startAt(formatDateTime(order.getTo_start_at()))
@@ -1089,7 +1153,7 @@ public class TransferServiceImpl implements TransferService {
     }
     
     @Override
-    public Integer getAccountBalance(Integer accountNo) {
+    public Long getAccountBalance(Integer accountNo) {
         log.info("계좌 잔액 조회 - 계좌: {}", accountNo);
         
         try {
@@ -1118,7 +1182,7 @@ public class TransferServiceImpl implements TransferService {
                 throw new UnauthorizedException("본인 계좌가 아닙니다.");
             }
             
-            return account.getBalance().intValue();
+            return account.getBalance().longValue();
             
         } catch (Exception e) {
             log.error("계좌 잔액 조회 중 오류 발생", e);
@@ -1180,7 +1244,7 @@ public class TransferServiceImpl implements TransferService {
                         recipient.put("bank", transfer.getOtherBank() != null ? transfer.getOtherBank() : "이음은행");
                         recipient.put("account", transfer.getOtherAccount());
                         recipient.put("memo", transfer.getMemo());
-                        recipient.put("amount", transfer.getAmount().intValue());
+                        recipient.put("amount", transfer.getAmount().longValue());
                         recipient.put("lastTransferDate", transfer.getTransferAt().toString());
                         uniqueRecipients.put(accountKey, recipient);
                         
@@ -1263,7 +1327,7 @@ public class TransferServiceImpl implements TransferService {
                 request.getFromAccountNo(), request.getToAccount(), request.getAmount());
         
         // 간단한 수수료 계산 로직
-        Integer amount = request.getAmount();
+        Long amount = request.getAmount();
         Integer fee = 0;
         
         // 금액에 따른 수수료 계산

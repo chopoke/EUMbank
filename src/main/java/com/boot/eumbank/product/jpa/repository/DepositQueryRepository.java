@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.boot.eumbank.account.open.entity.account.QAccount.account;
 import static com.boot.eumbank.product.entity.product.QProductDeposit.productDeposit;
 import static com.boot.eumbank.product.entity.product.QProductDepositList.productDepositList;
 
@@ -58,7 +59,7 @@ public class DepositQueryRepository {
     }
 
     /**
-     * 예금 상품의 전체 정보를 ProductDto 형태로 조회합니다.
+     * 예금 상품의 특정 정보를 ProductDto 형태로 조회합니다.
      */
     public ProductDto findOneDepositProducts(String depositNo) {
 
@@ -145,5 +146,26 @@ public class DepositQueryRepository {
                         new BigDecimal(requestDto.getAmount()),      // 16. dPrincipalBal - 원금잔액 (초기 예금액)
                         oneAccount.getAccountNo()
                 ).execute();
+    }
+
+    /**
+     * 예금 상품등록을 위한 특정 게좌 조회
+     * @return
+     */
+    public Account findOneAccount(Customer customer, DepositSubscriptionRequestDto requestDto) {
+
+        logger.info("AccountQueryRepository => findOneAccount()");
+
+        String fullText = requestDto.getLinkedAccount(); // "(110-784-589413) - 계좌 종류 : 자유적금"
+
+        String accountPart = fullText.split(" - ")[0]; // 결과: "(110-784-589413)"
+
+        String accountNumber = accountPart.substring(1, accountPart.length() - 1);
+
+        return queryFactory
+                .selectFrom(account)
+                .where(account.cNo.eq(customer.getCustomerNo()).and(account.accountNo.eq(accountNumber)))
+                .fetchOne();
+
     }
 }

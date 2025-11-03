@@ -1,10 +1,14 @@
 package com.boot.eumbank.transfer_domain.transfer.service;
 
+import com.boot.eumbank.account.open.entity.account.Account;
+import com.boot.eumbank.transfer_domain.account.repository.Transfer_AccountRepository;
 import com.boot.eumbank.transfer_domain.transfer.entity.TransferOrder;
+import com.boot.eumbank.transfer_domain.transfer.event.TransferFailedEvent;
 import com.boot.eumbank.transfer_domain.transfer.exception.TransferException;
 import com.boot.eumbank.transfer_domain.transfer.repository.Transfer_TransferOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +34,8 @@ public class TransferSchedulerService {
     // 의존성 주입
     private final Transfer_TransferOrderRepository transferOrderRepository;  // 예약 이체 조회/저장
     private final TransferService transferService;                  // 실제 이체 실행
+    private final Transfer_AccountRepository accountRepository;    // 계좌 조회 (실패 이벤트용)
+    private final ApplicationEventPublisher eventPublisher;          // 이벤트 발행
 
     /**
      * [예약 이체 스케줄러]
@@ -45,7 +51,7 @@ public class TransferSchedulerService {
     public void processScheduledTransfers() {
         
         // 로그 기록 - 스케줄러 실행 시작
-        log.info("=== 예약이체 스케줄러 실행 시작 - {} ===", LocalDateTime.now());
+//        log.info("=== 예약이체 스케줄러 실행 시작 - {} ===", LocalDateTime.now());
         
         try {
             // === 1단계: 스케줄된 예약 이체 목록 조회 (Race Condition 방지) ===
@@ -53,19 +59,19 @@ public class TransferSchedulerService {
             List<TransferOrder> scheduledTransfers = transferOrderRepository.findByStatusAndStartAtLessThanEqualForUpdate("SCHEDULED", LocalDateTime.now());
             
             // 로그 기록 - 조회된 예약 이체 건수
-            log.info("조회된 예약 이체 건수: {}", scheduledTransfers.size());
+            //log.info("조회된 예약 이체 건수: {}", scheduledTransfers.size());
             
             if (scheduledTransfers.isEmpty()) {
-                log.info("실행할 예약 이체가 없습니다.");
+                //log.info("실행할 예약 이체가 없습니다.");
                 return;
             }
 
             // === 2단계: 각 예약 이체를 순회하며 처리 ===
             for (TransferOrder transferOrder : scheduledTransfers) {
-                log.info("예약 이체 처리 시작 - 주문ID: {}, 시작시간: {}, 현재시간: {}",
-                    transferOrder.getTo_order_id(),
-                    transferOrder.getTo_start_at(),
-                    LocalDateTime.now());
+//                log.info("예약 이체 처리 시작 - 주문ID: {}, 시작시간: {}, 현재시간: {}",
+//                    transferOrder.getTo_order_id(),
+//                    transferOrder.getTo_start_at(),
+//                    LocalDateTime.now());
 
                 // 개별 예약 이체 처리 (실행 시점 확인, 이체 실행, 상태 변경)
                 processTransferOrder(transferOrder);
@@ -73,12 +79,12 @@ public class TransferSchedulerService {
             
             // 로그 기록 - 스케줄러 실행 완료
 //            log.info("예약 이체 스케줄러 실행 완료 - 처리된 건수: {}", scheduledTransfers.size());
-            log.info("=== 예약이체 스케줄러 실행 완료 - 처리된 건수: {} ===", scheduledTransfers.size());
+//            log.info("=== 예약이체 스케줄러 실행 완료 - 처리된 건수: {} ===", scheduledTransfers.size());
 
         } catch (Exception e) {
             // === 예외 처리 ===
             // 스케줄러 실행 중 오류가 발생해도 다음 실행에 영향을 주지 않도록 예외 처리
-            log.error("=== 예약이체 스케줄러 실행 중 오류 발생 ===", e);
+//            log.error("=== 예약이체 스케줄러 실행 중 오류 발생 ===", e);
         }
     }
 
@@ -116,16 +122,16 @@ public class TransferSchedulerService {
                 // === 예약 이체 실행 전 상태 변경 (중복 실행 방지) ===
                 transferOrder.updateStatus("PROCESSING");
                 transferOrderRepository.save(transferOrder);
-                log.info("예약 이체 처리 시작 - 주문ID: {}, 상태: PROCESSING", transferOrder.getTo_order_id());
+                //log.info("예약 이체 처리 시작 - 주문ID: {}, 상태: PROCESSING", transferOrder.getTo_order_id());
                 
                 // === 예약 이체 실행 ===
                 log.info("executeReserveTransfer 호출 시작 - 주문ID: {}", transferOrder.getTo_order_id());
                 transferService.executeReserveTransfer(transferOrder.getTo_order_id());
-                log.info("executeReserveTransfer 호출 완료 - 주문ID: {}", transferOrder.getTo_order_id());
+                //log.info("executeReserveTransfer 호출 완료 - 주문ID: {}", transferOrder.getTo_order_id());
 
                 // === 성공 처리 ===
                 transferOrder.updateStatus("COMPLETED");
-                log.info("예약 이체 성공 - 주문ID: {}, 상태: COMPLETED", transferOrder.getTo_order_id());
+                //log.info("예약 이체 성공 - 주문ID: {}, 상태: COMPLETED", transferOrder.getTo_order_id());
                 
                 // === 반복 예약 이체 처리 ===
                 if (transferOrder.isRecurring()) {
@@ -158,6 +164,9 @@ public class TransferSchedulerService {
                 transferOrder.updateStatus(e.getErrorCode());
                 transferOrderRepository.save(transferOrder);
                 
+                // === 🚀 이벤트 발행: 예약 이체 실패 알림 ===
+                publishReserveTransferFailureEvent(transferOrder, e.getErrorCode(), e.getMessage());
+                
             } catch (Exception e) {
                 // === 일반 예외 처리 (시스템 오류) ===
                 log.error("예약 이체 시스템 오류 - 주문ID: {}, 오류: {}", 
@@ -166,6 +175,9 @@ public class TransferSchedulerService {
                 // 시스템 오류는 SYSTEM_ERROR로 저장
                 transferOrder.updateStatus("SYSTEM_ERROR");
                 transferOrderRepository.save(transferOrder);
+                
+                // === 🚀 이벤트 발행: 예약 이체 실패 알림 ===
+                publishReserveTransferFailureEvent(transferOrder, "SYSTEM_ERROR", e.getMessage());
             }
             
         } else {
@@ -203,5 +215,44 @@ public class TransferSchedulerService {
         
         // 기본값: 1시간 후
         return now.plusHours(1);
+    }
+
+    /**
+     * 예약 이체 실패 이벤트 발행
+     * 
+     * @param transferOrder 예약 이체 주문
+     * @param failureReason 실패 사유 코드
+     * @param failureMessage 실패 메시지
+     */
+    private void publishReserveTransferFailureEvent(TransferOrder transferOrder, 
+                                                   String failureReason, 
+                                                   String failureMessage) {
+        try {
+            // 계좌 정보 조회
+            Account account = accountRepository.findById(transferOrder.getA_no()).orElse(null);
+            if (account == null) {
+                log.warn("예약 이체 실패 이벤트 발행 실패 - 계좌를 찾을 수 없음: {}", transferOrder.getA_no());
+                return;
+            }
+
+            TransferFailedEvent failedEvent = new TransferFailedEvent(
+                    account.getCNo(),
+                    "수취인", // TransferOrder에 수취인명 저장 필드가 없으므로 기본값
+                    transferOrder.getTo_amount().longValue(),
+                    account.getBalance().longValue(),
+                    failureReason,
+                    failureMessage != null ? failureMessage : "예약 이체 처리 중 오류가 발생했습니다.",
+                    true // 예약 이체는 true
+            );
+
+            eventPublisher.publishEvent(failedEvent);
+            log.info("✅ 예약 이체 실패 이벤트 발행 성공 - 주문ID: {}, 고객번호: {}, 실패사유: {}", 
+                    transferOrder.getTo_order_id(), account.getCNo(), failureReason);
+
+        } catch (Exception e) {
+            // 실패 이벤트 발행 실패는 로그만 기록
+            log.warn("⚠️ 예약 이체 실패 후 이벤트 발행 실패 - 주문ID: {}, 오류: {}", 
+                    transferOrder.getTo_order_id(), e.getMessage());
+        }
     }
 }

@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static com.boot.eumbank.account.open.entity.account.QAccount.account;
 import static com.boot.eumbank.product.entity.product.QProductInstallment.productInstallment;
 import static com.boot.eumbank.product.entity.product.QProductInstallmentList.productInstallmentList;
 
@@ -153,6 +154,27 @@ public class InstallQueryRepository {
                         LocalDateTime.now(),
                         oneAccount.getAccountNo()
                 ).execute();
+    }
+
+    /**
+     * 예금 상품등록을 위한 특정 게좌 조회
+     * @return
+     */
+    public Account findOneAccount(Customer customer, InstallSubscriptionRequestDto requestDto) {
+
+        logger.info("AccountQueryRepository => findOneAccount()");
+
+        String fullText = requestDto.getLinkedAccount(); // "(110-784-589413) - 계좌 종류 : 자유적금"
+
+        String accountPart = fullText.split(" - ")[0]; // 결과: "(110-784-589413)"
+
+        String accountNumber = accountPart.substring(1, accountPart.length() - 1);
+
+        return queryFactory
+                .selectFrom(account)
+                .where(account.cNo.eq(customer.getCustomerNo()).and(account.accountNo.eq(accountNumber)))
+                .fetchOne();
+
     }
 
 }

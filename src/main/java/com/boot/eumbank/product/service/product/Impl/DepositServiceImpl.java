@@ -4,7 +4,6 @@ import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.product.dto.product.DepositSubscriptionRequestDto;
 import com.boot.eumbank.product.dto.product.ProductDto;
-import com.boot.eumbank.product.jpa.repository.AccountQueryRepository;
 import com.boot.eumbank.product.jpa.repository.DepositQueryRepository;
 import com.boot.eumbank.product.service.product.DepositService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +27,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -40,8 +40,6 @@ public class DepositServiceImpl implements DepositService {
     private Logger logger = LoggerFactory.getLogger(DepositServiceImpl.class);
 
     private final DepositQueryRepository depositQueryRepository;
-
-    private final AccountQueryRepository accountQueryRepository;
 
     // application.properties에서 파일 저장 경로를 주입받음
     @Value("${file.upload-dir}")
@@ -82,38 +80,79 @@ public class DepositServiceImpl implements DepositService {
                 throw new RuntimeException("PDF 생성을 위한 한글 폰트 로드에 실패했습니다.", e);
             }
 
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Customer customer = (Customer) authentication.getPrincipal();
+
             // ✅ PDF에 정보 추가 로직 변경
             try (PDPageContentStream contentStream = new PDPageContentStream(
                     document, firstPage, PDPageContentStream.AppendMode.APPEND, true, true)) {
 
                 // 기본 좌표 및 폰트 크기 설정
-                float yPosition = 1100; // 시작 Y 좌표 (페이지 상단 근처)
-                float lineHeight = 20;  // 각 라인의 간격
-                float labelX = 50;      // '상품명:' 같은 라벨의 X 좌표
-                float valueX = 150;     // 실제 데이터 값의 X 좌표
+                float yPosition = 683; // 시작 Y 좌표 (페이지 상단 근처)
+                float lineHeight = 27;  // 각 라인의 간격
+                float valueX = 180;     // 실제 데이터 값의 X 좌표
                 int fontSize = 10;      // 폰트 크기
 
-                // 1. 상품명 추가
-                addText(contentStream, font, fontSize, labelX, yPosition, "상 품 명:");
-                addText(contentStream, font, fontSize, valueX, yPosition, requestDto.getProductName());
-                yPosition -= lineHeight; // 다음 라인을 위해 y 좌표 감소
 
-                // 2. 가입금액 추가 (포맷 적용)
+                // 성명
+                addText(contentStream, font, fontSize, valueX, yPosition, customer.getCNameKr());
+                yPosition -= lineHeight;
+
+                // 주민등록번호
+                addText(contentStream, font, fontSize, valueX, yPosition, customer.getCRrnHash());
+                yPosition -= lineHeight;
+
+                // 연락처
+                addText(contentStream, font, fontSize, valueX, yPosition, customer.getCPhoneMobile());
+                yPosition -= lineHeight;
+
+                // 주소
+                addText(contentStream, font, fontSize, valueX, yPosition, customer.getCAddress());
+                yPosition -= lineHeight;
+
+                // -----------------------------------------------
+
+                float underyPosition = 530; // 시작 Y 좌표 (페이지 상단 근처)
+                float underlineHeight = 28;  // 각 라인의 간격
+                float undervalueX = 180;     // 실제 데이터 값의 X 좌표
+                int underfontSize = 10;      // 폰트 크기
+
+                // 상품명
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, requestDto.getProductName());
+                underyPosition -= underlineHeight; // 다음 라인을 위해 y 좌표 감소
+
+                // 계좌번호
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, requestDto.getDepositAccount());
+                underyPosition -= underlineHeight;
+
+                // 신규 가입일
+                String formattedDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, formattedDate);
+                underyPosition -= underlineHeight;
+
+                // 만기일
+                LocalDate today = LocalDate.now();
+                int period = requestDto.getPeriod();
+                LocalDate maturityDate = today.plusMonths(period);
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                String formattedMaturityDate = maturityDate.format(formatter);
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, formattedMaturityDate);
+                underyPosition -= underlineHeight;
+
+                // 가입금액;
                 String formattedAmount = NumberFormat.getInstance().format(requestDto.getAmount()) + " 원";
-                addText(contentStream, font, fontSize, labelX, yPosition, "가입금액:");
-                addText(contentStream, font, fontSize, valueX, yPosition, formattedAmount);
-                yPosition -= lineHeight;
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, formattedAmount);
+                underyPosition -= underlineHeight;
 
-                // 3. 가입기간 추가
-                String formattedPeriod = requestDto.getPeriod() + " 개월";
-                addText(contentStream, font, fontSize, labelX, yPosition, "가입기간:");
-                addText(contentStream, font, fontSize, valueX, yPosition, formattedPeriod);
-                yPosition -= lineHeight;
+                // 가입기간
+                String formattedPeriod = formattedDate + " ~ " + formattedMaturityDate;
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, formattedPeriod);
+                underyPosition -= underlineHeight;
 
-                // 4. 가입일자 추가
-                String formattedDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-                addText(contentStream, font, fontSize, labelX, yPosition, "가입일자:");
-                addText(contentStream, font, fontSize, valueX, yPosition, formattedDate);
+                // 적용이율
+                ProductDto oneDepositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
+                addText(contentStream, font, underfontSize, undervalueX, underyPosition, oneDepositProducts.getRate());
+                underyPosition -= underlineHeight;
 
                 logger.info("PDF에 세분화된 정보 추가 완료");
             }
@@ -168,7 +207,7 @@ public class DepositServiceImpl implements DepositService {
 
         ProductDto depositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
 
-        Account oneAccount = accountQueryRepository.findOneAccount(customer);
+        Account oneAccount = depositQueryRepository.findOneAccount(customer, requestDto);
 
         depositQueryRepository.depositSave(requestDto, customer, depositProducts, oneAccount);
     }

@@ -20,7 +20,7 @@ public class TransferConfirmDto {
     
     private Integer fromAccountNo;        // 출금 계좌 번호
     private String toAccount;             // 수취 계좌번호
-    private Integer amount;               // 이체 금액
+    private Long amount;               // 이체 금액
     private BigDecimal currentBalance;    // 현재 잔액
     private BigDecimal availableBalance;  // 사용 가능 잔액
     private BigDecimal transferLimit;     // 이체 한도
