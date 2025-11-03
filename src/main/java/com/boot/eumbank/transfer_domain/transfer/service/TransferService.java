@@ -16,6 +16,9 @@ public interface TransferService {
     // 예약 이체
     TransferOrderDto createReserveTransfer(TransferOrderDto request);
     
+    // 자동이체 (매월 지정일 반복)
+    AutoTransferResponseDto createAutoTransfer(AutoTransferRequestDto request);
+    
     // 다건 이체
     BulkTransferResponseDto processBulkTransfer(BulkTransferRequestDto request);
     

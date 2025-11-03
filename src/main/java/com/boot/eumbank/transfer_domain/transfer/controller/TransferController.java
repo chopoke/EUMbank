@@ -123,6 +123,56 @@ public class TransferController {
     }
 
     /**
+     * [자동이체 API]
+     * - 매월 지정일에 반복 실행되는 예약이체 여러개 등록
+     * - POST /api/transfer/auto
+     */
+    @PostMapping("/auto")
+    public ResponseEntity<Map<String, Object>> autoTransfer(@Valid @RequestBody AutoTransferRequestDto request, @AuthenticationPrincipal Customer customer) {
+        log.info("=== 자동이체 API 시작 ===");
+        log.info("요청 데이터: {}", request);
+        log.info("고객 정보: {}", customer != null ? customer.getCId() : "null");
+        log.info("자동이체 요청 - 출금계좌: {}, 수취계좌: {}, 1회당 금액: {}, 시작: {}-{}, 매월: {}일, 횟수: {}회", 
+                request.getFromAccountNo(), request.getDestAccountNo(), request.getAmount(), 
+                request.getStartYear(), request.getStartMonth(), request.getDayOfMonth(), request.getRepeatCount());
+        
+        try {
+            log.info("1. 인증 확인 시작");
+            if (customer == null) {
+                log.error("인증 실패: 고객 정보가 null입니다.");
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "인증이 필요합니다.");
+                return ResponseEntity.status(401).body(result);
+            }
+            log.info("1. 인증 확인 완료 - 고객ID: {}", customer.getCId());
+            
+            log.info("2. TransferService.createAutoTransfer 호출 시작");
+            AutoTransferResponseDto response = transferService.createAutoTransfer(request);
+            log.info("2. TransferService.createAutoTransfer 호출 완료 - 응답: {}", response);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("data", response);
+            result.put("message", response.getMessage());
+            result.put("timestamp", LocalDateTime.now().toString());
+            
+            log.info("=== 자동이체 API 성공 완료 ===");
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            log.error("=== 자동이체 API 실패 ===");
+            log.error("자동이체 등록 중 오류 발생", e);
+            log.error("에러 타입: {}", e.getClass().getSimpleName());
+            log.error("에러 메시지: {}", e.getMessage());
+            if (e.getCause() != null) {
+                log.error("원인 에러: {}", e.getCause().getMessage());
+            }
+            throw e; // GlobalExceptionHandler에서 처리
+        }
+    }
+
+    /**
      * [다건 이체 API]
      * - 여러 수취인에게 일괄 이체
      * - POST /api/transfer/bulk
@@ -387,6 +437,7 @@ public class TransferController {
             // 하드코딩된 은행 목록 (신규 입력 탭용)
             Map<String, Object> banks = Map.of(
                 "banks", List.of(
+                    Map.of("code", "EUM", "name", "이음은행", "logo", "/images/eum.png"),
                     Map.of("code", "001", "name", "국민은행", "logo", "/images/kb.png"),
                     Map.of("code", "002", "name", "신한은행", "logo", "/images/shinhan.png"),
                     Map.of("code", "003", "name", "우리은행", "logo", "/images/woori.png"),
