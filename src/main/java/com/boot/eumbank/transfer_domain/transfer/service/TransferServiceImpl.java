@@ -58,6 +58,20 @@ public class TransferServiceImpl implements TransferService {
     //웹 푸시알람을 위한 이벤트 발행기능
     private final ApplicationEventPublisher eventPublisher;
 
+    /**
+     * [단건 이체 처리]
+     * - 즉시 실행되는 일반 이체 처리
+     * - 계좌 소유자 검증, 통화 검증, 비밀번호 검증, 한도 검증 후 이체 실행
+     * 
+     * @param request 이체 요청 DTO (출금계좌, 수취계좌, 금액, 비밀번호 등)
+     * @return 이체 결과 응답 DTO
+     * @throws UnauthorizedException 계좌 소유자가 아닌 경우
+     * @throws AccountNotFoundException 계좌를 찾을 수 없는 경우
+     * @throws CurrencyMismatchException 외화 계좌인 경우
+     * @throws AccountStatusException 계좌 상태가 이체 불가능한 경우
+     * @throws PasswordMismatchException 계좌 비밀번호가 일치하지 않는 경우
+     * @throws LimitExceededException 이체 한도를 초과한 경우
+     */
     @Override
     @Transactional
     public TransferResponseDto processTransfer(TransferRequestDto request) {
@@ -127,6 +141,21 @@ public class TransferServiceImpl implements TransferService {
                 .build();
     }
 
+    /**
+     * [예약 이체 등록]
+     * - 지정된 날짜/시간에 실행될 예약 이체를 등록
+     * - 등록 시점에 계좌 소유자, 비밀번호, 한도, 계좌 상태 등을 모두 검증
+     * - 실제 이체는 스케줄러에 의해 실행됨
+     * 
+     * @param request 예약 이체 요청 DTO (계좌번호, 수취계좌, 금액, 예약시간 등)
+     * @return 등록된 예약 이체 정보
+     * @throws UnauthorizedException 계좌 소유자가 아닌 경우
+     * @throws PasswordMismatchException 계좌 비밀번호가 일치하지 않는 경우
+     * @throws AccountNotFoundException 계좌를 찾을 수 없는 경우
+     * @throws AccountStatusException 계좌 상태가 이체 불가능한 경우
+     * @throws LimitExceededException 이체 한도를 초과한 경우
+     * @throws CurrencyMismatchException 외화 계좌인 경우
+     */
     @Override
     @Transactional
     public TransferOrderDto createReserveTransfer(TransferOrderDto request) {
@@ -297,6 +326,17 @@ public class TransferServiceImpl implements TransferService {
      * [자동이체 등록]
      * - 매월 지정일에 반복 실행되는 예약이체를 여러개 등록
      * - 각 월별로 별도의 예약이체(ONCE 타입) 생성
+     * - 월말 날짜 자동 조정 (예: 2월 30일 → 2월 28일)
+     * - 등록 시점에 각 회차별 이체 한도 검증 수행
+     * 
+     * @param request 자동이체 요청 DTO (출금계좌, 수취계좌, 금액, 시작연도/월/일, 반복횟수 등)
+     * @return 자동이체 등록 결과 (총 금액, 시작/종료 날짜, 등록된 건수 등)
+     * @throws UnauthorizedException 계좌 소유자가 아닌 경우
+     * @throws PasswordMismatchException 계좌 비밀번호가 일치하지 않는 경우
+     * @throws AccountNotFoundException 계좌를 찾을 수 없는 경우
+     * @throws AccountStatusException 계좌 상태가 이체 불가능한 경우
+     * @throws LimitExceededException 이체 한도를 초과한 경우
+     * @throws CurrencyMismatchException 외화 계좌인 경우
      */
     @Override
     @Transactional
@@ -472,7 +512,12 @@ public class TransferServiceImpl implements TransferService {
     }
 
     /**
-     * 자동이체 입력 검증
+     * [자동이체 입력 검증]
+     * - 자동이체 등록 시 필요한 모든 입력값 검증
+     * - 출금계좌, 수취계좌, 금액, 날짜, 횟수 등 유효성 검사
+     * 
+     * @param request 자동이체 요청 DTO
+     * @throws InvalidAmountException 입력값이 유효하지 않은 경우
      */
     private void validateAutoTransferRequest(AutoTransferRequestDto request) {
         if (request.getFromAccountNo() == null) {
@@ -502,8 +547,16 @@ public class TransferServiceImpl implements TransferService {
     }
 
     /**
-     * 예약 날짜 계산 (월말 처리 포함)
-     * 예: 매월 31일인데 2월은 28일/29일로 조정
+     * [예약 날짜 계산]
+     * - 자동이체의 매월 지정일에 대한 날짜 리스트 생성
+     * - 월말 날짜 자동 조정 (예: 매월 31일 지정 시 2월은 28일/29일로 조정)
+     * - 윤년 처리 포함
+     * 
+     * @param startYear 시작 연도
+     * @param startMonth 시작 월 (1~12)
+     * @param dayOfMonth 매월 지정일 (1~31)
+     * @param repeatCount 반복 횟수
+     * @return 예약된 날짜 리스트
      */
     private List<LocalDate> calculateScheduledDates(int startYear, int startMonth, int dayOfMonth, int repeatCount) {
         List<LocalDate> dates = new ArrayList<>();
@@ -528,6 +581,21 @@ public class TransferServiceImpl implements TransferService {
         return dates;
     }
 
+    /**
+     * [다건 이체 처리]
+     * - 여러 수취인에게 동시에 이체 실행
+     * - 각 이체는 개별 트랜잭션으로 처리되어 실패해도 다른 이체에 영향 없음
+     * - 실패한 이체는 별도로 기록 저장
+     * - 총 이체 금액에 대한 한도 검증 후 개별 이체 수행
+     * 
+     * @param request 다건 이체 요청 DTO (출금계좌, 수취인 목록, 비밀번호 등)
+     * @return 다건 이체 결과 (성공/실패 건수, 각 이체 상세 결과, 최종 잔액 등)
+     * @throws UnauthorizedException 계좌 소유자가 아닌 경우
+     * @throws PasswordMismatchException 계좌 비밀번호가 일치하지 않는 경우
+     * @throws AccountStatusException 계좌 상태가 이체 불가능한 경우
+     * @throws LimitExceededException 총 이체 한도를 초과한 경우
+     * @throws CurrencyMismatchException 외화 계좌인 경우
+     */
     @Override
     @Transactional
     public BulkTransferResponseDto processBulkTransfer(BulkTransferRequestDto request) {
@@ -649,9 +717,20 @@ public class TransferServiceImpl implements TransferService {
     }
 
     /**
-     * 개별 이체를 별도 트랜잭션으로 실행
+     * [개별 이체 별도 트랜잭션 실행]
+     * - 다건 이체에서 각 수취인별 이체를 별도 트랜잭션으로 실행
      * - 실패해도 다른 이체에 영향을 주지 않음
-     * - 실패한 이체는 기록만 남기고 실제 처리하지 않음
+     * - Propagation.REQUIRES_NEW로 독립 트랜잭션 보장
+     * 
+     * @param fromAccountNo 출금 계좌 번호
+     * @param toAccountNo 수취 계좌번호
+     * @param toBankName 수취 은행명
+     * @param toAccountHolder 수취인명
+     * @param amount 이체 금액
+     * @param memo 이체 메모
+     * @param password 계좌 비밀번호
+     * @return 이체 결과 DTO
+     * @throws Exception 이체 실패 시 예외 발생
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public TransferResultDto executeTransferInSeparateTransaction(
@@ -673,10 +752,14 @@ public class TransferServiceImpl implements TransferService {
     }
 
     /**
-     * 계좌 소유자 검증
-     * @param accountNo 계좌 번호
-     * @param customerNo JWT 토큰의 고객 번호
-     * @return 검증 성공 여부
+     * [계좌 소유자 검증]
+     * - JWT 토큰의 고객 번호와 계좌 소유자가 일치하는지 확인
+     * - 모든 이체 작업 전에 반드시 수행되는 보안 검증
+     * 
+     * @param accountNo 검증할 계좌 번호
+     * @param customerNo JWT 토큰에서 추출한 고객 번호
+     * @return 검증 성공 여부 (true: 소유자 일치, false: 불일치)
+     * @throws AccountNotFoundException 계좌를 찾을 수 없는 경우
      */
     private boolean validateAccountOwnership(Integer accountNo, Integer customerNo) {
         Account account = accountRepository.findById(accountNo)
@@ -693,9 +776,12 @@ public class TransferServiceImpl implements TransferService {
     }
 
     /**
-     * 예외 타입에 따른 실패 사유 구분
+     * [실패 사유 코드 추출]
+     * - 발생한 예외 타입에 따라 실패 사유 코드 반환
+     * - 실패 기록 저장 시 사용되는 코드 매핑
+     * 
      * @param e 발생한 예외
-     * @return 실패 사유 코드
+     * @return 실패 사유 코드 (ACCOUNT_NOT_FOUND, INSUFFICIENT_BALANCE 등)
      */
     private String getFailureReason(Exception e) {
         if (e instanceof AccountNotFoundException) return "ACCOUNT_NOT_FOUND";
@@ -711,9 +797,19 @@ public class TransferServiceImpl implements TransferService {
     }
 
     /**
-     * 실패한 이체 시도 기록을 별도 트랜잭션으로 저장
-     * - 메인 트랜잭션 롤백과 무관하게 저장됨
-     * - 실패 사유별로 구분하여 저장
+     * [실패한 이체 시도 기록 저장]
+     * - 이체 실패 시 별도 트랜잭션으로 기록 저장
+     * - Propagation.REQUIRES_NEW로 메인 트랜잭션 롤백과 무관하게 저장됨
+     * - 실패 사유별로 transactionType에 구분하여 저장
+     * - 원본 메모와 transferType은 유지하며, 실패 사유만 transactionType에 기록
+     * 
+     * @param e 발생한 예외
+     * @param fromAccountNo 출금 계좌 번호
+     * @param toAccountNo 수취 계좌번호
+     * @param toBankName 수취 은행명
+     * @param toAccountHolder 수취인명
+     * @param amount 이체 금액
+     * @param memo 이체 메모 (원본 유지)
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveFailedTransferHistory(Exception e, Integer fromAccountNo, String toAccountNo, 
@@ -761,6 +857,18 @@ public class TransferServiceImpl implements TransferService {
         }
     }
 
+    /**
+     * [이체 내역 조회]
+     * - 특정 계좌의 이체 내역을 페이징 처리하여 조회
+     * - 이체 유형(입금/출금) 필터링 지원
+     * 
+     * @param accountNo 계좌 번호
+     * @param type 이체 유형 (필터링, null이면 전체)
+     * @param fromDate 시작 날짜 (현재 미사용)
+     * @param toDate 종료 날짜 (현재 미사용)
+     * @param pageable 페이징 정보
+     * @return 이체 내역 페이지 (Page<TransferHistoryListDto>)
+     */
     @Override
     public Page<TransferHistoryListDto> getTransferHistory(Integer accountNo, String type,
                                                          String fromDate, String toDate, Pageable pageable) {
@@ -786,6 +894,13 @@ public class TransferServiceImpl implements TransferService {
         return historyPage.map(this::convertToHistoryListDto);
     }
 
+    /**
+     * [예약 이체 목록 조회]
+     * - 특정 계좌의 예약 이체 목록을 최신순으로 조회
+     * 
+     * @param accountNo 계좌 번호
+     * @return 예약 이체 목록 (최신순 정렬)
+     */
     @Override
     public List<TransferOrderDto> getReserveTransfers(Integer accountNo) {
         log.info("예약 이체 목록 조회 - 계좌: {}", accountNo);
@@ -797,6 +912,15 @@ public class TransferServiceImpl implements TransferService {
                 .toList();
     }
 
+    /**
+     * [예약 이체 취소]
+     * - 등록된 예약 이체를 취소 처리
+     * - 이미 완료된 예약 이체는 취소 불가
+     * 
+     * @param orderId 예약 이체 주문 ID
+     * @throws AccountNotFoundException 예약 이체를 찾을 수 없는 경우
+     * @throws TransferException 이미 완료된 예약 이체인 경우
+     */
     @Override
     @Transactional
     public void cancelReserveTransfer(Integer orderId) {
@@ -813,6 +937,18 @@ public class TransferServiceImpl implements TransferService {
         transferOrderRepository.save(order);
     }
 
+    /**
+     * [이체 확인]
+     * - 이체 실행 전 최종 확인
+     * - 계좌 상태, 잔액, 이체 한도 검증
+     * 
+     * @param request 이체 확인 요청 DTO
+     * @return 이체 확인 결과 DTO (잔액, 한도, 이체 가능 여부 등)
+     * @throws AccountNotFoundException 계좌를 찾을 수 없는 경우
+     * @throws AccountStatusException 계좌 상태가 이체 불가능한 경우
+     * @throws InsufficientBalanceException 잔액이 부족한 경우
+     * @throws LimitExceededException 이체 한도를 초과한 경우
+     */
     @Override
     public TransferConfirmDto confirmTransfer(TransferConfirmDto request) {
         log.info("이체 확인 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
@@ -849,6 +985,29 @@ public class TransferServiceImpl implements TransferService {
                 .build();
     }
 
+    /**
+     * [이체 실행 핵심 메서드]
+     * - 모든 이체 타입(단건, 예약, 자동이체)의 공통 실행 로직
+     * - 데드락 방지를 위한 계좌 락 순서 보장 (작은 ID → 큰 ID)
+     * - Pessimistic Lock을 사용하여 동시성 제어
+     * - 출금/입금 처리, 이체 내역 저장, 이벤트 발행 수행
+     * 
+     * @param fromAccountNo 출금 계좌 번호
+     * @param toAccountNo 수취 계좌번호
+     * @param toBankName 수취 은행명
+     * @param toName 수취인명
+     * @param amount 이체 금액
+     * @param memo 이체 메모
+     * @param password 계좌 비밀번호 (null이면 예약이체 자동 실행)
+     * @return 이체 결과 DTO
+     * @throws InvalidAmountException 이체 금액이 유효하지 않은 경우
+     * @throws SameAccountTransferException 자기 계좌로 이체 시도한 경우
+     * @throws AccountNotFoundException 계좌를 찾을 수 없는 경우
+     * @throws PasswordMismatchException 계좌 비밀번호가 일치하지 않는 경우
+     * @throws InsufficientBalanceException 잔액이 부족한 경우
+     * @throws AccountStatusException 계좌 상태가 이체 불가능한 경우
+     * @throws CurrencyMismatchException 외화 계좌인 경우
+     */
     @Transactional
     private TransferResultDto executeTransfer(Integer fromAccountNo, String toAccountNo,
                                            String toBankName, String toName, Long amount,
@@ -1116,6 +1275,18 @@ public class TransferServiceImpl implements TransferService {
         }
     }
 
+    /**
+     * [예약 이체 실행]
+     * - 스케줄러에 의해 호출되는 예약 이체 실행 메서드
+     * - 실행 시점에 이체 한도 재검증 수행
+     * - 비밀번호 검증 없이 자동 실행
+     * - 실행 후 예약 이체 상태를 COMPLETED로 변경
+     * 
+     * @param orderId 예약 이체 주문 ID
+     * @throws AccountNotFoundException 예약 이체를 찾을 수 없는 경우
+     * @throws TransferException 실행 가능한 예약 이체가 아닌 경우
+     * @throws LimitExceededException 이체 한도를 초과한 경우
+     */
     @Override
     @Transactional
     public void executeReserveTransfer(Integer orderId) {
@@ -1159,6 +1330,17 @@ public class TransferServiceImpl implements TransferService {
         }
     }
 
+    /**
+     * [이체 한도 검증]
+     * - 1회 이체 한도, 일일 이체 한도, 월간 이체 한도 검증
+     * - 계좌별 한도 정보가 없으면 기본 한도 적용 (1회 1천만원, 일일 5천만원, 월간 1억원)
+     * - 오늘/이번 달 출금액 계산 후 한도 초과 여부 확인
+     * 
+     * @param accountNo 계좌 번호
+     * @param amount 이체 금액
+     * @return 한도 검증 통과 여부
+     * @throws LimitExceededException 한도를 초과한 경우 (1회/일일/월간 구분)
+     */
     public boolean checkTransferLimit(Integer accountNo, Long amount) {
         // 계좌 한도 정보 조회
         Optional<AccountLimit> limitOpt = accountLimitRepository.findByAccountNo(accountNo);
@@ -1210,6 +1392,16 @@ public class TransferServiceImpl implements TransferService {
         return true;
     }
 
+    /**
+     * [계좌 비밀번호 검증]
+     * - 계좌 비밀번호 일치 여부 확인
+     * - 현재는 평문 비교 (향후 BCrypt 등 암호화 비교로 개선 필요)
+     * 
+     * @param accountNo 계좌 번호
+     * @param password 입력된 비밀번호
+     * @return 비밀번호 일치 여부
+     * @throws AccountNotFoundException 계좌를 찾을 수 없는 경우
+     */
     public boolean validateAccountPassword(Integer accountNo, String password) {
         Account account = accountRepository.findById(accountNo)
                 .orElseThrow(() -> new AccountNotFoundException("계좌를 찾을 수 없습니다."));
@@ -1219,12 +1411,14 @@ public class TransferServiceImpl implements TransferService {
     }
 
     /**
-     * 계좌가 원화 계좌인지 검증
-     * - currency가 'KRW'이거나 null인 경우만 원화 계좌로 판단
+     * [원화 계좌 검증]
+     * - 계좌의 통화(currency)가 'KRW'이거나 null인 경우만 원화 계좌로 판단
+     * - 외화 계좌로의 이체는 금지
+     * - 모든 이체 작업 전에 출금/입금 계좌 모두에 대해 수행
      * 
-     * @param account 검증할 계좌
+     * @param account 검증할 계좌 객체
      * @param accountNo 계좌번호 (에러 메시지용)
-     * @throws CurrencyMismatchException 원화 계좌가 아닌 경우
+     * @throws CurrencyMismatchException 원화 계좌가 아닌 경우 (외화 계좌)
      */
     private void validateKRWAccount(Account account, String accountNo) {
         if (account == null) {
@@ -1241,6 +1435,15 @@ public class TransferServiceImpl implements TransferService {
         log.debug("원화 계좌 검증 통과 - 계좌: {}, 통화: {}", account.getAccountNo(), currency != null ? currency : "null (기본값)");
     }
 
+    /**
+     * [계좌 상태 확인]
+     * - 계좌가 ACTIVE 상태인지 확인
+     * - 거래 가능한 계좌인지 검증
+     * 
+     * @param accountNo 계좌 번호
+     * @return 계좌 활성 상태 여부
+     * @throws AccountNotFoundException 계좌를 찾을 수 없는 경우
+     */
     public boolean checkAccountStatus(Integer accountNo) {
         log.info("checkAccountStatus 시작 - 계좌번호: {}", accountNo);
         
@@ -1260,6 +1463,15 @@ public class TransferServiceImpl implements TransferService {
 
     // === 유틸리티 메서드들 ===
 
+    /**
+     * [단건 이체 입력 검증]
+     * - 출금 계좌, 이체 금액 유효성 검사
+     * - 자기 계좌 이체 방지
+     * 
+     * @param request 단건 이체 요청 DTO
+     * @throws InvalidAmountException 입력값이 유효하지 않은 경우
+     * @throws SameAccountTransferException 자기 계좌로 이체 시도한 경우
+     */
     private void validateTransferRequest(TransferRequestDto request) {
         // 출금 계좌 선택 검증
         if (request.getFromAccountNo() == null) {
@@ -1275,6 +1487,15 @@ public class TransferServiceImpl implements TransferService {
         }
     }
 
+    /**
+     * [예약 이체 입력 검증]
+     * - 예약 이체 등록 시 필요한 모든 입력값 검증
+     * - 계좌번호, 금액, 수취계좌, 시작시간 필수 검사
+     * 
+     * @param request 예약 이체 요청 DTO
+     * @throws IllegalArgumentException 요청 데이터가 null이거나 필수값 누락
+     * @throws InvalidAmountException 이체 금액이 유효하지 않은 경우
+     */
     private void validateReserveTransferRequest(TransferOrderDto request) {
         log.info("validateReserveTransferRequest 시작 - 요청: {}", request);
         
@@ -1306,12 +1527,26 @@ public class TransferServiceImpl implements TransferService {
         log.info("validateReserveTransferRequest 완료 - 검증 통과");
     }
 
+    /**
+     * [다건 이체 입력 검증]
+     * - 수취인 목록이 비어있지 않은지 확인
+     * 
+     * @param request 다건 이체 요청 DTO
+     * @throws InvalidAmountException 수취인 목록이 비어있는 경우
+     */
     private void validateBulkTransferRequest(BulkTransferRequestDto request) {
         if (request.getRecipients().isEmpty()) {
             throw new InvalidAmountException("수취인 목록이 비어있습니다.");
         }
     }
 
+    /**
+     * [이체 ID 생성]
+     * - 고유한 이체 ID 생성 (TRX + 타임스탬프 + 랜덤)
+     * - 형식: TRX(3자) + 타임스탬프(13자) + 랜덤(3자) = 19자
+     * 
+     * @return 생성된 이체 ID
+     */
     private String generateTransferId() {
         // TRX(3자) + 타임스탬프(13자) + 랜덤(3자) = 19자
         long timestamp = System.currentTimeMillis();
@@ -1319,11 +1554,26 @@ public class TransferServiceImpl implements TransferService {
         return "TRX" + timestamp + random;
     }
 
-
+    /**
+     * [예약 이체 주문 ID 생성]
+     * - 예약 이체 등록 시 사용되는 주문 ID 생성
+     * - 타임스탬프 기반으로 생성
+     * 
+     * @return 생성된 주문 ID
+     */
     private Integer generateOrderId() {
         return (int) System.currentTimeMillis() % 1000000;
     }
 
+    /**
+     * [날짜/시간 문자열 파싱]
+     * - ISO 8601 형식 (yyyy-MM-dd'T'HH:mm:ss) 또는 일반 형식 (yyyy-MM-dd HH:mm:ss) 지원
+     * - 예약 이체 등록 시 사용
+     * 
+     * @param dateTimeStr 파싱할 날짜/시간 문자열
+     * @return 파싱된 LocalDateTime 객체
+     * @throws IllegalArgumentException 날짜 형식이 올바르지 않은 경우
+     */
     private LocalDateTime parseDateTime(String dateTimeStr) {
         log.info("parseDateTime 시작 - 입력값: '{}'", dateTimeStr);
         
@@ -1352,6 +1602,14 @@ public class TransferServiceImpl implements TransferService {
         }
     }
 
+    /**
+     * [날짜/시간 포맷팅]
+     * - LocalDateTime을 문자열로 변환
+     * - 형식: yyyy-MM-dd HH:mm:ss
+     * 
+     * @param dateTime 포맷팅할 LocalDateTime 객체
+     * @return 포맷된 날짜/시간 문자열 (null이면 null 반환)
+     */
     private String formatDateTime(LocalDateTime dateTime) {
         if (dateTime == null) {
             return null;
@@ -1359,6 +1617,13 @@ public class TransferServiceImpl implements TransferService {
         return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
+    /**
+     * [날짜 문자열을 Timestamp로 변환]
+     * - 날짜 문자열에 시간 추가하여 Timestamp 생성
+     * 
+     * @param dateStr 날짜 문자열 (yyyy-MM-dd 형식)
+     * @return 생성된 Timestamp 객체 (null이면 null 반환)
+     */
     private java.sql.Timestamp parseTimestamp(String dateStr) {
         if (!StringUtils.hasText(dateStr)) {
             return null;
@@ -1366,6 +1631,13 @@ public class TransferServiceImpl implements TransferService {
         return java.sql.Timestamp.valueOf(dateStr + " 00:00:00");
     }
 
+    /**
+     * [이체 내역 Entity를 DTO로 변환]
+     * - TransferHistory Entity를 TransferHistoryListDto로 변환
+     * 
+     * @param history 변환할 이체 내역 Entity
+     * @return 변환된 이체 내역 DTO
+     */
     private TransferHistoryListDto convertToHistoryListDto(TransferHistory history) {
         return TransferHistoryListDto.builder()
                 .transferNo(history.getTransferNo())
@@ -1383,6 +1655,13 @@ public class TransferServiceImpl implements TransferService {
                 .build();
     }
 
+    /**
+     * [예약 이체 Entity를 DTO로 변환]
+     * - TransferOrder Entity를 TransferOrderDto로 변환
+     * 
+     * @param order 변환할 예약 이체 Entity
+     * @return 변환된 예약 이체 DTO
+     */
     private TransferOrderDto convertToTransferOrderDto(TransferOrder order) {
         return TransferOrderDto.builder()
                 .orderId(order.getTo_order_id())
@@ -1400,13 +1679,30 @@ public class TransferServiceImpl implements TransferService {
                 .build();
     }
 
+    /**
+     * [이체 한도 조회]
+     * - 계좌별 1회 이체 한도 조회
+     * - 한도 정보가 없으면 기본 한도(1천만원) 반환
+     * 
+     * @param accountNo 계좌 번호
+     * @return 1회 이체 한도 (BigDecimal)
+     */
     private BigDecimal getTransferLimit(Integer accountNo) {
         return accountLimitRepository.findByAccountNo(accountNo)
                 .map(AccountLimit::getPerTransferLimit)
                 .orElse(BigDecimal.valueOf(10_000_000)); // 기본 한도
     }
 
-
+    /**
+     * [계좌 잔액 조회]
+     * - 계좌 소유자 확인 후 잔액 반환
+     * 
+     * @param accountNo 계좌 번호
+     * @param customer 현재 로그인한 고객 정보
+     * @return 계좌 잔액 (Long)
+     * @throws AccountNotFoundException 계좌를 찾을 수 없는 경우
+     * @throws UnauthorizedException 계좌 소유자가 아닌 경우
+     */
     @Override
     public Long getAccountBalance(int accountNo, Customer customer) {
         log.info("계좌 잔액 조회 - 계좌: {}, 고객: {}", accountNo, customer.getCId());
@@ -1422,6 +1718,14 @@ public class TransferServiceImpl implements TransferService {
         return account.getBalance().longValue();
     }
     
+    /**
+     * [계좌 목록 조회]
+     * - JWT 토큰 기반으로 현재 로그인한 고객의 계좌 목록 조회
+     * - 원화 계좌만 반환 (외화 계좌 제외)
+     * - 이체 가능한 계좌만 표시
+     * 
+     * @return 계좌 목록 (Map 형태)
+     */
     @Override
     public Object getAccounts() {
         log.info("계좌 목록 조회 (JWT 토큰 기반)");
@@ -1465,6 +1769,16 @@ public class TransferServiceImpl implements TransferService {
         }
     }
     
+    /**
+     * [계좌 잔액 조회 (JWT 토큰 기반)]
+     * - JWT 토큰에서 고객 정보 추출 후 계좌 소유자 확인
+     * - 본인 계좌만 조회 가능
+     * 
+     * @param accountNo 계좌 번호
+     * @return 계좌 잔액 (Long)
+     * @throws UnauthorizedException 인증 실패 또는 계좌 소유자가 아닌 경우
+     * @throws AccountNotFoundException 계좌를 찾을 수 없는 경우
+     */
     @Override
     public Long getAccountBalance(Integer accountNo) {
         log.info("계좌 잔액 조회 - 계좌: {}", accountNo);
@@ -1503,6 +1817,15 @@ public class TransferServiceImpl implements TransferService {
         }
     }
     
+    /**
+     * [최근 수취인 조회]
+     * - 특정 계좌의 최근 이체 내역에서 수취인 정보 추출
+     * - 중복 제거 및 최근 이체 내역 우선 정렬
+     * - 수취인명 조회 실패 시 안전하게 처리하여 전체 목록 반환 실패 방지
+     * 
+     * @param accountNo 계좌 번호
+     * @return 최근 수취인 목록 (은행, 계좌번호, 이름, 마지막 이체 날짜, 금액, 메모 포함)
+     */
     @Override
     public List<Map<String, Object>> getRecentRecipients(Integer accountNo) {
         log.info("=== 최근 수취인 조회 시작 - 계좌: {} ===", accountNo);
@@ -1583,7 +1906,16 @@ public class TransferServiceImpl implements TransferService {
     }
     
     /**
-     * 실제 예금주명 조회 (DB에서 실제 고객 정보 조회)
+     * [실제 예금주명 조회]
+     * - 계좌번호를 통해 실제 예금주명(한국 이름) 조회
+     * - 계좌의 FK(c_no)를 통해 고객 정보 조회
+     * - 원화 계좌 검증 수행 (외화 계좌는 존재하지 않는 계좌로 처리)
+     * - 계좌 상태가 ACTIVE가 아니면 "계좌 정보 없음" 반환
+     * 
+     * @param accountNumber 계좌번호
+     * @param bank 은행 코드 (현재는 사용하지 않음)
+     * @return 예금주명 (한국 이름) 또는 "계좌 정보 없음"
+     * @throws AccountNotFoundException 계좌를 찾을 수 없거나 외화 계좌인 경우
      */
     public String getActualAccountHolderName(String accountNumber, String bank) {
         try {
