@@ -46,7 +46,7 @@ public class TransferSchedulerService {
      *   3) 실행 시간이 된 예약 이체는 실제 이체 처리
      *   4) 성공 시 COMPLETED, 실패 시 에러 코드 저장 (삭제하지 않음)
      */
-    @Scheduled(fixedRate = 10000) // 10초마다 실행 (10000ms = 10초)
+    @Scheduled(fixedRate = 60000) // 10초마다 실행 (10000ms = 10초)
     @Transactional  // 예약 이체 실행 및 상태 변경은 트랜잭션 처리 필요
     public void processScheduledTransfers() {
         

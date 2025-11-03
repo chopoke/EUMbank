@@ -38,7 +38,7 @@ const NotificationBell = () => {
           background: 'none',
           border: 'none',
           cursor: 'pointer',
-          padding: '8px'
+          padding: '4px'
         }}
       >
         <svg
