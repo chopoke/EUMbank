@@ -8,10 +8,10 @@ import java.math.BigDecimal;
  */
 public class InsufficientBalanceException extends TransferException {
     
-    public InsufficientBalanceException(BigDecimal balance, Integer amount) {
+    public InsufficientBalanceException(BigDecimal balance, Long amount) {
         super("INSUFFICIENT_BALANCE", 
               String.format("잔액이 부족합니다. (현재 잔액: ₩%,d원, 이체 금액: ₩%,d원)", 
-                           balance.intValue(), amount));
+                           balance.longValue(), amount));
     }
     
     public InsufficientBalanceException(String message) {

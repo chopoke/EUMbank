@@ -7,7 +7,7 @@ import maintxt from '../../resources/img/e-um.png'
 
 const h = React.createElement;
 
-const API_BASE = process.env.REACT_APP_API_URL;
+const API_BASE = process.env?.REACT_APP_API_URL || "http://localhost:8081";
 
 function Input({ label, name, type, value, onChange, placeholder }) {
   return h("div", null, [
@@ -62,6 +62,7 @@ export default function Login() {
 
   const naverLogin = (e) => {
     window.location.href = `${API_BASE}/oauth2/authorization/naver`;    // 스프링 시큐리티가 자동 제공
+    //window.location.href = `http://localhost:8081/oauth2/authorization/naver`;    // 스프링 시큐리티가 자동 제공
     //window.location.href = `${API_BASE}/oauth2/authorization/google`;
   }
 

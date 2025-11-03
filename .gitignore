@@ -47,6 +47,10 @@ dist/
 .env.*
 *.env
 
+# Firebase Admin SDK (github에 올리면 안됨)
+**/firebase-adminsdk-*.json
+**/*firebase*admin*.json
+
 # OS / Etc
 .DS_Store
 Thumbs.db
