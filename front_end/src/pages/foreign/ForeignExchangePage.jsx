@@ -441,6 +441,14 @@ export default function ForeignExchangePage() {
       }
     };
 
+    // ✅ side 표준화 & 방향/라벨 계산
+    const normalizeSide = (s) => {
+      const C = String(s || '').toUpperCase();
+      if (['BUY','ASK','BUY_FC','B','PURCHASE'].includes(C))  return 'BUY';
+      if (['SELL','BID','SELL_FC','S','REMIT','REDEEM'].includes(C)) return 'SELL';
+      return 'UNKNOWN';
+    };
+
     return (
       <div className="p-6 bg-white rounded-xl shadow-lg mt-6">
         <h2 className="text-xl font-bold mb-4 flex items-center">
@@ -474,12 +482,19 @@ export default function ForeignExchangePage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {history.map((tx) => {
-                  const sideLabel = tx.side === 'BUY' ? '사실 때' : '파실 때';
+                  const side = normalizeSide(tx.side);
+                  const sideLabel = side === 'BUY' ? '살 때' : side === 'SELL' ? '팔 때' : '—';
+                  const dirLabel  = side === 'BUY'
+                    ? `KRW → ${tx.curCode}`
+                    : side === 'SELL'
+                      ? `${tx.curCode} → KRW`
+                      : `${tx.curCode}`;
+
                   return (
                     <tr key={String(tx.id)} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{tx.id}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {sideLabel} ({tx.curCode} → KRW{tx.side === 'BUY' ? ` (수취 ${tx.curCode})` : ''})
+                        {sideLabel} <span className="text-gray-400">({dirLabel})</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {tx.orderedAt ? new Date(tx.orderedAt).toLocaleString() : '-'}
@@ -571,7 +586,7 @@ export default function ForeignExchangePage() {
                     }}
                     className={`px-4 py-2 text-sm font-medium ${isBuy ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}
                   >
-                    사실 때
+                    살 때
                   </button>
                   <button
                     type="button"
@@ -582,7 +597,7 @@ export default function ForeignExchangePage() {
                     }}
                     className={`px-4 py-2 text-sm font-medium ${!isBuy ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}
                   >
-                    파실 때
+                    팔 때
                   </button>
                 </div>
               </div>
