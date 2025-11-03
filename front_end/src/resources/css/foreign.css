@@ -1,7 +1,7 @@
 /* 페이지 헤더 */
 .fx-page { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
-.fx-page__head h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 4px 0 8px; }
-.fx-page__hint { color: #6b7280; font-size: 13px; }
+.fx-page__head h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 4px 0 8px; }
+.fx-page__hint { color: #6b7280; font-size: 16px; }
 
 /* 카드 그리드 */
 .fx-grid {
@@ -621,4 +621,23 @@
   background: linear-gradient(to top, #fff, rgba(255,255,255,0));
   border-bottom-left-radius: 10px;
   border-bottom-right-radius: 10px;
+}
+
+
+.fx-page__head {
+  /* 배경 이미지 설정 */
+  background-image: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url('../../resources/img/exchange.png');
+  /* 첫 번째 rgba(0,0,0,0.5)는 검은색 50% 투명 오버레이를 의미합니다. */
+  /* 두 번째 rgba(0,0,0,0.5)도 동일하게 적용되어 이미지 위에 불투명도를 만듭니다. */
+  /* 필요에 따라 색상과 투명도(0.0 ~ 1.0)를 조절하세요. */
+  /* 예: 흰색 30% 투명 오버레이: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.3)) */
+  
+  /* 배경 이미지 관련 추가 스타일 (선택 사항) */
+  background-size: cover;        /* 이미지가 컨테이너를 채우도록 확대/축소 */
+  background-position: center;   /* 이미지를 중앙에 배치 */
+  background-repeat: no-repeat;  /* 이미지 반복 안 함 */
+  color: rgb(51, 125, 223); /* 텍스트가 잘 보이도록 흰색으로 변경 */
+  padding: 40px 20px; /* 내부 여백 추가 */
+  /* 텍스트 중앙 정렬 */
+  /* text-align: center;  */
 }

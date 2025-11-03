@@ -1014,7 +1014,7 @@ export default function TransferPage() {
                           const account = accounts.find(acc => acc.aNo === parseInt(e.target.value));
                           if (account) handleAccountChange(account);
                         }}
-                        className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        className="w-full rounded-lg border-gray-300 bg-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                         disabled={isLoading}
                       >
                         <option value="">계좌를 선택하세요</option>
@@ -1028,7 +1028,7 @@ export default function TransferPage() {
                     </div>
                     <div className="col-span-12 md:col-span-6">
                       <label className="block text-sm font-medium text-gray-800 mb-1">내 잔액</label>
-                      <div className="rounded-lg border px-3 py-2 text-sm bg-gray-50 h-[54px] flex items-center">
+                      <div className="rounded-lg border px-3 py-2 text-sm bg-gray-200 h-[36px] flex items-center">
                         {isLoading ? '조회중...' : formatKRW(balance)}
                       </div>
                       <p className="text-xs text-gray-500 mt-1">수수료 제외 기준</p>
@@ -1200,7 +1200,7 @@ export default function TransferPage() {
                           value={formattedAmount} 
                           onChange={handleAmountChange} 
                           inputMode="numeric" 
-                          className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" 
+                          className="w-full rounded-lg border-gray-300 bg-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" 
                           placeholder="0" 
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3">
@@ -1213,7 +1213,7 @@ export default function TransferPage() {
                     </div>
                     <div className="col-span-12 md:col-span-6">
                       <label className="block text-sm font-medium text-gray-800 mb-1">받는 분 메모</label>
-                      <input value={memo} onChange={e => setMemo(e.target.value)} maxLength="10" className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="예: 점심값" />
+                      <input value={memo} onChange={e => setMemo(e.target.value)} maxLength="10" className="w-full rounded-lg border-gray-300 bg-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="예: 점심값" />
                       <p className="text-xs text-gray-500 mt-1">통장표시 10자 내외</p>
                     </div>
                   </div>
