@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "ACCOUNT_TBL")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@ToString
 public class Account {
 
     @Id

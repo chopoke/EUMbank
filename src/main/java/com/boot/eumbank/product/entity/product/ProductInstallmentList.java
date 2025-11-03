@@ -69,4 +69,7 @@ public class ProductInstallmentList {
 
     @Column(name = "ip_href")
     private String ipHref;
+
+    @Column(name = "ip_rate")
+    private BigDecimal ipRate;
 }

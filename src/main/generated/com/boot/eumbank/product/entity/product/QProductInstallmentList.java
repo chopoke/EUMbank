@@ -49,6 +49,8 @@ public class QProductInstallmentList extends EntityPathBase<ProductInstallmentLi
 
     public final NumberPath<Integer> ipNo = createNumber("ipNo", Integer.class);
 
+    public final NumberPath<java.math.BigDecimal> ipRate = createNumber("ipRate", java.math.BigDecimal.class);
+
     public final StringPath ipType = createString("ipType");
 
     public final DateTimePath<java.time.LocalDateTime> ipUpdatedAt = createDateTime("ipUpdatedAt", java.time.LocalDateTime.class);

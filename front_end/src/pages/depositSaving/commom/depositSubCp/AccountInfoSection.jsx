@@ -1,17 +1,34 @@
 import { formatDepositAccount } from '../../utils/formatUtils';
 
-const AccountInfoSection = ({ 
-    linkedAccount, 
-    setLinkedAccount, 
-    depositAccount, 
-    setDepositAccount, 
-    pin, 
-    setPin, 
-    userAccounts 
+const AccountInfoSection = ({
+    linkedAccount,
+    setLinkedAccount,
+    depositAccount,
+    setDepositAccount,
+    pin,
+    setPin,
+    userAccounts
 }) => {
+    // 입금 계좌 input용 핸들러
     const handleDepositAccountChange = (e) => {
         const formatted = formatDepositAccount(e.target.value);
         setDepositAccount(formatted);
+    };
+
+    // 출금 계좌 select용 핸들러
+    const handleAccountChange = (e) => {
+        const selectedOption = e.target.selectedOptions[0];
+        const ano = selectedOption.dataset.ano;
+        const accountNumber = e.target.value;
+
+        const selectedAccount = {
+            ano: ano,
+            accountNumber: accountNumber,
+        };
+
+        console.log("selectedAccount:", selectedAccount);
+
+        setLinkedAccount(selectedAccount);
     };
 
     return (
@@ -20,15 +37,15 @@ const AccountInfoSection = ({
             <div className="subscription-form">
                 <div className="form-group">
                     <label htmlFor="linkedAccount">출금 계좌 *</label>
-                    <select 
-                        id="linkedAccount" 
-                        value={linkedAccount} 
-                        onChange={(e) => setLinkedAccount(e.target.value)}
+                    <select
+                        id="linkedAccount"
+                        value={linkedAccount.accountNumber}
+                        onChange={handleAccountChange}
                     >
                         <option value="">계좌를 선택하세요</option>
                         {userAccounts.map(account => (
-                            <option key={account.appId} value={account.accountNumber}>
-                                {account.accountName} ({account.accountNo}) - 계좌 종류 : {account.accountType}
+                            <option key={account.ano} value={account.accountNumber} data-ano={account.ano}>
+                                {account.ano}/{account.accountName} ({account.accountNo}) - 계좌 종류 : {account.accountType}
                             </option>
                         ))}
                     </select>
@@ -41,9 +58,9 @@ const AccountInfoSection = ({
                         id="depositAccount"
                         value={depositAccount}
                         onChange={handleDepositAccountChange}
-                        placeholder="110-XXX-XXXXXX 형식으로 입력"
+                        placeholder="220-XXX-XXXXXX 입력해주세요."
                         autoComplete="off"
-                        maxLength="100"
+                        style={{ width: '100%' }}
                     />
                 </div>
 

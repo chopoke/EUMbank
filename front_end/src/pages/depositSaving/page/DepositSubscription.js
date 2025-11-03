@@ -6,6 +6,7 @@ import { getAccountList } from '../api/accountApi';
 import { depositSave } from '../api/depositApi';
 import { formatProductData } from '../utils/formatProductData';
 import SignatureSection from '../commom/depositSubCp/SignatureSection';
+import { calculateMaturityAmount} from "../utils/depositCalculator";
 import AccountInfoSection from '../commom/depositSubCp/AccountInfoSection';
 import NoticeSection from '../commom/depositSubCp/NoticeSection';
 import FAQSection from '../commom/depositSubCp/FAQSection';
@@ -18,18 +19,19 @@ const DepositSubscription = () => {
     const [productList, setProductList] = useState();
     const [aggreement, setAggreement] = useState();
     const [amount, setAmount] = useState(10000000);
-    const [term, setTerm] = useState(12);
+    const [term, setTerm] = useState(null);
     const [linkedAccount, setLinkedAccount] = useState('');
     const [depositAccount, setDepositAccount] = useState('');
     const [pin, setPin] = useState('');
     const [isConfirmed, setIsConfirmed] = useState(false);
+    const [paymentStartDate, setPaymentStartDate] = useState('');
 
     // 전자서명 관련
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSigned, setIsSigned] = useState(false);
     const [signatureData, setSignatureData] = useState(null);
     const [userAccounts, setUserAccounts] = useState([]);
-    
+
     useEffect(() => {
         let product = location.state?.productData;
         const agreement = location.state?.agreements;
@@ -49,7 +51,7 @@ const DepositSubscription = () => {
             navigate("/depositSavingProductList/open");
             return;
         }
-        
+
         fetchUserAccounts();
     }, []);
 
@@ -67,6 +69,14 @@ const DepositSubscription = () => {
         return formatProductData(productList);
     }, [productList]);
 
+    // formattedProduct가 로드되면 자동으로 첫 번째 term 설정
+    useEffect(() => {
+        if (formattedProduct?.termOptions?.length > 0 && term === null) {
+            setTerm(formattedProduct.termOptions[0]);
+            console.log('초기 term 설정:', formattedProduct.termOptions[0]);
+        }
+    }, [formattedProduct, term]);
+
     const handleSignPdf = () => {
         setIsModalOpen(true);
     };
@@ -75,16 +85,18 @@ const DepositSubscription = () => {
         console.log('========================================');
         console.log('서명된 PDF 데이터 받음:', {
             pdfSize: data.signedPdfBlob.size,
-            date: data.signatureDate,
-            pdfPath: data.templatePdfPath
+            signatureDate: data.signatureDate,
+            templatePdfPath: data.templatePdfPath,
+            timestamp: data.timestamp
         });
         console.log('========================================');
-        
+
         setSignatureData(data);
         setIsSigned(true);
     };
 
     const handleSubscription = async () => {
+        if ()
         if (!isConfirmed) { alert('상품설명서 및 약관에 동의해주세요.'); return; }
         if (!isSigned || !signatureData) { alert('약관 확인 및 서명을 먼저 진행해주세요.'); return; }
         if (!linkedAccount) { alert('출금 계좌를 선택해주세요.'); return; }
@@ -92,16 +104,23 @@ const DepositSubscription = () => {
         if (!pin || pin.length !== 6) { alert('계좌 비밀번호 6자리를 입력해주세요.'); return; }
 
         try {
+            // 만기 예상 수령액 계산
+            const calculatedResult = calculateMaturityAmount(amount, term, formattedProduct.rateInfo);
+            const expectedMaturityAmount = calculatedResult.total * term;
+
             const formData = new FormData();
 
             const subscriptionRequest = {
+                name: nickName,
                 dpNo: productList.no,
                 productName: formattedProduct.name,
                 amount: amount,
                 period: term,
-                linkedAccount: linkedAccount,
+                linkedAccountAno: linkedAccount.ano,
+                linkedAccount: linkedAccount.accountNumber ,
                 depositAccount: depositAccount,
                 pin: pin,
+                expectedMaturityAmount: expectedMaturityAmount,
                 signatureDate: signatureData.signatureDate,
                 templatePdfPath: signatureData.templatePdfPath,
                 agreements: JSON.stringify(aggreement)
@@ -111,26 +130,26 @@ const DepositSubscription = () => {
             formData.append('subscriptionRequest', jsonBlob);
 
             formData.append(
-                'signedPdf', 
+                'signedPdf',
                 signatureData.signedPdfBlob,
                 `subscription-${signatureData.timestamp}.pdf`
             );
 
             console.log('FormData 생성 완료. 서버로 전송합니다.');
-            
+
             const result = await depositSave(formData);
 
             console.log('가입 성공:', result);
             alert('예금 가입이 완료되었습니다!');
             navigate('/depositSavingProductList/open', { state: { result } });
-            
+
         } catch (error) {
             console.error('예금 가입 실패:', error);
             alert('가입 처리 중 오류가 발생했습니다: ' + (error.response?.data?.message || error.message));
         }
     };
 
-    if (!formattedProduct) {
+    if (!formattedProduct || term === null) {
         return <div>로딩 중...</div>;
     }
 
@@ -147,7 +166,7 @@ const DepositSubscription = () => {
             <main className="sub-main-grid">
                 <div className="left-col">
                     {/* 전자 서명 섹션 */}
-                    <SignatureSection 
+                    <SignatureSection
                         onSignClick={handleSignPdf}
                         isSigned={isSigned}
                     />

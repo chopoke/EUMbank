@@ -42,7 +42,7 @@ public class InstallQueryRepository {
                         productInstallmentList.ipName,
                         productInstallmentList.ipType,
                         productInstallmentList.ipDescription, // 상품 설명
-                        productInstallmentList.ipEarlyTerminationRate.stringValue().append("%"),
+                        productInstallmentList.ipRate.stringValue().append("%"),
                         productInstallmentList.ipMaxMonthlyAmount.stringValue().prepend("최대금액").append("원"),
                         productInstallmentList.ipMinMonthlyAmount.stringValue().prepend("최소금액").append("원"),
                         productInstallmentList.ipMinMonths,
@@ -117,7 +117,6 @@ public class InstallQueryRepository {
                         productInstallment.iJoinDate,              // 7. 가입일
                         productInstallment.iMaturityDate,          // 8. 만기일
                         productInstallment.iMonth,                 // 9. 가입개월
-                        productInstallment.iMonthlyAmt,            // 10. 월납입금
                         productInstallment.iCurrency,              // 11. 통화
                         productInstallment.iInterestRate,          // 12. 연이율
                         productInstallment.iPayDay,                // 13. 납입일
@@ -129,7 +128,9 @@ public class InstallQueryRepository {
                         productInstallment.iArrearsCnt,            // 19. 연체회차
                         productInstallment.iArrearsAmt,            // 20. 연체금액
                         productInstallment.iUpdatedAt,              // 21. 수정일
-                        productInstallment.aAccountNo
+                        productInstallment.aAccountNo,              // 22. 계조번호
+                        productInstallment.iPrincipalBal
+
                 ).values(
                         null,
                         installProducts.getNo(), // dposit_product_tbl dpNo
@@ -140,7 +141,6 @@ public class InstallQueryRepository {
                         LocalDateTime.now(),                        // 6. dJoinDate - 가입일 (현재시간)
                         LocalDateTime.now().plusMonths(installDto.getPeriod()), // 7. dMaturityDate - 만기일 (가입일 + 개월수)
                         installDto.getPeriod(),                                         // 9. iMonth - 가입개월
-                        installDto.getAmount().intValue(),
                         "KRW",                                                          // 11. iCurrency - 통화
                         new BigDecimal(installProducts.getRate()),                      // 12. iInterestRate - 연이율
                         installDto.getPayDay(),    // 13. iPayDay - 납입일 (기본값: 1일)
@@ -152,7 +152,8 @@ public class InstallQueryRepository {
                         0,                                                              // 19. iArrearsCnt - 연체회차 (초기값: 0)
                         BigDecimal.ZERO,                                                // 20. iArrearsAmt - 연체금액 (초기값: 0)
                         LocalDateTime.now(),
-                        oneAccount.getAccountNo()
+                        oneAccount.getAccountNo(),
+                        installDto.getAmount().intValue()
                 ).execute();
     }
 

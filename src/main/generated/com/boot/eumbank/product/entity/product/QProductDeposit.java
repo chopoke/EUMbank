@@ -29,11 +29,15 @@ public class QProductDeposit extends EntityPathBase<ProductDeposit> {
 
     public final NumberPath<java.math.BigDecimal> dAccrInt = createNumber("dAccrInt", java.math.BigDecimal.class);
 
-    public final NumberPath<Integer> dAmount = createNumber("dAmount", Integer.class);
+    public final NumberPath<Long> dAmount = createNumber("dAmount", Long.class);
 
     public final NumberPath<java.math.BigDecimal> dApy = createNumber("dApy", java.math.BigDecimal.class);
 
+    public final NumberPath<Integer> dCountPeriod = createNumber("dCountPeriod", Integer.class);
+
     public final StringPath dDormantYn = createString("dDormantYn");
+
+    public final NumberPath<Integer> dFail = createNumber("dFail", Integer.class);
 
     public final StringPath dFreezeYn = createString("dFreezeYn");
 
@@ -47,9 +51,11 @@ public class QProductDeposit extends EntityPathBase<ProductDeposit> {
 
     public final NumberPath<Integer> dNo = createNumber("dNo", Integer.class);
 
+    public final NumberPath<Integer> dPeriod = createNumber("dPeriod", Integer.class);
+
     public final NumberPath<Integer> dpNo = createNumber("dpNo", Integer.class);
 
-    public final NumberPath<Integer> dPrincipalBal = createNumber("dPrincipalBal", Integer.class);
+    public final NumberPath<Long> dPrincipalBal = createNumber("dPrincipalBal", Long.class);
 
     public final StringPath dStatus = createString("dStatus");
 

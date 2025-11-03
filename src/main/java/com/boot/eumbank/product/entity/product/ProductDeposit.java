@@ -3,14 +3,16 @@ package com.boot.eumbank.product.entity.product;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
+
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
 @Entity
 @Table(name = "DEPOSIT_TBL")
+@ToString
 public class ProductDeposit {
 
     @Id
@@ -39,8 +41,8 @@ public class ProductDeposit {
     @Column(name = "d_maturity_date")
     private LocalDateTime dMaturityDate;
 
-    @Column(name = "d_amount", precision = 15, scale = 2)
-    private Integer dAmount;
+    @Column(name = "d_amount")
+    private long dAmount;
 
     @Column(name = "d_interest_rate", precision = 5, scale = 2)
     private BigDecimal dInterestRate;
@@ -63,9 +65,18 @@ public class ProductDeposit {
     @Column(name = "d_accr_int", precision = 15, scale = 2)
     private BigDecimal dAccrInt;
 
-    @Column(name = "d_principal_bal", precision = 15, scale = 2)
-    private Integer dPrincipalBal;
+    @Column(name = "d_principal_bal")
+    private long dPrincipalBal;
 
     @Column(name = "a_account_no")
     private String aAccountNo;
+
+    @Column(name= "d_period")
+    private Integer dPeriod;
+
+    @Column(name= "d_count_period")
+    private Integer dCountPeriod;
+
+    @Column(name= "d_fail")
+    private Integer dFail;
 }

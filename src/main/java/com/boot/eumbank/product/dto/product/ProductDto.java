@@ -1,7 +1,9 @@
 package com.boot.eumbank.product.dto.product;
 
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.util.List;
 
@@ -9,7 +11,9 @@ import java.util.List;
  * 프론트엔드로 전달될 통합 상품 DTO (Data Transfer Object)
  * 각기 다른 상품 테이블의 데이터를 이 공통 형식으로 변환합니다.
  */
-@Data
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 public class ProductDto {
     private Integer no;

@@ -188,3 +188,10 @@ jobs:
       cron: "0 */2 * * * *"    # 매일 03:00  --> 임시로 15초마다
   timezone: "Asia/Seoul"
 
+# ==================================
+# --- Gemini API ---
+# ==================================
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
+  model: gemini-2.5-pro

@@ -45,7 +45,7 @@ public class TransferSchedulerService {
     public void processScheduledTransfers() {
         
         // 로그 기록 - 스케줄러 실행 시작
-        log.info("=== 예약이체 스케줄러 실행 시작 - {} ===", LocalDateTime.now());
+        //log.info("=== 예약이체 스케줄러 실행 시작 - {} ===", LocalDateTime.now());
         
         try {
             // === 1단계: 스케줄된 예약 이체 목록 조회 (Race Condition 방지) ===
@@ -53,10 +53,10 @@ public class TransferSchedulerService {
             List<TransferOrder> scheduledTransfers = transferOrderRepository.findByStatusAndStartAtLessThanEqualForUpdate("SCHEDULED", LocalDateTime.now());
             
             // 로그 기록 - 조회된 예약 이체 건수
-            log.info("조회된 예약 이체 건수: {}", scheduledTransfers.size());
+            //log.info("조회된 예약 이체 건수: {}", scheduledTransfers.size());
             
             if (scheduledTransfers.isEmpty()) {
-                log.info("실행할 예약 이체가 없습니다.");
+                //log.info("실행할 예약 이체가 없습니다.");
                 return;
             }
 

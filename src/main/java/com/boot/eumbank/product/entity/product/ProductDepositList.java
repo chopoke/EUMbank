@@ -72,4 +72,5 @@ public class ProductDepositList {
 
     @Column(name = "dp_href")
     private String dpHref;
+
 }
