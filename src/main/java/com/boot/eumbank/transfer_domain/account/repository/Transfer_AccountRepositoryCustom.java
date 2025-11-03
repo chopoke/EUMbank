@@ -44,4 +44,10 @@ public interface Transfer_AccountRepositoryCustom {
      * 잔액 기준 상위 계좌 조회
      */
     List<Account> findAccountsByBalanceDesc(Integer customerNo);
+
+    /**
+     * 고객의 원화 계좌만 조회 (이체 가능한 계좌)
+     * - currency가 'KRW'이거나 null인 계좌만 조회
+     */
+    List<Account> findKRWAccountsByCustomerId(Integer customerNo);
 }

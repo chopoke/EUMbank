@@ -59,6 +59,13 @@ public interface Transfer_AccountRepository extends JpaRepository<Account, Integ
     List<Account> findByCNo(@Param("cNo") Integer cNo);
 
     /**
+     * 고객 번호로 원화 계좌 목록만 조회 (이체 가능한 계좌)
+     * - currency가 'KRW'이거나 null인 계좌만 조회
+     */
+    @Query("SELECT a FROM Account a WHERE a.cNo = :cNo AND (a.currency = 'KRW' OR a.currency IS NULL)")
+    List<Account> findByCNoAndCurrencyKRW(@Param("cNo") Integer cNo);
+
+    /**
      * 활성 계좌만 조회 (QueryDSL 사용)
      */
     Optional<Account> findActiveAccountByAccountId(String accountId);

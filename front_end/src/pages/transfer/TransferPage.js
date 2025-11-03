@@ -60,14 +60,37 @@ function TransferConfirmModal({ isOpen, onClose, onConfirm, data }) {
               <div className="font-medium">{data.recipient?.name}</div>
             </div>
             <div className="space-y-2">
-              <div className="text-sm text-gray-500">금액</div>
-              <div className="text-2xl font-bold font-mono">{formatKRW(data.amount)}</div>
-              <div className="text-sm text-gray-500">수수료</div>
-              <div className="font-medium font-mono">{formatKRW(data.fee)}</div>
-              <div className="text-sm text-gray-500">메모</div>
-              <div className="font-medium">{data.memo || '-'}</div>
+              {data.isAutoTransfer ? (
+                <>
+                  <div className="text-sm text-gray-500">1회당 금액</div>
+                  <div className="text-2xl font-bold font-mono">{formatKRW(data.amount)}</div>
+                  <div className="text-sm text-gray-500">반복 횟수</div>
+                  <div className="font-medium">{data.autoRepeatCount}회</div>
+                  <div className="text-sm text-gray-500">총 금액</div>
+                  <div className="text-xl font-bold font-mono text-blue-700">{formatKRW(data.amount * data.autoRepeatCount)}</div>
+                  <div className="text-sm text-gray-500">시작 날짜</div>
+                  <div className="font-medium">{data.autoStartYear}-{String(data.autoStartMonth).padStart(2, '0')}-{String(data.autoDayOfMonth).padStart(2, '0')}</div>
+                  <div className="text-sm text-gray-500">메모</div>
+                  <div className="font-medium">{data.memo || '-'}</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm text-gray-500">금액</div>
+                  <div className="text-2xl font-bold font-mono">{formatKRW(data.amount)}</div>
+                  <div className="text-sm text-gray-500">수수료</div>
+                  <div className="font-medium font-mono">{formatKRW(data.fee)}</div>
+                  <div className="text-sm text-gray-500">메모</div>
+                  <div className="font-medium">{data.memo || '-'}</div>
+                </>
+              )}
             </div>
           </div>
+
+          {data.isAutoTransfer && (
+            <div className="mt-4 rounded-xl border bg-blue-50 border-blue-200 p-4 text-sm text-blue-900">
+              매월 {data.autoDayOfMonth}일에 자동으로 이체됩니다. 총 {data.autoRepeatCount}회 진행됩니다.
+            </div>
+          )}
 
           <div className="mt-6 space-y-4">
             <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
@@ -122,6 +145,11 @@ export default function TransferPage() {
   const [isReserved, setIsReserved] = useState(false);
   const [reserveDate, setReserveDate] = useState('');
   const [reserveTime, setReserveTime] = useState('');
+  const [isAutoTransfer, setIsAutoTransfer] = useState(false);
+  const [autoStartYear, setAutoStartYear] = useState(new Date().getFullYear());
+  const [autoStartMonth, setAutoStartMonth] = useState(new Date().getMonth() + 1);
+  const [autoDayOfMonth, setAutoDayOfMonth] = useState('');
+  const [autoRepeatCount, setAutoRepeatCount] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -571,6 +599,15 @@ export default function TransferPage() {
         return;
       }
 
+      // 자동이체 선택 시 검증
+      if (isAutoTransfer) {
+        if (!autoStartYear || !autoStartMonth || !autoDayOfMonth || !autoRepeatCount) {
+          alert('자동이체 설정을 모두 선택해주세요.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // 이체 요청 데이터 구성
       const requestData = {
         fromAccountNo: selectedAccount.aNo,
@@ -583,6 +620,89 @@ export default function TransferPage() {
         password: transferData.password
       };
 
+      // 자동이체인 경우 (AutoTransferRequestDto 구조)
+      if (isAutoTransfer) {
+        const autoRequestData = {
+          fromAccountNo: selectedAccount.aNo,
+          bankCode: selectedRecipient.bankCode || 'EUM',
+          destAccountNo: selectedRecipient.account,
+          amount: numericAmount,
+          startYear: autoStartYear,
+          startMonth: autoStartMonth,
+          dayOfMonth: parseInt(autoDayOfMonth),
+          repeatCount: parseInt(autoRepeatCount),
+          memo: memo || null,
+          password: transferData.password
+        };
+
+        const autoResponse = await transferApi.createAutoTransfer(autoRequestData);
+
+        if (autoResponse.data && autoResponse.data.success === true) {
+          const completeData = {
+            totalAmount: autoResponse.data.data.totalAmount,
+            amount: numericAmount,
+            startDate: autoResponse.data.data.startDate,
+            endDate: autoResponse.data.data.endDate,
+            repeatCount: autoResponse.data.data.registeredCount,
+            fromAccountNo: selectedAccount.accountNo,
+            fromAccountType: selectedAccount.accountType,
+            fromAccountBalance: balance,
+            toBank: selectedRecipient.bank,
+            toAccount: selectedRecipient.account,
+            toName: selectedRecipient.name,
+            memo: memo || '',
+            orderIds: autoResponse.data.data.orderIds
+          };
+
+          setIsModalOpen(false);
+          navigate('/transfer/auto/complete', { state: { completeData } });
+          return;
+        } else {
+          let errorMessage = autoResponse.data?.message || autoResponse.data?.error || '자동이체 등록에 실패했습니다.';
+          const errorCode = autoResponse.data?.errorCode;
+          
+          if (errorCode) {
+            switch (errorCode) {
+              case 'PASSWORD_MISMATCH':
+                errorMessage = '계좌 비밀번호가 일치하지 않습니다.';
+                break;
+              case 'INSUFFICIENT_BALANCE':
+                errorMessage = '잔액이 부족합니다.';
+                break;
+              case 'ACCOUNT_NOT_FOUND':
+                errorMessage = '계좌를 찾을 수 없습니다.';
+                break;
+              case 'ACCOUNT_STATUS_ERROR':
+                errorMessage = '계좌가 이체 불가능한 상태입니다.';
+                break;
+              case 'CURRENCY_MISMATCH':
+                errorMessage = '이체는 원화 계좌만 사용 가능합니다.';
+                break;
+              case 'LIMIT_EXCEEDED':
+              case 'PER_TRANSFER_LIMIT_EXCEEDED':
+                errorMessage = '1회 이체 한도를 초과했습니다.';
+                break;
+              case 'DAILY_LIMIT_EXCEEDED':
+                errorMessage = '일일 이체 한도를 초과했습니다.';
+                break;
+              case 'MONTHLY_LIMIT_EXCEEDED':
+                errorMessage = '월간 이체 한도를 초과했습니다.';
+                break;
+              case 'UNAUTHORIZED':
+                errorMessage = '권한이 없습니다.';
+                break;
+              default:
+                errorMessage = autoResponse.data?.message || errorMessage;
+            }
+          }
+
+          setError(errorMessage);
+          alert(`자동이체 등록 실패: ${errorMessage}`);
+          setIsModalOpen(false);
+          return;
+        }
+      }
+
       // 예약 이체인 경우 (TransferOrderDto 구조)
       if (isReserved && reserveDate && reserveTime) {
         const requestData = {
@@ -594,7 +714,8 @@ export default function TransferPage() {
           scheduleExpr: '0 0 9 * * ?',                      // String (cron 표현식)
           startAt: `${reserveDate}T${reserveTime}:00`,       // String (시작 시간)
           endAt: `${reserveDate}T${reserveTime}:00`,         // String (종료 시간)
-          memo: memo                                         // String (메모)
+          memo: memo,                                        // String (메모)
+          password: transferData.password                    // String (계좌 비밀번호 - 예약 이체 등록 시 검증용)
         };
         
         // 예약 이체 생성 API 호출
@@ -615,11 +736,47 @@ export default function TransferPage() {
             memo: memo
           };
           
+          setIsModalOpen(false);
           navigate('/transfer/reserve/complete', { state: { reserveData } });
           return;
         } else {
           // 예약이체 실패 시 alert로 에러 메시지 표시하고 완료 페이지로 이동하지 않음
-          const errorMessage = scheduleResponse.data?.message || scheduleResponse.data?.error || '예약 이체 등록에 실패했습니다.';
+          let errorMessage = scheduleResponse.data?.message || scheduleResponse.data?.error || '예약 이체 등록에 실패했습니다.';
+          const errorCode = scheduleResponse.data?.errorCode;
+          
+          // 에러 코드에 따른 사용자 친화적인 메시지 표시
+          if (errorCode) {
+            switch (errorCode) {
+              case 'PASSWORD_MISMATCH':
+                errorMessage = '계좌 비밀번호가 일치하지 않습니다.';
+                break;
+              case 'ACCOUNT_NOT_FOUND':
+                errorMessage = '존재하지 않는 계좌입니다.';
+                break;
+              case 'INSUFFICIENT_BALANCE':
+                errorMessage = '잔액이 부족합니다.';
+                break;
+              case 'ACCOUNT_SUSPENDED':
+                errorMessage = '거래가 제한된 계좌입니다.';
+                break;
+              case 'PER_TRANSFER_LIMIT_EXCEEDED':
+                errorMessage = '1회 이체 한도를 초과했습니다.';
+                break;
+              case 'DAILY_LIMIT_EXCEEDED':
+                errorMessage = '일일 이체 한도를 초과했습니다.';
+                break;
+              case 'MONTHLY_LIMIT_EXCEEDED':
+                errorMessage = '월간 이체 한도를 초과했습니다.';
+                break;
+              case 'UNAUTHORIZED':
+                errorMessage = '권한이 없습니다.';
+                break;
+              case 'CURRENCY_MISMATCH':
+                errorMessage = '이체는 원화 계좌만 사용 가능합니다.';
+                break;
+            }
+          }
+          
           console.error('예약이체 실패 응답:', scheduleResponse.data);
           alert(`예약이체 실패: ${errorMessage}`);
           setIsModalOpen(false); // 모달 닫기
@@ -733,6 +890,9 @@ export default function TransferPage() {
           case 'INVALID_REQUEST':
             userFriendlyMessage = '잘못된 요청입니다.';
             break;
+          case 'CURRENCY_MISMATCH':
+            userFriendlyMessage = '이체는 원화 계좌만 사용 가능합니다.';
+            break;
           default:
             userFriendlyMessage = errorMessage;
         }
@@ -809,14 +969,7 @@ export default function TransferPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <main id="main">
         <section className="mx-auto max-w-screen-xl px-6 py-6">
-          <nav aria-label="Breadcrumb" className="text-sm text-gray-500">
-            <ol className="flex items-center gap-2">
-              <li className="hover:underline cursor-pointer">이체</li>
-              <li aria-hidden>›</li>
-              <li className="text-gray-900">계좌 이체</li>
-            </ol>
-          </nav>
-          <div className="mt-2 flex items-center justify-between">
+          <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold tracking-tight">계좌 이체</h1>
             <div className="flex items-center gap-3">
               <button 
@@ -839,7 +992,7 @@ export default function TransferPage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-screen-xl px-6 pb-12 grid grid-cols-12 gap-6">
+        <section className="mx-auto max-w-screen-xl px-6 pb-12 grid lg:grid-cols-12 gap-6">
           <div className="col-span-12 lg:col-span-8 space-y-6">
             
             {step === 'form' && (
@@ -861,7 +1014,7 @@ export default function TransferPage() {
                           const account = accounts.find(acc => acc.aNo === parseInt(e.target.value));
                           if (account) handleAccountChange(account);
                         }}
-                        className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                         disabled={isLoading}
                       >
                         <option value="">계좌를 선택하세요</option>
@@ -934,7 +1087,7 @@ export default function TransferPage() {
                               <select 
                                 value={selectedBank}
                                 onChange={(e) => handleBankChange(e.target.value)}
-                                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                                className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                               >
                                 <option value="">은행을 선택하세요</option>
                                 {banks.map(bank => (
@@ -949,7 +1102,7 @@ export default function TransferPage() {
                                 value={newAccountNumber}
                                 onChange={(e) => handleAccountNumberChange(e.target.value)}
                                 placeholder={selectedBank ? "숫자만 입력하세요" : "은행을 먼저 선택하세요"}
-                                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                                className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                                 disabled={!selectedBank}
                               />
                               {selectedBank && (
@@ -1047,7 +1200,7 @@ export default function TransferPage() {
                           value={formattedAmount} 
                           onChange={handleAmountChange} 
                           inputMode="numeric" 
-                          className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" 
+                          className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" 
                           placeholder="0" 
                         />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-3">
@@ -1060,30 +1213,139 @@ export default function TransferPage() {
                     </div>
                     <div className="col-span-12 md:col-span-6">
                       <label className="block text-sm font-medium text-gray-800 mb-1">받는 분 메모</label>
-                      <input value={memo} onChange={e => setMemo(e.target.value)} maxLength="10" className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="예: 점심값" />
+                      <input value={memo} onChange={e => setMemo(e.target.value)} maxLength="10" className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" placeholder="예: 점심값" />
                       <p className="text-xs text-gray-500 mt-1">통장표시 10자 내외</p>
                     </div>
                   </div>
                   
-                  <div className="flex flex-wrap items-center gap-4">
-                    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                      <input type="checkbox" className="peer sr-only" checked={isReserved} onChange={e => setIsReserved(e.target.checked)} />
-                      <span className="relative inline-flex h-5 w-9 items-center rounded-full bg-gray-300 peer-checked:bg-blue-600 transition">
-                        <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition peer-checked:translate-x-4"></span>
+                  <div className="space-y-4">
+                    {/* 토글 버튼들 */}
+                    <div className="flex flex-wrap items-center gap-4">
+                      <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input 
+                          type="checkbox" 
+                          className="peer sr-only" 
+                          checked={isReserved} 
+                          onChange={e => {
+                            setIsReserved(e.target.checked);
+                            if (e.target.checked) setIsAutoTransfer(false);
+                          }} 
+                        />
+                        <span className="relative inline-flex h-5 w-9 items-center rounded-full bg-gray-300 peer-checked:bg-blue-600 transition">
+                          <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition peer-checked:translate-x-4"></span>
+                        </span>
+                        <span className="text-sm text-gray-700">예약 이체</span>
+                      </label>
+                      <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input 
+                          type="checkbox" 
+                          className="peer sr-only" 
+                          checked={isAutoTransfer} 
+                          onChange={e => {
+                            setIsAutoTransfer(e.target.checked);
+                            if (e.target.checked) setIsReserved(false);
+                          }} 
+                        />
+                        <span className="relative inline-flex h-5 w-9 items-center rounded-full bg-gray-300 peer-checked:bg-blue-600 transition">
+                          <span className="absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition peer-checked:translate-x-4"></span>
+                        </span>
+                        <span className="text-sm text-gray-700">자동이체</span>
+                      </label>
+                      <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs text-gray-700">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 8h.01M12 12v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        이체 전 잘못된 계좌/금액 경고창 표시
                       </span>
-                      <span className="text-sm text-gray-700">예약 이체</span>
-                    </label>
+                    </div>
+
+                    {/* 예약 이체 입력 필드 */}
                     {isReserved && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 4v2m10-2v2M4 10h16M5 20h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        <input type="date" className="rounded border px-2 py-1" value={reserveDate} onChange={e => setReserveDate(e.target.value)} />
-                        <input type="time" className="rounded border px-2 py-1" value={reserveTime} onChange={e => setReserveTime(e.target.value)} />
+                      <div className="rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-700 mb-3">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 4v2m10-2v2M4 10h16M5 20h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          <span className="font-medium">예약 이체 설정</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <input type="date" className="rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" value={reserveDate} onChange={e => setReserveDate(e.target.value)} />
+                          <input type="time" className="rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" value={reserveTime} onChange={e => setReserveTime(e.target.value)} />
+                          <span className="text-gray-500">에 이체됩니다</span>
+                        </div>
                       </div>
                     )}
-                    <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs text-gray-700">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 8h.01M12 12v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      이체 전 잘못된 계좌/금액 경고창 표시
-                    </span>
+
+                    {/* 자동이체 입력 필드 */}
+                    {isAutoTransfer && (
+                      <div className="rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-700 mb-3">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                          <span className="font-medium">자동이체 설정</span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">시작 연도</label>
+                            <select 
+                              value={autoStartYear} 
+                              onChange={e => setAutoStartYear(parseInt(e.target.value))}
+                              className="w-full rounded-lg border-gray-300 bg-gray-100 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            >
+                              {Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(year => (
+                                <option key={year} value={year}>{year}년</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">시작 월</label>
+                            <select 
+                              value={autoStartMonth} 
+                              onChange={e => setAutoStartMonth(parseInt(e.target.value))}
+                              className="w-full rounded-lg border-gray-300 bg-gray-100 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            >
+                              {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                                <option key={month} value={month}>{month}월</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">매월 지정일</label>
+                            <select 
+                              value={autoDayOfMonth} 
+                              onChange={e => setAutoDayOfMonth(e.target.value ? parseInt(e.target.value) : '')}
+                              className="w-full rounded-lg border-gray-300 bg-gray-100 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            >
+                              <option value="">날짜 선택</option>
+                              {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                                <option key={day} value={day}>{day}일</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">반복 횟수</label>
+                            <select 
+                              value={autoRepeatCount} 
+                              onChange={e => setAutoRepeatCount(e.target.value ? parseInt(e.target.value) : '')}
+                              className="w-full rounded-lg border-gray-300 bg-gray-100 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                            >
+                              <option value="">횟수 선택</option>
+                              {Array.from({ length: 24 }, (_, i) => i + 1).map(count => (
+                                <option key={count} value={count}>{count}회</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex flex-col items-end justify-end gap-1">
+                            {autoDayOfMonth && autoRepeatCount && amount && (
+                              <>
+                                <div className="text-xs font-medium text-gray-700">
+                                  총 금액: {formatKRW((parseInt(amount.replace(/[^0-9]/g, '')) || 0) * parseInt(autoRepeatCount))}
+                                </div>
+                                <div className="text-xs text-gray-500">매월 {autoDayOfMonth}일마다 {autoRepeatCount}회 반복</div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="rounded-xl border bg-gray-50 p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
@@ -1173,7 +1435,12 @@ export default function TransferPage() {
           fee,
           memo,
           recipient: selectedRecipient,
-          fromAccountDisplay: selectedAccount ? `${selectedAccount.accountType} · ${selectedAccount.accountNumber}` : "계좌를 선택하세요"
+          fromAccountDisplay: selectedAccount ? `${selectedAccount.accountType} · ${selectedAccount.accountNumber}` : "계좌를 선택하세요",
+          isAutoTransfer: isAutoTransfer,
+          autoStartYear: autoStartYear,
+          autoStartMonth: autoStartMonth,
+          autoDayOfMonth: autoDayOfMonth ? parseInt(autoDayOfMonth) : '',
+          autoRepeatCount: autoRepeatCount ? parseInt(autoRepeatCount) : ''
         }}
       />
     </div>
