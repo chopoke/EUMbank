@@ -446,8 +446,8 @@ export default function BillsLanding() {
                           {invoices.map(row => (
                             <tr key={row.biNo} className="border-b">
                               <td className="py-2">{row.ym}</td>
-                              <td className="text-right">{Number(row.amount).toLocaleString()}</td>
-                              <td>{row.dueAt ? row.dueAt.replace("T"," ").slice(0,19) : "-"}</td>
+                              <td className="text-right">{Number(row.amount).toLocaleString()}원</td>
+                              <td>&nbsp;&nbsp;&nbsp; {row.dueAt ? row.dueAt.replace("T"," ").slice(0,19) : "-"}</td>
                               <td>{row.status}</td>
                               <td>
                                 {row.status === "READY" ? (

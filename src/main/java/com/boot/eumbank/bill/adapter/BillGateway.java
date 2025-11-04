@@ -31,12 +31,14 @@ public class BillGateway {
             map.putIfAbsent("GAS", mock);
             map.putIfAbsent("TELCO", mock);
             map.putIfAbsent("TAX", mock);
+            map.putIfAbsent("NH_GIRO", mock);
         }
         return map;
     }
 
     public PayResult pay(UtilityBill bill, BillInvoice inv, BigDecimal amount, String idempotencyKey) {
-        String code = bill.getProvider().getBpvCode();
+        String code = bill.getProvider() != null ? bill.getProvider().getBpvCode() : null;
+        if (code == null || code.isBlank()) return new PayResult(false, null, null, "NO_PROVIDER_CODE");
         BillProviderAdapter adapter = index().get(code);
         if (adapter == null) return new PayResult(false, null, null, "NO_ADAPTER:" + code);
         return adapter.pay(new PayCommand(bill, inv, amount, idempotencyKey));
