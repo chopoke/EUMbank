@@ -1,19 +1,20 @@
-import { useEffect, useState } from 'react';
-import { testmypage, updateProfile } from '../../api/accounts';
-import axios from 'axios';
-import React from "react";
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { testmypage, updateProfile } from "../../api/accounts";
+import DepositDashboard from "./DepositDashboard";
 
-/* ===================== Tab Navigation ===================== */
+// 성별 코드 → 라벨 유틸
+const toGenderLabel = (cd) => (cd === "M" || cd === "m" ? "남성" : cd === "F" || cd === "f" ? "여성" : "-");
+
+// TabNavigation Component
 function TabNavigation({ activeTab, onTabChange }) {
   const tabs = [
-    { id: 'overview', label: '개요', icon: 'ri-dashboard-line' },
-    { id: 'savings',  label: '예·적금', icon: 'ri-piggy-bank-line' },
-    { id: 'profile',  label: '프로필', icon: 'ri-user-line' },
-    { id: 'security', label: '보안', icon: 'ri-shield-line' },
-    { id: 'limit',    label: '한도 관리', icon: 'ri-wallet-line' },
-    { id: 'document', label: '증빙 서류', icon: 'ri-file-text-line' },
-    { id: 'tax',      label: '세금/공과금 계산', icon: 'ri-calculator-line' }
+    { id: "overview", label: "개요", icon: "ri-dashboard-line" },
+    { id: "profile", label: "프로필", icon: "ri-user-line" },
+    { id: "security", label: "보안", icon: "ri-shield-line" },
+    { id: "limit", label: "한도 관리", icon: "ri-wallet-line" },
+    { id: "document", label: "증빙 서류", icon: "ri-file-text-line" },
+    { id: "tax", label: "세금/공과금 계산", icon: "ri-calculator-line" },
   ];
 
   return (
@@ -25,8 +26,8 @@ function TabNavigation({ activeTab, onTabChange }) {
             onClick={() => onTabChange(tab.id)}
             className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.id
-                ? 'border-blue-500 text-blue-600 bg-white'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? "border-blue-500 text-blue-600 bg-white"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}
           >
             <i className={`${tab.icon} text-lg`} />
@@ -38,91 +39,64 @@ function TabNavigation({ activeTab, onTabChange }) {
   );
 }
 
-/* ===================== Overview Tab ===================== */
+/* ======================= 개요 탭 ======================= */
 function OverviewTab({ onTabSwitch }) {
-  const [sv, setSv] = useState({
-    percent: 0, paid: 0, total: 0, acc: 0, target: 0, nextDueDate: null, topAccounts: []
-  });
-
-  useEffect(() => {
-    axios.get('/api/mypage/summary')
-      .then(res => setSv(res.data))
-      .catch(() => setSv(prev => ({ ...prev, percent: 0 })));
-  }, []);
-
-  const Donut = ({ percent = 0, size = 96, stroke = 10 }) => {
-    const r = (size - stroke) / 2;
-    const c = 2 * Math.PI * r;
-    const dash = Math.max(0, Math.min(100, percent)) / 100 * c;
-    return (
-      <svg width={size} height={size} className="shrink-0">
-        <circle cx={size/2} cy={size/2} r={r} stroke="#E5E7EB" strokeWidth={stroke} fill="none"/>
-        <circle
-          cx={size/2}
-          cy={size/2}
-          r={r}
-          stroke="currentColor"
-          strokeWidth={stroke}
-          fill="none"
-          strokeDasharray={`${dash} ${c - dash}`}
-          className="text-blue-500 -rotate-90 origin-center"
-        />
-        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" className="font-semibold text-gray-800">
-          {Math.round(percent)}%
-        </text>
-      </svg>
-    );
-  };
-
   const services = [
     {
-      title: '계좌 조회',
-      description: '전체 계좌 현황 및 잔액 확인',
-      icon: 'ri-bank-line',
-      color: 'from-blue-300 to-sky-400',
-      image: 'https://readdy.ai/api/search-image?query=modern%20banking%20account%20overview%20with%20elegant%20financial%20dashboard%2C%20clean%20white%20background%2C%20professional%20banking%20interface%2C%20digital%20account%20management%2C%20minimalist%20design%20style%2C%20soft%20lighting&width=400&height=300&seq=account_overview&orientation=landscape',
-      href: "/accounts"
+      title: "계좌 조회",
+      description: "전체 계좌 현황 및 잔액 확인",
+      icon: "ri-bank-line",
+      color: "from-blue-300 to-sky-400",
+      image:
+        "https://readdy.ai/api/search-image?query=modern%20banking%20account%20overview%20with%20elegant%20financial%20dashboard%2C%20clean%20white%20background%2C%20professional%20banking%20interface%2C%20digital%20account%20management%2C%20minimalist%20design%20style%2C%20soft%20lighting&width=400&height=300&seq=account_overview&orientation=landscape",
+      href: "/accounts",
     },
     {
-      title: '대출',
-      description: '대출 관리',
-      icon: 'ri-bank-card-line',
-      color: 'from-blue-500 to-sky-400',
-      image: 'https://readdy.ai/api/search-image?query=elegant%20credit%20cards%20and%20loan%20management%20interface%2C%20modern%20banking%20cards%20display%2C%20clean%20white%20background%2C%20professional%20financial%20services%2C%20minimalist%20design%2C%20soft%20professional%20lighting&width=400&height=300&seq=card_loan&orientation=landscape'
+      title: "상품",
+      description: "상품 관리",
+      icon: "ri-bank-card-line",
+      color: "from-blue-500 to-sky-400",
+      image:
+        "https://readdy.ai/api/search-image?query=elegant%20credit%20cards%20and%20loan%20management%20interface%2C%20modern%20banking%20cards%20display%2C%20clean%20white%20background%2C%20professional%20financial%20services%2C%20minimalist%20design%2C%20soft%20professional%20lighting&width=400&height=300&seq=card_loan&orientation=landscape",
+      href: "/deposits",
     },
     {
-      title: '자산관리',
-      description: '투자 포트폴리오 및 자산 현황',
-      icon: 'ri-line-chart-line',
-      color: 'from-blue-300 to-sky-400',
-      image: 'https://readdy.ai/api/search-image?query=investment%20portfolio%20dashboard%20with%20growing%20charts%20and%20financial%20assets%2C%20clean%20white%20background%2C%20professional%20wealth%20management%20interface%2C%20minimalist%20design%2C%20modern%20financial%20graphics&width=400&height=300&seq=investment_wealth&orientation=landscape'
+      title: "자산관리",
+      description: "투자 포트폴리오 및 자산 현황",
+      icon: "ri-line-chart-line",
+      color: "from-blue-300 to-sky-400",
+      image:
+        "https://readdy.ai/api/search-image?query=investment%20portfolio%20dashboard%20with%20growing%20charts%20and%20financial%20assets%2C%20clean%20white%20background%2C%20professional%20wealth%20management%20interface%2C%20minimalist%20design%2C%20modern%20financial%20graphics&width=400&height=300&seq=investment_wealth&orientation=landscape",
     },
     {
-      title: '보안 설정',
-      description: '비밀번호 및 보안 관리',
-      icon: 'ri-shield-check-line',
-      color: 'from-indigo-500 to-indigo-200',
-      image: 'https://readdy.ai/api/search-image?query=digital%20security%20shield%20and%20lock%20interface%2C%20modern%20banking%20security%20system%2C%20clean%20white%20background%2C%20professional%20cybersecurity%20design%2C%20minimalist%20tech%20style%2C%20secure%20banking%20environment&width=400&height=300&seq=security_settings&orientation=landscape',
+      title: "보안 설정",
+      description: "비밀번호 및 보안 관리",
+      icon: "ri-shield-check-line",
+      color: "from-indigo-500 to-indigo-200",
+      image:
+        "https://readdy.ai/api/search-image?query=digital%20security%20shield%20and%20lock%20interface%2C%20modern%20banking%20security%20system%2C%20clean%20white%20background%2C%20professional%20cybersecurity%20design%2C%20minimalist%20tech%20style%2C%20secure%20banking%20environment&width=400&height=300&seq=security_settings&orientation=landscape",
       href: "#",
-      targetTab: 'security'
+      targetTab: "security",
     },
     {
-      title: '개인정보 수정',
-      description: '회원정보 및 연락처 변경',
-      icon: 'ri-user-settings-line',
-      color: 'from-indigo-700 to-indigo-300',
-      image: 'https://readdy.ai/api/search-image?query=personal%20profile%20management%20interface%2C%20modern%20user%20settings%20dashboard%2C%20clean%20white%20background%2C%20professional%20account%20management%2C%20minimalist%20design%2C%20user-friendly%20interface&width=400&height=300&seq=personal_info&orientation=landscape',
+      title: "개인정보 수정",
+      description: "회원정보 및 연락처 변경",
+      icon: "ri-user-settings-line",
+      color: "from-indigo-700 to-indigo-300",
+      image:
+        "https://readdy.ai/api/search-image?query=personal%20profile%20management%20interface%2C%20modern%20user%20settings%20dashboard%2C%20clean%20white%20background%2C%20professional%20account%20management%2C%20minimalist%20design%2C%20user-friendly%20interface&width=400&height=300&seq=personal_info&orientation=landscape",
       href: "#",
-      targetTab: 'profile'
+      targetTab: "profile",
     },
     {
-      title: '빠른 이체',
-      description: '자주 사용하는 계좌로 빠른 송금',
-      icon: 'ri-exchange-line',
-      color: 'from-indigo-500 to-indigo-200',
-      image: 'https://readdy.ai/api/search-image?query=quick%20money%20transfer%20interface%20with%20arrows%20and%20banking%20symbols%2C%20modern%20digital%20payment%20system%2C%20clean%20white%20background%2C%20professional%20financial%20transfer%2C%20minimalist%20design&width=400&height=300&seq=quick_transfer&orientation=landscape',
-      href: "/transfer"
-    }
+      title: "빠른 이체",
+      description: "자주 사용하는 계좌로 빠른 송금",
+      icon: "ri-exchange-line",
+      color: "from-indigo-500 to-indigo-200",
+      image:
+        "https://readdy.ai/api/search-image?query=quick%20money%20transfer%20interface%20with%20arrows%20and%20banking%20symbols%2C%20modern%20digital%20payment%20system%2C%20clean%20white%20background%2C%20professional%20financial%20transfer%2C%20minimalist%20design&width=400&height=300&seq=quick_transfer&orientation=landscape",
+      href: "/transfer",
+    },
   ];
 
   const handleTabSwitch = (event, targetTabName) => {
@@ -134,26 +108,6 @@ function OverviewTab({ onTabSwitch }) {
 
   return (
     <div className="space-y-6">
-      {/* 예·적금 요약 카드 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-center gap-6">
-        <div className="w-28 h-28 flex items-center justify-center">
-          <Donut percent={sv.percent}/>
-        </div>
-        <div className="space-y-1">
-          <div className="text-xl font-semibold text-gray-800">{Math.round(sv.percent)}%</div>
-          <div className="text-sm text-gray-600">납입회차 <b>{sv.paid}/{sv.total}</b></div>
-          <div className="text-sm text-gray-600">누적 {sv.acc?.toLocaleString()} / 목표 {sv.target?.toLocaleString()}</div>
-          {sv.nextDueDate && <div className="text-sm text-gray-600">다음 납입일 {sv.nextDueDate}</div>}
-        </div>
-        <div className="ml-auto">
-          <button
-            onClick={(e)=>{ e.preventDefault(); onTabSwitch?.('savings'); }}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm whitespace-nowrap">
-            자세히 보기
-          </button>
-        </div>
-      </div>
-
       <div className="flex items-center space-x-3 mb-6">
         <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
           <i className="ri-dashboard-line text-blue-600" />
@@ -204,8 +158,7 @@ function OverviewTab({ onTabSwitch }) {
           <div>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">오늘의 금융 팁</h3>
             <p className="text-gray-600 leading-relaxed">
-              정기적인 가계부 작성과 투자 포트폴리오 점검을 통해 건전한 재정 관리를 유지하세요.
-              매월 수입과 지출을 분석하여 불필요한 지출을 줄이고 투자 목표를 설정해보세요.
+              정기적인 가계부 작성과 투자 포트폴리오 점검을 통해 건전한 재정 관리를 유지하세요. 매월 수입과 지출을 분석하여 불필요한 지출을 줄이고 투자 목표를 설정해보세요.
             </p>
           </div>
         </div>
@@ -214,122 +167,192 @@ function OverviewTab({ onTabSwitch }) {
   );
 }
 
-/* ===================== Savings Tab (간단 플레이스홀더) ===================== */
-function SavingsTab() {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-3">
-        <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center">
-          <i className="ri-piggy-bank-line text-pink-600" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800">예·적금 상세</h2>
-      </div>
-      <p className="text-gray-600">예·적금 상세 화면 구성 예정입니다.</p>
-    </div>
-  );
-}
-
-/* ===================== Profile Tab ===================== */
+/* ======================= 프로필 탭 (직업 멀티선택 + 직접입력) ======================= */
 function ProfileTab({ initialData }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [gender, setGender] = useState(initialData?.cgenderCd || null);
-
+  const [isEditing, setIsEditing] = useState(false); // 상단 "편집/저장" 버튼
+  const [occupationEditing, setOccupationEditing] = useState(false); // 직업 섹션 개별 편집
   const [isTermsPopupOpen, setIsTermsPopupOpen] = useState(false);
+
+  // 직업 옵션
+  const OCC_OPTIONS = [
+    "학생",
+    "회사원",
+    "공무원",
+    "자영업",
+    "프리랜서",
+    "전문직",
+    "무직",
+    "군인",
+    "연구원",
+    "서비스직",
+  ];
+
+  // 기본 프로필
+  const [gender, setGender] = useState(
+    (initialData?.cgenderCd || "").toString().toLowerCase() || null
+  );
   const [profileData, setProfileData] = useState({
-    name: '',
-    enname: '',
-    email: '',
-    phone: '',
-    address: '',
-    birthDate: '',
-    occupation: '정보 없음',
-    gender: '',
-    marketing: 'N',
-    pinnum: '',
+    name: "",
+    enname: "",
+    email: "",
+    phone: "",
+    address: "",
+    birthDate: "",
+    gender: "",
+    marketing: "",
+    pinnum: "",
+    loginty: "",
+    naverid: "",
   });
 
-  useEffect(() => {
-    if (initialData && (initialData.cnameKr || initialData.cnamekr)) {
-      const nameKey       = initialData.cnameKr ?? initialData.cnamekr;
-      const ennameKey     = initialData.cnameEn ?? initialData.cnameen;
-      const emailKey      = initialData.cemail;
-      const phoneKey      = initialData.cphoneMobile ?? initialData.cphonemobile;
-      const birthKey      = initialData.cbirthDt ?? initialData.cbirthdt;
-      const marketingKey  = initialData.cagreeMarketing ?? initialData.cagreemarketing ?? 'N';
-      const addressKey    = initialData.caddress;
-      const pinnumKey     = initialData.cpinnumber;
+  // 직업 상태
+  const [occupationNone, setOccupationNone] = useState(false);
+  const [occSelected, setOccSelected] = useState([]); // 체크박스 선택
+  const [occCustomOn, setOccCustomOn] = useState(false); // 직접입력 토글
+  const [occCustom, setOccCustom] = useState(""); // 직접입력 값
 
-      setProfileData({
-        name: nameKey || '',
-        enname: ennameKey || '',
-        email: emailKey || '',
-        phone: phoneKey || '',
-        birthDate: birthKey ? String(birthKey).split('T')[0] : '',
-        gender: initialData?.cgenderCd || '',
-        address: addressKey || '',
-        occupation: '정보 없음',
-        marketing: marketingKey === 'Y' ? 'Y' : 'N',
-        pinnum: pinnumKey || '',
-      });
-      setGender(initialData?.cgenderCd || '');
-    } else {
-      // 아직 데이터 로딩 중
-    }
+  // 초기 로드
+  useEffect(() => {
+    if (!initialData) return;
+
+    const nameKr = initialData.cnameKr ?? initialData.cnamekr ?? "";
+    const enName =
+      initialData.cnameEn ??
+      initialData.c_name_en ??
+      initialData.c_nameEn ??
+      initialData.enName ??
+      "";
+
+    const birthRaw = initialData.cbirthDt ?? initialData.cBirthDt ?? "";
+    const birth = birthRaw ? String(birthRaw).split("T")[0] : "";
+
+    setProfileData((prev) => ({
+      ...prev,
+      name: nameKr,
+      enname: enName,
+      email: initialData.email ?? "",
+      phone: initialData.cphoneMobile ?? initialData.phone ?? "",
+      birthDate: birth,
+      gender: initialData?.cgenderCd || null,
+      address: initialData.caddress ?? initialData.address ?? "",
+      marketing: initialData.cagreeMarketing ?? initialData.marketing ?? "N",
+      pinnum: initialData.cpinnumber ?? null,
+      loginty: initialData.loginType ?? "",
+      naverid: initialData.naverid ?? null,
+    }));
+
+    // 서버에 저장돼 있던 직업 문자열 → 배열
+    const fromServerOccStr =
+      initialData.coccupation ??
+      initialData.c_occupation ??
+      initialData.occupation ??
+      initialData.job ??
+      "";
+    const parsedOcc = fromServerOccStr
+      ? fromServerOccStr.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+
+    const inOptions = parsedOcc.filter((x) => OCC_OPTIONS.includes(x));
+    const outOptions = parsedOcc.filter((x) => !OCC_OPTIONS.includes(x));
+
+    setOccSelected(inOptions);
+    setOccCustom(outOptions.join(", "));
+    setOccCustomOn(outOptions.length > 0);
+    setOccupationNone(parsedOcc.length === 0);
   }, [initialData]);
 
-  const handleMarketingToggle = (event) => {
-    const isChecked = event.target.checked;
-    const newValue = isChecked ? 'Y' : 'N';
-    setProfileData(prev => ({ ...prev, marketing: newValue }));
+  const handleMarketingToggle = (e) =>
+    setProfileData((p) => ({ ...p, marketing: e.target.checked ? "Y" : "N" }));
+
+  const handleGenderChange = (e) => {
+    const v = e.target.value;
+    setGender(v);
+    setProfileData((p) => ({ ...p, gender: v }));
   };
 
-  const handleGenderChange = (event) => {
-    const newGenderValue = event.target.value; // 'm' | 'f'
-    setGender(newGenderValue);
-    setProfileData(prev => ({ ...prev, gender: newGenderValue }));
+  // 직업 체크박스 토글
+  const toggleOcc = (label) => {
+     // 다른 옵션을 누르면 자동으로 '미입력' 해제
+     setOccupationNone(false);
+     setOccSelected((prev) =>
+       prev.includes(label) ? prev.filter((x) => x !== label) : [...prev, label]
+     );
+   };
+
+  // 서버 전송용 직업 문자열
+  const buildOccString = () => {
+    if (occupationNone) return "";
+    const parts = [
+      ...occSelected,
+      ...(occCustomOn && occCustom.trim()
+        ? occCustom.split(",").map((s) => s.trim()).filter(Boolean)
+        : []),
+    ];
+    return [...new Set(parts)].join(", ");
   };
 
-  const mockTerms = `
-제 1조 (목적)
-본 약관은 [회사명]이 제공하는 이벤트, 할인 정보, 신제품 소식 등의 마케팅 정보를 고객에게 제공하는 조건 및 절차에 관한 사항을 규정함을 목적으로 합니다.
+  // 업데이트 DTO
+  const buildUpdateDto = (patch) => ({ ...initialData, ...patch });
 
-제 2조 (수신 동의)
-1. 고객은 본 동의서를 통해 SMS, 이메일, 앱 푸시 등의 전자적 전송 매체를 통한 정보 수신에 동의할 수 있습니다.
-2. 수신 동의 시, 고객은 마케팅 활용 목적에 필요한 개인정보(이름, 연락처, 이메일 등) 제공에 동의한 것으로 간주합니다.
-
-제 3조 (철회 및 불이익)
-1. 고객은 언제든지 동의를 철회할 수 있으며, 철회 후 즉시 마케팅 정보 발송이 중단됩니다.
-2. 마케팅 정보 수신 동의 여부는 서비스 이용에 영향을 미치지 않습니다.
-  `;
-
+  // 전체 저장
   const handleSave = () => {
-    const updatedDto = {
-      ...initialData,
-      // ★ 백엔드 DTO 키 명세에 맞춰 통일
-      cnameKr: profileData.name,
-      cnameEn: profileData.enname,
-      cemail: profileData.email,
-      cphoneMobile: profileData.phone,
-      cbirthDt: profileData.birthDate,
-      cgenderCd: profileData.gender,
-      cagreeMarketing: profileData.marketing,
-      caddress: profileData.address,
-    };
-
-    updateProfile(updatedDto)
-      .then(res => {
-        console.log("프로필 업데이트 성공:", res.data);
-        alert('프로필 정보가 성공적으로 저장되었습니다.');
-        setIsEditing(false);
+    const occFinal = buildOccString();
+    updateProfile(
+      buildUpdateDto({
+        cnameKr: profileData.name,
+        cnameEn: profileData.enname,
+        c_name_en: profileData.enname,
+        email: profileData.email,
+        cphoneMobile: profileData.phone,
+        cBirthDt: profileData.birthDate,
+        cGenderCd: profileData.gender,
+        cagreeMarketing: profileData.marketing,
+        caddress: profileData.address,
+        cOccupation: occFinal,
+        c_occupation: occFinal,
+        occupation: occFinal,
       })
-      .catch(err => {
-        console.error("프로필 업데이트 실패:", err);
-        alert('프로필 업데이트에 실패했습니다. 다시 시도해 주세요.');
-      });
+    )
+      .then(() => {
+        alert("프로필 정보가 저장되었습니다.");
+        setIsEditing(false);
+        setOccupationEditing(false);
+      })
+      .catch(() => alert("저장 실패. 잠시 후 다시 시도해주세요."));
   };
+
+  // 직업만 저장
+  const handleSaveOccupation = () => {
+    const occFinal = buildOccString();
+    updateProfile(
+      buildUpdateDto({
+        cOccupation: occFinal,
+        c_occupation: occFinal,
+        occupation: occFinal,
+      })
+    )
+      .then(() => {
+        alert("직업이 업데이트되었습니다.");
+        setOccupationEditing(false);
+      })
+      .catch(() => alert("직업 업데이트 실패"));
+  };
+
+  // 보기용 직업 문자열
+  const displayOcc = () => {
+    if (occupationNone || (occSelected.length === 0 && !occCustom.trim()))
+      return "미입력";
+    const customShown =
+      occCustomOn && occCustom.trim() ? occCustom.trim() : "";
+    return [...occSelected, ...(customShown ? [customShown] : [])].join(", ");
+  };
+
+  const mockTerms = `제 1조 (목적)
+[요약 텍스트 생략]`;
 
   return (
     <div className="space-y-6">
+      {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -341,34 +364,33 @@ function ProfileTab({ initialData }) {
           onClick={isEditing ? handleSave : () => setIsEditing(true)}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
             isEditing
-              ? 'bg-green-500 text-white hover:bg-green-600'
-              : 'bg-blue-500 text-white hover:bg-blue-600'
+              ? "bg-green-500 text-white hover:bg-green-600"
+              : "bg-blue-500 text-white hover:bg-blue-600"
           }`}
         >
-          {isEditing ? '저장' : '편집'}
+          {isEditing ? "저장" : "편집"}
         </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        {/* 프로필 사진 섹션 */}
+        {/* 상단 프로필 카드 */}
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center space-x-6">
-            <div className="relative">
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                {profileData.name?.[0] || '?'}
-              </div>
-              {isEditing && (
-                <button className="absolute -bottom-1 -right-1 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
-                  <i className="ri-camera-line text-sm" />
-                </button>
-              )}
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+              {profileData.name?.[0] || "유"}
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-gray-800">{profileData.name || '이름없음'}</h3>
-              <p className="text-gray-600">프리미엄 회원</p>
+              <h3 className="text-xl font-semibold text-gray-800">{profileData.name}</h3>
+              {profileData.naverid != null || profileData.loginty === "NAVER" ? (
+                <p className="text-gray-600">통합아이디 로그인 중</p>
+              ) : (
+                <p className="text-gray-600">이음은행 로그인 중</p>
+              )}
               <div className="flex items-center mt-2">
                 <div className="flex text-yellow-400">
-                  {[...Array(5)].map((_, i) => (<i key={i} className="ri-star-fill text-sm" />))}
+                  {[...Array(5)].map((_, i) => (
+                    <i key={i} className="ri-star-fill text-sm" />
+                  ))}
                 </div>
                 <span className="text-sm text-gray-500 ml-2">등급: VIP</span>
               </div>
@@ -376,7 +398,7 @@ function ProfileTab({ initialData }) {
           </div>
         </div>
 
-        {/* 개인정보 섹션 */}
+        {/* 개인정보 */}
         <div className="p-6">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">개인정보</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -387,8 +409,8 @@ function ProfileTab({ initialData }) {
                 <input
                   type="text"
                   value={profileData.name}
-                  onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
                 />
               ) : (
                 <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.name}</div>
@@ -402,8 +424,8 @@ function ProfileTab({ initialData }) {
                 <input
                   type="email"
                   value={profileData.email}
-                  onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
                 />
               ) : (
                 <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.email}</div>
@@ -413,52 +435,39 @@ function ProfileTab({ initialData }) {
             {/* 영문이름 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">영문이름</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileData.enname}
-                  onChange={(e) => setProfileData({ ...profileData, enname: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              ) : (
-                <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.enname}</div>
-              )}
+              <div className="px-3 py-2 bg-gray-50 rounded-lg">
+                {profileData.enname || (
+                  <span className="text-gray-300">외화 계좌 개설시 표시됩니다.</span>
+                )}
+              </div>
             </div>
 
             {/* 성별 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">성별</label>
               <div className="flex space-x-6">
-                <div className="flex items-center">
+                <label className="flex items-center">
                   <input
-                    id="gender-male"
-                    name="gender"
                     type="radio"
                     value="m"
-                    disabled={!isEditing}
-                    checked={gender === 'm'}
+                    checked={gender === "m"}
                     onChange={handleGenderChange}
-                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    disabled
+                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 mr-2"
                   />
-                  <label htmlFor="gender-male" className="ml-3 block text-sm font-medium text-gray-700">
-                    남성
-                  </label>
-                </div>
-                <div className="flex items-center">
+                  남성
+                </label>
+                <label className="flex items-center">
                   <input
-                    id="gender-female"
-                    name="gender"
                     type="radio"
                     value="f"
-                    disabled={!isEditing}
-                    checked={gender === 'f'}
+                    checked={gender === "f"}
                     onChange={handleGenderChange}
-                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    disabled
+                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 mr-2"
                   />
-                  <label htmlFor="gender-female" className="ml-3 block text-sm font-medium text-gray-700">
-                    여성
-                  </label>
-                </div>
+                  여성
+                </label>
               </div>
             </div>
 
@@ -480,16 +489,7 @@ function ProfileTab({ initialData }) {
             {/* 생년월일 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">생년월일</label>
-              {isEditing ? (
-                <input
-                  type="date"
-                  value={profileData.birthDate}
-                  onChange={(e) => setProfileData({ ...profileData, birthDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              ) : (
-                <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.birthDate}</div>
-              )}
+              <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.birthDate}</div>
             </div>
 
             {/* 주소 */}
@@ -507,95 +507,189 @@ function ProfileTab({ initialData }) {
               )}
             </div>
 
-            {/* 직업 */}
+            {/* 직업 섹션 */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">직업</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileData.occupation}
-                  onChange={(e) => setProfileData({ ...profileData, occupation: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">직업</label>
+                {!occupationEditing && (
+                  <button
+                    type="button"
+                    className="text-blue-600 text-sm hover:underline"
+                    onClick={() => setOccupationEditing(true)}
+                  >
+                    수정
+                  </button>
+                )}
+              </div>
+
+              {!occupationEditing ? (
+                <div className="px-3 py-2 bg-gray-50 rounded-lg">{displayOcc()}</div>
               ) : (
-                <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.occupation}</div>
+                <div className="space-y-3 border rounded-lg p-3">
+                  {/* 미입력 */}
+                  <label className="inline-flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={occupationNone}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setOccupationNone(checked);
+                        if (checked) {
+                          setOccSelected([]);
+                          setOccCustom("");
+                          setOccCustomOn(false);
+                        }
+                      }}
+                    />
+                    <span className="text-sm text-gray-700">직업 없음(미입력)</span>
+                  </label>
+
+                  <div className={`${occupationNone ? "opacity-50" : ""}`}>
+                    {/* 멀티 체크박스 */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {OCC_OPTIONS.map((opt) => (
+                        <label key={opt} className="flex items-center space-x-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4"
+                            checked={occSelected.includes(opt)}
+                            onChange={() => toggleOcc(opt)}
+                          />
+                          <span>{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    {/* 직접 입력 */}
+                    <div className="mt-3 space-y-2">
+                      <label className="inline-flex items-center space-x-2 text-sm">
+                        <input
+                           type="checkbox"
+                           className="h-4 w-4"
+                           checked={occCustomOn}
+                           onChange={(e) => {
+                             const on = e.target.checked;
+                             setOccCustomOn(on);
+                             if (on) setOccupationNone(false);
+                           }}
+                         />
+                        <span>직접 입력</span>
+                      </label>
+                      {occCustomOn && (
+                        <input
+                          type="text"
+                          value={occCustom}
+                          onChange={(e) => setOccCustom(e.target.value.slice(0, 80))}
+                          onFocus={() => setOccupationNone(false)}
+                          placeholder="예) 소프트웨어 엔지니어, 디자이너"
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      )}
+                      {occCustomOn && (
+                        <p className="text-xs text-gray-500">
+                          쉼표(,)로 여러 개를 입력할 수 있어요. {(occCustom?.length || 0)}/80
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveOccupation}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
+                    >
+                      저장
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const fromServerOccStr =
+                          initialData.coccupation ??
+                          initialData.c_occupation ??
+                          initialData.occupation ??
+                          initialData.job ??
+                          "";
+                        const parsedOcc = fromServerOccStr
+                          ? fromServerOccStr.split(",").map((s) => s.trim()).filter(Boolean)
+                          : [];
+                        const inOptions = parsedOcc.filter((x) => OCC_OPTIONS.includes(x));
+                        const outOptions = parsedOcc.filter((x) => !OCC_OPTIONS.includes(x));
+                        setOccSelected(inOptions);
+                        setOccCustom(outOptions.join(", "));
+                        setOccCustomOn(outOptions.length > 0);
+                        setOccupationNone(parsedOcc.length === 0);
+                        setOccupationEditing(false);
+                      }}
+                      className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* 계정 설정 섹션 */}
+        {/* 마케팅 수신 동의 */}
         <div className="p-6 border-t border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">마케팅 수신 동의</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div
-                className="relative mt-2 p-3 text-right"
-                tabIndex={-1}
-                onBlur={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget)) setIsTermsPopupOpen(false);
-                }}
-              >
-                <span className="text-sm text-gray-700">
-                  ※버튼을 활성화 하시면 마케팅 수신{' '}
-                  <a
-                    className="text-sm text-gray-700 cursor-pointer pb-0.5 hover:text-blue-600 transition-colors"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setIsTermsPopupOpen(prev => !prev)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setIsTermsPopupOpen(prev => !prev);
-                      }
-                    }}
-                    style={{ textDecoration: 'underline' }}
-                  >
-                    약관
-                  </a>
-                  에 동의한 것으로 간주됩니다.
-                  <span className="text-blue-600 font-semibold border-b border-dashed border-blue-400 ml-1">
-                    <br /><small>(약관을 클릭하시면 내용을 보실수 있습니다.)</small>
-                  </span>
-                </span>
+          <div className="flex items-center justify-between">
+            <div
+              className="relative mt-2 p-3 text-right"
+              tabIndex={-1}
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) setIsTermsPopupOpen(false);
+              }}
+            >
+              <span className="text-sm text-gray-700">
+                ※버튼을 활성화 하시면 마케팅 수신{" "}
+                <a
+                  className="text-sm text-gray-700 cursor-pointer pb-0.5 hover:text-blue-600 transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setIsTermsPopupOpen((v) => !v)}
+                  style={{ textDecoration: "underline" }}
+                >
+                  약관
+                </a>
+                에 동의한 것으로 간주됩니다.
+              </span>
 
-                {isTermsPopupOpen && (
-                  <div className="absolute right-0 bottom-full mb-4 w-full max-w-xs sm:max-w-md lg:max-w-lg mx-2 md:mx-0 z-10 bg-white border border-blue-200 rounded-xl shadow-2xl p-4 transition duration-300 ease-in-out transform origin-bottom-right">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="text-base font-semibold text-blue-600">
-                        마케팅 수신 약관 (요약)
-                      </div>
-                      <button
-                        onClick={() => setIsTermsPopupOpen(false)}
-                        className="text-gray-500 hover:text-gray-900 transition-colors p-1 rounded-full hover:bg-gray-100"
-                        aria-label="약관 팝업 닫기"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="text-xs text-gray-700 space-y-2 max-h-48 overflow-y-auto pr-2">
-                      {mockTerms.split('\n\n').map((paragraph, idx) => (
-                        <p key={idx}>{paragraph.trim()}</p>
-                      ))}
-                    </div>
-                    <div className="absolute right-3 -bottom-2 w-4 h-4 bg-white border-b border-r border-blue-200 transform rotate-45" />
+              {isTermsPopupOpen && (
+                <div className="absolute right-0 bottom-full mb-4 w-full max-w-xs sm:max-w-md lg:max-w-lg z-10 bg-white border border-blue-200 rounded-xl shadow-2xl p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-base font-semibold text-blue-600">마케팅 수신 약관 (요약)</div>
+                    <button
+                      onClick={() => setIsTermsPopupOpen(false)}
+                      className="text-gray-500 hover:text-gray-900 transition-colors p-1 rounded-full hover:bg-gray-100"
+                      aria-label="약관 팝업 닫기"
+                    >
+                      <i className="ri-close-line" />
+                    </button>
                   </div>
-                )}
-              </div>
-
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={profileData.marketing === 'Y'}
-                  disabled={!isEditing}
-                  onChange={handleMarketingToggle}
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600" />
-              </label>
+                  <div className="text-xs text-gray-700 space-y-2 max-h-48 overflow-y-auto pr-2">
+                    {mockTerms.split("\n\n").map((paragraph, index) => (
+                      <p key={index}>{paragraph.trim()}</p>
+                    ))}
+                  </div>
+                  <div className="absolute right-3 -bottom-2 w-4 h-4 bg-white border-b border-r border-blue-200 transform rotate-45" />
+                </div>
+              )}
             </div>
+
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={profileData.marketing === "Y"}
+                disabled={!isEditing}
+                onChange={handleMarketingToggle}
+              />
+              <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:h-5 after:w-5 after:rounded-full after:transition-all peer-checked:after:translate-x-full" />
+            </label>
           </div>
         </div>
       </div>
@@ -603,7 +697,7 @@ function ProfileTab({ initialData }) {
   );
 }
 
-/* ===================== Security Tab ===================== */
+/* ======================= 보안 탭 ======================= */
 function SecurityTab() {
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -638,7 +732,7 @@ function SecurityTab() {
         </div>
       </div>
 
-      {/* OTP */}
+      {/* OTP 설정 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-smartphone-line text-blue-600 mr-2" />
@@ -694,6 +788,61 @@ function SecurityTab() {
         </div>
       </div>
 
+      {/* 로그인 기록 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+          <i className="ri-history-line text-indigo-600 mr-2" />
+          최근 로그인 기록
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <i className="ri-computer-line text-green-600 text-sm" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">웹 브라우저</p>
+                <p className="text-xs text-gray-500">Chrome - Windows</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-800">2024.01.20 14:30</p>
+              <p className="text-xs text-green-600">현재 세션</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <i className="ri-smartphone-line text-blue-600 text-sm" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">모바일 앱</p>
+                <p className="text-xs text-gray-500">iOS App</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-800">2024.01.20 09:15</p>
+              <p className="text-xs text-gray-500">서울시 강남구</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                <i className="ri-computer-line text-orange-600 text-sm" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">웹 브라우저</p>
+                <p className="text-xs text-gray-500">Safari - macOS</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-800">2024.01.19 22:45</p>
+              <p className="text-xs text-gray-500">서울시 강남구</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* OTP 모달 */}
       {showOTPModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -726,15 +875,24 @@ function SecurityTab() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">현재 비밀번호</label>
-                <input type="password" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <input
+                  type="password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
-                <input type="password" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <input
+                  type="password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">새 비밀번호 확인</label>
-                <input type="password" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <input
+                  type="password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
             </div>
             <div className="flex space-x-3 mt-6">
@@ -758,16 +916,16 @@ function SecurityTab() {
   );
 }
 
-/* ===================== Limit Tab ===================== */
+/* ======================= 한도 탭 ======================= */
 function LimitTab() {
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedLimit, setSelectedLimit] = useState('');
+  const [selectedLimit, setSelectedLimit] = useState("");
 
   const limits = [
-    { type: '일일 이체한도', current: '500만원',  max: '1,000만원', icon: 'ri-exchange-line', color: 'blue' },
-    { type: '월간 이체한도', current: '3,000만원', max: '5,000만원',  icon: 'ri-calendar-line', color: 'green' },
-    { type: '카드 결제한도', current: '300만원',  max: '500만원',  icon: 'ri-bank-card-line', color: 'purple' },
-    { type: '해외송금 한도', current: '$5,000',  max: '$10,000', icon: 'ri-global-line', color: 'orange' }
+    { type: "일일 이체한도", current: "500만원", max: "1,000만원", icon: "ri-exchange-line", color: "blue" },
+    { type: "월간 이체한도", current: "3,000만원", max: "5,000만원", icon: "ri-calendar-line", color: "green" },
+    { type: "카드 결제한도", current: "300만원", max: "500만원", icon: "ri-bank-card-line", color: "purple" },
+    { type: "해외송금 한도", current: "$5,000", max: "$10,000", icon: "ri-global-line", color: "orange" },
   ];
 
   const handleEditLimit = (limitType) => {
@@ -789,9 +947,8 @@ function LimitTab() {
           <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
-                {/* 동적 색상은 Tailwind safelist 필요할 수 있음 */}
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-gray-100`}>
-                  <i className={`${limit.icon} text-gray-700`} />
+                <div className={`w-10 h-10 bg-${limit.color}-100 rounded-lg flex items-center justify-center`}>
+                  <i className={`${limit.icon} text-${limit.color}-600`} />
                 </div>
                 <h3 className="font-semibold text-gray-800">{limit.type}</h3>
               </div>
@@ -819,7 +976,7 @@ function LimitTab() {
                   <span>60%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className="h-2 bg-gray-600 rounded-full" style={{ width: '60%' }} />
+                  <div className={`h-2 bg-${limit.color}-500 rounded-full`} style={{ width: "60%" }} />
                 </div>
               </div>
             </div>
@@ -827,7 +984,7 @@ function LimitTab() {
         ))}
       </div>
 
-      {/* 변경 내역 (예시) */}
+      {/* 변경 내역 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-history-line text-indigo-600 mr-2" />
@@ -849,10 +1006,42 @@ function LimitTab() {
               <p className="text-xs text-green-600">승인완료</p>
             </div>
           </div>
+
+          <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                <i className="ri-bank-card-line text-purple-600 text-sm" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">카드 결제한도 변경</p>
+                <p className="text-xs text-gray-500">200만원 → 300만원</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-800">2024.01.10</p>
+              <p className="text-xs text-green-600">승인완료</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                <i className="ri-global-line text-orange-600 text-sm" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">해외송금 한도 신청</p>
+                <p className="text-xs text-gray-500">$3,000 → $5,000</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-800">2024.01.05</p>
+              <p className="text-xs text-orange-600">심사중</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 수정 모달 */}
+      {/* 모달 */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
@@ -904,25 +1093,25 @@ function LimitTab() {
   );
 }
 
-/* ===================== Document Tab ===================== */
+/* ======================= 증빙서류 탭 ======================= */
 function DocumentTab() {
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedDocType, setSelectedDocType] = useState('');
+  const [selectedDocType, setSelectedDocType] = useState("");
 
   const documents = [
-    { type: '신분증', name: '주민등록증_조원빈.pdf', uploadDate: '2024.01.15', status: '승인완료', icon: 'ri-id-card-line', color: 'green' },
-    { type: '소득증명서', name: '근로소득원천징수영수증_2023.pdf', uploadDate: '2024.01.10', status: '승인완료', icon: 'ri-file-text-line', color: 'blue' },
-    { type: '재직증명서', name: '재직증명서_테크컴퍼니.pdf', uploadDate: '2024.01.08', status: '심사중', icon: 'ri-building-line', color: 'orange' },
-    { type: '통장사본', name: '통장사본_하나은행.pdf', uploadDate: '2024.01.05', status: '승인완료', icon: 'ri-bank-line', color: 'purple' }
+    { type: "신분증", name: "주민등록증_조원빈.pdf", uploadDate: "2024.01.15", status: "승인완료", icon: "ri-id-card-line", color: "green" },
+    { type: "소득증명서", name: "근로소득원천징수영수증_2023.pdf", uploadDate: "2024.01.10", status: "승인완료", icon: "ri-file-text-line", color: "blue" },
+    { type: "재직증명서", name: "재직증명서_테크컴퍼니.pdf", uploadDate: "2024.01.08", status: "심사중", icon: "ri-building-line", color: "orange" },
+    { type: "통장사본", name: "통장사본_하나은행.pdf", uploadDate: "2024.01.05", status: "승인완료", icon: "ri-bank-line", color: "purple" },
   ];
 
   const requiredDocs = [
-    { type: '신분증', required: true, submitted: true },
-    { type: '소득증명서', required: true, submitted: true },
-    { type: '재직증명서', required: true, submitted: true },
-    { type: '통장사본', required: true, submitted: true },
-    { type: '거주지 확인서', required: false, submitted: false },
-    { type: '사업자등록증', required: false, submitted: false }
+    { type: "신분증", required: true, submitted: true },
+    { type: "소득증명서", required: true, submitted: true },
+    { type: "재직증명서", required: true, submitted: true },
+    { type: "통장사본", required: true, submitted: true },
+    { type: "거주지 확인서", required: false, submitted: false },
+    { type: "사업자등록증", required: false, submitted: false },
   ];
 
   const handleUpload = (docType) => {
@@ -939,7 +1128,7 @@ function DocumentTab() {
         <h2 className="text-2xl font-bold text-gray-800">증빙 서류</h2>
       </div>
 
-      {/* 제출 현황 */}
+      {/* 서류 제출 현황 */}
       <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -958,7 +1147,7 @@ function DocumentTab() {
         </div>
       </div>
 
-      {/* 제출된 서류 */}
+      {/* 제출된 서류 목록 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -971,8 +1160,8 @@ function DocumentTab() {
             <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <i className={`${doc.icon} text-gray-700`} />
+                  <div className={`w-10 h-10 bg-${doc.color}-100 rounded-lg flex items-center justify-center`}>
+                    <i className={`${doc.icon} text-${doc.color}-600`} />
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-800">{doc.type}</h4>
@@ -981,11 +1170,15 @@ function DocumentTab() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    doc.status === '승인완료' ? 'bg-green-100 text-green-800'
-                      : doc.status === '심사중' ? 'bg-orange-100 text-orange-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full ${
+                      doc.status === "승인완료"
+                        ? "bg-green-100 text-green-800"
+                        : doc.status === "심사중"
+                        ? "bg-orange-100 text-orange-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
                     {doc.status}
                   </span>
                   <button className="text-blue-600 hover:text-blue-700 text-sm">
@@ -1011,8 +1204,12 @@ function DocumentTab() {
           {requiredDocs.map((doc, index) => (
             <div key={index} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
               <div className="flex items-center space-x-3">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${doc.submitted ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                  <i className={doc.submitted ? 'ri-check-line' : 'ri-time-line'} style={{ fontSize: 12 }} />
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    doc.submitted ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
+                  }`}
+                >
+                  <i className={doc.submitted ? "ri-check-line" : "ri-time-line"} style={{ fontSize: "12px" }} />
                 </div>
                 <div>
                   <span className="text-sm font-medium text-gray-800">{doc.type}</span>
@@ -1032,6 +1229,25 @@ function DocumentTab() {
         </div>
       </div>
 
+      {/* 안내 */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6">
+        <div className="flex items-start space-x-4">
+          <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <i className="ri-information-line text-amber-600 text-xl" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">서류 업로드 안내</h3>
+            <ul className="text-gray-600 space-y-1 text-sm">
+              <li>• 파일 형식: PDF, JPG, PNG (파일 크기 10MB 이하)</li>
+              <li>• 글씨가 선명하고 네 모서리가 모두 보이도록 촬영해주세요</li>
+              <li>• 신분증의 경우 주민등록번호 뒷자리는 가려주세요</li>
+              <li>• 서류 심사는 영업일 기준 1-2일 소요됩니다</li>
+              <li>• 서류에 문제가 있을 경우 재제출을 요청드릴 수 있습니다</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* 업로드 모달 */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1045,9 +1261,7 @@ function DocumentTab() {
                   파일 선택
                 </button>
               </div>
-              <div className="text-xs text-gray-500 text-center">
-                지원 형식: PDF, JPG, PNG (최대 10MB)
-              </div>
+              <div className="text-xs text-gray-500 text-center">지원 형식: PDF, JPG, PNG (최대 10MB)</div>
             </div>
             <div className="flex space-x-3 mt-6">
               <button
@@ -1070,32 +1284,32 @@ function DocumentTab() {
   );
 }
 
-/* ===================== Tax Tab ===================== */
+/* ======================= 세금/공과금 탭 ======================= */
 function TaxTab() {
-  const [selectedYear, setSelectedYear] = useState('2024');
+  const [selectedYear, setSelectedYear] = useState("2024");
   const [showCalculator, setShowCalculator] = useState(false);
 
   const taxData = [
-    { type: '소득세', amount: '1,250,000', status: '납부완료', dueDate: '2024.05.31', icon: 'ri-money-dollar-circle-line', color: 'green' },
-    { type: '지방소득세', amount: '125,000', status: '납부완료', dueDate: '2024.05.31', icon: 'ri-building-line', color: 'blue' },
-    { type: '주민세', amount: '100,000', status: '납부예정', dueDate: '2024.08.31', icon: 'ri-home-line', color: 'orange' },
-    { type: '재산세', amount: '450,000', status: '납부완료', dueDate: '2024.07.16', icon: 'ri-building-2-line', color: 'purple' }
+    { type: "소득세", amount: "1,250,000", status: "납부완료", dueDate: "2024.05.31", icon: "ri-money-dollar-circle-line", color: "green" },
+    { type: "지방소득세", amount: "125,000", status: "납부완료", dueDate: "2024.05.31", icon: "ri-building-line", color: "blue" },
+    { type: "주민세", amount: "100,000", status: "납부예정", dueDate: "2024.08.31", icon: "ri-home-line", color: "orange" },
+    { type: "재산세", amount: "450,000", status: "납부완료", dueDate: "2024.07.16", icon: "ri-building-2-line", color: "purple" },
   ];
 
   const publicBills = [
-    { type: '전기요금', amount: '85,400', month: '2024년 1월', status: '납부완료', icon: 'ri-flashlight-line', color: 'yellow' },
-    { type: '가스요금', amount: '127,500', month: '2024년 1월', status: '납부완료', icon: 'ri-fire-line', color: 'red' },
-    { type: '수도요금', amount: '42,300', month: '2024년 1월', status: '납부완료', icon: 'ri-drop-line', color: 'blue' },
-    { type: '통신요금', amount: '89,000', month: '2024년 1월', status: '미납부', icon: 'ri-smartphone-line', color: 'purple' }
+    { type: "전기요금", amount: "85,400", month: "2024년 1월", status: "납부완료", icon: "ri-flashlight-line", color: "yellow" },
+    { type: "가스요금", amount: "127,500", month: "2024년 1월", status: "납부완료", icon: "ri-fire-line", color: "red" },
+    { type: "수도요금", amount: "42,300", month: "2024년 1월", status: "납부완료", icon: "ri-drop-line", color: "blue" },
+    { type: "통신요금", amount: "89,000", month: "2024년 1월", status: "미납부", icon: "ri-smartphone-line", color: "purple" },
   ];
 
   const deductions = [
-    { category: '건강보험료', amount: '180,000', rate: '15%' },
-    { category: '국민연금',   amount: '540,000', rate: '30%' },
-    { category: '신용카드',   amount: '1,200,000', rate: '10%' },
-    { category: '교육비',     amount: '450,000', rate: '20%' },
-    { category: '의료비',     amount: '320,000', rate: '18%' },
-    { category: '기부금',     amount: '200,000', rate: '12%' }
+    { category: "건강보험료", amount: "180,000", rate: "15%" },
+    { category: "국민연금", amount: "540,000", rate: "30%" },
+    { category: "신용카드", amount: "1,200,000", rate: "10%" },
+    { category: "교육비", amount: "450,000", rate: "20%" },
+    { category: "의료비", amount: "320,000", rate: "18%" },
+    { category: "기부금", amount: "200,000", rate: "12%" },
   ];
 
   return (
@@ -1126,7 +1340,6 @@ function TaxTab() {
         </div>
       </div>
 
-      {/* 연간 요약 */}
       <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">2024년 세금 요약</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1162,8 +1375,8 @@ function TaxTab() {
             <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <i className={`${tax.icon} text-gray-700`} />
+                  <div className={`w-10 h-10 bg-${tax.color}-100 rounded-lg flex items-center justify-center`}>
+                    <i className={`${tax.icon} text-${tax.color}-600`} />
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-800">{tax.type}</h4>
@@ -1172,9 +1385,11 @@ function TaxTab() {
                 </div>
                 <div className="text-right">
                   <div className="font-semibold text-gray-800">₩{tax.amount}</div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    tax.status === '납부완료' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full ${
+                      tax.status === "납부완료" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"
+                    }`}
+                  >
                     {tax.status}
                   </span>
                 </div>
@@ -1184,7 +1399,7 @@ function TaxTab() {
         </div>
       </div>
 
-      {/* 공과금 */}
+      {/* 공과금 납부 현황 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100">
           <h3 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -1197,8 +1412,8 @@ function TaxTab() {
             <div key={index} className="border border-gray-100 rounded-lg p-4 hover:shadow-sm transition-shadow">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <i className={`${bill.icon} text-gray-700 text-sm`} />
+                  <div className={`w-8 h-8 bg-${bill.color}-100 rounded-lg flex items-center justify-center`}>
+                    <i className={`${bill.icon} text-${bill.color}-600 text-sm`} />
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-800">{bill.type}</h4>
@@ -1207,9 +1422,11 @@ function TaxTab() {
                 </div>
                 <div className="text-right">
                   <div className="font-semibold text-gray-800">₩{bill.amount}</div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    bill.status === '납부완료' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full ${
+                      bill.status === "납부완료" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                    }`}
+                  >
                     {bill.status}
                   </span>
                 </div>
@@ -1219,7 +1436,7 @@ function TaxTab() {
         </div>
       </div>
 
-      {/* 소득공제 */}
+      {/* 소득공제 현황 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-discount-percent-line text-purple-600 mr-2" />
@@ -1230,9 +1447,7 @@ function TaxTab() {
             <div key={index} className="border border-gray-100 rounded-lg p-4">
               <div className="flex justify-between items-center mb-2">
                 <span className="font-medium text-gray-800">{deduction.category}</span>
-                <span className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                  {deduction.rate}
-                </span>
+                <span className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded-full">{deduction.rate}</span>
               </div>
               <div className="text-lg font-semibold text-gray-800">₩{deduction.amount}</div>
               <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
@@ -1243,16 +1458,13 @@ function TaxTab() {
         </div>
       </div>
 
-      {/* 계산기 모달 */}
+      {/* 세금 계산기 모달 */}
       {showCalculator && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">간단 세금 계산기</h3>
-              <button
-                onClick={() => setShowCalculator(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
+              <button onClick={() => setShowCalculator(false)} className="text-gray-400 hover:text-gray-600">
                 <i className="ri-close-line text-xl" />
               </button>
             </div>
@@ -1314,10 +1526,10 @@ function TaxTab() {
   );
 }
 
-/* ===================== Sidebar ===================== */
+/* ======================= 사이드바 ======================= */
 function Sidebar({ customerName, customerPhone }) {
   return (
-    <aside className="w-80 bg-gray-50 border-l border-gray-200 p-6">
+    <aside className="w-72 bg-gray-50 border-l border-gray-200 p-6">
       <div className="space-y-6">
         {/* 회원 확인 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -1346,9 +1558,11 @@ function Sidebar({ customerName, customerPhone }) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">핀번호 등록</span>
-              {customerPhone !== null
-                ? <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">완료</span>
-                : <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full">미등록</span>}
+              {customerPhone !== null ? (
+                <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">완료</span>
+              ) : (
+                <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded-full">미등록</span>
+              )}
             </div>
           </div>
         </div>
@@ -1390,7 +1604,7 @@ function Sidebar({ customerName, customerPhone }) {
             </div>
             <button
               onClick={() => {
-                const widget = document.querySelector('#vapi-widget-floating-button');
+                const widget = document.querySelector("#vapi-widget-floating-button");
                 if (widget) widget.click();
               }}
               className="w-full mt-3 bg-teal-500 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-teal-600 transition-colors whitespace-nowrap"
@@ -1406,78 +1620,51 @@ function Sidebar({ customerName, customerPhone }) {
             <i className="ri-time-line text-purple-600 mr-2" />
             최근 활동
           </h3>
-          <div className="space-y-2">
-            <div className="text-xs text-gray-500 border-l-2 border-blue-200 pl-2">
-              <div>계좌 조회</div>
-              <div className="text-gray-400">2분 전</div>
-            </div>
-            <div className="text-xs text-gray-500 border-l-2 border-green-200 pl-2">
-              <div>이체 실행</div>
-              <div className="text-gray-400">15분 전</div>
-            </div>
-            <div className="text-xs text-gray-500 border-l-2 border-orange-200 pl-2">
-              <div>보안 설정 변경</div>
-              <div className="text-gray-400">1시간 전</div>
-            </div>
-          </div>
         </div>
       </div>
     </aside>
   );
 }
 
-/* ===================== MyPage Root ===================== */
+/* ======================= MyPage ======================= */
 function MyPage() {
   const [customerProfile, setCustomerProfile] = useState({});
-  const [customerName, setCustomerName] = useState('이름없음');
-  const [customerPhone, setCustomerPhone] = useState('로딩 중...');
-  const [activeTab, setActiveTab] = useState('overview');
+  const [customerName, setCustomerName] = useState("이름없음");
+  const [customerPhone, setCustomerPhone] = useState("로딩 중...");
+  const [activeTab, setActiveTab] = useState("overview");
 
   const goToTab = (tabName) => setActiveTab(tabName);
 
   useEffect(() => {
     testmypage()
-      .then(res => {
+      .then((res) => {
         const customerData = res.data;
         setCustomerProfile(customerData);
-
         const fetchedName = customerData?.cnameKr;
         if (fetchedName) setCustomerName(fetchedName);
-        else {
-          console.error("DTO에서 cnameKr 필드를 찾을 수 없거나 값이 비어있습니다.");
-          setCustomerName('데이터 오류');
-        }
-
-        const fetchedPin = customerData?.cpinnumber;
-        if (fetchedPin) {
-          setCustomerPhone(fetchedPin);
-          console.log(customerData.cpinnumber);
-        } else {
-          console.warn("DTO에서 cpinnumber 필드를 찾을 수 없거나 값이 비어있습니다.");
-          setCustomerPhone(null);
-        }
+        else setCustomerName("데이터 오류");
+        const fetchedPhone = customerData?.cpinnumber;
+        setCustomerPhone(fetchedPhone ? fetchedPhone : null);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error("API 호출 중 예외 발생:", error);
-        setCustomerName('통신 오류');
+        setCustomerName("통신 오류");
       });
   }, []);
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'overview':
+      case "overview":
         return <OverviewTab onTabSwitch={goToTab} />;
-      case 'savings':
-        return <SavingsTab />;
-      case 'profile':
+      case "profile":
         return <ProfileTab initialData={customerProfile} />;
-      case 'security':
+      case "security":
         return <SecurityTab />;
-      case 'limit':
+      case "limit":
         return <LimitTab />;
-      case 'document':
+      case "document":
         return <DocumentTab />;
-      case 'tax':
+      case "tax":
         return <TaxTab />;
       default:
         return <OverviewTab onTabSwitch={goToTab} />;
@@ -1486,13 +1673,11 @@ function MyPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50">
-      <div className="container mx-auto px-38 py-10">
+      <div className="mx-auto max-w-[1100px] px-4 py-10">
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
           <div className="flex">
-            <div className="flex-1 p-6">
-              {renderTabContent()}
-            </div>
+            <div className="flex-1 p-6">{renderTabContent()}</div>
             <Sidebar customerName={customerName} customerPhone={customerPhone} />
           </div>
         </div>

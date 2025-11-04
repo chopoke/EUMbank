@@ -1,10 +1,8 @@
 package com.boot.eumbank.mypage.controller;
 
 import com.boot.eumbank.customer.entity.Customer;
-import com.boot.eumbank.mypage.dto.MypageSummaryDto;
 import com.boot.eumbank.mypage.entity.MypageCustomer;
 import com.boot.eumbank.mypage.service.MypageServiceImpl;
-import com.boot.eumbank.mypage.service.MypageSummaryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,8 +20,6 @@ public class MypageController {
     @Autowired
     private MypageServiceImpl service;
 
-    @Autowired
-    private MypageSummaryService summaryService;
 
     /* =========================
        1) 마이페이지 기본 조회
@@ -80,33 +76,7 @@ public class MypageController {
         }
     }
 
-    /* =========================
-       3) 마이페이지 요약
-          프론트는 나중에 /api/mypage/summary로 갈아타면 됨
-       ========================= */
-    @GetMapping("/mypage/summary")
-    public ResponseEntity<MypageSummaryDto> summary(@RequestParam(value = "cNo", required = false) Integer cNo) {
-        Integer customerNo = (cNo != null) ? cNo : currentCustomerNoOrNull();
-        if (customerNo == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-        MypageSummaryDto dto = summaryService.getSummary(customerNo);
-        return new ResponseEntity<>(dto, HttpStatus.OK);
-    }
-
-    /* =========================
-       4) 호환용 엔드포인트
-          /api/savings/summary 를 계속 지원
-       ========================= */
-    @GetMapping("/savings/summary")
-    public ResponseEntity<MypageSummaryDto> summaryCompat(@RequestParam(value = "cNo", required = false) Integer cNo) {
-        Integer customerNo = (cNo != null) ? cNo : currentCustomerNoOrNull();
-        if (customerNo == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-        }
-        MypageSummaryDto dto = summaryService.getSummary(customerNo);
-        return new ResponseEntity<>(dto, HttpStatus.OK);
-    }
+   
 
     /* =========================
        헬퍼: 현재 로그인 사용자 정보
