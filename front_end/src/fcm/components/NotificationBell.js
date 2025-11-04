@@ -38,12 +38,12 @@ const NotificationBell = () => {
           background: 'none',
           border: 'none',
           cursor: 'pointer',
-          padding: '8px'
+          padding: '4px'
         }}
       >
         <svg
-          width="20"
-          height="20"
+          width="25"
+          height="25"
           viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -63,14 +63,14 @@ const NotificationBell = () => {
             style={{
               position: 'absolute',
               top: '4px',
-              right: '4px',
+              right: '3px',
               backgroundColor: '#ef4444',
               color: 'white',
-              fontSize: '10px',
+              fontSize: '8px',
               fontWeight: 'bold',
               borderRadius: '50%',
-              minWidth: '16px',
-              height: '16px',
+              minWidth: '12px',
+              height: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

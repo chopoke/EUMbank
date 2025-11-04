@@ -27,6 +27,8 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -72,6 +74,11 @@ public class TransferServiceImpl implements TransferService {
         if (!validateAccountOwnership(request.getFromAccountNo(), customer.getCustomerNo())) {
             throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
         }
+
+        // 0-1. 출금 계좌 통화 검증 (원화 계좌만 이체 가능)
+        Account fromAccount = accountRepository.findById(request.getFromAccountNo())
+                .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
+        validateKRWAccount(fromAccount, request.getFromAccountNo().toString());
 
         // 1. 기본 검증
         validateTransferRequest(request);
@@ -140,6 +147,23 @@ public class TransferServiceImpl implements TransferService {
                 throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
             }
 
+            // 0-0. 출금 계좌 통화 검증 (원화 계좌만 이체 가능)
+            Account fromAccountForValidation = accountRepository.findById(request.getAccountNo())
+                    .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
+            validateKRWAccount(fromAccountForValidation, request.getAccountNo().toString());
+
+            // 0-1. 계좌 비밀번호 검증 (예약 이체 등록 시 필수)
+            log.info("0-1. 계좌 비밀번호 검증 시작");
+            if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+                log.error("계좌 비밀번호가 제공되지 않았습니다.");
+                throw new PasswordMismatchException("계좌 비밀번호를 입력해주세요.");
+            }
+            if (!validateAccountPassword(request.getAccountNo(), request.getPassword())) {
+                log.error("계좌 비밀번호가 일치하지 않습니다.");
+                throw new PasswordMismatchException();
+            }
+            log.info("0-1. 계좌 비밀번호 검증 완료");
+
             // 1. 기본 검증
             log.info("1. 기본 검증 시작");
             validateReserveTransferRequest(request);
@@ -183,6 +207,19 @@ public class TransferServiceImpl implements TransferService {
             
             log.info("2-1. 수취 계좌 검증 완료 - 계좌: {}, 상태: {}, 약관동의: {}, 개인정보동의: {}", 
                 toAccount.getAccountNo(), toAccount.getStatus(), toAccount.getAgreeTerms(), toAccount.getAgreePrivacy());
+
+            // 2-1-1. 수취 계좌 통화 검증 (원화 계좌만 이체 가능)
+            log.info("2-1-1. 수취 계좌 통화 검증 시작 - 계좌: {}", toAccount.getAccountNo());
+            validateKRWAccount(toAccount, toAccount.getAccountNo());
+            log.info("2-1-1. 수취 계좌 통화 검증 완료");
+
+            // 2-2. 이체 한도 확인 (예약 이체 등록 시점에 검증)
+            log.info("2-2. 이체 한도 확인 시작 - 계좌: {}, 금액: {}", request.getAccountNo(), request.getAmount());
+            if (!checkTransferLimit(request.getAccountNo(), request.getAmount())) {
+                log.error("이체 한도 초과 - 계좌: {}, 금액: {}", request.getAccountNo(), request.getAmount());
+                throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), request.getAmount());
+            }
+            log.info("2-2. 이체 한도 확인 완료");
 
             // 3. 예약 이체 엔티티 생성
             log.info("3. 예약 이체 엔티티 생성 시작");
@@ -256,6 +293,241 @@ public class TransferServiceImpl implements TransferService {
         }
     }
 
+    /**
+     * [자동이체 등록]
+     * - 매월 지정일에 반복 실행되는 예약이체를 여러개 등록
+     * - 각 월별로 별도의 예약이체(ONCE 타입) 생성
+     */
+    @Override
+    @Transactional
+    public AutoTransferResponseDto createAutoTransfer(AutoTransferRequestDto request) {
+        log.info("=== TransferServiceImpl.createAutoTransfer 시작 ===");
+        log.info("요청 데이터 상세: {}", request);
+        log.info("자동이체 등록 시작 - 출금계좌: {}, 수취계좌: {}, 1회당 금액: {}, 시작: {}-{}, 매월: {}일, 횟수: {}회", 
+                request.getFromAccountNo(), request.getDestAccountNo(), request.getAmount(), 
+                request.getStartYear(), request.getStartMonth(), request.getDayOfMonth(), request.getRepeatCount());
+
+        try {
+            // === 0. JWT 토큰에서 고객 정보 추출 및 계좌 소유자 검증 ===
+            Customer customer = (Customer) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (customer == null) {
+                throw new UnauthorizedException("인증이 필요합니다.");
+            }
+            
+            // 계좌 소유자 검증 (최우선)
+            if (!validateAccountOwnership(request.getFromAccountNo(), customer.getCustomerNo())) {
+                throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
+            }
+
+            // === 0-1. 입력 검증 ===
+            log.info("0-1. 입력 검증 시작");
+            validateAutoTransferRequest(request);
+            log.info("0-1. 입력 검증 완료");
+
+            // === 0-2. 출금 계좌 통화 검증 (원화 계좌만 이체 가능) ===
+            Account fromAccountForValidation = accountRepository.findById(request.getFromAccountNo())
+                    .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
+            validateKRWAccount(fromAccountForValidation, request.getFromAccountNo().toString());
+
+            // === 0-3. 계좌 비밀번호 검증 (자동이체 등록 시 필수) ===
+            log.info("0-3. 계좌 비밀번호 검증 시작");
+            if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+                log.error("계좌 비밀번호가 제공되지 않았습니다.");
+                throw new PasswordMismatchException("계좌 비밀번호를 입력해주세요.");
+            }
+            if (!validateAccountPassword(request.getFromAccountNo(), request.getPassword())) {
+                log.error("계좌 비밀번호가 일치하지 않습니다.");
+                throw new PasswordMismatchException();
+            }
+            log.info("0-3. 계좌 비밀번호 검증 완료");
+
+            // === 0-4. 계좌 상태 확인 ===
+            log.info("0-4. 계좌 상태 확인 시작 - 계좌번호: {}", request.getFromAccountNo());
+            if (!checkAccountStatus(request.getFromAccountNo())) {
+                log.error("계좌 상태 확인 실패 - 계좌가 이체 불가능한 상태입니다.");
+                throw new AccountStatusException("계좌가 이체 불가능한 상태입니다.");
+            }
+            log.info("0-4. 계좌 상태 확인 완료");
+
+            // === 0-5. 수취 계좌 검증 ===
+            log.info("0-5. 수취 계좌 존재 여부 확인 시작 - 계좌번호: {}", request.getDestAccountNo());
+            Optional<Account> toAccountOpt = accountRepository.findByAccountNo(request.getDestAccountNo());
+            if (toAccountOpt.isEmpty()) {
+                log.error("수취 계좌를 찾을 수 없습니다: {}", request.getDestAccountNo());
+                throw new AccountNotFoundException("수취 계좌를 찾을 수 없습니다: " + request.getDestAccountNo());
+            }
+            
+            Account toAccount = toAccountOpt.get();
+            
+            // 계좌 상태 상세 검증
+            if (toAccount.getStatus() == null || !"ACTIVE".equals(toAccount.getStatus())) {
+                log.error("수취 계좌 상태 이상 - 계좌: {}, 상태: {}", toAccount.getAccountNo(), toAccount.getStatus());
+                throw new AccountStatusException("수취 계좌가 거래 불가능한 상태입니다. 상태: " + toAccount.getStatus());
+            }
+            
+            // 약관 동의 검증
+            if (toAccount.getAgreeTerms() == null || !"Y".equals(toAccount.getAgreeTerms())) {
+                log.error("수취 계좌 약관 미동의 - 계좌: {}, 약관동의: {}", toAccount.getAccountNo(), toAccount.getAgreeTerms());
+                throw new AccountStatusException("수취 계좌의 약관에 동의하지 않았습니다.");
+            }
+            
+            // 개인정보 처리방침 동의 검증
+            if (toAccount.getAgreePrivacy() == null || !"Y".equals(toAccount.getAgreePrivacy())) {
+                log.error("수취 계좌 개인정보처리방침 미동의 - 계좌: {}, 개인정보동의: {}", toAccount.getAccountNo(), toAccount.getAgreePrivacy());
+                throw new AccountStatusException("수취 계좌의 개인정보 처리방침에 동의하지 않았습니다.");
+            }
+            
+            // 수취 계좌 통화 검증 (원화 계좌만 이체 가능)
+            log.info("0-5-1. 수취 계좌 통화 검증 시작 - 계좌: {}", toAccount.getAccountNo());
+            validateKRWAccount(toAccount, toAccount.getAccountNo());
+            log.info("0-5-1. 수취 계좌 통화 검증 완료");
+            
+            log.info("0-5. 수취 계좌 검증 완료 - 계좌: {}, 상태: {}, 약관동의: {}, 개인정보동의: {}", 
+                toAccount.getAccountNo(), toAccount.getStatus(), toAccount.getAgreeTerms(), toAccount.getAgreePrivacy());
+
+            // === 1. 날짜 계산 및 검증 ===
+            log.info("1. 날짜 계산 및 검증 시작");
+            List<LocalDate> scheduledDates = calculateScheduledDates(
+                request.getStartYear(), 
+                request.getStartMonth(), 
+                request.getDayOfMonth(), 
+                request.getRepeatCount()
+            );
+            log.info("1. 날짜 계산 완료 - 총 {}개의 예약 날짜 생성", scheduledDates.size());
+
+            // === 2. 각 예약 날짜에 대해 예약이체 등록 ===
+            log.info("2. 예약이체 등록 시작 - 총 {}건", scheduledDates.size());
+            List<Integer> orderIds = new ArrayList<>();
+            LocalDateTime now = LocalDateTime.now();
+            
+            for (int i = 0; i < scheduledDates.size(); i++) {
+                LocalDate scheduledDate = scheduledDates.get(i);
+                
+                // 각 회차마다 이체 한도 확인
+                log.info("2-{}. 이체 한도 확인 시작 - 회차: {}/{}, 날짜: {}", i + 1, i + 1, scheduledDates.size(), scheduledDate);
+                if (!checkTransferLimit(request.getFromAccountNo(), request.getAmount())) {
+                    log.error("이체 한도 초과 - 계좌: {}, 금액: {}, 회차: {}", request.getFromAccountNo(), request.getAmount(), i + 1);
+                    throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), request.getAmount());
+                }
+                
+                // 예약 이체 엔티티 생성
+                Integer orderId = generateOrderId();
+                LocalDateTime scheduledDateTime = scheduledDate.atTime(9, 0); // 매월 지정일 오전 9시
+                
+                TransferOrder transferOrder = TransferOrder.builder()
+                        .to_order_id(orderId)
+                        .a_no(request.getFromAccountNo())
+                        .to_bank_code(request.getBankCode())
+                        .to_dest_account_no(request.getDestAccountNo())
+                        .to_amount(BigDecimal.valueOf(request.getAmount()))
+                        .to_schedule_type("ONCE")  // 각 회차는 일회성
+                        .to_schedule_expr(null)
+                        .to_start_at(scheduledDateTime)
+                        .to_end_at(scheduledDateTime)
+                        .to_status("SCHEDULED")
+                        .to_memo(request.getMemo())
+                        .to_created_at(now)
+                        .build();
+                
+                // 예약 이체 저장
+                TransferOrder savedOrder = transferOrderRepository.save(transferOrder);
+                orderIds.add(savedOrder.getTo_order_id());
+                
+                log.info("2-{}. 예약이체 등록 완료 - 주문ID: {}, 날짜: {}", i + 1, savedOrder.getTo_order_id(), scheduledDate);
+            }
+            
+            log.info("2. 예약이체 등록 완료 - 총 {}건 등록됨", orderIds.size());
+
+            // === 3. 응답 DTO 생성 ===
+            log.info("3. 응답 DTO 생성 시작");
+            LocalDate startDate = scheduledDates.get(0);
+            LocalDate endDate = scheduledDates.get(scheduledDates.size() - 1);
+            Long totalAmount = request.getAmount() * request.getRepeatCount();
+            
+            AutoTransferResponseDto response = AutoTransferResponseDto.builder()
+                    .totalAmount(totalAmount)
+                    .startDate(startDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+                    .endDate(endDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")))
+                    .registeredCount(orderIds.size())
+                    .orderIds(orderIds)
+                    .success(true)
+                    .message(String.format("자동이체가 등록되었습니다. (%d건)", orderIds.size()))
+                    .build();
+            
+            log.info("3. 응답 DTO 생성 완료: {}", response);
+            log.info("=== TransferServiceImpl.createAutoTransfer 성공 완료 ===");
+            
+            return response;
+            
+        } catch (Exception e) {
+            log.error("=== TransferServiceImpl.createAutoTransfer 실패 ===");
+            log.error("자동이체 등록 중 오류 발생", e);
+            log.error("에러 타입: {}", e.getClass().getSimpleName());
+            log.error("에러 메시지: {}", e.getMessage());
+            if (e.getCause() != null) {
+                log.error("원인 에러: {}", e.getCause().getMessage());
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * 자동이체 입력 검증
+     */
+    private void validateAutoTransferRequest(AutoTransferRequestDto request) {
+        if (request.getFromAccountNo() == null) {
+            throw new InvalidAmountException("출금 계좌를 선택해주세요.");
+        }
+        if (request.getDestAccountNo() == null || request.getDestAccountNo().trim().isEmpty()) {
+            throw new InvalidAmountException("수취 계좌번호를 입력해주세요.");
+        }
+        if (request.getBankCode() == null || request.getBankCode().trim().isEmpty()) {
+            throw new InvalidAmountException("수취 은행을 선택해주세요.");
+        }
+        if (request.getAmount() == null || request.getAmount() <= 0) {
+            throw new InvalidAmountException("이체 금액은 0보다 커야 합니다.");
+        }
+        if (request.getStartYear() == null || request.getStartYear() < 2020 || request.getStartYear() > 2100) {
+            throw new InvalidAmountException("시작 연도가 올바르지 않습니다.");
+        }
+        if (request.getStartMonth() == null || request.getStartMonth() < 1 || request.getStartMonth() > 12) {
+            throw new InvalidAmountException("시작 월이 올바르지 않습니다. (1~12)");
+        }
+        if (request.getDayOfMonth() == null || request.getDayOfMonth() < 1 || request.getDayOfMonth() > 31) {
+            throw new InvalidAmountException("매월 지정일이 올바르지 않습니다. (1~31)");
+        }
+        if (request.getRepeatCount() == null || request.getRepeatCount() < 1 || request.getRepeatCount() > 24) {
+            throw new InvalidAmountException("반복 횟수는 1~24회 사이여야 합니다.");
+        }
+    }
+
+    /**
+     * 예약 날짜 계산 (월말 처리 포함)
+     * 예: 매월 31일인데 2월은 28일/29일로 조정
+     */
+    private List<LocalDate> calculateScheduledDates(int startYear, int startMonth, int dayOfMonth, int repeatCount) {
+        List<LocalDate> dates = new ArrayList<>();
+        int currentYear = startYear;
+        int currentMonth = startMonth;
+        
+        for (int i = 0; i < repeatCount; i++) {
+            YearMonth yearMonth = YearMonth.of(currentYear, currentMonth);
+            int actualDay = Math.min(dayOfMonth, yearMonth.lengthOfMonth()); // 월말 처리
+            
+            LocalDate scheduledDate = LocalDate.of(currentYear, currentMonth, actualDay);
+            dates.add(scheduledDate);
+            
+            // 다음 달로 이동
+            currentMonth++;
+            if (currentMonth > 12) {
+                currentMonth = 1;
+                currentYear++;
+            }
+        }
+        
+        return dates;
+    }
+
     @Override
     @Transactional
     public BulkTransferResponseDto processBulkTransfer(BulkTransferRequestDto request) {
@@ -272,6 +544,11 @@ public class TransferServiceImpl implements TransferService {
         if (!validateAccountOwnership(request.getFromAccountNo(), customer.getCustomerNo())) {
             throw new UnauthorizedException("해당 계좌에 대한 권한이 없습니다.");
         }
+
+        // 0-1. 출금 계좌 통화 검증 (원화 계좌만 이체 가능)
+        Account fromAccount = accountRepository.findById(request.getFromAccountNo())
+                .orElseThrow(() -> new AccountNotFoundException("출금 계좌를 찾을 수 없습니다."));
+        validateKRWAccount(fromAccount, request.getFromAccountNo().toString());
 
         // 1. 기본 검증
         validateBulkTransferRequest(request);
@@ -682,6 +959,12 @@ public class TransferServiceImpl implements TransferService {
             throw new AccountStatusException("수취 계좌가 거래 불가능한 상태입니다. 상태: " + toAccount.getStatus());
         }
         
+        // === 3-1단계: 통화 검증 (출금/입금 계좌 모두 원화 계좌여야 함) ===
+        log.info("통화 검증 시작 - 출금계좌: {}, 수취계좌: {}", fromAccount.getAccountNo(), toAccount.getAccountNo());
+        validateKRWAccount(fromAccount, fromAccount.getAccountNo());
+        validateKRWAccount(toAccount, toAccount.getAccountNo());
+        log.info("통화 검증 완료 - 모든 계좌가 원화 계좌입니다.");
+        
         log.info("계좌 상태 검증 완료 - 출금계좌: {}, 수취계좌: {}", fromAccount.getAccountNo(), toAccount.getAccountNo());
         
         // === 7단계: 출금 처리 (수취 계좌 검증 완료 후) ===
@@ -846,6 +1129,13 @@ public class TransferServiceImpl implements TransferService {
         }
 
         try {
+            // 예약 이체 실행 시점에 이체 한도 확인 (등록 후 한도가 변경되었을 수 있음)
+            log.info("예약 이체 실행 시점 이체 한도 확인 - 계좌: {}, 금액: {}", order.getA_no(), order.getTo_amount());
+            if (!checkTransferLimit(order.getA_no(), order.getTo_amount().longValue())) {
+                log.error("예약 이체 실행 시 이체 한도 초과 - 계좌: {}, 금액: {}", order.getA_no(), order.getTo_amount());
+                throw LimitExceededException.perTransferLimit(BigDecimal.valueOf(1000000), order.getTo_amount().longValue());
+            }
+            
             // 이체 실행
             executeTransfer(
                     order.getA_no(),
@@ -926,6 +1216,29 @@ public class TransferServiceImpl implements TransferService {
 
         // 실제로는 BCrypt 등으로 암호화된 비밀번호를 비교해야 함
         return password.equals(account.getAccountPwd());
+    }
+
+    /**
+     * 계좌가 원화 계좌인지 검증
+     * - currency가 'KRW'이거나 null인 경우만 원화 계좌로 판단
+     * 
+     * @param account 검증할 계좌
+     * @param accountNo 계좌번호 (에러 메시지용)
+     * @throws CurrencyMismatchException 원화 계좌가 아닌 경우
+     */
+    private void validateKRWAccount(Account account, String accountNo) {
+        if (account == null) {
+            throw new AccountNotFoundException("계좌를 찾을 수 없습니다: " + accountNo);
+        }
+        
+        String currency = account.getCurrency();
+        // currency가 null이거나 "KRW"가 아니면 외화 계좌
+        if (currency != null && !currency.equals("KRW")) {
+            log.warn("원화 계좌 아님 - 계좌: {}, 통화: {}", account.getAccountNo(), currency);
+            throw new CurrencyMismatchException(account.getAccountNo(), currency);
+        }
+        
+        log.debug("원화 계좌 검증 통과 - 계좌: {}, 통화: {}", account.getAccountNo(), currency != null ? currency : "null (기본값)");
     }
 
     public boolean checkAccountStatus(Integer accountNo) {
@@ -1126,9 +1439,9 @@ public class TransferServiceImpl implements TransferService {
             Customer customer = (Customer) authentication.getPrincipal();
             log.info("인증된 고객: {}", customer.getCId());
             
-            // 고객의 실제 계좌 목록 조회
-            List<Account> accounts = accountRepository.findByCNo(customer.getCustomerNo());
-            log.info("조회된 계좌 수: {}", accounts.size());
+            // 고객의 원화 계좌만 조회 (이체 가능한 계좌만)
+            List<Account> accounts = accountRepository.findByCNoAndCurrencyKRW(customer.getCustomerNo());
+            log.info("조회된 원화 계좌 수: {}", accounts.size());
             
             List<Map<String, Object>> accountList = accounts.stream()
                 .map(account -> {
@@ -1280,7 +1593,16 @@ public class TransferServiceImpl implements TransferService {
             Optional<Account> account = accountRepository.findByAccountNo(accountNumber);
             if (account.isPresent()) {
                 Account foundAccount = account.get();
-                log.info("계좌 조회 성공 - 계좌번호: {}, 상태: {}", accountNumber, foundAccount.getStatus());
+                log.info("계좌 조회 성공 - 계좌번호: {}, 상태: {}, 통화: {}", accountNumber, foundAccount.getStatus(), foundAccount.getCurrency());
+                
+                // 통화 검증 (원화 계좌만 이체 가능)
+                try {
+                    validateKRWAccount(foundAccount, accountNumber);
+                } catch (CurrencyMismatchException e) {
+                    // 외화 계좌인 경우 존재하지 않는 계좌로 처리 (사용자 경험을 위해)
+                    log.warn("외화 계좌는 이체 불가 - 계좌번호: {}, 통화: {}", accountNumber, foundAccount.getCurrency());
+                    throw new AccountNotFoundException("존재하지 않는 계좌입니다.");
+                }
                 
                 // 계좌 상태 검증
                 if (!"ACTIVE".equals(foundAccount.getStatus())) {
