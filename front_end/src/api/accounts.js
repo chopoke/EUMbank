@@ -58,6 +58,24 @@ export const uploadLoanDoc = (code, file) => {
 };
 
 
+// 대출관리자단 ============================
+export const adminListApplications = (params = {}) =>
+api.get("/api/loan/admin/applications", { params });
+
+export const adminGetApplicationDetail = (laId) =>
+api.get(`/api/loan/admin/applications/${encodeURIComponent(laId)}`);
+
+export const adminStartReview = (laId) =>
+api.post(`/api/loan/admin/applications/${encodeURIComponent(laId)}/review/start`);
+
+export const adminApprove = (laId, payload) =>
+api.post(`/api/loan/admin/applications/${encodeURIComponent(laId)}/approve`, payload);
+
+export const adminReject = (laId, payload) =>
+api.post(`/api/loan/admin/applications/${encodeURIComponent(laId)}/reject`, payload);
+
+
+
 
 
 export const updateProfile = (profile) => {

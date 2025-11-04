@@ -1,6 +1,6 @@
 import React from "react";
 import { fetchAccounts } from "../../api/accounts";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -140,11 +140,21 @@ function AccountListPage(){
   // 원화 스케일링에서 -> 통화 표기로 수정
   const formatCurrency = (amt, cur) => formatMoney(amt, cur, 'code');
 
-    // 계좌번호 마스킹
-    const maskAcc = (s) =>
-      s.replace(/(\d{2,4})-(\d{2,4})-(\d{2,6})/, (_m, a, b, c) => `${a}-${b}-` + c.replace(/\d/g, "•"));
-    // 원화 변환
-    const toKRW = (a) => (a.currency === "KRW" ? a.balance : a.balance * 1350);
+  // 계좌번호 마스킹
+  const maskAcc = (s) =>
+    s.replace(/(\d{2,4})-(\d{2,4})-(\d{2,6})/, (_m, a, b, c) => `${a}-${b}-` + c.replace(/\d/g, "•"));
+
+  // 숫자 비교 유틸
+  function cmpCurrency(a, b) {
+    return String(a || "").localeCompare(String(b || ""), "en");
+  }
+  function cmpNumberAsc(a, b) {
+    return (Number(a) || 0) - (Number(b) || 0);
+  }
+  function cmpNumberDesc(a, b) {
+    return (Number(b) || 0) - (Number(a) || 0);
+  }
+    
 
 
   // 은행 필터 토글
@@ -250,8 +260,18 @@ function AccountListPage(){
       })
       .sort((a, b) => {
         switch (sortKey) {
-          case "balDesc": return toKRW(b) - toKRW(a);
-          case "balAsc": return toKRW(a) - toKRW(b);
+          case "balDesc": {
+            // 1) 통화 코드로 먼저 정렬(그룹핑)
+            const byCur = cmpCurrency(a.currency, b.currency);
+            if (byCur !== 0) return byCur;
+            // 2) 같은 통화끼리는 잔액 내림차순
+            return cmpNumberDesc(a.balance, b.balance);
+          }
+          case "balAsc": {
+            const byCur = cmpCurrency(a.currency, b.currency);
+            if (byCur !== 0) return byCur;
+            return cmpNumberAsc(a.balance, b.balance);
+          }
           case "name": return (a.disName || a.accountType).localeCompare(b.disName || b.accountType, "ko");
           default: return b.lastActivityTs - a.lastActivityTs;
         }

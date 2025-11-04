@@ -4,10 +4,13 @@ import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.loan.dto.LoanProductDTO;
 import com.boot.eumbank.loan.dto.LoanProductDetailDTO;
 import com.boot.eumbank.loan.dto.apply.*;
+import com.boot.eumbank.loan.dto.payment.RepaymentRequestDTO;
+import com.boot.eumbank.loan.dto.payment.RepaymentResponseDTO;
 import com.boot.eumbank.loan.service.apply.LoanApplicationService;
 import com.boot.eumbank.loan.service.apply.LoanConsentService;
 import com.boot.eumbank.loan.service.apply.LoanQuoteService;
 import com.boot.eumbank.loan.service.LoanService;
+import com.boot.eumbank.loan.service.payment.LoanRepaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +36,11 @@ public class LoanController {
 
     // 약관 저장용
     private final LoanConsentService loanConsentService;
+
+    // 상환서비스
+    private final LoanRepaymentService repaymentService;
+
+
 
     // 상품 리스트 -------------------------------------------------
     @GetMapping("/products")
@@ -86,6 +94,15 @@ public class LoanController {
         Integer cNo = (customer != null) ? customer.getCustomerNo() : Integer.valueOf(req.getCustomerNo());
         // la_no는 아직 없을 수도 있음(동의 → 신청 전 단계). 그땐 NULL로 저장해도 됨.
         LoanSaveConsentsResponseDTO res = loanConsentService.saveConsents(req, null, cNo);
+        return ResponseEntity.ok(res);
+    }
+
+
+    // --   상환(Repayment) 추가 엔드포인트
+    @PostMapping("/loans/{lNo}/repayments")
+    public ResponseEntity<RepaymentResponseDTO> repay(@PathVariable("lNo") Long loanNo,
+                                                      @RequestBody RepaymentRequestDTO req) {
+        RepaymentResponseDTO res = repaymentService.repay(loanNo, req);
         return ResponseEntity.ok(res);
     }
 }

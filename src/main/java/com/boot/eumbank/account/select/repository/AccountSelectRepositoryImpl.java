@@ -4,6 +4,7 @@ import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.account.open.entity.account.QAccount;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -84,5 +85,11 @@ public class AccountSelectRepositoryImpl implements AccountRepositoryCustom {
         return updateCnt;
     }
 
+    @Override
+    public Optional<Account> findByIdForUpdate(Integer aNo) {
+        // PK 기준 잠금 조회  -> 없으면 null 처ㅣㄹ
+        Account acc = em.find(Account.class, aNo, LockModeType.PESSIMISTIC_WRITE);
+        return Optional.ofNullable(acc);
+    }
 
 }

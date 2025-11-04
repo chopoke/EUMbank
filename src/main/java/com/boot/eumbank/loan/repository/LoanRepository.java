@@ -1,9 +1,8 @@
 package com.boot.eumbank.loan.repository;
 
-import com.boot.eumbank.loan.entity.LoanProduct;
+import com.boot.eumbank.loan.entity.Loan;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface LoanRepository extends JpaRepository<LoanProduct, Integer> {
-    
-    // 리스트
+public interface LoanRepository extends JpaRepository<Loan, Long> {
+
 }

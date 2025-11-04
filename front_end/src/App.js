@@ -25,7 +25,6 @@ import ForeignProductsPage from "./pages/foreign/ForeignProductsPage";
 import ForeignRatePage from "./pages/foreign/ForeignRatePage";
 import ForeignOpenPage from "./pages/foreign/ForeignOpenPage";
 import ForeignExchangePage from "./pages/foreign/ForeignExchangePage";
-import api from "./api/axios";
 
 // 이체 관련 페이지들
 import TransferPage from "./pages/transfer/TransferPage";
@@ -38,11 +37,11 @@ import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
 import LoanProductList from "./pages/loan/products/LoanProductList"
 // 대출상품상세
 import LoanProductDetail from "./pages/loan/products/LoanProductDetail"
+
 // 예적금
 import { depositSavingRouteElements } from "./pages/depositSaving/router/depositSavingRouter";
 // 계좌개설
 import { accountElements } from "./pages/account/router/accountRouter";
-import LoanQuotePage from "./pages/loan/products/LoanQuotePage";
 import ApplyAgree from "./pages/loan/apply/ApplyAgree";
 import ApplySubmitPage from "./pages/loan/apply/ApplySubmitPage";
 import ApplySignPage from "./pages/loan/apply/ApplySignPage";
@@ -52,9 +51,12 @@ import ApplyCompletePage from "./pages/loan/apply/ApplyCompletePage";
 
 // 관리자페이지
 import AdminPage from "./pages/admin/page";
+import LoanApplicaion from "./pages/loan/admin/LoanApplicaion";
+import LoanAdminDetailPage from "./pages/loan/admin/LoanAdminDetailPage";
 
 // 공과금
 import BillsLanding from "./pages/bills/BillsLanding";
+
 
 function AppWrapper() {
   return <App />;
@@ -158,6 +160,9 @@ function App() {
         <Route path="/loan/apply/:code/complete/:laId" element={<ProtectedRoute><ApplyCompletePage/></ProtectedRoute> } />
 
 
+        {/* 대출관리자 */}
+        <Route path="/admin/loan/applications" element={<LoanApplicaion/>} />
+        <Route path="/admin/loan/applications/:laId" element={<LoanAdminDetailPage/>} />
         
 
         {/* 계좌 개설: 각 단계 독립 경로 */}

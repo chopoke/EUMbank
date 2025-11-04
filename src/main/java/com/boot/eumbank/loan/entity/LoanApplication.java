@@ -45,7 +45,13 @@ public class LoanApplication {
     private String purposeCode;
 
     @Column(name = "la_appl_status", length = 20, nullable = false)
-    private String status; // DRAFT/SUBMITTED/UNDER_REVIEW/APPROVED/REJECTED/FUNDED/CANCELED
+    private String status; // SUBMITTED/UNDER_REVIEW/APPROVED/REJECTED/FUNDED/CANCELED
+
+    @Column(name = "la_rate_type", length = 30, nullable = false)
+    private String rateType;        //  금리타입(고정금리/변동금리)
+
+    @Column(name = "la_repay_type", length = 30, nullable = false)
+    private String rpayType;            // 반환타입 (원리금균등상환/원금균등상환/만기일시상환)
 
     @Column(name = "la_approved_amount", precision = 18, scale = 2)
     private BigDecimal approvedAmount;

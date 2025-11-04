@@ -1,5 +1,7 @@
 package com.boot.eumbank.loan.service.apply;
 
+import com.boot.eumbank.account.open.entity.account.Account;
+import com.boot.eumbank.account.select.repository.AccountSelectRepository;
 import com.boot.eumbank.loan.dto.apply.LoanApplicationRequestDTO;
 import com.boot.eumbank.loan.dto.apply.LoanApplicationResponseDTO;
 import com.boot.eumbank.loan.dto.apply.LoanSaveConsentsRequestDTO;
@@ -25,6 +27,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
 
     private final LoanApplicationRepository appRepo;
     private final LoanProductRepository productRepo;
+    private final AccountSelectRepository accountRepository;
     private final ObjectMapper om = new ObjectMapper();
 
     // ============================ 신청 저장
@@ -37,25 +40,51 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
 
         String laId = nextLaId();
 
+        
+        // 고객번호보장
+        Integer cNo = Optional.ofNullable(req.getCustomerNo())
+                .orElseThrow(() -> new IllegalArgumentException("고객번호가 필요합니다. (customerNo)"));
+
+        // 계좌 검증
+        Account payout = accountRepository.findById(req.getPayoutAccountNo())
+                .orElseThrow(() -> new IllegalArgumentException("지급계좌가 존재하지 않습니다."));
+        Account repay = accountRepository.findById(req.getRepayAccountNo())
+                .orElseThrow(() -> new IllegalArgumentException("상환계좌가 존재하지 않습니다."));
+
+        // 금액/기간 보정
+        BigDecimal applAmt = Optional.ofNullable(req.getDesiredAmount())
+                .filter(a -> a.compareTo(BigDecimal.ZERO) > 0)
+                .orElseThrow(() -> new IllegalArgumentException("신청금액(desiredAmount)은 0보다 커야 합니다."));
+        Integer term = Optional.ofNullable(req.getDesiredTerm())
+                .filter(t -> t > 0)
+                .orElseThrow(() -> new IllegalArgumentException("기간(desiredTerm)은 1개월 이상이어야 합니다."));
+
+        String rateKo = req.getRateType() != null && !req.getRateType().isBlank() ? req.getRateType() : "고정금리";  // "고정금리"/"변동금리"
+        String rpayKo = req.getRpayType() != null && !req.getRpayType().isBlank() ? req.getRpayType() : "원리금균등";   // "원리금균등"/"원금균등"/"만기일시"
+        String purpose = Optional.ofNullable(req.getPurposeCode()).filter(s -> !s.isBlank()).orElse("기타");
+
+
         // context snapshot
         String contextJson = buildContextJson(req, product);
 
         LoanApplication la = new LoanApplication();
         la.setLaId(laId);
-        la.setCustomerNo(Integer.valueOf(req.getCustomerNo()));
         la.setLoanProductNo(product.getLoanNo());
-        la.setPayoutAccountNo(req.getPayoutAccountNo());
-        la.setRepayAccountNo(req.getRepayAccountNo());
-        la.setAppliedAmount(nvl(req.getDesiredAmount(), BigDecimal.ZERO));
-        la.setDesiredTerm(req.getDesiredTerm());
-        la.setPurposeCode(req.getPurposeCode());
+        la.setCustomerNo(cNo);
+        la.setPayoutAccountNo(payout.getANo());
+        la.setRepayAccountNo(repay.getANo());
+        la.setAppliedAmount(applAmt);
+        la.setDesiredTerm(term);
+        la.setPurposeCode(purpose);
         la.setStatus("SUBMITTED");
+        la.setRateType(rateKo);
+        la.setRpayType(rpayKo);
         // 견적 echo
         la.setApprovedAmount(req.getQuoteApprovedAmount());
         la.setApprovedRate(req.getQuoteAppliedRate());
         la.setApprovedTerm(req.getQuoteApprovedTerm());
         la.setContextJson(contextJson);
-        la.setChannel(channel == null ? "WEB" : channel);
+        la.setChannel((channel == null || channel.isBlank()) ? "WEB" : channel);
         la.setSubmittedAt(LocalDateTime.now());
 
         appRepo.save(la);
@@ -67,6 +96,8 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
                 la.getSubmittedAt()
         );
     }
+
+
 
     // ================================== 약관 동의
     @Override
@@ -135,5 +166,10 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         if (value != null) map.put(key, value);
     }
 
-    private static BigDecimal nvl(BigDecimal v, BigDecimal d) { return v == null ? d : v; }
+    private static String normalizeRateKo(String raw) {
+        String s = raw == null ? "" : raw.trim();
+        if (s.equalsIgnoreCase("VARIABLE") || s.contains("변동")) return "변동금리";
+        return "고정금리";
+    }
+
 }
