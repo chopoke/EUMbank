@@ -35,7 +35,7 @@ public class MypageCustomer {
     private String cNameKr;
 
     @Column(name = "c_name_en", length = 100)
-    private String cNameEn;
+    private String cnameEn;
 
     @Column(name = "c_birth_dt")
     private LocalDate cBirthDt;

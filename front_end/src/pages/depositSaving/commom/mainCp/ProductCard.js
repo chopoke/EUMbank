@@ -1,3 +1,6 @@
+import depositlogo from '../../../../resources/img/deposit.png'
+import savelogo from '../../../../resources/img/save.png'
+
 // 체크 아이콘 SVG
 const CheckIcon = () => (
     <svg
@@ -53,10 +56,18 @@ const ProductCard = ({ product, onProductClick }) => {
         ? product.feature.replace(/^"|"$/g, '').split('", "')
         : [];
 
+    const isdeposit = product.name;
+
+    const isd = isdeposit.includes('예금');
+
+    console.log('test :', isd);
+
     return (
         <div className="product-card">
             <div className="card-content">
+                {isd ? (<img src={depositlogo} className="deplogo w-20"/>) : (<img src={savelogo} className="savelogo w-20"/>)}
                 <h3>{product.name}</h3>
+                
                 <p className="interest-rate">{product.rate}</p>
                 <p className="rate-label">연이율</p>
                 <p className="min-amount">{formatMinAmount(product.minAmount)}</p>

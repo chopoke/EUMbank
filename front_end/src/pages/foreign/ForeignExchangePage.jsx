@@ -542,7 +542,7 @@ export default function ForeignExchangePage() {
       {/* ▶ 가운데 고정폭 래퍼 */}
       <div className="container mx-auto max-w-7xl px-4 py-8">
         <h1 className="text-3xl font-extrabold text-gray-900 mb-6">
-          <span className="text-indigo-600">환전 신청</span> / 환전 내역
+          <span className="text-blue-500">환전 신청</span> / 환전 내역
         </h1>
 
         <div className="border-b border-gray-200 mb-6">
@@ -584,7 +584,7 @@ export default function ForeignExchangePage() {
                       setCalculationResult(null);
                       setMessage('');
                     }}
-                    className={`px-4 py-2 text-sm font-medium ${isBuy ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}
+                    className={`px-4 py-2 text-sm font-medium ${isBuy ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'}`}
                   >
                     살 때
                   </button>
@@ -695,7 +695,8 @@ export default function ForeignExchangePage() {
                 <button
                   onClick={handleCalculate}
                   disabled={isLoading || !form.fxAmount || !currentRate}
-                  className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition duration-150"
+                  className={`flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${isBuy ? 'bg-blue-500 hover:bg-blue-600' : 'bg-indigo-600 hover:bg-indigo-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 transition duration-150`}
+                  // className={`px-4 py-2 text-sm font-medium ${!isBuy ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700'}`}
                 >
                   <Calculator className="w-5 h-5 mr-2" />
                   {isLoading ? '계산 중...' : '환율 계산하기'}
@@ -704,7 +705,7 @@ export default function ForeignExchangePage() {
                 <button
                   onClick={handleSubmit}
                   disabled={isLoading || !calculationResult}
-                  className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition duration-150"
+                  className={`flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm ${isBuy ? 'text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500' : 'text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'} disabled:opacity-50 transition duration-150`}
                 >
                   <Send className="w-5 h-5 mr-2" />
                   환전하기
