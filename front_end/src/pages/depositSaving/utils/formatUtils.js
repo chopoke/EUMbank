@@ -4,21 +4,21 @@
 export const formatWon = (n) => n.toLocaleString('ko-KR');
 
 /**
- * 예금 계좌번호 자동 포맷팅 (110-XXX-XXXXXX)
+ * 예금 계좌번호 자동 포맷팅 (220-XXX-XXXXXX)
  */
 export const formatDepositAccount = (value) => {
-    // "110-"로 시작하지 않으면 자동으로 추가
-    if (!value.startsWith('110-')) {
-        value = '110-' + value.replace(/^110-?/, '');
+    // "220-"로 시작하지 않으면 자동으로 추가
+    if (!value.startsWith('220-')) {
+        value = '220-' + value.replace(/^220-?/, '');
     }
     
     // 숫자와 하이픈만 허용
     value = value.replace(/[^0-9-]/g, '');
     
-    // "110-XXX-XXXXXX" 형식으로 자동 포맷팅
+    // "220-XXX-XXXXXX" 형식으로 자동 포맷팅
     const parts = value.split('-');
     if (parts.length > 0) {
-        let formatted = '110';
+        let formatted = '220';
         
         if (parts[1]) {
             formatted += '-' + parts[1].slice(0, 3);
@@ -37,21 +37,21 @@ export const formatDepositAccount = (value) => {
 };
 
 /**
- * 적금/예금 계좌번호 자동 포맷팅 (110-XXX-XXXXXX)
+ * 적금 계좌번호 자동 포맷팅 (220-XXX-XXXXXX)
  */
 export const formatAccountNumber = (value) => {
-    // "110-"로 시작하지 않으면 자동으로 추가
-    if (!value.startsWith('110-')) {
-        value = '110-' + value.replace(/^110-?/, '');
+    // "220-"로 시작하지 않으면 자동으로 추가
+    if (!value.startsWith('220-')) {
+        value = '220-' + value.replace(/^220-?/, '');
     }
     
     // 숫자와 하이픈만 허용
     value = value.replace(/[^0-9-]/g, '');
     
-    // "110-XXX-XXXXXX" 형식으로 자동 포맷팅
+    // "220-XXX-XXXXXX" 형식으로 자동 포맷팅
     const parts = value.split('-');
     if (parts.length > 0) {
-        let formatted = '110';
+        let formatted = '220';
         
         if (parts[1]) {
             formatted += '-' + parts[1].slice(0, 3);

@@ -1,0 +1,85 @@
+/* src/components/ProductTypeToggle/ProductTypeToggle.css */
+
+.product-type-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-container {
+    position: relative;
+    display: flex;
+    background: #f3f4f6;
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.toggle-option {
+    position: relative;
+    padding: 10px 32px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    z-index: 2;
+    min-width: 100px;
+    text-align: center;
+}
+
+.toggle-text {
+    font-weight: 600;
+    font-size: 15px;
+    color: #6b7280;
+    transition: color 0.3s ease;
+}
+
+.toggle-option.active .toggle-text {
+    color: white;
+}
+
+.toggle-option:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+/* 슬라이더 배경 */
+.toggle-slider {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    width: calc(50% - 4px);
+    border-radius: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 왼쪽 (예금 - 빨간색) */
+.toggle-slider.left {
+    left: 4px;
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+}
+
+/* 오른쪽 (적금 - 파란색) */
+.toggle-slider.right {
+    left: calc(50%);
+    background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+}
+
+/* 애니메이션 효과 */
+@keyframes slideLeft {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideRight {
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}

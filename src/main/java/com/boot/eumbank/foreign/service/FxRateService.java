@@ -314,7 +314,7 @@ public class FxRateService {
         }
 
         reloadCacheFromDb();
-        log.info("[FX] backfilled rows={}", total);
+        //log.info("[FX] backfilled rows={}", total);
         return total;
     }
 
@@ -344,7 +344,7 @@ public class FxRateService {
 
         this.cacheByIso = Collections.unmodifiableMap(fresh);
         this.updatedAt = LocalDateTime.now();
-        log.info("[FX] cache reloaded at {} ({} currencies)", this.updatedAt, this.cacheByIso.size());
+        //log.info("[FX] cache reloaded at {} ({} currencies)", this.updatedAt, this.cacheByIso.size());
     }
 
     /* --------------------------- 내부 변환 --------------------------- */

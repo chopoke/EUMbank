@@ -17,9 +17,9 @@ public class ForexScheduler {
     /** 서버 기동 직후 1회 (초기 표시가 '-'로 비는 현상 방지) */
     @EventListener(ApplicationReadyEvent.class)
     public void warmupOnBoot() {
-        log.info("[FX] warmup start");
+        //log.info("[FX] warmup start");
         fxRateService.warmupIfEmpty();
-        log.info("[FX] warmup end");
+        //log.info("[FX] warmup end");
     }
 
     /** 10분마다 갱신 (매 시각 0,10,20,30,40,50분) */

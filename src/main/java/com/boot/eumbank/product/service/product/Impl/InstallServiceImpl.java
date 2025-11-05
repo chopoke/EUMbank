@@ -111,7 +111,6 @@ public class InstallServiceImpl implements InstallService {
                 yPosition -= lineHeight;
 
                 // -----------------------------------------------
-
                 float underyPosition = 530; // 시작 Y 좌표 (페이지 상단 근처)
                 float underlineHeight = 28;  // 각 라인의 간격
                 float undervalueX = 180;     // 실제 데이터 값의 X 좌표
