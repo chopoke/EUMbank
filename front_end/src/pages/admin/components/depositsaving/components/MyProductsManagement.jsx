@@ -23,9 +23,6 @@ export default function MyProductsManagement({ activeType }) {
     const [selectedDeposit, setSelectedDeposit] = useState(null);
     const [newStatus, setNewStatus] = useState('');
 
-    // 고객 번호 (실제로는 로그인한 사용자 정보에서 가져와야 함)
-    const cNo = 3; // TODO: 실제 로그인 정보로 교체
-
     // 데이터 로드
     useEffect(() => {
         loadData();
@@ -35,10 +32,10 @@ export default function MyProductsManagement({ activeType }) {
         setLoading(true);
         try {
             if (activeType === '예금') {
-                const data = await getMyDeposits(cNo);
+                const data = await getMyDeposits();
                 setMyDeposits(data);
             } else {
-                const data = await getMyInstallments(cNo);
+                const data = await getMyInstallments();
                 setMyDeposits(data);
             }
         } catch (error) {
