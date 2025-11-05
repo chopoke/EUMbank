@@ -36,6 +36,9 @@ export default function MyProductsManagement({ activeType }) {
         try {
             if (activeType === '예금') {
                 const data = await getMyDeposits(cNo);
+
+                console.log(data);
+
                 setMyDeposits(data);
             } else {
                 const data = await getMyInstallments(cNo);

@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ChatBotModal from './ChatBotModal';
 import '../css/FloatingChatBot.css';
+import sym from '../../../resources/img/eumonly.png'
 
 const FloatingChatButton = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -100,7 +101,7 @@ const FloatingChatButton = () => {
                     <span className="close-icon">✕</span>
                 ) : (
                     <>
-                        <span className="chat-icon">💬</span>
+                        <span className="chat-icon"><img src={sym} className="sym" /></span>
                         {hasNewMessage && <span className="notification-badge"></span>}
                     </>
                 )}

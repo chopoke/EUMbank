@@ -1,12 +1,12 @@
 
 export default function Sidebar({ activeMenu, setActiveMenu }) {
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'ri-dashboard-line' },
-    { id: 'loan', label: 'Loan Management', icon: 'ri-bank-line' },
-    { id: 'deposit', label: 'Deposit Management', icon: 'ri-safe-line' },
-    { id: 'user', label: 'User Management', icon: 'ri-user-line' },
-    { id: 'inquiry', label: 'Inquiry Management', icon: 'ri-question-line' },
-    { id: 'verification', label: 'Verification', icon: 'ri-shield-check-line' }
+    { id: 'dashboard', label: '대시보드(전체)', icon: 'ri-dashboard-line' },
+    { id: 'loan', label: '대출 관리', icon: 'ri-bank-line' },
+    { id: 'deposit', label: '예/적금 관리', icon: 'ri-safe-line' },
+    { id: 'user', label: '회원관리', icon: 'ri-user-line' },
+    // { id: 'inquiry', label: 'Inquiry Management', icon: 'ri-question-line' },
+    { id: 'verification', label: '인증관리', icon: 'ri-shield-check-line' }
   ];
 
   return (

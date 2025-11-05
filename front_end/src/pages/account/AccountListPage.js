@@ -245,7 +245,7 @@ function AccountListPage(){
     <div className="bg-gray-50 py-8">
       {/* 타이틀 배너 */}
       <section className="border-b bg-white">
-        <div className="accb mx-auto max-w-[1240px] px-6 py-6">
+        <div className="checkb mx-auto max-w-[1240px] px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl md:text-2xl font-semibold tracking-tight">계좌 목록 조회</h1>

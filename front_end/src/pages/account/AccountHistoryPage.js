@@ -346,7 +346,7 @@ function AccountHistoryPage(){
     <div className="bg-gray-50 py-8">
       {/* 타이틀 */}
       <section className="border-b bg-white">
-        <div className="accb mx-auto max-w-[1240px] px-6 py-6">
+        <div className="checkb mx-auto max-w-[1240px] px-6 py-6">
           <h1 className="text-xl md:text-2xl font-semibold tracking-tight">내 계좌 상세</h1>
           <p className="text-sm text-gray-600 mt-1">선택한 계좌의 정보와 거래내역을 함께 확인하세요.</p>
         </div>
