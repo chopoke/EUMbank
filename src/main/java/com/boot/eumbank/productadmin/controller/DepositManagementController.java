@@ -30,10 +30,10 @@ public class DepositManagementController {
     /**
      * 고객의 가입한 예금 목록 조회
      */
-    @GetMapping("/my-deposits/{cNo}")
-    public ResponseEntity<List<MyDepositDTO>> getMyDeposits(@PathVariable Integer cNo) {
+    @GetMapping("/my-deposits")
+    public ResponseEntity<List<MyDepositDTO>> getMyDeposits() {
         logger.info("DepositManagementController => getMyDeposits()");
-        List<MyDepositDTO> deposits = depositManagementService.getMyDeposits(cNo);
+        List<MyDepositDTO> deposits = depositManagementService.getMyDeposits();
         return ResponseEntity.ok(deposits);
     }
 

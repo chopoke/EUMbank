@@ -23,9 +23,9 @@ public class DepositManagementService {
     /**
      * 고객의 가입한 예금 목록 조회
      */
-    public List<MyDepositDTO> getMyDeposits(Integer cNo) {
+    public List<MyDepositDTO> getMyDeposits() {
         logger.info("DepositManagementService => getMyDeposits()");
-        return depositManagementQueryRepository.findMyDeposits(cNo);
+        return depositManagementQueryRepository.findMyDeposits();
     }
 
     /**
