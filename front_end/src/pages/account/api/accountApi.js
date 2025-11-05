@@ -79,3 +79,13 @@ export async function verifyExistingPin(data) {
   return res.data;
 
 }
+
+/**
+ * pin번호 변경
+ */
+export async function changePin(data) {
+
+    const res = await api.post("/api/changePin", data);
+    return res.data;
+
+}

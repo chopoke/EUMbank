@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { testmypage } from '../../api/accounts';
 import { updateProfile } from '../../api/accounts';
+import { CheckPinProvider} from "./contexts/CheckPinContext";
+import { useCheckPin } from "./contexts/CheckPinContext";
+
 import axios from 'axios';
 import React from "react";
 import { Link } from 'react-router-dom';
@@ -194,6 +197,7 @@ function OverviewTab({onTabSwitch}) {
 function ProfileTab({initialData}) {
   const [isEditing, setIsEditing] = useState(false);
   const [gender, setGender] = useState(initialData?.cgenderCd || null);
+  const [checkPin, setCheckPin] = useState('');
   const [profileData, setProfileData] = useState({
     name: '',
     enname: '',
@@ -209,7 +213,9 @@ function ProfileTab({initialData}) {
     naverid: '',
   });
 
-  const [isTermsPopupOpen, setIsTermsPopupOpen] = useState(false); 
+  const [isTermsPopupOpen, setIsTermsPopupOpen] = useState(false);
+
+
 
   useEffect(() => {
     // initialData가 존재하고, DTO의 핵심 필드가 채워졌을 때만 실행
@@ -301,6 +307,8 @@ function ProfileTab({initialData}) {
     `;
 
   const handleSave = () => {
+
+
         // 서버로 전송할 DTO 형식에 맞게 데이터를 매핑합니다.
         // 현재 ProfileData 키(name, email, phone)를 DTO 키(cnameKr, cemail, cphoneMobile)로 다시 변환해야 합니다.
         console.log("프론트 상태 (profileData.name):", profileData.name);
@@ -348,6 +356,7 @@ function ProfileTab({initialData}) {
             });
     // return axios.put('../../api/accounts');
   };
+
 
   return (
     <div className="space-y-6">
@@ -651,8 +660,12 @@ function ProfileTab({initialData}) {
 
 // SecurityTab Component
 function SecurityTab() {
+    const { checkPin, setCheckPin } = useCheckPin();
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+
+  console.log(checkPin);
 
   return (
     <div className="space-y-6">
@@ -689,22 +702,26 @@ function SecurityTab() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-smartphone-line text-blue-600 mr-2"></i>
-          아마도 핀번호 인증
+            핀번호 변경
         </h3>
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-gray-600 mb-1">일회용 비밀번호 인증이 활성화되어 있습니다.</p>
-            <p className="text-sm text-green-600">등록된 기기: iPhone 14 Pro</p>
-          </div>
+            {checkPin ? (
+                <div>
+                    <p className="text-gray-600 mb-1">일회용 핀 인증이 활성화되어 있습니다.</p>
+                </div>
+            ) : (
+
+                <div>
+                <p className="text-gray-600 mb-1">일회용 핀 인증이 비활성화되어 있습니다.</p>
+                </div>
+
+            )}
           <div className="flex space-x-2">
             <button
               onClick={() => setShowOTPModal(true)}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm whitespace-nowrap"
             >
               재설정
-            </button>
-            <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm whitespace-nowrap">
-              비활성화
             </button>
           </div>
         </div>
@@ -832,12 +849,12 @@ function SecurityTab() {
         </div>
       </div>
 
-      {/* OTP 모달 */}
+      {/* PIN 모달 */}
       {showOTPModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">OTP 재설정</h3>
-            <p className="text-gray-600 mb-4">새로운 기기에서 OTP를 설정하시겠습니까?</p>
+            <h3 className="text-lg font-semibold mb-4">PIN 재설정</h3>
+            <p className="text-gray-600 mb-4">PIN을 재설정하시겠습니까?</p>
             <div className="flex space-x-3">
               <button
                 onClick={() => setShowOTPModal(false)}
@@ -1901,21 +1918,23 @@ function MyPage() {
   
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50">
-      {/* <Header /> */}
-      <div className="container mx-auto px-38 py-10">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-          <div className="flex">
-            <div className="flex-1 p-6">
-              {renderTabContent()}
+      <CheckPinProvider>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50">
+          {/* <Header /> */}
+          <div className="container mx-auto px-38 py-10">
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+              <div className="flex">
+                <div className="flex-1 p-6">
+                  {renderTabContent()}
+                </div>
+                <Sidebar customerName={customerName} customerPhone={customerPhone} />
+              </div>
             </div>
-            <Sidebar customerName={customerName} customerPhone={customerPhone} /> 
           </div>
+          {/* <Footer /> */}
         </div>
-      </div>
-      {/* <Footer /> */}
-    </div>
+      </CheckPinProvider>
   );
 }
 

@@ -23,9 +23,9 @@ public class InstallmentManagementService {
     /**
      * 고객의 가입한 적금 목록 조회
      */
-    public List<MyInstallmentDTO> getMyInstallments(Integer cNo) {
+    public List<MyInstallmentDTO> getMyInstallments() {
         logger.info("InstallmentManagementService => getMyInstallments()");
-        return installmentManagementQueryRepository.findMyInstallments(cNo);
+        return installmentManagementQueryRepository.findMyInstallments();
     }
 
     /**
