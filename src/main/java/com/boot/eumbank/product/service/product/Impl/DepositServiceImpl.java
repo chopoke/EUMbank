@@ -85,6 +85,9 @@ public class DepositServiceImpl implements DepositService {
 
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             Customer customer = (Customer) authentication.getPrincipal();
+
+            System.out.println("test" + customer);
+
             ProductDto oneDepositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
             Account oneAccount = accountQueryRepository.findAOneAccount(Math.toIntExact(requestDto.getLinkedAccountAno()));
 
