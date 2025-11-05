@@ -409,8 +409,8 @@ function AccountHistoryPage(){
               </div>
               <div className="mt-3 flex gap-2">
                   <button className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">이체</button>
-                    <button onClick={backBtn}
-                      className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">계좌목록</button>
+                  <button onClick={backBtn}
+                    className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">계좌목록</button>
                 </div>
             </div>
           </div>
@@ -442,7 +442,7 @@ function AccountHistoryPage(){
               <div className="mt-4">
                 <div className="text-xs text-gray-600 mb-1">거래 구분</div>
                 <div className="flex flex-wrap gap-2">
-                  {["입금", "출금", "이체", "수수료"].map((k) => (
+                  {["입금", "출금"].map((k) => (
                     <Chip key={k} active={kinds.has(k)} onClick={() => toggleKind(k)}>{k}</Chip>
                   ))}
                 </div>

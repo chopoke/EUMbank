@@ -26,4 +26,7 @@ public interface TransferHistoryRepository extends JpaRepository<TransferHistory
             @Param("to_at") Timestamp to_at,
             Pageable pageable
     );
+
+    // 상환내역 찍기
+    boolean existsByAccountNoAndTransferId(Integer accountNo, String transferId);
 }

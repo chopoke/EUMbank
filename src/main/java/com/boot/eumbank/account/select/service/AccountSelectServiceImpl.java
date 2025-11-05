@@ -60,14 +60,15 @@ public class AccountSelectServiceImpl implements AccountSelectService {
     // --------- mapping ---------
     private AccountSummaryDTO toSummaryDTO(Account a) {
         AccountSummaryDTO dto = new AccountSummaryDTO();
-        dto.setA_no(a.getANo());
-        dto.setA_id(a.getAId());
-        dto.setA_account_no(a.getAccountNo());
-        dto.setA_account_type(a.getAccountType());
-        dto.setA_currency(a.getCurrency());
-        dto.setA_balance(a.getBalance());
-        dto.setA_nickname(a.getNickname());
-        dto.setA_status(a.getStatus());
+        dto.setANo(a.getANo());
+        dto.setAId(a.getAId());
+        dto.setAccountNo(a.getAccountNo());
+        dto.setAccountType(a.getAccountType());
+        dto.setProductCode(a.getProductCode());
+        dto.setCurrency(a.getCurrency());
+        dto.setBalance(a.getBalance());
+        dto.setNickname(a.getNickname());
+        dto.setStatus(a.getStatus());
         dto.setLastTransferAt(a.getLastTxAt());
         return dto;
     }

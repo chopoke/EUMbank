@@ -29,10 +29,10 @@ public class FinlifeUpsert {
 
     private final LoanProductRepository productRepo;
     private final LoanRateOptionRepository rateOptRepo;
-    private final LoanCreditRepository creditOptRepo;
+//    private final LoanCreditRepository creditOptRepo;
 
     // =========================================
-    // 로컬 PageResult (기존 FinlifeSaveSync.PageResult 대체)
+    // 로컬 PageResult
     // =========================================
     @Data @AllArgsConstructor
     public static class PageResult {
@@ -65,7 +65,6 @@ public class FinlifeUpsert {
             Function<B,String> b_erlyRpayFee,
             Function<B,String> b_dlyRate,
             Function<B,String> b_loanLmt,
-            Function<B,String> b_etcNote,
             // ─ 옵션 필드
             Function<O,String>     o_finPrdtCd,
             Function<O,String>     o_mrtgTypeNm,
@@ -139,8 +138,6 @@ public class FinlifeUpsert {
             product.setRateMin(rateMin);
             product.setRateMax(rateMax);
 
-            product.setEtcNote(safe(b_etcNote, b));
-
             product = productRepo.save(product);
 
             // 기존 옵션 제거 후 다시 적재
@@ -168,11 +165,7 @@ public class FinlifeUpsert {
                     entities.add(e);
                 }
 
-                if (!"MORTGAGE".equals(loanType) && !"JEONSE".equals(loanType)) {
-                    log.warn("[SYNC:{}] rate options save skipped (not JEONSE/MORTGAGE). product={}", loanType, finPrdtCd);
-                } else {
-                    rateOptRepo.saveAll(entities);
-                }
+                rateOptRepo.saveAll(entities);
             }
 
             upsertCount++;
@@ -182,138 +175,8 @@ public class FinlifeUpsert {
         return new PageResult(upsertCount, nowPageNo, maxPageNo);
     }
 
-    /**
-     * 신용대출 옵션 업서트
-     * 옵션을(A/B/C)타입으로 그룹핑 후, 타입별 1행만 upsert
-     */
-    @Transactional
-    public PageResult upsertOnePageCredit(
-            int pageNo,
-            List<FinlifeCreditResponseDTO.Base> baseList,
-            List<FinlifeCreditResponseDTO.Option> optList,
-            Integer nowPageNo, Integer maxPageNo
-    ){
-        Map<String, List<FinlifeCreditResponseDTO.Option>> optsByProduct =
-                optList.stream().collect(Collectors.groupingBy(FinlifeCreditResponseDTO.Option::getFinPrdtCd));
 
-        int upsertCount = 0;
-
-        for (var b: baseList) {
-            String code = b.getFinPrdtCd();
-            if (code == null || code.isBlank()) continue;
-
-            var rawOpts = optsByProduct.getOrDefault(code, Collections.emptyList());
-
-            // 타입(A/B/C) 기준으로 그룹핑 (null/공백 제외)
-            Map<String, List<FinlifeCreditResponseDTO.Option>> byType = rawOpts.stream()
-                    .map(o -> new AbstractMap.SimpleEntry<>(trimToNull(o.getCrdtLendRateType()), o))
-                    .filter(e -> e.getKey() != null)
-                    .collect(Collectors.groupingBy(
-                            e -> e.getKey().toUpperCase(),
-                            Collectors.mapping(Map.Entry::getValue, Collectors.toList())
-                    ));
-
-            // A타입 min/max(표시용)
-            BigDecimal min = byType.getOrDefault("A", List.of()).stream()
-                    .map(FinlifeCreditResponseDTO.Option::getGradAvg)
-                    .filter(Objects::nonNull).min(BigDecimal::compareTo).orElse(null);
-            BigDecimal max = byType.getOrDefault("A", List.of()).stream()
-                    .map(FinlifeCreditResponseDTO.Option::getGradAvg)
-                    .filter(Objects::nonNull).max(BigDecimal::compareTo).orElse(null);
-
-            // ─ 상품 UPSERT
-            LoanProduct p = productRepo.findByLoanCode(code).orElseGet(LoanProduct::new);
-            boolean isNew = (p.getLoanNo() == null);
-            if (isNew) {
-                p.setLoanCode(code);
-                p.setLoanType("CREDIT");
-                p.setStatus("PUBLISHED");
-                p.setIsActive(true);
-                p.setSourceType("API");
-            }
-            p.setLoanName(b.getFinPrdtNm());
-            p.setBankName(b.getKorCoNm());
-            p.setFinCoNo(b.getFinCoNo());
-            p.setDclsMonth(b.getDclsMonth());
-            p.setDclsStartDay(b.getDclsStrtDay());
-            p.setDclsEndDay(b.getDclsEndDay());
-            p.setFinCoSubmDay(b.getFinCoSubmDay());
-
-            // 신용 전용 베이스
-            p.setCrdtPrdtType(b.getCrdtPrdtType());
-            p.setCrdtPrdtTypeNm(b.getCrdtPrdtTypeNm());
-            p.setCbName(b.getCbName());
-
-            p.setRateMin(min);
-            p.setRateMax(max);
-
-            p.setJoinWay(b.getJoinWay());
-            p.setEtcNote(b.getEtcNote());
-
-            p = productRepo.save(p);
-
-            // 타입별 1행씩 upsert (유니크 (lpd_no, rate_type) 가정)
-            for (var entry : byType.entrySet()) {
-                String type = entry.getKey();            // A/B/C
-                var list = entry.getValue();
-
-                // ✅ 레포 메서드명 통일
-                var existingOpt = creditOptRepo.findFirstByLoanProductAndRateType(p, type).orElse(null);
-
-                if (existingOpt == null) {
-                    existingOpt = new LoanCreditOption();
-                    existingOpt.setLoanProduct(p);
-                    existingOpt.setRateType(type);
-                }
-                existingOpt.setRateTypeNm(pickMostCommonNameCrdt(list));
-                existingOpt.setG1(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad1)));
-                existingOpt.setG4(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad4)));
-                existingOpt.setG5(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad5)));
-                existingOpt.setG6(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad6)));
-                existingOpt.setG10(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad10)));
-                existingOpt.setG11(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad11)));
-                existingOpt.setG12(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad12)));
-                existingOpt.setG13(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad13)));
-                existingOpt.setAvg(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGradAvg)));
-
-                creditOptRepo.save(existingOpt);
-            }
-
-            if (rawOpts.stream().anyMatch(o -> trimToNull(o.getCrdtLendRateType()) == null)) {
-                log.warn("[CREDIT] {} has options with blank lendRateType — skipped", code);
-            }
-
-            upsertCount++;
-        }
-
-        log.info("[SYNC:CREDIT] page {} upsert {}건 (now/max={}/{})",
-                pageNo, upsertCount, nowPageNo, maxPageNo);
-        return new PageResult(upsertCount, nowPageNo, maxPageNo);
-    }
-
-    private static String pickMostCommonNameCrdt(List<FinlifeCreditResponseDTO.Option> list) {
-        return list.stream().map(FinlifeCreditResponseDTO.Option::getCrdtLendRateTypeNm)
-                .filter(Objects::nonNull)
-                .collect(Collectors.groupingBy(x -> x, Collectors.counting()))
-                .entrySet().stream().max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey).orElse(null);
-    }
-
-    // ===== 공통 유틸 =====
-    private static String trimToNull(String s) {
-        if (s == null) return null;
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
-    }
-
-    private static BigDecimal avgOf(Stream<BigDecimal> s) {
-        var list = s.filter(Objects::nonNull).toList();
-        if (list.isEmpty()) return null;
-        return list.stream()
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(BigDecimal.valueOf(list.size()), 4, RoundingMode.HALF_UP);
-    }
-
+    // ================ 공통 유틸
     private static <T, R> R safe(Function<T, R> f, T v) {
         if (f == null) return null;
         try { return f.apply(v); } catch (Exception ignore) { return null; }
@@ -391,4 +254,136 @@ public class FinlifeUpsert {
         }
         return (max == null) ? null : max.setScale(0, RoundingMode.HALF_UP).intValue();
     }
+
+    /**
+     * 신용대출 옵션 업서트
+     * 옵션을(A/B/C)타입으로 그룹핑 후, 타입별 1행만 upsert
+     */
+//    @Transactional
+//    public PageResult upsertOnePageCredit(
+//            int pageNo,
+//            List<FinlifeCreditResponseDTO.Base> baseList,
+//            List<FinlifeCreditResponseDTO.Option> optList,
+//            Integer nowPageNo, Integer maxPageNo
+//    ){
+//        Map<String, List<FinlifeCreditResponseDTO.Option>> optsByProduct =
+//                optList.stream().collect(Collectors.groupingBy(FinlifeCreditResponseDTO.Option::getFinPrdtCd));
+//
+//        int upsertCount = 0;
+//
+//        for (var b: baseList) {
+//            String code = b.getFinPrdtCd();
+//            if (code == null || code.isBlank()) continue;
+//
+//            var rawOpts = optsByProduct.getOrDefault(code, Collections.emptyList());
+//
+//            // 타입(A/B/C) 기준으로 그룹핑 (null/공백 제외)
+//            Map<String, List<FinlifeCreditResponseDTO.Option>> byType = rawOpts.stream()
+//                    .map(o -> new AbstractMap.SimpleEntry<>(trimToNull(o.getCrdtLendRateType()), o))
+//                    .filter(e -> e.getKey() != null)
+//                    .collect(Collectors.groupingBy(
+//                            e -> e.getKey().toUpperCase(),
+//                            Collectors.mapping(Map.Entry::getValue, Collectors.toList())
+//                    ));
+//
+//            // A타입 min/max(표시용)
+//            BigDecimal min = byType.getOrDefault("A", List.of()).stream()
+//                    .map(FinlifeCreditResponseDTO.Option::getGradAvg)
+//                    .filter(Objects::nonNull).min(BigDecimal::compareTo).orElse(null);
+//            BigDecimal max = byType.getOrDefault("A", List.of()).stream()
+//                    .map(FinlifeCreditResponseDTO.Option::getGradAvg)
+//                    .filter(Objects::nonNull).max(BigDecimal::compareTo).orElse(null);
+//
+//            // ─ 상품 UPSERT
+//            LoanProduct p = productRepo.findByLoanCode(code).orElseGet(LoanProduct::new);
+//            boolean isNew = (p.getLoanNo() == null);
+//            if (isNew) {
+//                p.setLoanCode(code);
+//                p.setLoanType("CREDIT");
+//                p.setStatus("PUBLISHED");
+//                p.setIsActive(true);
+//                p.setSourceType("API");
+//            }
+//            p.setLoanName(b.getFinPrdtNm());
+//            p.setBankName(b.getKorCoNm());
+//            p.setFinCoNo(b.getFinCoNo());
+//            p.setDclsMonth(b.getDclsMonth());
+//            p.setDclsStartDay(b.getDclsStrtDay());
+//            p.setDclsEndDay(b.getDclsEndDay());
+//            p.setFinCoSubmDay(b.getFinCoSubmDay());
+//
+////            // 신용 전용 베이스
+////            p.setCrdtPrdtType(b.getCrdtPrdtType());
+////            p.setCrdtPrdtTypeNm(b.getCrdtPrdtTypeNm());
+////            p.setCbName(b.getCbName());
+//
+//            p.setRateMin(min);
+//            p.setRateMax(max);
+//
+//            p.setJoinWay(b.getJoinWay());
+//
+//            p = productRepo.save(p);
+//
+//            // 타입별 1행씩 upsert (유니크 (lpd_no, rate_type) 가정)
+//            for (var entry : byType.entrySet()) {
+//                String type = entry.getKey();            // A/B/C
+//                var list = entry.getValue();
+//
+//                var existingOpt = creditOptRepo.findFirstByLoanProductAndRateType(p, type).orElse(null);
+//
+//                if (existingOpt == null) {
+//                    existingOpt = new LoanCreditOption();
+//                    existingOpt.setLoanProduct(p);
+//                    existingOpt.setRateType(type);
+//                }
+//                existingOpt.setRateTypeNm(pickMostCommonNameCrdt(list));
+//                existingOpt.setG1(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad1)));
+//                existingOpt.setG4(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad4)));
+//                existingOpt.setG5(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad5)));
+//                existingOpt.setG6(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad6)));
+//                existingOpt.setG10(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad10)));
+//                existingOpt.setG11(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad11)));
+//                existingOpt.setG12(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad12)));
+//                existingOpt.setG13(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGrad13)));
+//                existingOpt.setAvg(avgOf(list.stream().map(FinlifeCreditResponseDTO.Option::getGradAvg)));
+//
+//                creditOptRepo.save(existingOpt);
+//            }
+//
+//            if (rawOpts.stream().anyMatch(o -> trimToNull(o.getCrdtLendRateType()) == null)) {
+//                log.warn("[CREDIT] {} has options with blank lendRateType — skipped", code);
+//            }
+//
+//            upsertCount++;
+//        }
+//
+//        log.info("[SYNC:CREDIT] page {} upsert {}건 (now/max={}/{})",
+//                pageNo, upsertCount, nowPageNo, maxPageNo);
+//        return new PageResult(upsertCount, nowPageNo, maxPageNo);
+//    }
+//
+//    private static String pickMostCommonNameCrdt(List<FinlifeCreditResponseDTO.Option> list) {
+//        return list.stream().map(FinlifeCreditResponseDTO.Option::getCrdtLendRateTypeNm)
+//                .filter(Objects::nonNull)
+//                .collect(Collectors.groupingBy(x -> x, Collectors.counting()))
+//                .entrySet().stream().max(Map.Entry.comparingByValue())
+//                .map(Map.Entry::getKey).orElse(null);
+//    }
+//
+//    // ===== 공통 유틸 =====
+//    private static String trimToNull(String s) {
+//        if (s == null) return null;
+//        String t = s.trim();
+//        return t.isEmpty() ? null : t;
+//    }
+//
+//    private static BigDecimal avgOf(Stream<BigDecimal> s) {
+//        var list = s.filter(Objects::nonNull).toList();
+//        if (list.isEmpty()) return null;
+//        return list.stream()
+//                .reduce(BigDecimal.ZERO, BigDecimal::add)
+//                .divide(BigDecimal.valueOf(list.size()), 4, RoundingMode.HALF_UP);
+//    }
+
+
 }

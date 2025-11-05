@@ -43,12 +43,15 @@ import LoanProductDetail from "./pages/loan/products/LoanProductDetail"
 import { depositSavingRouteElements } from "./pages/depositSaving/router/depositSavingRouter";
 // 계좌개설
 import { accountElements } from "./pages/account/router/accountRouter";
+
+// 대출신청 스텝
 import ApplyAgree from "./pages/loan/apply/ApplyAgree";
 import ApplySubmitPage from "./pages/loan/apply/ApplySubmitPage";
 import ApplySignPage from "./pages/loan/apply/ApplySignPage";
 import ApplyFormPage from "./pages/loan/apply/ApplyFormPage";
 import ApplyDocsPage from "./pages/loan/apply/ApplyDocsPage";
 import ApplyCompletePage from "./pages/loan/apply/ApplyCompletePage";
+
 
 // 관리자페이지
 import AdminPage from "./pages/admin/page";
@@ -159,6 +162,7 @@ function App() {
         <Route path="/loan/apply/:code/sign"   element={<ProtectedRoute><ApplySignPage/></ProtectedRoute>} />
         <Route path="/loan/apply/:code/submit" element={<ProtectedRoute><ApplySubmitPage/></ProtectedRoute>} />
         <Route path="/loan/apply/:code/complete/:laId" element={<ProtectedRoute><ApplyCompletePage/></ProtectedRoute> } />
+
 
 
         {/* 대출관리자 */}

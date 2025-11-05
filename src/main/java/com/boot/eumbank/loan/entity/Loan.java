@@ -76,4 +76,7 @@ public class Loan {
 
     @Column(name = "l_closed_at")
     private LocalDateTime closedAt;         // 완제일 (해지)
+    
+    @Column(name = "l_last_paid_at")
+    private LocalDateTime lastPaidAt;       // 마지막 상환일
 }

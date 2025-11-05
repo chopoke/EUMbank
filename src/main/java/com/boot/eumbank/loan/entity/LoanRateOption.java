@@ -26,8 +26,7 @@ public class LoanRateOption {
     // 공통필드--------------------------
     @Column(name="lro_rpay_type_nm") 
     private String rpayTypeNm;              // 상환방식(원금균등상환/원리금균등상환/만기일시상환)
-    @Column(name="lro_lend_rate_type") 
-    private String lendRateType;            // 금리유형코드
+
     @Column(name="lro_lend_rate_type_nm") 
     private String lendRateTypeNm;          // 금리유형 (고정금리/변동금리/혼합금리)
 

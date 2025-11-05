@@ -10,7 +10,7 @@ export const fetchAccountDetail = (a_no) =>
 
 // 계좌 이체내역목록
 export const fetchAccountTransactions = (a_no, { type, from, to, page = 0, size = 20 } = {}) =>
-  api.get(`/api/accounts/${a_no}/transfers`, { params: { type, from, to, page, size } });
+  api.get(`/api/accounts/${a_no}/transfers`, { params: {  type, from, to, page, size } });
 
 // 계좌 이체내역에서 별명 변경
 export const updateAccountAlias = (a_no, alias) =>
@@ -22,6 +22,7 @@ export const testmypage = () =>
 // 대출 상품 리스트
 export const fetchLoanProducts = ({ type = "MORTGAGE", page = 0, size = 20 } = {}) =>
   api.get("/api/loan/products", { params: { type, page, size } });
+
 
 // 대출상품 상세
 export const fetchLoanProductDetail = (code) =>

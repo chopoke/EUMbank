@@ -10,13 +10,14 @@ import { won, numberToKorean } from "../util/money";
 import { computeVisibility, toKoRateType, normalizeRpayKo } from "../util/loan";
 import useLoanQuote from "./hooks/useLoanQuote";
 
+/** 숫자를 한글 화폐(억/만)로 힌트 표기 */
 function KoreanMoneyHint({ value, className = "", showWon = false, omitIl = true }) {
   if (!value || Number(value) === 0) return null;
   const text = numberToKorean(value, { money: true, omitIl });
   return <div className={`text-xs text-gray-500 mt-1 ${className}`}>({text}{showWon ? "원" : ""})</div>;
 }
 
-// 날짜 유틸
+/** Date -> 'YYYY-MM-DD' (input[type=date] 값) */
 function toDateOnlyInputValue(d = new Date()) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -24,27 +25,26 @@ function toDateOnlyInputValue(d = new Date()) {
   return `${y}-${m}-${day}`;
 }
 
-// 날짜를 1~28사이로 제한
+/** 납부일 1~28로 클램프 */
 function clampPayDay(day) {
   return Math.max(1, Math.min(28, Number(day || 0)));
 }
+
+/** 선택한 날짜 기준 최초 납부일/월 판정 */
 function computeFirstDue(today, selectedDate) {
   const tY = today.getFullYear();
-  const tM = today.getMonth();        
+  const tM = today.getMonth();
   const tD = today.getDate();
 
   const selD = selectedDate.getDate();
   const payDay = clampPayDay(selD);
   const clamped = selD !== payDay;
-  // - 선택일(day) < 오늘(day) ⇒ 다음달 payDay
-  // - 선택일(day) >= 오늘(day) ⇒ 이번달 payDay
-  // - (항상 payDay는 1~28로 보정)
+
   let year = tY;
   let month = tM;
   if (payDay < tD) {
-    // 다음달
     month = tM + 1;
-    if (month >= 11 + 1) { // 11 = December
+    if (month >= 12) {
       year = tY + 1;
       month = 0;
     }
@@ -52,7 +52,7 @@ function computeFirstDue(today, selectedDate) {
   const due = new Date(year, month, payDay, 12, 0, 0, 0);
 
   const isThisMonth = (due.getFullYear() === tY) && (due.getMonth() === tM);
-  const isSoonInThisMonth = isThisMonth && payDay >= tD; // "곧 납부" 경고 조건
+  const isSoonInThisMonth = isThisMonth && payDay >= tD;
   const isNextMonth = !isThisMonth;
 
   return { payDay, clamped, due, isSoonInThisMonth, isNextMonth };
@@ -62,17 +62,19 @@ export default function ApplyFormPage() {
   const { code } = useParams();
   const nav = useNavigate();
 
+  // ====== 상태 ======
   const [useSameAccount, setUseSameAccount] = React.useState(true);
   const [flow, setFlow] = React.useState(null);
   const [product, setProduct] = React.useState(null);
-  const [accounts, setAccounts] = React.useState([]);
+  const [accounts, setAccounts] = React.useState([]);        // 전체 계좌 (백엔드 원본)
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState(null);
 
-  // 납부일 경고
+  // 납부일 미리보기
   const [firstDueInput, setFirstDueInput] = React.useState(toDateOnlyInputValue());
-  const [duePreview, setDuePreview] = React.useState(null); 
+  const [duePreview, setDuePreview] = React.useState(null);
 
+  // 신청 폼
   const [form, setForm] = React.useState({
     occupation: "EMPLOYEE",
     incomeAnnual: 0,
@@ -88,14 +90,15 @@ export default function ApplyFormPage() {
     payoutAccountNo: "",
     repayAccountNo: "",
     customerId: "1",
-    preferredPayDay: null,        // 1~28 고정
-  preferredFirstDueDate: "",    // 'YYYY-MM-DD'
+    preferredPayDay: null,      // 1~28
+    preferredFirstDueDate: "",  // 'YYYY-MM-DD'
   });
 
-  // 초기 로드
+  // ====== 초기 로드: flow/상품/계좌 ======
   React.useEffect(() => {
     (async () => {
       try {
+        // 1) 저장된 flow 없으면 동의 화면으로
         const f = loadFlow(code);
         if (!f) {
           nav(`/loan/apply/${encodeURIComponent(code)}/agree`, { replace: true });
@@ -103,6 +106,7 @@ export default function ApplyFormPage() {
         }
         setFlow(f);
 
+        // 2) 폼 기본값 채우기(한글 변환 포함)
         setForm((prev) => ({
           ...prev,
           occupation: f.form?.occupation || "EMPLOYEE",
@@ -117,10 +121,11 @@ export default function ApplyFormPage() {
           employer: f.form?.employer || "",
           creditScore: f.form?.creditScore ?? null,
           payoutAccountNo: f.form?.payoutAccountNo || "",
-          repayAccountNo: f.form?.repayAccountNo || "",
+          repayAccountNo:  f.form?.repayAccountNo  || "",
           customerId: f.form?.customerId || "1",
         }));
 
+        // 3) 상품 로드
         let prod = f.product || null;
         if (!prod) {
           const res = await fetchLoanProductDetail(code);
@@ -128,20 +133,21 @@ export default function ApplyFormPage() {
         }
         setProduct(prod);
 
+        // 4) 계좌 로드 (백엔드 원본)
         const accRes = await fetchAccounts().catch(() => ({ data: [] }));
         const list = accRes?.data ?? accRes ?? [];
         const arr = Array.isArray(list) ? list : [];
-        setAccounts(arr);
+        setAccounts(arr); // 전체 계좌 저장
 
-        if (arr.length > 0) {
-          setForm((s) => {
-            const first = arr[0].a_no;
-            return {
-              ...s,
-              payoutAccountNo: s.payoutAccountNo || first,
-              repayAccountNo:  s.repayAccountNo  || first,
-            };
-          });
+        // 5) (초기) '입출금' 계좌 중 첫 번째를 기본 선택으로
+        const eligible = arr.filter(a => (a.a_account_type ?? a.accountType) === '입출금');
+        if (eligible.length > 0) {
+          const first = eligible[0].a_no;
+          setForm((s) => ({
+            ...s,
+            payoutAccountNo: s.payoutAccountNo || first,
+            repayAccountNo:  s.repayAccountNo  || first,
+          }));
           setUseSameAccount(true);
         }
       } catch (e) {
@@ -152,21 +158,25 @@ export default function ApplyFormPage() {
     })();
   }, [code, nav]);
 
-  // 날짜 변겨시 
+  // ====== 최초 납부일 기본 계산 ======
   React.useEffect(() => {
-  const today = new Date();
-  const init = computeFirstDue(today, today);
-  setFirstDueInput(toDateOnlyInputValue(today));
-  setDuePreview(init);
-  setForm(s => ({
-    ...s,
-    preferredPayDay: init.payDay,
-    preferredFirstDueDate: toDateOnlyInputValue(init.due),
-  }));
-}, []);
+    const today = new Date();
+    const init = computeFirstDue(today, today);
+    setFirstDueInput(toDateOnlyInputValue(today));
+    setDuePreview(init);
+    setForm(s => ({
+      ...s,
+      preferredPayDay: init.payDay,
+      preferredFirstDueDate: toDateOnlyInputValue(init.due),
+    }));
+  }, []);
 
-  // 파생 옵션
-  const opts = React.useMemo(() => (Array.isArray(product?.options) ? product.options : []), [product]);
+  // ====== 파생 옵션 ======
+  const opts = React.useMemo(
+    () => (Array.isArray(product?.options) ? product.options : []),
+    [product]
+  );
+
   const allowedTerms = React.useMemo(() => {
     const terms = [
       ...(product?.termMonths || []),
@@ -176,7 +186,10 @@ export default function ApplyFormPage() {
   }, [product, opts]);
 
   const allowedRateTypesKo = React.useMemo(() => {
-    const fromProduct = opts.map((op) => (op.rateType || op.rate_type || "").toString()).filter(Boolean).map(toKoRateType);
+    const fromProduct = opts
+      .map((op) => (op.rateType || op.rate_type || "").toString())
+      .filter(Boolean)
+      .map(toKoRateType);
     const fromForm = form.rateType ? [toKoRateType(form.rateType)] : [];
     const fallback = ["고정금리", "변동금리"];
     return Array.from(new Set([...fromProduct, ...fromForm, ...fallback]));
@@ -192,12 +205,12 @@ export default function ApplyFormPage() {
     return Array.from(new Set([...fromProduct, ...fromForm, ...fallback]));
   }, [opts, form.rpayType]);
 
-  // 타입 판별
+  // ====== 타입 가시성 & 담보 필요 여부 ======
   const loanType = String(product?.type || "");
   const { isMortgage, isJeonse, isPersonal, isBullet } = computeVisibility(loanType, form.rpayType);
   const needsCollateral = isMortgage || isJeonse;
 
-  // 기본값/보정
+  // ====== 폼 값 보정 ======
   React.useEffect(() => {
     if (allowedTerms.length && !allowedTerms.includes(Number(form.desiredTerm))) {
       setForm((s) => ({ ...s, desiredTerm: allowedTerms[0] }));
@@ -217,29 +230,66 @@ export default function ApplyFormPage() {
     }
   }, [allowedTerms, allowedRateTypesKo, allowedRpayTypesKo, product, needsCollateral]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 유효성
+  // ====== 유효성 ======
   const invalidCollateral = isMortgage && (!form.collateralValue || Number(form.collateralValue) <= 0);
   const invalidJeonse    = isJeonse && (!form.jeonseDeposit  || Number(form.jeonseDeposit)  <= 0);
 
-  // 견적 훅 (디바운스 + 파생계산 포함)
+  // ====== 견적 훅 ======
   const {
     quote, quoting, fieldErr, onRequote, canRequote,
     derived: { annualRate, P_req, P_appr, n, r, monthlyAppr },
   } = useLoanQuote({ code, product, form, invalidCollateral, invalidJeonse });
 
-  // 만기일시일 때 총액
-  const totalAtMaturityAppr = React.useMemo(() => (!P_appr || !n) ? 0 : P_appr + Math.ceil(P_appr * r * n), [P_appr, r, n]);
+  // 만기일시 총액 (승인금액 기준)
+  const totalAtMaturityAppr = React.useMemo(
+    () => (!P_appr || !n) ? 0 : P_appr + Math.ceil(P_appr * r * n),
+    [P_appr, r, n]
+  );
 
-  // 다음 단계
+
+  /** '입출금' 타입만 뽑아낸 선택 가능 계좌 목록 */
+  const eligibleAccounts = React.useMemo(
+    () => (Array.isArray(accounts)
+      ? accounts.filter(a => (a.a_account_type ?? a.accountType) === '입출금')
+      : []),
+    [accounts]
+  );
+
+  /**
+   * eligibleAccounts 또는 useSameAccount가 변할 때
+   * - 현재 선택이 유효하지 않다면 '입출금' 중 첫 번째로 보정
+   * - 같은 계좌 사용이면 repay가 payout을 따라가도록 유지
+   */
+  React.useEffect(() => {
+    if (!eligibleAccounts.length) return;
+
+    setForm(s => {
+      const hasPayout = eligibleAccounts.some(a => String(a.a_no) === String(s.payoutAccountNo));
+      const hasRepay  = eligibleAccounts.some(a => String(a.a_no) === String(s.repayAccountNo));
+      const first = eligibleAccounts[0].a_no;
+
+      return {
+        ...s,
+        payoutAccountNo: hasPayout ? s.payoutAccountNo : first,
+        repayAccountNo:  (useSameAccount
+          ? (hasPayout ? s.payoutAccountNo : first) // 같은 계좌 사용이면 payout을 따라감
+          : (hasRepay ? s.repayAccountNo : first)
+        ),
+      };
+    });
+  }, [eligibleAccounts, useSameAccount]);
+
+  // ====== 다음 단계 버튼 활성 조건 
   const canNext =
     !!form.desiredAmount && !!form.desiredTerm && !!form.payoutAccountNo &&
     (useSameAccount ? true : (!!form.repayAccountNo && String(form.repayAccountNo) !== String(form.payoutAccountNo))) &&
     (!needsCollateral || (!invalidCollateral && !invalidJeonse));
 
+  /** 다음(서류제출)으로 진행: form 보정 저장 + 이동 */
   const onNext = () => {
     if (!canNext) return;
 
-      const normalizedForm = {
+    const normalizedForm = {
       ...form,
       rateType: toKoRateType(form.rateType),
       rpayType: normalizeRpayKo(form.rpayType),
@@ -260,7 +310,7 @@ export default function ApplyFormPage() {
     nav(`/loan/apply/${encodeURIComponent(code)}/docs`);
   };
 
-  // 렌더
+  // ====== 렌더 ======
   if (loading) return <div className="p-8">로딩중…</div>;
   if (err) return <div className="p-8 text-red-600">에러: {err}</div>;
   if (!flow || !product) return null;
@@ -279,7 +329,7 @@ export default function ApplyFormPage() {
             <div className="grid md:grid-cols-12 gap-6">
               {/* 좌측 */}
               <div className="md:col-span-7 space-y-6">
-                {/* 금액/기간/옵션 */}
+                {/* 금액/기간/옵션 카드 */}
                 <div className="rounded-2xl border border-gray-100 shadow-sm bg-white p-5 space-y-4">
                   <div className="flex items-center gap-2">
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gray-100 text-gray-700">
@@ -289,6 +339,7 @@ export default function ApplyFormPage() {
                   </div>
 
                   <div className="grid md-grid-cols-2 md:grid-cols-2 gap-4">
+                    {/* 신청금액 */}
                     <label className="block text-sm">
                       <span className="text-gray-600">신청금액(원)</span>
                       <NumberInput
@@ -308,6 +359,7 @@ export default function ApplyFormPage() {
                       )}
                     </label>
 
+                    {/* 기간 */}
                     <label className="block text-sm">
                       <span className="text-gray-600">기간(개월)</span>
                       {allowedTerms.length ? (
@@ -328,6 +380,7 @@ export default function ApplyFormPage() {
                       )}
                     </label>
 
+                    {/* 금리유형 */}
                     <label className="block text-sm">
                       <span className="text-gray-600">금리유형</span>
                       <select
@@ -340,6 +393,7 @@ export default function ApplyFormPage() {
                       </select>
                     </label>
 
+                    {/* 상환방식 */}
                     <label className="block text-sm">
                       <span className="text-gray-600">상환방식</span>
                       <select
@@ -352,6 +406,7 @@ export default function ApplyFormPage() {
                       </select>
                     </label>
 
+                    {/* 담보/전세금 입력 (타입별 조건) */}
                     {isMortgage && (
                       <label className="block text-sm md:col-span-2">
                         <span className="text-gray-600">담보가치(원)</span>
@@ -382,64 +437,61 @@ export default function ApplyFormPage() {
                       </label>
                     )}
                   </div>
-                  <label className="block text-sm">
-                    <label className="block text-sm md:col-span-2">
-                      <span className="text-gray-600">최초 납부일</span>
-                        <input
-                          type="date"
-                          value={firstDueInput}
-                          onChange={(e) => {
-                            const v = e.target.value; 
-                            setFirstDueInput(v);
-                            if (!v) {
-                              setDuePreview(null);
-                              setForm(s => ({ ...s, preferredPayDay: null, preferredFirstDueDate: "" }));
-                              return;
-                            }
-                            const parts = v.split("-");
-                            const selected = new Date(
-                              Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])
-                            );
-                            const today = new Date();
-                            const calc = computeFirstDue(today, selected);
-                            setDuePreview(calc);
-                            setForm(s => ({
-                              ...s,
-                              preferredPayDay: calc.payDay,
-                              preferredFirstDueDate: toDateOnlyInputValue(calc.due),
-                            }));
-                          }}
-                          className="mt-1 w-full rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200/70 outline-none px-3 py-2 transition"
-                        />
 
-                        {duePreview?.clamped && (
-                          <div className="mt-2 text-xs rounded-lg px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200">
-                            29~31일은 지원하지 않아 <b>28일</b>로 자동 조정됩니다. (선택일: {form.preferredPayDay}일)
-                          </div>
-                        )}
-                        {duePreview?.isSoonInThisMonth && (
-                          <div className="mt-2 text-xs rounded-lg px-3 py-2 bg-yellow-50 text-yellow-800 border border-yellow-200">
-                            이번 달 <b>{form.preferredPayDay}일</b>에 바로 납부가 시작됩니다. 계속하시겠어요?
-                          </div>
-                        )}
-                        {duePreview?.isNextMonth && (
-                          <div className="mt-2 text-xs rounded-lg px-3 py-2 bg-sky-50 text-sky-800 border border-sky-200">
-                            <b>다음 달 {form.preferredPayDay}일</b>에 첫 납부가 시작됩니다.
-                          </div>
-                        )}
-                        {/* 확정 미리보기 */}
-                        {duePreview && (
-                          <div className="mt-2 text-xs text-gray-600">
-                            확정 최초 납부 예정일: <b>{toDateOnlyInputValue(duePreview.due)}</b> (납부일 {form.preferredPayDay}일)
-                          </div>
-                        )}
-                    </label>
+                  {/* 최초 납부일 선택 */}
+                  <label className="block text-sm md:col-span-2">
+                    <span className="text-gray-600">최초 납부일</span>
+                    <input
+                      type="date"
+                      value={firstDueInput}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setFirstDueInput(v);
+                        if (!v) {
+                          setDuePreview(null);
+                          setForm(s => ({ ...s, preferredPayDay: null, preferredFirstDueDate: "" }));
+                          return;
+                        }
+                        const parts = v.split("-");
+                        const selected = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                        const today = new Date();
+                        const calc = computeFirstDue(today, selected);
+                        setDuePreview(calc);
+                        setForm(s => ({
+                          ...s,
+                          preferredPayDay: calc.payDay,
+                          preferredFirstDueDate: toDateOnlyInputValue(calc.due),
+                        }));
+                      }}
+                      className="mt-1 w-full rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200/70 outline-none px-3 py-2 transition"
+                    />
+
+                    {duePreview?.clamped && (
+                      <div className="mt-2 text-xs rounded-lg px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200">
+                        29~31일은 지원하지 않아 <b>28일</b>로 자동 조정됩니다. (선택일: {form.preferredPayDay}일)
+                      </div>
+                    )}
+                    {duePreview?.isSoonInThisMonth && (
+                      <div className="mt-2 text-xs rounded-lg px-3 py-2 bg-yellow-50 text-yellow-800 border border-yellow-200">
+                        이번 달 <b>{form.preferredPayDay}일</b>에 바로 납부가 시작됩니다. 계속하시겠어요?
+                      </div>
+                    )}
+                    {duePreview?.isNextMonth && (
+                      <div className="mt-2 text-xs rounded-lg px-3 py-2 bg-sky-50 text-sky-800 border border-sky-200">
+                        <b>다음 달 {form.preferredPayDay}일</b>에 첫 납부가 시작됩니다.
+                      </div>
+                    )}
+                    {duePreview && (
+                      <div className="mt-2 text-xs text-gray-600">
+                        확정 최초 납부 예정일: <b>{toDateOnlyInputValue(duePreview.due)}</b> (납부일 {form.preferredPayDay}일)
+                      </div>
+                    )}
                   </label>
                 </div>
 
-                {/* 계좌 */}
+                {/* 🔵 계좌 선택: '입출금'만 전달 */}
                 <AccountPickers
-                  accounts={accounts}
+                  accounts={eligibleAccounts}           // ✅ 핵심: 입출금 필터링된 목록만
                   useSameAccount={useSameAccount}
                   setUseSameAccount={setUseSameAccount}
                   form={form}
@@ -455,7 +507,6 @@ export default function ApplyFormPage() {
                   P_appr={P_appr}
                   n={n}
                   r={r}
-                  // monthlyReq={monthlyReq}
                   monthlyAppr={monthlyAppr}
                   isBullet={isBullet}
                   quote={quote}

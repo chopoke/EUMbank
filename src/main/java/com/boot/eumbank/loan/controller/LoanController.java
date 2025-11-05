@@ -14,10 +14,9 @@ import com.boot.eumbank.loan.service.payment.LoanRepaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 @RestController
@@ -105,4 +104,12 @@ public class LoanController {
         RepaymentResponseDTO res = repaymentService.repay(loanNo, req);
         return ResponseEntity.ok(res);
     }
+
+//    // -- 상환 내역 목록 진입
+//    @GetMapping("/loans/{lNo}/repayments")
+//    public Page<LoanPaymentViewDTO> listRepayments(@PathVariable("lNo") Long loanNo,
+//                                                   @RequestParam(defaultValue = "0") int page,
+//                                                   @RequestParam(defaultValue = "20") int size){
+//        return loanPaymentQueryService.getRepayments(loanNo, page, size);
+//    }
 }

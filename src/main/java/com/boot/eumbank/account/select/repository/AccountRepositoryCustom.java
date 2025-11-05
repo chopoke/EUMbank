@@ -29,4 +29,6 @@ public interface AccountRepositoryCustom {
 
     // 대출신청 조회를 위한 계좌조회
     Optional<Account> findByIdForUpdate(Integer aNo);
+
+
 }

@@ -13,7 +13,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/loan/admin")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('ADMIN')")           // 권한이 admin일때만 접근 가능
 public class LoanAdminController {
 
     private final LoanAdminService service;
@@ -54,6 +54,4 @@ public class LoanAdminController {
         service.reject(laId, cmd);
         return ResponseEntity.ok().build();
     }
-
-
 }

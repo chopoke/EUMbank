@@ -46,19 +46,6 @@ public class LoanProduct {
     @Column(name="lpd_fin_co_subm_day")
     private String finCoSubmDay;                // 금융회사 제출일(YYYYMMDDHH24MI)
 
-    @Column(name="lpd_etc_note", columnDefinition = "TEXT")
-    private String etcNote;                     // FSS base.etc_note 원문 저장
-
-    // 신용(Credit)전용 필드 ---------------------------------
-    @Column(name="lpd_crdt_prdt_type")
-    private String crdtPrdtType;                // 신용 대출 종류 (일반신용대출:1)
-
-    @Column(name="lpd_crdt_prdt_type_nm")
-    private String crdtPrdtTypeNm;              // 신용대출 명 (default 일반신용대출 사실 이거말고 없음)
-
-    @Column(name="lpd_cb_name")
-    private String cbName;                      // 신용회사명 (기본 NICE)
-
 
     // 전세(JEONSE) 주담대(MORTGAGE) 전용 필드 --------------------------------
     @Column(name="lpd_loan_inci_expn")
@@ -99,9 +86,6 @@ public class LoanProduct {
 
     @Column(name="lpd_summary") 
     private String summary;             // 한줄소개
-
-    @Column(name="lpd_description", columnDefinition="TEXT")
-    private String description;             // 대출 설명
 
     @Column(name="lpd_created_at", insertable=false, updatable=false, nullable=false)       //DB에서 관리할 수 있도록
     private LocalDateTime createdAt;        // 생성일

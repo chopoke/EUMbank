@@ -37,7 +37,7 @@ public class FinlifeSaveSync {
     public void runSave() {
         upsertAllPagesMortgage("020000"); // 주담대
         upsertAllPagesJeonse("020000");   // 전세자금(임차)
-        upsertAllPagesCredit("020000");   // 신용대출
+//        upsertAllPagesCredit("020000");   // 신용대출
     }
 
     // ===== 페이지 루프 공통 =====
@@ -91,7 +91,6 @@ public class FinlifeSaveSync {
                         FinlifeMortgageResponseDTO.Base::getErlyRpayFee,
                         FinlifeMortgageResponseDTO.Base::getDlyRate,
                         FinlifeMortgageResponseDTO.Base::getLoanLmt,
-                        FinlifeMortgageResponseDTO.Base::getEtcNote,
                         FinlifeMortgageResponseDTO.Option::getFinPrdtCd,
                         FinlifeMortgageResponseDTO.Option::getMrtgTypeNm,
                         FinlifeMortgageResponseDTO.Option::getRpayTypeNm,
@@ -137,7 +136,6 @@ public class FinlifeSaveSync {
                         FinlifeJeonseResponseDTO.Base::getErlyRpayFee,
                         FinlifeJeonseResponseDTO.Base::getDlyRate,
                         FinlifeJeonseResponseDTO.Base::getLoanLmt,
-                        FinlifeJeonseResponseDTO.Base::getEtcNote,
                         FinlifeJeonseResponseDTO.Option::getFinPrdtCd,
                         FinlifeJeonseResponseDTO.Option::getMrtgTypeNm,
                         FinlifeJeonseResponseDTO.Option::getRpayTypeNm,
@@ -157,26 +155,26 @@ public class FinlifeSaveSync {
         });
     }
 
-    /** 신용대출 */
-    public void upsertAllPagesCredit(String topFinGrpNo) {
-        loopPages(topFinGrpNo, "CREDIT", (grp, page) -> {
-            try {
-                String json = fss.getCreditProductsRaw(grp, page);
-                var res = om.readValue(json, FinlifeCreditResponseDTO.class);
-                var r = res.getResult();
-
-                return upsertTx.upsertOnePageCredit(
-                        page,
-                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getBaseList).orElse(Collections.emptyList()),
-                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getOptionList).orElse(Collections.emptyList()),
-                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getNowPageNo).orElse(null),
-                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getMaxPageNo).orElse(null)
-                );
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
+//    /** 신용대출 */
+//    public void upsertAllPagesCredit(String topFinGrpNo) {
+//        loopPages(topFinGrpNo, "CREDIT", (grp, page) -> {
+//            try {
+//                String json = fss.getCreditProductsRaw(grp, page);
+//                var res = om.readValue(json, FinlifeCreditResponseDTO.class);
+//                var r = res.getResult();
+//
+//                return upsertTx.upsertOnePageCredit(
+//                        page,
+//                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getBaseList).orElse(Collections.emptyList()),
+//                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getOptionList).orElse(Collections.emptyList()),
+//                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getNowPageNo).orElse(null),
+//                        Optional.ofNullable(r).map(FinlifeCreditResponseDTO.Result::getMaxPageNo).orElse(null)
+//                );
+//            } catch (Exception e) {
+//                throw new RuntimeException(e);
+//            }
+//        });
+//    }
 
     // ===== 유틸 ================================
 

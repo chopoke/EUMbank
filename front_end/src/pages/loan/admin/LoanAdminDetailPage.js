@@ -142,7 +142,7 @@ export default function LoanAdminDetailPage(){
     }
     const payload = {
       approvedAmount: Number(approvedAmount||0),
-      approvedTerm: Number(approvedTerm||0),
+      approvedTerm: Number(approvedTerm||0),    
       approvedRate: Number(approvedRate||0),
       firstPayoutAt: firstPayoutAt ? new Date(firstPayoutAt).toISOString() : null,
       payDay: (payDay != null)

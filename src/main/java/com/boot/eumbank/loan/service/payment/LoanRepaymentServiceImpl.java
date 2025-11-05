@@ -1,5 +1,6 @@
 package com.boot.eumbank.loan.service.payment;
 
+import com.boot.eumbank.loan.admin.service.AccountTxnServiceImpl;
 import com.boot.eumbank.loan.dto.payment.RepaymentRequestDTO;
 import com.boot.eumbank.loan.dto.payment.RepaymentResponseDTO;
 import com.boot.eumbank.loan.entity.Loan;
@@ -8,7 +9,6 @@ import com.boot.eumbank.loan.entity.LoanSchedule;
 import com.boot.eumbank.loan.repository.LoanRepository;
 import com.boot.eumbank.loan.repository.payment.LoanPaymentRepository;
 import com.boot.eumbank.loan.repository.payment.LoanScheduleRepository;
-import com.boot.eumbank.loan.service.payment.LoanRepaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,6 +22,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+
+/**
+ * 들어온 상환금을 회차별로 배분하고 대출잔액 갱신
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -30,10 +34,11 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
     private final LoanRepository loanRepo;
     private final LoanScheduleRepository scheduleRepo;
     private final LoanPaymentRepository paymentRepo;
+    private final AccountTxnServiceImpl accountTxn;     // 출금용 서비스
 
     private static final BigDecimal ZERO = new BigDecimal("0.00");
 
-    // -------- utils
+    // -------- 유틸
     private static BigDecimal nvl(BigDecimal v) {
         return v == null ? ZERO : v.setScale(2, RoundingMode.HALF_UP);
     }
@@ -50,6 +55,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
     @Transactional
     public RepaymentResponseDTO repay(Long loanNo, RepaymentRequestDTO req) {
 
+
         // (1) 동시성 락
         scheduleRepo.lockLoanRow(loanNo);
 
@@ -61,9 +67,18 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
             throw new IllegalArgumentException("상환금액은 0보다 커야합니다.");
         }
 
-        // ✅ 없으면 now()로 대체 (orElseThrow 아님!)
+        // 없으면 now()로 대체 저장하기
         LocalDateTime payTime = Optional.ofNullable(req.getPaymentTime())
                 .orElse(LocalDateTime.now());
+
+        // 멱등키 준비
+        String lpGroupId = nextPaymentId();
+        String idem = Optional.ofNullable(req.getIdempotencyKey()).orElse(lpGroupId);
+
+        // 멱등키가 이미 처리되어 있으ㅁ면 직전 결과 스냅샷 반환
+        if (paymentRepo.existsByLoanNoAndIdempotencyKey(loanNo, idem)) {
+            return buildSnapshotFromPayments(loanNo, idem); // 아래 헬퍼 참고
+        }
 
         // (2) 상환 대상 스케줄 조회
         List<LoanSchedule> targets;
@@ -88,8 +103,43 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
             }
         }
 
+        // (2-1) 미납 금액 계산
+        BigDecimal needTotal = targets.stream().map(s->{
+            BigDecimal needInt = nvl(s.getDueInterest()).subtract(nvl(s.getPaidInterest()));
+            if (needInt.signum() < 0) needInt = ZERO;
+            BigDecimal needPrin = nvl(s.getDuePrincipal()).subtract(nvl(s.getPaidPrincipal()));
+            if (needPrin.signum() < 0) needPrin = ZERO;
+            return needInt.add(needPrin);
+        }).reduce(ZERO, BigDecimal::add);
+
+        BigDecimal withdrawAmt = receive.min(needTotal); // 요청금액과 실제 필요액 중 작은 값
+        if (withdrawAmt.compareTo(ZERO) <= 0) {
+            throw new IllegalArgumentException("이번 회차에 납부할 금액이 없습니다.");
+        }
+
+        // === (2-2) 실제 출금 (계좌 잔액 차감 + transfer_history_tbl 적재) ===
+        Integer repayA = loan.getRepayAccount();            // ACCOUNT_TBL.a_no 여야 함
+        LocalDateTime now = payTime;
+        // 멱등키 기반 transferId (20자 제한 고려해 짧게)
+        String transferId = ("LOANRP-" + loanNo + "-" + idem).replaceAll("[^A-Za-z0-9-]", "");
+        if (transferId.length() > 20) transferId = transferId.substring(0, 20);
+        String memo = "[대출상환] "+ " 회차:" +
+                (req.getInstallmentNo() != null ? req.getInstallmentNo() : "다수");
+
+        // 동일 트랜잭션 내에서 출금 시도하는데, 실패 시 전체 롤백
+        accountTxn.withdraw(
+                repayA,
+                withdrawAmt,
+                now,
+                memo,
+                transferId,
+                "LOAN_REPAYMENT",   // th_transfer_type
+                "WITHDRAWAL",                   // th_transaction_type
+                "EUMBANK",                      // th_other_bank
+                null                            // th_other_account
+        );
+
         // (3) 배분
-        String lpGroupId = nextPaymentId();
         int seq = 0;
 
         BigDecimal appliedInterestTotal = ZERO;
@@ -97,7 +147,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
         BigDecimal appliedPenaltyTotal = ZERO;
 
         List<RepaymentResponseDTO.Item> items = new ArrayList<>();
-        BigDecimal remain = receive;
+        BigDecimal remain = withdrawAmt;
 
         for (LoanSchedule s : targets) {
             if (remain.compareTo(ZERO) <= 0) break;
@@ -150,6 +200,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
                 String lpId = lpGroupId + "-" + String.format("%02d", seq);
                 LoanPayment p = LoanPayment.builder()
                         .loanNo(loanNo)
+                        .idempotencyKey(idem)
                         .lpId(lpId)
                         .amountReceived(payInterest.add(payPrincipal)) // penalty 제외
                         .principalAmt(payPrincipal)
@@ -178,11 +229,18 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
 
         // (4) 대출 잔액/상태 갱신 (원금만 차감)
         BigDecimal curBal = nvl(loan.getBalance());
-        if (appliedPrincipalTotal.compareTo(ZERO) > 0) {
+
+        // 최근 납부시간 갱신
+        loan.setLastPaidAt(payTime);
+
+        if (curBal.compareTo(ZERO) <= 0) {
             curBal = curBal.subtract(appliedPrincipalTotal);
             if (curBal.compareTo(ZERO) < 0) curBal = ZERO;
             loan.setBalance(curBal);
         }
+        // 최근 납부 시각 업데이트
+        loan.setLastPaidAt(payTime);
+
         if (curBal.compareTo(ZERO) <= 0) {
             loan.setStatus("CLOSED");
             loan.setClosedAt(LocalDateTime.now());
@@ -193,7 +251,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
         return RepaymentResponseDTO.builder()
                 .loanNo(loanNo)
                 .lpGroupId(lpGroupId)
-                .receivedTotal(receive)
+                .receivedTotal(withdrawAmt)                 // 실제 출금금액(상환햇을떄)
                 .appliedToInterest(appliedInterestTotal)
                 .appliedToPrincipal(appliedPrincipalTotal)
                 .appliedToPenalty(appliedPenaltyTotal)
@@ -201,4 +259,37 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
                 .allocations(items)
                 .build();
     }
+
+    // 멱등키 재호출시 스냅샷 돌려줘야함    --> 같은 멱등키로 들어오면 이미 저장된 payment_tbl로 응답 재구성 리턴
+    private RepaymentResponseDTO buildSnapshotFromPayments(Long loanNo, String idem) {
+        List<LoanPayment> rows = paymentRepo.findAllByLoanNoAndIdempotencyKey(loanNo, idem);
+        BigDecimal toInt = ZERO, toPrin = ZERO, toPen = ZERO, recv = ZERO;
+        List<RepaymentResponseDTO.Item> items = new ArrayList<>();
+        for (LoanPayment p : rows) {
+            toInt  = toInt.add(nvl(p.getInterestAmt()));
+            toPrin = toPrin.add(nvl(p.getPrincipalAmt()));
+            toPen  = toPen.add(nvl(p.getPenaltyAmt()));
+            recv   = recv.add(nvl(p.getAmountReceived()));
+
+            items.add(RepaymentResponseDTO.Item.builder()
+                    .installmentNo(p.getInstallmentNo())
+                    .scheduleId(p.getScheduleId())
+                    .appliedInterest(nvl(p.getInterestAmt()))
+                    .appliedPrincipal(nvl(p.getPrincipalAmt()))
+                    .newStatus(null)                // 필요시 조회해서 채워도 됨
+                    .lpId(p.getLpId())
+                    .build());
+        }
+        return RepaymentResponseDTO.builder()
+                .loanNo(loanNo)
+                .lpGroupId(idem)                    // 멱등키를 그룹ID처럼 노출
+                .receivedTotal(recv)
+                .appliedToInterest(toInt)
+                .appliedToPrincipal(toPrin)
+                .appliedToPenalty(toPen)
+                .remainingAfterApply(ZERO)      // 재호출은 보통 0
+                .allocations(items)
+                .build();
+    }
+
 }

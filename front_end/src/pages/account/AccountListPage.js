@@ -86,16 +86,23 @@ function AccountListPage(){
         const asDate = raw
           ? new Date(typeof raw === 'number' ? raw : String(raw).replace(' ', 'T'))
           : null;
-
+        const baseType = d.a_account_type || '입출금';
         const ts = asDate ? asDate.getTime() : 0;
         const lastText = asDate ? CustomDateFm(asDate) : '최근거래없음';
+
+        // 대출 뱃지용
+        const code = String(d.a_product_code ?? '').trim();
+        const isLoanRepay = code === '대출' || code === '상환';
+        const uiTags = [baseType, ...(isLoanRepay ? ['대출상환용'] : [])]; // 배지용 배열
+
+        const typeLabel = isLoanRepay ? `${baseType}·대출상환용` : baseType;
 
         // 계좌명 디스플레이용
         const disName = d.a_nickname || d.a_account_code || d.a_account_type || "계좌명";
         return {
           id: d.a_no,
           nickname: d.a_nickname,
-          productCode: d.a_product_code,    
+          productCode: code,   
           accountType: d.a_account_type || '입출금',  
           bank: 'Eum', // 임시
           number: d.a_account_no,
@@ -107,6 +114,10 @@ function AccountListPage(){
           lastActivityTs: ts,
           lastActivity: lastText,
           disName,
+          typeLabel,
+          uiTags,
+          isLoanRepay,
+          filterType: isLoanRepay ? '대출' : baseType,
         };
       });
         setAccounts(mapped);
@@ -125,17 +136,8 @@ function AccountListPage(){
     };
   }, []
 );  
+  const typeOptions = ["전체","입출금","자유적금", "예금","적금", "대출","외환"];
 
-
-  const bankOptions = ["Eum","신한","KB국민","우리","하나","NH농협"];
-  const typeOptions = ["전체","입출금","자유적금", "예금","적금", "대출","외화"];
-  const foreignFm = ["KRW", "USD", "JPY", "SGD", "THB", "AED", "AUD", "BHD", "BND", "CAD",
-    "CHF", "CNH", "DKK", "EUR", "GBP", "HKD", "IDR", "KWD","MYR", "NOK", "NZD","NZD", "SEK"];
-
-  // 원화 스케일링
-  // const won = (n)=> n.toLocaleString('ko-KR');
-  // const formatCurrency = (amt, cur) => 
-  //   cur === "USD" ? `$ ${amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`: `₩ ${won(amt)}`;
 
   // 원화 스케일링에서 -> 통화 표기로 수정
   const formatCurrency = (amt, cur) => formatMoney(amt, cur, 'code');
@@ -154,7 +156,21 @@ function AccountListPage(){
   function cmpNumberDesc(a, b) {
     return (Number(b) || 0) - (Number(a) || 0);
   }
-    
+  
+  // 통장 타입용 태그
+  const TagPill = ({children}) => (
+   <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] leading-5
+                   bg-gray-100 text-gray-700 border border-gray-200">
+     {children}
+    </span>
+  );
+  // 대출용
+  const LoanPill = ({children}) => (
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px]
+                    bg-blue-50 text-blue-700 border border-blue-200">
+      {children}
+    </span>
+  );
 
 
   // 은행 필터 토글
@@ -176,7 +192,7 @@ function AccountListPage(){
   function downloadCsv(rows) {
     const header = ["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"];
     const body = rows.map((r) => [
-      r.nickname, r.accountType, r.bank, r.number, r.type,
+      r.nickname, r.accountType, r.bank, r.number, r.typeLabel,
       formatMoney(r.balance, r.currency, 'code'), // 예: SAR 12,345.00
       r.currency, r.status, r.lastActivity
     ]);
@@ -212,7 +228,7 @@ function AccountListPage(){
     // 테이블 구성
     const head = [["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"]];
     const body = rows.map((r) => [
-      r.nickname, r.accountType, r.bank, r.number, r.type,
+      r.nickname, r.accountType, r.bank, r.number, r.typeLabel,
       formatMoney(r.balance, r.currency, 'code'), // 예: SAR 12,345.00
       r.currency, r.status, r.lastActivity
     ]);
@@ -247,10 +263,13 @@ function AccountListPage(){
     return accounts
       .filter((a) => {
         const q = search.trim().toLowerCase();
-        const okQ = !q || [a.disName, a.accountType, a.number].some((s) => 
+        const okQ = !q || [a.disName, a.accountType, a.number, a.typeLabel].some((s) => 
           s?.toLowerCase().includes(q));
         if (!okQ) return false;
-        if (type !== "전체" && a.type !== type) return false;
+        if (type !== "전체") {
+          const typeMatch = a.type === type || a.filterType === type;
+          if (!typeMatch) return false;
+        }
         if (selectedBanks.size > 0 && !selectedBanks.has(a.bank)) return false;
         if (statuses.size > 0 && !statuses.has(a.status)) return false;
         const balKRW = a.currency === "KRW" ? a.balance : null;
@@ -338,18 +357,18 @@ function AccountListPage(){
                   </div>
                 </div>
 
-                {/* 은행별검색(체크박스) */}
-                <div className="mt-4">
-                  <div className="text-xs text-gray-600 mb-1">은행</div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {bankOptions.map(b=> (
-                      <label key={b} className="inline-flex items-center gap-2">
-                        <input type="checkbox" className="rounded border-gray-300"
-                               checked={selectedBanks.has(b)} onChange={()=>toggleBank(b)} /> {b}
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                {/* 은행별검색(체크박스)
+                // <div className="mt-4">
+                //   <div className="text-xs text-gray-600 mb-1">은행</div>
+                //   <div className="grid grid-cols-2 gap-2 text-xs">
+                //     {bankOptions.map(b=> (
+                //       <label key={b} className="inline-flex items-center gap-2">
+                //         <input type="checkbox" className="rounded border-gray-300"
+                //                checked={selectedBanks.has(b)} onChange={()=>toggleBank(b)} /> {b}
+                //       </label>
+                //     ))}
+                //   </div>
+                // </div> */}
 
                 {/* 금액별 검색 */}
                 <div className="mt-4">
@@ -425,7 +444,10 @@ function AccountListPage(){
                           {/* 계좌이름/별칭 */}
                           <td className="px-3 py-3">
                             <div className="font-medium text-gray-900">{row.disName}</div>
-                            <div className="text-gray-500 text-xs">{row.type}</div>
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                <TagPill>{row.type || '입출금'}</TagPill>
+                                {row.isLoanRepay && <LoanPill>대출상환용</LoanPill>}
+                              </div>
                           </td>
                           {/* 계좌번호 */}
                           <td className="px-3 py-3">{row.bank}</td>
@@ -478,7 +500,10 @@ function AccountListPage(){
                     <div key={row.id} className="rounded-xl border p-3">
                       <div className="flex items-start justify-between">
                         <div>
-                          <div className="text-sm text-gray-500">{row.bank} · {row.type}</div>
+                          <div className="text-sm text-gray-500">{row.bank}</div>
+                          <div className="mt-0.5 flex flex-wrap gap-1">
+                            {row.uiTags?.map(tag => <TagPill key={tag}>{tag}</TagPill>)}
+                          </div>
                           <div className="font-medium text-gray-900">{row.disName}</div>
                         </div>
                         <button onClick={()=>setAccounts(list=>list.map(a=> a.id===row.id?{...a,favorite:!a.favorite}:a))} aria-label="즐겨찾기">

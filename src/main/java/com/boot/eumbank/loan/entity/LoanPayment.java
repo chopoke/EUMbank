@@ -27,6 +27,12 @@ public class LoanPayment {
     @Column(name = "lp_id", nullable = false, length = 20)
     private String lpId;                                        // 대출별 유니크 아이디
 
+    @Column(name = "ls_no")
+    private Long scheduleId;                        // 옵션: 단일 타겟일 때 연결
+
+    @Column(name = "lp_idempotency_key", length = 64)
+    private String idempotencyKey;
+
     @Column(name = "lp_amount_received", nullable = false, precision = 18, scale = 2)
     private BigDecimal amountReceived;
 
@@ -47,7 +53,4 @@ public class LoanPayment {
 
     @Column(name = "lp_payment_time", nullable = false)
     private LocalDateTime paymentTime;
-
-    @Column(name = "ls_no")
-    private Long scheduleId;                        // 옵션: 단일 타겟일 때 연결
 }

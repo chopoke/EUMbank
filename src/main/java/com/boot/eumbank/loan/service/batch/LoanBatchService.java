@@ -29,7 +29,8 @@ public class LoanBatchService {
     private final LoanRepaymentService repaymentService;
 
     // ---- 1) 당일 납부 대상 자동출금 (매일 09:05 KST)
-    @Scheduled(cron = "0 5 9 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
+    //@Scheduled(cron = "0 5 9 * * *", zone = "Asia/Seoul")
     public void autoDebitForToday() {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));       // 서울 기준
         List<LoanSchedule> dues = scheduleRepo.findAllDueForAutoDebit(today);
@@ -57,7 +58,8 @@ public class LoanBatchService {
     }
 
     // ---- 2) 실패/부분납부 재시도 (매시간 20분)
-    @Scheduled(cron = "0 20 * * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 */2 * * * *", zone = "Asia/Seoul")     // 임시 2분
+    //@Scheduled(cron = "0 20 * * * *", zone = "Asia/Seoul")
     public void retryFailedOrPartial() {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         // PARTIAL/FAILED 등 정책에 맞게 조회 (예: 오늘자 + 미수금 있음)
@@ -89,7 +91,8 @@ public class LoanBatchService {
     }
 
     // ---- 3) 연체 판정 & 연체이자 업데이트 (매일 00:10)
-    @Scheduled(cron = "0 10 0 * * *", zone = "Asia/Seoul")
+     @Scheduled(cron = "0 * * * * *", zone = "Asia/Seoul")
+    //@Scheduled(cron = "0 10 0 * * *", zone = "Asia/Seoul")
     public void markOverdueAndAccruePenalty() {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         List<LoanSchedule> overdueTargets = scheduleRepo.findOverdueTargets(today);
