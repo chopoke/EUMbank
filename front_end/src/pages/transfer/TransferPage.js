@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { transferApi } from '../../api/transferApi';
+import '../../resources/css/other.css';
 
 // 전역 유틸리티 함수
 const formatKRW = (n) => `₩${(n || 0).toLocaleString('ko-KR')}`;
@@ -968,8 +969,8 @@ export default function TransferPage() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <main id="main">
-        <section className="mx-auto max-w-screen-xl px-6 py-6">
-          <div className="flex items-center justify-between">
+        <section className="mx-auto max-w-screen-xl px-6 py-[32px]">
+          <div className="accb flex items-center justify-between w-[1240px] h-[152px]">
             <h1 className="text-2xl font-semibold tracking-tight">계좌 이체</h1>
             <div className="flex items-center gap-3">
               <button 

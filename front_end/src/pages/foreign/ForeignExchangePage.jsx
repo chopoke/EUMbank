@@ -538,24 +538,32 @@ export default function ForeignExchangePage() {
   const onRightChange = (e) => handleChange({ target: { name: rightName, value: e.target.value }});
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    // <div className="bg-gray-50 min-h-screen">
+    <div className="fx-page" style={{ maxWidth: 1280 }}>
+      <div className="fx-page__head">
+        {activeTab === 'exchange' ? (<h1>환전 신청 / <a style={{ color: 'black' }}>환전 내역</a></h1>) : (<h1><a style={{ color: 'black' }}>환전 신청</a> / 환전 내역</h1>)}
+        <p className="fx-page__hint">
+          실시간 갱신분(스케줄), 매매기준/사실때/파실때 환율을 확인하고 간이 계산기를 사용할 수 있어요.
+        </p>
+      </div>
+      
       {/* ▶ 가운데 고정폭 래퍼 */}
-      <div className="container mx-auto max-w-7xl px-4 py-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-6">
+      <div className="container mx-auto max-w-7xl py-8">
+        {/* <h1 className="text-3xl font-extrabold text-gray-900 mb-6">
           <span className="text-blue-500">환전 신청</span> / 환전 내역
-        </h1>
+        </h1> */}
 
         <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-4">
             <button
               onClick={() => setActiveTab('exchange')}
-              className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'exchange' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              className={`py-3 px-1 border-b-2 rounded-md font-medium text-sm ${activeTab === 'exchange' ? 'border-indigo-500 text-indigo-600 bg-indigo-100 ' : 'bg-gray-100 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             >
               <Calculator className="w-4 h-4 inline mr-2" /> 환전 신청 (실시간 계산)
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`py-3 px-1 border-b-2 font-medium text-sm ${activeTab === 'history' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+              className={`py-3 px-1 border-b-2 rounded-md font-medium text-sm ${activeTab === 'history' ? 'border-indigo-500 text-indigo-600 bg-indigo-100 ' : 'bg-gray-100 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
             >
               <List className="w-4 h-4 inline mr-2" /> 환전 내역 조회
             </button>
