@@ -1,15 +1,15 @@
 package com.boot.eumbank.product.entity.product;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor  // 추가
+@Builder
 @Entity
 @Table(name = "DEPOSIT_TBL")
 @ToString
@@ -79,4 +79,7 @@ public class ProductDeposit {
 
     @Column(name= "d_fail")
     private Integer dFail;
+
+    @Column(name= "d_expected_maturity_amount")
+    private long dExpectedMaturityAmount;
 }

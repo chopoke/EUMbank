@@ -1,6 +1,8 @@
 package com.boot.eumbank.product.entity.product;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
@@ -11,7 +13,9 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
 @Entity
+@Builder
 @Table(name = "INSTALLMENT_PRODUCT_TBL")
 public class ProductInstallmentList {
 
@@ -39,10 +43,10 @@ public class ProductInstallmentList {
     private Integer ipMaxMonths;
 
     @Column(name = "ip_min_monthly_amount")
-    private BigDecimal ipMinMonthlyAmount;
+    private Long ipMinMonthlyAmount;
 
     @Column(name = "ip_max_monthly_amount")
-    private BigDecimal ipMaxMonthlyAmount;
+    private Long ipMaxMonthlyAmount;
 
     @Column(name = "ip_early_termination_rate", precision = 5, scale = 2)
     private BigDecimal ipEarlyTerminationRate;
@@ -71,5 +75,5 @@ public class ProductInstallmentList {
     private String ipHref;
 
     @Column(name = "ip_rate")
-    private BigDecimal ipRate;
+    private String ipRate;
 }

@@ -96,7 +96,6 @@ const DepositSubscription = () => {
     };
 
     const handleSubscription = async () => {
-        if ()
         if (!isConfirmed) { alert('상품설명서 및 약관에 동의해주세요.'); return; }
         if (!isSigned || !signatureData) { alert('약관 확인 및 서명을 먼저 진행해주세요.'); return; }
         if (!linkedAccount) { alert('출금 계좌를 선택해주세요.'); return; }
@@ -111,7 +110,6 @@ const DepositSubscription = () => {
             const formData = new FormData();
 
             const subscriptionRequest = {
-                name: nickName,
                 dpNo: productList.no,
                 productName: formattedProduct.name,
                 amount: amount,

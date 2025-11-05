@@ -129,8 +129,8 @@ public class InstallQueryRepository {
                         productInstallment.iArrearsAmt,            // 20. 연체금액
                         productInstallment.iUpdatedAt,              // 21. 수정일
                         productInstallment.aAccountNo,              // 22. 계조번호
-                        productInstallment.iPrincipalBal
-
+                        productInstallment.iPrincipalBal,
+                        productInstallment.iExpectedMaturityAmount
                 ).values(
                         null,
                         installProducts.getNo(), // dposit_product_tbl dpNo
@@ -153,7 +153,8 @@ public class InstallQueryRepository {
                         BigDecimal.ZERO,                                                // 20. iArrearsAmt - 연체금액 (초기값: 0)
                         LocalDateTime.now(),
                         oneAccount.getAccountNo(),
-                        installDto.getAmount().intValue()
+                        installDto.getAmount().intValue(),
+                        installDto.getExpectedMaturityAmount().intValue()
                 ).execute();
     }
 

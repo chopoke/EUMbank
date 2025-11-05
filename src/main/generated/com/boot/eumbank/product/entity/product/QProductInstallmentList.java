@@ -37,11 +37,11 @@ public class QProductInstallmentList extends EntityPathBase<ProductInstallmentLi
 
     public final StringPath ipIsActive = createString("ipIsActive");
 
-    public final NumberPath<java.math.BigDecimal> ipMaxMonthlyAmount = createNumber("ipMaxMonthlyAmount", java.math.BigDecimal.class);
+    public final NumberPath<Long> ipMaxMonthlyAmount = createNumber("ipMaxMonthlyAmount", Long.class);
 
     public final NumberPath<Integer> ipMaxMonths = createNumber("ipMaxMonths", Integer.class);
 
-    public final NumberPath<java.math.BigDecimal> ipMinMonthlyAmount = createNumber("ipMinMonthlyAmount", java.math.BigDecimal.class);
+    public final NumberPath<Long> ipMinMonthlyAmount = createNumber("ipMinMonthlyAmount", Long.class);
 
     public final NumberPath<Integer> ipMinMonths = createNumber("ipMinMonths", Integer.class);
 
@@ -49,7 +49,7 @@ public class QProductInstallmentList extends EntityPathBase<ProductInstallmentLi
 
     public final NumberPath<Integer> ipNo = createNumber("ipNo", Integer.class);
 
-    public final NumberPath<java.math.BigDecimal> ipRate = createNumber("ipRate", java.math.BigDecimal.class);
+    public final StringPath ipRate = createString("ipRate");
 
     public final StringPath ipType = createString("ipType");
 

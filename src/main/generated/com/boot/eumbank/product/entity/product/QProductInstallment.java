@@ -39,6 +39,8 @@ public class QProductInstallment extends EntityPathBase<ProductInstallment> {
 
     public final StringPath iCurrency = createString("iCurrency");
 
+    public final NumberPath<Long> iExpectedMaturityAmount = createNumber("iExpectedMaturityAmount", Long.class);
+
     public final NumberPath<Integer> iFail = createNumber("iFail", Integer.class);
 
     public final StringPath iId = createString("iId");

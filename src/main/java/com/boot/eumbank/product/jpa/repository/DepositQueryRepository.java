@@ -124,7 +124,8 @@ public class DepositQueryRepository {
                         productDeposit.dAccrInt,
                         productDeposit.dPrincipalBal,
                         productDeposit.aAccountNo,
-                        productDeposit.dPeriod
+                        productDeposit.dPeriod,
+                        productDeposit.dExpectedMaturityAmount
                 ).values(
                         null,
                         depositProducts.getNo(), // dposit_product_tbl dpNo
@@ -144,7 +145,8 @@ public class DepositQueryRepository {
                         BigDecimal.ZERO,                            // 15. dAccrInt - 경과이자 (초기값: 0)
                         new BigDecimal(requestDto.getExpectedMaturityAmount()),      // 16. dPrincipalBal - 원금잔액 (초기 예금액)
                         oneAccount.getAccountNo(),
-                        requestDto.getPeriod()
+                        requestDto.getPeriod(),
+                        requestDto.getExpectedMaturityAmount()
                 ).execute();
     }
 

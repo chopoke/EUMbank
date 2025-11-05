@@ -1,6 +1,8 @@
 package com.boot.eumbank.product.entity.product;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -9,6 +11,8 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "INSTALLMENT_TBL")
 public class ProductInstallment {
@@ -89,4 +93,7 @@ public class ProductInstallment {
 
     @Column(name = "i_principal_bal")
     private long iPrincipalBal;
+
+    @Column(name = "i_expected_maturity_amount")
+    private long iExpectedMaturityAmount;
 }

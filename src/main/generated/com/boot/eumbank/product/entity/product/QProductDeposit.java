@@ -37,6 +37,8 @@ public class QProductDeposit extends EntityPathBase<ProductDeposit> {
 
     public final StringPath dDormantYn = createString("dDormantYn");
 
+    public final NumberPath<Long> dExpectedMaturityAmount = createNumber("dExpectedMaturityAmount", Long.class);
+
     public final NumberPath<Integer> dFail = createNumber("dFail", Integer.class);
 
     public final StringPath dFreezeYn = createString("dFreezeYn");

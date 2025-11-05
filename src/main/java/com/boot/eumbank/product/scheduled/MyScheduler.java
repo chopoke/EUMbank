@@ -3,6 +3,7 @@ package com.boot.eumbank.product.scheduled;
 import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.account.open.entity.account.QAccount;
 import com.boot.eumbank.account.select.entity.TransferHistory;
+import com.boot.eumbank.product.entity.product.ProductDeposit;
 import com.boot.eumbank.product.entity.product.ProductInstallment;
 import com.boot.eumbank.product.entity.product.QProductDeposit;
 import com.boot.eumbank.product.entity.product.QProductInstallment;
@@ -46,253 +47,256 @@ public class MyScheduler {
     @Transactional
     public void deductDepositWithLock() {
 
-//        logger.info("MyScheduler => deductDepositWithLock() 시작 - {}", LocalDateTime.now());
-//
-//        try {
-//
-//            // ⭐ 1. ACTIVE 예금이 존재하는지 먼저 확인
-//            boolean hasActiveDeposits = queryFactory
-//                    .selectOne()
-//                    .from(productDeposit)
-//                    .where(productDeposit.dStatus.eq("ACTIVE"))
-//                    .fetchFirst() != null;
-//
-//            if (!hasActiveDeposits) {
-//                logger.info("처리할 ACTIVE 예금이 없습니다.");
-//                return;
-//            }
-//
-//            // 2. ACTIVE 예금 목록 조회
-//            List<ProductDeposit> deposits = queryFactory
-//                    .selectFrom(productDeposit)
-//                    .where(productDeposit.dStatus.eq("ACTIVE"))
-//                    .orderBy(productDeposit.dNo.asc()) // 데드락 방지
-//                    .fetch();
-//
-//            logger.info("처리할 예금 건수: {}", deposits.size());
-//
-//            int successCount = 0;
-//            int failCount = 0;
-//
-//            for (var deposit : deposits) {
-//
-//                logger.info("처리 중 - dNo: {}, aNo: {}, accountNo: {}",
-//                        deposit.getDNo(), deposit.getANo(), deposit.getAAccountNo());
-//
-//                try {
-//                    boolean depositExists = queryFactory
-//                            .selectOne()
-//                            .from(productDeposit)
-//                            .where(productDeposit.dNo.eq(deposit.getDNo()))
-//                            .fetchFirst() != null;
-//
-//                    if (!depositExists) {
-//                        logger.warn("예금이 더 이상 ACTIVE 상태가 아님 - dNo: {}", deposit.getDNo());
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    // 4. 예금 정보 락 (FOR UPDATE)
-//                    ProductDeposit depositEntity = queryFactory
-//                            .selectFrom(productDeposit)
-//                            .where(productDeposit.dNo.eq(deposit.getDNo()))
-//                            .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-//                            .fetchOne();
-//
-//                    if (depositEntity == null) {
-//                        logger.warn("예금 정보를 찾을 수 없음 - dNo: {}", deposit.getDNo());
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    ProductDeposit product = queryFactory
-//                            .selectFrom(productDeposit)
-//                            .where(productDeposit.dNo.eq(deposit.getDNo()))
-//                            .fetchOne();
-//
-//                    if(product.getDCountPeriod().equals(product.getDPeriod())) {
-//                        logger.info("완료 처리");
-//
-//                        queryFactory
-//                                .update(productDeposit)
-//                                .set(productDeposit.dStatus, "NONE")
-//                                .execute();
-//                        continue;
-//                    }
-//
-//                    logger.info(String.valueOf(product.getDAmount()));
-//                    logger.info(String.valueOf(product.getDPrincipalBal()));
-//                    if(product.getDAmount() == product.getDPrincipalBal() && product.getDStatus().equals("ACTIVE")) {
-//                        logger.info("정상적으로 현재 금액을 유지중입니다.");
-//
-//                        // 기간 증가
-//                        queryFactory
-//                                .update(productDeposit)
-//                                .set(productDeposit.dCountPeriod, productDeposit.dCountPeriod.add(1))
-//                                .execute();
-//
-//                        logger.info("testddr " + product.getDPeriod());
-//                        logger.info("testddr " + product.getDCountPeriod());
-//                        // 해당 개월수 일치하는 경우 ACTIVE => NONE
-//
-//                        continue;
-//                    }
-//
-//                    // 에금 기간이 1회가 넘었거나, 그리고 금액이 일치하지 않을시..
-//                    if(product.getDCountPeriod() > 1 && !(product.getDAmount() == product.getDPrincipalBal() == false)){
-//                        logger.info("약속된 금액을 입금해주세요.");
-//                        // 기간 증가
-//                        queryFactory
-//                                .update(productDeposit)
-//                                .set(productDeposit.dFail, productDeposit.dCountPeriod.add(1))
-//                                .execute();
-//                    }
-//
-//                    // 5. 계좌 존재 여부 exists로 확인
-//                    boolean accountExists = queryFactory
-//                            .selectOne()
-//                            .from(account)
-//                            .where(
-//                                    account.aNo.eq(depositEntity.getANo())
-//                                            .and(account.accountNo.eq(depositEntity.getAAccountNo()))
-//                            )
-//                            .fetchFirst() != null;
-//
-//                    if (!accountExists) {
-//                        logger.warn("계좌가 존재하지 않음 - aNo: {}, accountNo: {}",
-//                                depositEntity.getANo(), depositEntity.getAAccountNo());
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    // 6. 계좌 정보 락 (FOR UPDATE)
-//                    Account accountEntity = queryFactory
-//                            .selectFrom(account)
-//                            .where(
-//                                    account.aNo.eq(depositEntity.getANo())
-//                                            .and(account.accountNo.eq(depositEntity.getAAccountNo()))
-//                            )
-//                            .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-//                            .fetchOne();
-//
-//                    if (accountEntity == null) {
-//                        logger.warn("계좌를 찾을 수 없음 - aNo: {}, accountNo: {}",
-//                                depositEntity.getANo(), depositEntity.getAAccountNo());
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    // ⭐ 7. 잔액이 충분한지 exists로 확인 (조회 전 미리 체크)
-//                    boolean hasSufficientBalance = queryFactory
-//                            .selectOne()
-//                            .from(account)
-//                            .where(
-//                                    account.aNo.eq(accountEntity.getANo())
-//                                            .and(account.balance.goe(depositEntity.getDPrincipalBal()))
-//                            )
-//                            .fetchFirst() != null;
-//
-//                    if (!hasSufficientBalance) {
-//                        logger.warn("잔액 부족 - 계좌: {}, 필요금액: {}",
-//                                depositEntity.getAAccountNo(),
-//                                depositEntity.getDPrincipalBal());
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    // 8. 잔액 체크 (실제 값 확인)
-//                    if (accountEntity.getBalance().compareTo(BigDecimal.valueOf(depositEntity.getDPrincipalBal())) < 0) {
-//                        logger.warn("잔액 부족 - 계좌: {}, 잔액: {}, 차감금액: {}",
-//                                depositEntity.getAAccountNo(),
-//                                accountEntity.getBalance(),
-//                                depositEntity.getDPrincipalBal());
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    BigDecimal beforeBalance = accountEntity.getBalance();
-//
-//                    // 9. 계좌 잔액 차감
-//                    long accountUpdated = queryFactory
-//                            .update(account)
-//                            .set(account.balance,
-//                                    account.balance.subtract(depositEntity.getDPrincipalBal()))
-//                            .set(account.updatedAt, LocalDateTime.now())
-//                            .where(account.aNo.eq(accountEntity.getANo()))
-//                            .execute();
-//
-//                    if (accountUpdated == 0) {
-//                        logger.warn("계좌 업데이트 실패 - aNo: {}", accountEntity.getANo());
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    logger.info("계좌 차감 완료 - 계좌번호: {}, 차감금액: {}",
-//                            depositEntity.getAAccountNo(), depositEntity.getDPrincipalBal());
-//
-//
-//                    // transfer_history_tbl에 히스토리 쌓기
-//                    BigDecimal afterBalance = beforeBalance.subtract(BigDecimal.valueOf(depositEntity.getDPrincipalBal()));
-//
-//                    TransferHistory history = TransferHistory.builder()
-//                            // transferNo는 자동 생성되므로 제외
-//                            .transferId(generateTransferId())  // 고유 ID
-//                            .accountNo(accountEntity.getANo())  // a_no (계좌 PK)
-//                            .amount(BigDecimal.valueOf(depositEntity.getDPrincipalBal()))  // 거래 금액
-//                            .memo("예금 자동이체 - " + depositEntity.getDId())  // 메모
-//                            .otherBank("EUM_BANK")  // 상대방 은행
-//                            .otherAccount(depositEntity.getDAccountNo())  // 상대방 계좌 (예금계좌)
-//                            .transferType("DEPOSIT_AUTO")  // 이체 유형
-//                            .afterBalance(afterBalance)  // 거래 후 잔액
-//                            .transactionType("WITHDRAW")  // 거래 구분 (출금)
-//                            .accountOut(BigDecimal.valueOf(depositEntity.getDPrincipalBal()))  // 출금액
-//                            .accountIn(BigDecimal.ZERO)  // 입금액 (출금이므로 0)
-//                            .build();
-//
-//                    entityManager.persist(history);
-//                    logger.info("거래 히스토리 저장 완료 - 계좌: {}, 금액: {}",
-//                            accountEntity.getAccountNo(), depositEntity.getDPrincipalBal());
-//
-//                    // 기간 증가
-//                    queryFactory
-//                            .update(productDeposit)
-//                            .set(productDeposit.dCountPeriod, productDeposit.dCountPeriod.add(1))
-//                            .execute();
-//
-//                    logger.info("기간 증감");
-//
-//                    // 10. 예금 테이블 업데이트
-//                    long depositUpdated = queryFactory
-//                            .update(productDeposit)
-//                            .set(productDeposit.dAmount,
-//                                    productDeposit.dAmount.add(depositEntity.getDPrincipalBal()))
-//                            .set(productDeposit.dUpdatedAt, LocalDateTime.now())
-//                            .where(productDeposit.dNo.eq(depositEntity.getDNo()))
-//                            .execute();
-//
-//                    if (depositUpdated == 0) {
-//                        logger.warn("예금 업데이트 실패 - dNo: {}", depositEntity.getDNo());
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    logger.info("예금 증액 완료 - 예금번호: {}, 증액금액: {}",
-//                            depositEntity.getDNo(), depositEntity.getDPrincipalBal());
-//
-//                    successCount++;
-//
-//                } catch (Exception e) {
-//                    logger.error("개별 예금 처리 중 에러 - depositNo: {}", deposit.getDNo(), e);
-//                    failCount++;
-//                }
-//            }
-//
-//
-//
-//        } catch (Exception e) {
-//            logger.error("deductDepositWithLock 실행 중 에러", e);
-//            throw e; // 트랜잭션 롤백
-//        }
+        logger.info("MyScheduler => deductDepositWithLock() 시작 - {}", LocalDateTime.now());
+
+        try {
+
+            // ⭐ 1. ACTIVE 예금이 존재하는지 먼저 확인
+            boolean hasActiveDeposits = queryFactory
+                    .selectOne()
+                    .from(productDeposit)
+                    .where(productDeposit.dStatus.eq("ACTIVE"))
+                    .fetchFirst() != null;
+
+            if (!hasActiveDeposits) {
+                logger.info("처리할 ACTIVE 예금이 없습니다.");
+                return;
+            }
+
+            // 2. ACTIVE 예금 목록 조회
+            List<ProductDeposit> deposits = queryFactory
+                    .selectFrom(productDeposit)
+                    .where(productDeposit.dStatus.eq("ACTIVE"))
+                    .orderBy(productDeposit.dNo.asc()) // 데드락 방지
+                    .fetch();
+
+            logger.info("처리할 예금 건수: {}", deposits.size());
+
+            int successCount = 0;
+            int failCount = 0;
+
+            for (var deposit : deposits) {
+
+                logger.info("처리 중 - dNo: {}, aNo: {}, accountNo: {}",
+                        deposit.getDNo(), deposit.getANo(), deposit.getAAccountNo());
+
+                try {
+                    boolean depositExists = queryFactory
+                            .selectOne()
+                            .from(productDeposit)
+                            .where(productDeposit.dNo.eq(deposit.getDNo()))
+                            .fetchFirst() != null;
+
+                    if (!depositExists) {
+                        logger.warn("예금이 더 이상 ACTIVE 상태가 아님 - dNo: {}", deposit.getDNo());
+                        failCount++;
+                        continue;
+                    }
+
+                    // 4. 예금 정보 락 (FOR UPDATE)
+                    ProductDeposit depositEntity = queryFactory
+                            .selectFrom(productDeposit)
+                            .where(productDeposit.dNo.eq(deposit.getDNo()))
+                            .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+                            .fetchOne();
+
+                    if (depositEntity == null) {
+                        logger.warn("예금 정보를 찾을 수 없음 - dNo: {}", deposit.getDNo());
+                        failCount++;
+                        continue;
+                    }
+
+                    ProductDeposit product = queryFactory
+                            .selectFrom(productDeposit)
+                            .where(productDeposit.dNo.eq(deposit.getDNo()))
+                            .fetchOne();
+
+                    if(product.getDCountPeriod().equals(product.getDPeriod())) {
+                        logger.info("완료 처리");
+
+                        queryFactory
+                                .update(productDeposit)
+                                .set(productDeposit.dAmount, productDeposit.dExpectedMaturityAmount)
+                                .execute();
+
+                        queryFactory
+                                .update(productDeposit)
+                                .set(productDeposit.dStatus, "NONE")
+                                .execute();
+                        continue;
+                    }
+
+                    logger.info(String.valueOf(product.getDAmount()));
+                    logger.info(String.valueOf(product.getDPrincipalBal()));
+                    if(product.getDAmount() == product.getDPrincipalBal() && product.getDStatus().equals("ACTIVE")) {
+                        logger.info("정상적으로 현재 금액을 유지중입니다.");
+
+                        // 기간 증가
+                        queryFactory
+                                .update(productDeposit)
+                                .set(productDeposit.dCountPeriod, productDeposit.dCountPeriod.add(1))
+                                .execute();
+
+                        logger.warn("납입 횟수 : {}/{}", product.getDCountPeriod(), product.getDPeriod());
+
+                        continue;
+                    }
+
+                    // 에금 기간이 1회가 넘었거나, 그리고 금액이 일치하지 않을시..
+                    if(product.getDCountPeriod() > 1 && !(product.getDAmount() == product.getDPrincipalBal() == false)){
+                        logger.info("약속된 금액을 입금해주세요.");
+                        // 기간 증가
+                        queryFactory
+                                .update(productDeposit)
+                                .set(productDeposit.dFail, productDeposit.dCountPeriod.add(1))
+                                .execute();
+                    }
+
+                    // 5. 계좌 존재 여부 exists로 확인
+                    boolean accountExists = queryFactory
+                            .selectOne()
+                            .from(account)
+                            .where(
+                                    account.aNo.eq(depositEntity.getANo())
+                                            .and(account.accountNo.eq(depositEntity.getAAccountNo()))
+                            )
+                            .fetchFirst() != null;
+
+                    if (!accountExists) {
+                        logger.warn("계좌가 존재하지 않음 - aNo: {}, accountNo: {}",
+                                depositEntity.getANo(), depositEntity.getAAccountNo());
+                        failCount++;
+                        continue;
+                    }
+
+                    // 6. 계좌 정보 락 (FOR UPDATE)
+                    Account accountEntity = queryFactory
+                            .selectFrom(account)
+                            .where(
+                                    account.aNo.eq(depositEntity.getANo())
+                                            .and(account.accountNo.eq(depositEntity.getAAccountNo()))
+                            )
+                            .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+                            .fetchOne();
+
+                    if (accountEntity == null) {
+                        logger.warn("계좌를 찾을 수 없음 - aNo: {}, accountNo: {}",
+                                depositEntity.getANo(), depositEntity.getAAccountNo());
+                        failCount++;
+                        continue;
+                    }
+
+                    // ⭐ 7. 잔액이 충분한지 exists로 확인 (조회 전 미리 체크)
+                    boolean hasSufficientBalance = queryFactory
+                            .selectOne()
+                            .from(account)
+                            .where(
+                                    account.aNo.eq(accountEntity.getANo())
+                                            .and(account.balance.goe(depositEntity.getDPrincipalBal()))
+                            )
+                            .fetchFirst() != null;
+
+                    if (!hasSufficientBalance) {
+                        logger.warn("잔액 부족 - 계좌: {}, 필요금액: {}",
+                                depositEntity.getAAccountNo(),
+                                depositEntity.getDPrincipalBal());
+                        failCount++;
+                        continue;
+                    }
+
+                    // 8. 잔액 체크 (실제 값 확인)
+                    if (accountEntity.getBalance().compareTo(BigDecimal.valueOf(depositEntity.getDPrincipalBal())) < 0) {
+                        logger.warn("잔액 부족 - 계좌: {}, 잔액: {}, 차감금액: {}",
+                                depositEntity.getAAccountNo(),
+                                accountEntity.getBalance(),
+                                depositEntity.getDPrincipalBal());
+                        failCount++;
+                        continue;
+                    }
+
+                    BigDecimal beforeBalance = accountEntity.getBalance();
+
+                    // 9. 계좌 잔액 차감
+                    long accountUpdated = queryFactory
+                            .update(account)
+                            .set(account.balance,
+                                    account.balance.subtract(depositEntity.getDPrincipalBal()))
+                            .set(account.updatedAt, LocalDateTime.now())
+                            .where(account.aNo.eq(accountEntity.getANo()))
+                            .execute();
+
+                    if (accountUpdated == 0) {
+                        logger.warn("계좌 업데이트 실패 - aNo: {}", accountEntity.getANo());
+                        failCount++;
+                        continue;
+                    }
+
+                    logger.info("계좌 차감 완료 - 계좌번호: {}, 차감금액: {}",
+                            depositEntity.getAAccountNo(), depositEntity.getDPrincipalBal());
+
+
+                    // transfer_history_tbl에 히스토리 쌓기
+                    BigDecimal afterBalance = beforeBalance.subtract(BigDecimal.valueOf(depositEntity.getDPrincipalBal()));
+
+                    TransferHistory history = TransferHistory.builder()
+                            // transferNo는 자동 생성되므로 제외
+                            .transferId(generateTransferId())  // 고유 ID
+                            .accountNo(accountEntity.getANo())  // a_no (계좌 PK)
+                            .amount(BigDecimal.valueOf(depositEntity.getDPrincipalBal()))  // 거래 금액
+                            .memo("예금 자동이체 - " + depositEntity.getDId())  // 메모
+                            .otherBank("EUM_BANK")  // 상대방 은행
+                            .otherAccount(depositEntity.getDAccountNo())  // 상대방 계좌 (예금계좌)
+                            .transferType("DEPOSIT_AUTO")  // 이체 유형
+                            .afterBalance(afterBalance)  // 거래 후 잔액
+                            .transactionType("WITHDRAW")  // 거래 구분 (출금)
+                            .accountOut(BigDecimal.valueOf(depositEntity.getDPrincipalBal()))  // 출금액
+                            .accountIn(BigDecimal.ZERO)  // 입금액 (출금이므로 0)
+                            .build();
+
+                    entityManager.persist(history);
+                    logger.info("거래 히스토리 저장 완료 - 계좌: {}, 금액: {}",
+                            accountEntity.getAccountNo(), depositEntity.getDPrincipalBal());
+
+                    // 기간 증가
+                    queryFactory
+                            .update(productDeposit)
+                            .set(productDeposit.dCountPeriod, productDeposit.dCountPeriod.add(1))
+                            .execute();
+
+                    logger.info("기간 증감");
+
+                    // 10. 예금 테이블 업데이트
+                    long depositUpdated = queryFactory
+                            .update(productDeposit)
+                            .set(productDeposit.dAmount,
+                                    productDeposit.dAmount.add(depositEntity.getDPrincipalBal()))
+                            .set(productDeposit.dUpdatedAt, LocalDateTime.now())
+                            .where(productDeposit.dNo.eq(depositEntity.getDNo()))
+                            .execute();
+
+                    if (depositUpdated == 0) {
+                        logger.warn("예금 업데이트 실패 - dNo: {}", depositEntity.getDNo());
+                        failCount++;
+                        continue;
+                    }
+
+                    logger.info("예금 증액 완료 - 예금번호: {}, 증액금액: {}",
+                            depositEntity.getDNo(), depositEntity.getDPrincipalBal());
+
+                    successCount++;
+
+                } catch (Exception e) {
+                    logger.error("개별 예금 처리 중 에러 - depositNo: {}", deposit.getDNo(), e);
+                    failCount++;
+                }
+            }
+
+
+
+        } catch (Exception e) {
+            logger.error("deductDepositWithLock 실행 중 에러", e);
+            throw e; // 트랜잭션 롤백
+        }
     }
 
     private String generateTransferId() {
@@ -313,7 +317,7 @@ public class MyScheduler {
     @Transactional
     public void deductSavingWithLock() {
 
-        logger.info("MyScheduler => deductSavingWithLock() 시작 - {}", LocalDateTime.now());
+        //logger.info("MyScheduler => deductSavingWithLock() 시작 - {}", LocalDateTime.now());
 
         try {
 
@@ -388,6 +392,14 @@ public class MyScheduler {
                                 .set(productInstallment.iStatus, "COMPLETE")
                                 .where(productInstallment.iNo.eq(saving.getINo()))
                                 .execute();
+
+
+                        queryFactory
+                                .update(productInstallment)
+                                .set(productInstallment.iAmount, productInstallment.iExpectedMaturityAmount)
+                                .where(productInstallment.iNo.eq(saving.getINo()))
+                                .execute();
+
                         continue;
                     }
 
@@ -521,7 +533,7 @@ public class MyScheduler {
             logger.info("적금 스케줄러 완료 - 성공: {}, 실패: {}", successCount, failCount);
 
         } catch (Exception e) {
-            logger.error("deductSavingWithLock 실행 중 에러", e);
+            //logger.error("deductSavingWithLock 실행 중 에러", e);
             throw e; // 트랜잭션 롤백
         }
     }
