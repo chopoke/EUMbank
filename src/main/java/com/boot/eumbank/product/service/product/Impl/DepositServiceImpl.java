@@ -4,6 +4,7 @@ import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.product.dto.product.DepositSubscriptionRequestDto;
 import com.boot.eumbank.product.dto.product.ProductDto;
+import com.boot.eumbank.product.jpa.repository.AccountQueryRepository;
 import com.boot.eumbank.product.jpa.repository.DepositQueryRepository;
 import com.boot.eumbank.product.service.product.DepositService;
 import lombok.RequiredArgsConstructor;
@@ -41,11 +42,10 @@ public class DepositServiceImpl implements DepositService {
 
     private final DepositQueryRepository depositQueryRepository;
 
-    // application.properties에서 파일 저장 경로를 주입받음
+    private final AccountQueryRepository accountQueryRepository;
+
     @Value("${file.upload-dir}")
     private String uploadDir;
-
-
 
     @Override
     @Transactional
@@ -54,38 +54,50 @@ public class DepositServiceImpl implements DepositService {
             MultipartFile signedPdfFile) {
 
         logger.info("=== PDF 처리 시작 ===");
-        logger.info("상품명: {}", requestDto.getProductName());
-        logger.info("금액: {}", requestDto.getAmount());
-        logger.info("기간: {}", requestDto.getPeriod());
 
         try (PDDocument document = PDDocument.load(signedPdfFile.getInputStream())) {
 
-            // PDF 첫 페이지 가져오기
-            if (document.getNumberOfPages() == 0) {
+            // PDF 페이지 수 확인
+            int totalPages = document.getNumberOfPages();
+            logger.info("PDF 총 페이지 수: {}", totalPages);
+
+            if (totalPages == 0) {
                 throw new IllegalArgumentException("PDF 문서에 페이지가 없습니다.");
             }
 
-            PDPage firstPage = document.getPage(0);
-            logger.info("PDF 페이지 수: {}", document.getNumberOfPages());
+            // ✅ 두 번째 페이지(상품 가입서)에 정보 추가
+            // 페이지가 2개 이상이면 두 번째 페이지(인덱스 1), 1개면 첫 페이지 사용
+            int targetPageIndex = totalPages > 1 ? 1 : 0;
+            PDPage targetPage = document.getPage(targetPageIndex);
 
-            // 한글 폰트 로드 (선택사항)
+            logger.info("정보를 추가할 페이지: {} (총 {}페이지 중)", targetPageIndex + 1, totalPages);
+
+            // 한글 폰트 로드
             PDFont font;
             try {
-                // ClassPathResource는 'src/main/resources'를 기준으로 경로를 찾습니다.
                 font = PDType0Font.load(document,
                         new ClassPathResource("fonts/NanumGothic.ttf").getInputStream());
                 logger.info("한글 폰트(NanumGothic.ttf) 로드 성공");
-            } catch (IOException e) { // Exception 대신 IOException으로 구체화
-                logger.error("한글 폰트 파일을 찾을 수 없거나 읽는 데 실패했습니다. 'resources/fonts/' 경로를 확인하세요.", e);
+            } catch (IOException e) {
+                logger.error("한글 폰트 파일을 찾을 수 없거나 읽는 데 실패했습니다.", e);
                 throw new RuntimeException("PDF 생성을 위한 한글 폰트 로드에 실패했습니다.", e);
             }
 
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             Customer customer = (Customer) authentication.getPrincipal();
+            ProductDto oneDepositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
+            Account oneAccount = accountQueryRepository.findAOneAccount(Math.toIntExact(requestDto.getLinkedAccountAno()));
 
-            // ✅ PDF에 정보 추가 로직 변경
+            System.out.println("=== PDF 처리 시작 === one" + requestDto);
+            System.out.println("=== PDF 처리 시작 === twe" + oneAccount);
+            System.out.println("=== PDF 처리 시작 === three" + customer);
+            System.out.println("=== PDF 처리 시작 === four" + oneDepositProducts);
+
+
+
+            // ✅ 대상 페이지에 정보 추가
             try (PDPageContentStream contentStream = new PDPageContentStream(
-                    document, firstPage, PDPageContentStream.AppendMode.APPEND, true, true)) {
+                    document, targetPage, PDPageContentStream.AppendMode.APPEND, true, true)) {
 
                 // 기본 좌표 및 폰트 크기 설정
                 float yPosition = 683; // 시작 Y 좌표 (페이지 상단 근처)
@@ -93,6 +105,7 @@ public class DepositServiceImpl implements DepositService {
                 float valueX = 180;     // 실제 데이터 값의 X 좌표
                 int fontSize = 10;      // 폰트 크기
 
+                logger.info("고객 정보 추가 시작");
 
                 // 성명
                 addText(contentStream, font, fontSize, valueX, yPosition, customer.getCNameKr());
@@ -108,18 +121,20 @@ public class DepositServiceImpl implements DepositService {
 
                 // 주소
                 addText(contentStream, font, fontSize, valueX, yPosition, customer.getCAddress());
-                yPosition -= lineHeight;
 
-                // -----------------------------------------------
+                logger.info("고객 정보 추가 완료");
 
+                // 상품 정보 추가 (하단)
                 float underyPosition = 530; // 시작 Y 좌표 (페이지 상단 근처)
                 float underlineHeight = 28;  // 각 라인의 간격
                 float undervalueX = 180;     // 실제 데이터 값의 X 좌표
                 int underfontSize = 10;      // 폰트 크기
 
+                logger.info("상품 정보 추가 시작");
+
                 // 상품명
                 addText(contentStream, font, underfontSize, undervalueX, underyPosition, requestDto.getProductName());
-                underyPosition -= underlineHeight; // 다음 라인을 위해 y 좌표 감소
+                underyPosition -= underlineHeight;
 
                 // 계좌번호
                 addText(contentStream, font, underfontSize, undervalueX, underyPosition, requestDto.getDepositAccount());
@@ -139,8 +154,8 @@ public class DepositServiceImpl implements DepositService {
                 addText(contentStream, font, underfontSize, undervalueX, underyPosition, formattedMaturityDate);
                 underyPosition -= underlineHeight;
 
-                // 가입금액;
-                String formattedAmount = NumberFormat.getInstance().format(requestDto.getAmount()) + " 원";
+                // 가입금액
+                String formattedAmount = NumberFormat.getInstance().format(requestDto.getAmount()) + "원";
                 addText(contentStream, font, underfontSize, undervalueX, underyPosition, formattedAmount);
                 underyPosition -= underlineHeight;
 
@@ -150,11 +165,10 @@ public class DepositServiceImpl implements DepositService {
                 underyPosition -= underlineHeight;
 
                 // 적용이율
-                ProductDto oneDepositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
                 addText(contentStream, font, underfontSize, undervalueX, underyPosition, oneDepositProducts.getRate());
-                underyPosition -= underlineHeight;
 
-                logger.info("PDF에 세분화된 정보 추가 완료");
+                logger.info("상품 정보 추가 완료");
+                logger.info("페이지 {}에 모든 정보 추가 완료", targetPageIndex + 1);
             }
 
             // 저장 디렉토리 생성
@@ -182,9 +196,7 @@ public class DepositServiceImpl implements DepositService {
             // PDF 저장
             document.save(filePath.toFile());
             logger.info("PDF 파일 저장 완료: {}", filePath);
-
-            // DB 저장 로직 (필요시 구현)
-            // ...
+            logger.info("최종 페이지 수: {}", document.getNumberOfPages());
 
             logger.info("=== PDF 처리 완료 ===");
             return filePath.toString();
@@ -201,18 +213,15 @@ public class DepositServiceImpl implements DepositService {
     @Override
     public void depositSave(DepositSubscriptionRequestDto requestDto) {
 
-        // --- 1. 현재 로그인한 사용자(JWT) 정보 가져오기 ---
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
 
         ProductDto depositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
-
         Account oneAccount = depositQueryRepository.findOneAccount(customer, requestDto);
 
         depositQueryRepository.depositSave(requestDto, customer, depositProducts, oneAccount);
     }
 
-    // ✅ 헬퍼 메소드 추가: 지정된 좌표에 텍스트를 추가하는 로직
     private void addText(PDPageContentStream contentStream, PDFont font, int fontSize, float x, float y, String text) throws IOException {
         contentStream.beginText();
         contentStream.setFont(font, fontSize);
@@ -220,5 +229,4 @@ public class DepositServiceImpl implements DepositService {
         contentStream.showText(text);
         contentStream.endText();
     }
-
 }

@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import LoanManagement from './components/LoanManagement';
-import DepositManagement from './components/DepositManagement';
+import DepositManagement from './components/depositsaving/DepositManagement';
 import UserManagement from './components/UserManagement';
 import InquiryManagement from './components/InquiryManagement';
 import Verification from './components/Verification';

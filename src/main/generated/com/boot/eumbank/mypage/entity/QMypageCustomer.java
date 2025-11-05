@@ -55,6 +55,8 @@ public class QMypageCustomer extends EntityPathBase<MypageCustomer> {
 
     public final StringPath cNationalityCd = createString("cNationalityCd");
 
+    public final StringPath cnaverid = createString("cnaverid");
+
     public final StringPath cPassword = createString("cPassword");
 
     public final StringPath cPhoneHome = createString("cPhoneHome");
