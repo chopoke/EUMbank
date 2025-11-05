@@ -375,7 +375,7 @@ function ProfileTab({initialData}) {
               : 'bg-blue-500 text-white hover:bg-blue-600'
           }`}
         >
-          {isEditing ? '저장' : '편집'}
+          {isEditing ? '저장' : '수정'}
         </button>
       </div>
 

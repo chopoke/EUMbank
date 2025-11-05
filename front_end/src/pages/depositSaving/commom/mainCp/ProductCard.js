@@ -1,5 +1,7 @@
 import depositlogo from '../../../../resources/img/deposit.png'
 import savelogo from '../../../../resources/img/save.png'
+import { LiaPiggyBankSolid } from "react-icons/lia";
+import { GiMoneyStack } from "react-icons/gi";
 
 // 체크 아이콘 SVG
 const CheckIcon = () => (
@@ -65,7 +67,7 @@ const ProductCard = ({ product, onProductClick }) => {
     return (
         <div className="product-card">
             <div className="card-content">
-                {isd ? (<img src={depositlogo} className="deplogo w-20"/>) : (<img src={savelogo} className="savelogo w-20"/>)}
+                {isd ? (<GiMoneyStack size='40' style={{color: '#9e7c33ff'}} />) : (<LiaPiggyBankSolid size='40' style={{color: '#b49941ff'}} />)}
                 <h3>{product.name}</h3>
                 
                 <p className="interest-rate">{product.rate}</p>

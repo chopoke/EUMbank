@@ -32,7 +32,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="mx-auto w-[1280px] flex h-screen bg-gray-50">
       <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* <Header /> */}

@@ -56,7 +56,7 @@
 /* 왼쪽 (예금 - 빨간색) */
 .toggle-slider.left {
     left: 4px;
-    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    background: linear-gradient(135deg, #4126dc 0%, #9380e7 100%);
 }
 
 /* 오른쪽 (적금 - 파란색) */
