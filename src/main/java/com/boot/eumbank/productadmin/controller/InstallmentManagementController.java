@@ -29,10 +29,10 @@ public class InstallmentManagementController {
     /**
      * 고객의 가입한 적금 목록 조회
      */
-    @GetMapping("/my-installments/{cNo}")
-    public ResponseEntity<List<MyInstallmentDTO>> getMyInstallments(@PathVariable Integer cNo) {
+    @GetMapping("/my-installments")
+    public ResponseEntity<List<MyInstallmentDTO>> getMyInstallments() {
         logger.info("InstallmentManagementController => getMyInstallments()");
-        List<MyInstallmentDTO> installments = installmentManagementService.getMyInstallments(cNo);
+        List<MyInstallmentDTO> installments = installmentManagementService.getMyInstallments();
         return ResponseEntity.ok(installments);
     }
 

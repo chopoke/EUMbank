@@ -27,7 +27,7 @@ public class InstallmentManagementQueryRepository {
     /**
      * 고객의 가입한 적금 목록 조회
      */
-    public List<MyInstallmentDTO> findMyInstallments(Integer cNo) {
+    public List<MyInstallmentDTO> findMyInstallments() {
         logger.info("InstallmentManagementQueryRepository => findMyInstallments()");
 
         return queryFactory
@@ -49,7 +49,6 @@ public class InstallmentManagementQueryRepository {
                 .from(productInstallment)
                 .leftJoin(productInstallmentList)
                 .on(productInstallment.ipNo.eq(productInstallmentList.ipNo))
-                .where(productInstallment.cNo.eq(cNo))
                 .orderBy(productInstallment.iJoinDate.desc())
                 .fetch();
     }

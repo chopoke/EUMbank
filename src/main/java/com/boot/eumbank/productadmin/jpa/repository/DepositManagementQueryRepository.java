@@ -28,7 +28,7 @@ public class DepositManagementQueryRepository {
     /**
      * 고객의 가입한 예금 목록 조회
      */
-    public List<MyDepositDTO> findMyDeposits(Integer cNo) {
+    public List<MyDepositDTO> findMyDeposits() {
         logger.info("DepositManagementQueryRepository => findMyDeposits()");
 
         return queryFactory
@@ -49,7 +49,6 @@ public class DepositManagementQueryRepository {
                 .from(productDeposit)
                 .leftJoin(productDepositList)
                 .on(productDeposit.dpNo.eq(productDepositList.dpNo))
-                .where(productDeposit.cNo.eq(cNo))
                 .orderBy(productDeposit.dJoinDate.desc())
                 .fetch();
     }
