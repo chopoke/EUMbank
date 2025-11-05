@@ -189,12 +189,10 @@ jobs:
   timezone: "Asia/Seoul"
 
 # ==================================================================
-# NH 공과금 API
+# 공과금 API
 # ==================================================================
-ext:
-  nh:
-    base-url: ${NH_BASE_URL}
-    api-key: ${NH_API_KEY}
-    org-code: ${NH_ORG_CODE}
-    client-id: ${NH_CLIENT_ID:}
-    client-secret: ${NH_CLIENT_SECRET:}
+kepco:
+  endpoint: https://bigdata.kepco.co.kr/openapi/v1/powerUsage/contractType.do
+  service-key: ${KEPCO_SERVICE_KEY}
+  connect-timeout-ms: 2000
+  read-timeout-ms: 3000
