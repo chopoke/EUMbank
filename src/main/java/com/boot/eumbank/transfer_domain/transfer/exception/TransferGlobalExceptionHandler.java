@@ -212,6 +212,25 @@ public class TransferGlobalExceptionHandler {
     }
 
     /**
+     * [통화 불일치 예외 처리]
+     * - 원화 계좌가 아닌 계좌로 이체 시도 시
+     * - HTTP 400 Bad Request
+     */
+    @ExceptionHandler(CurrencyMismatchException.class)
+    public ResponseEntity<Map<String, Object>> handleCurrencyMismatchException(CurrencyMismatchException ex) {
+        log.warn("통화 불일치 예외 - {}", ex.getMessage());
+        
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("success", false);
+        errorResponse.put("errorCode", ex.getErrorCode());
+        errorResponse.put("error", ex.getMessage());
+        errorResponse.put("timestamp", LocalDateTime.now().toString());
+        errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    /**
      * [IllegalArgumentException 처리]
      * - 기존 코드와의 호환성을 위해 유지
      * - HTTP 400 Bad Request

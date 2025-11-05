@@ -33,6 +33,7 @@ import TransferComplete from "./pages/transfer/TransferComplete";
 import TransferReserveComplete from "./pages/transfer/TransferReserveComplete";
 import BulkTransferDashboard from "./pages/transfer/BulkTransferDashboard";
 import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
+import AutoTransferComplete from "./pages/transfer/AutoTransferComplete";
 
 // 주택담보대출
 import LoanProductList from "./pages/loan/products/LoanProductList"
@@ -201,6 +202,16 @@ function App() {
         <Route path="/transfer/bulk/complete" element={
           <ProtectedRoute>
             <BulkTransferComplete />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/auto" element={
+          <ProtectedRoute>
+            <Navigate to="/transfer" replace />
+          </ProtectedRoute>
+        } />
+        <Route path="/transfer/auto/complete" element={
+          <ProtectedRoute>
+            <AutoTransferComplete />
           </ProtectedRoute>
         } />
 

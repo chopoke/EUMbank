@@ -46,44 +46,45 @@ public class TransferSchedulerService {
      *   3) 실행 시간이 된 예약 이체는 실제 이체 처리
      *   4) 성공 시 COMPLETED, 실패 시 에러 코드 저장 (삭제하지 않음)
      */
-    @Scheduled(fixedRate = 10000) // 10초마다 실행 (10000ms = 10초)
+    @Scheduled(fixedRate = 60000) // 10초마다 실행 (10000ms = 10초)
     @Transactional  // 예약 이체 실행 및 상태 변경은 트랜잭션 처리 필요
     public void processScheduledTransfers() {
         
         // 로그 기록 - 스케줄러 실행 시작
         // log.info("=== 예약이체 스케줄러 실행 시작 - {} ===", LocalDateTime.now());
+
         try {
             // === 1단계: 스케줄된 예약 이체 목록 조회 (Race Condition 방지) ===
             // SELECT FOR UPDATE SKIP LOCKED를 사용하여 동시 실행 방지
             List<TransferOrder> scheduledTransfers = transferOrderRepository.findByStatusAndStartAtLessThanEqualForUpdate("SCHEDULED", LocalDateTime.now());
             
             // 로그 기록 - 조회된 예약 이체 건수
-            //log.info("조회된 예약 이체 건수: {}", scheduledTransfers.size());
+            log.info("조회된 예약 이체 건수: {}", scheduledTransfers.size());
             
             if (scheduledTransfers.isEmpty()) {
-                //log.info("실행할 예약 이체가 없습니다.");
+                log.info("실행할 예약 이체가 없습니다.");
                 return;
             }
 
             // === 2단계: 각 예약 이체를 순회하며 처리 ===
             for (TransferOrder transferOrder : scheduledTransfers) {
-//                log.info("예약 이체 처리 시작 - 주문ID: {}, 시작시간: {}, 현재시간: {}",
-//                    transferOrder.getTo_order_id(),
-//                    transferOrder.getTo_start_at(),
-//                    LocalDateTime.now());
+                log.info("예약 이체 처리 시작 - 주문ID: {}, 시작시간: {}, 현재시간: {}",
+                    transferOrder.getTo_order_id(),
+                    transferOrder.getTo_start_at(),
+                    LocalDateTime.now());
 
                 // 개별 예약 이체 처리 (실행 시점 확인, 이체 실행, 상태 변경)
                 processTransferOrder(transferOrder);
             }
             
             // 로그 기록 - 스케줄러 실행 완료
-//            log.info("예약 이체 스케줄러 실행 완료 - 처리된 건수: {}", scheduledTransfers.size());
-//            log.info("=== 예약이체 스케줄러 실행 완료 - 처리된 건수: {} ===", scheduledTransfers.size());
+            log.info("예약 이체 스케줄러 실행 완료 - 처리된 건수: {}", scheduledTransfers.size());
+            log.info("=== 예약이체 스케줄러 실행 완료 - 처리된 건수: {} ===", scheduledTransfers.size());
 
         } catch (Exception e) {
             // === 예외 처리 ===
             // 스케줄러 실행 중 오류가 발생해도 다음 실행에 영향을 주지 않도록 예외 처리
-//            log.error("=== 예약이체 스케줄러 실행 중 오류 발생 ===", e);
+            log.error("=== 예약이체 스케줄러 실행 중 오류 발생 ===", e);
         }
     }
 
@@ -121,16 +122,16 @@ public class TransferSchedulerService {
                 // === 예약 이체 실행 전 상태 변경 (중복 실행 방지) ===
                 transferOrder.updateStatus("PROCESSING");
                 transferOrderRepository.save(transferOrder);
-                //log.info("예약 이체 처리 시작 - 주문ID: {}, 상태: PROCESSING", transferOrder.getTo_order_id());
+                log.info("예약 이체 처리 시작 - 주문ID: {}, 상태: PROCESSING", transferOrder.getTo_order_id());
                 
                 // === 예약 이체 실행 ===
                 log.info("executeReserveTransfer 호출 시작 - 주문ID: {}", transferOrder.getTo_order_id());
                 transferService.executeReserveTransfer(transferOrder.getTo_order_id());
-                //log.info("executeReserveTransfer 호출 완료 - 주문ID: {}", transferOrder.getTo_order_id());
+                log.info("executeReserveTransfer 호출 완료 - 주문ID: {}", transferOrder.getTo_order_id());
 
                 // === 성공 처리 ===
                 transferOrder.updateStatus("COMPLETED");
-                //log.info("예약 이체 성공 - 주문ID: {}, 상태: COMPLETED", transferOrder.getTo_order_id());
+                log.info("예약 이체 성공 - 주문ID: {}, 상태: COMPLETED", transferOrder.getTo_order_id());
                 
                 // === 반복 예약 이체 처리 ===
                 if (transferOrder.isRecurring()) {

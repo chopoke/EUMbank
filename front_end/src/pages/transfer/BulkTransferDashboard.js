@@ -167,11 +167,31 @@ export default function BulkTransferPage() {
         }
 
         // 은행 목록 처리 - API 성공 시 업데이트 (하드코딩된 목록은 이미 초기화됨)
+        // 백엔드 응답 구조: { success: true, data: { banks: [...] } }
         if (bankRes.data && bankRes.data.success && bankRes.data.data) {
-          const banksData = Array.isArray(bankRes.data.data) ? bankRes.data.data : [];
-          if (banksData.length > 0) {
-            setBanks(banksData);
+          let banksData = null;
+          
+          // 응답 구조 확인: data.banks 또는 data가 배열인 경우
+          if (bankRes.data.data.banks && Array.isArray(bankRes.data.data.banks)) {
+            banksData = bankRes.data.data.banks;
+          } else if (Array.isArray(bankRes.data.data)) {
+            banksData = bankRes.data.data;
           }
+          
+          if (banksData && Array.isArray(banksData) && banksData.length > 0) {
+            // EUM이 포함되어 있는지 확인
+            const hasEUM = banksData.some(b => b.code === 'EUM');
+            if (!hasEUM) {
+              console.warn('API 응답에 EUM이 없음. 초기값 유지 또는 EUM 추가');
+              // EUM을 첫 번째로 추가
+              banksData = [{ code: 'EUM', name: '이음은행' }, ...banksData];
+            }
+            setBanks(banksData);
+          } else {
+            console.warn('은행 데이터가 배열이 아니거나 비어있음. 초기값 유지');
+          }
+        } else {
+          console.warn('은행 목록 API 응답 실패 또는 형식 오류. 초기값 유지');
         }
         
         setRows([makeRow()]);
@@ -360,6 +380,9 @@ export default function BulkTransferPage() {
           case 'INVALID_REQUEST':
             userFriendlyMessage = '잘못된 요청입니다.';
             break;
+          case 'CURRENCY_MISMATCH':
+            userFriendlyMessage = '이체는 원화 계좌만 사용 가능합니다. 외화 계좌가 포함되어 있습니다.';
+            break;
           default:
             userFriendlyMessage = errorMessage;
         }
@@ -385,12 +408,21 @@ export default function BulkTransferPage() {
           }}
       />
       <main className="mx-auto max-w-screen-xl px-6 py-6">
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold tracking-tight">다건이체</h1>
-          <button onClick={() => navigate('/transfer')} className="text-sm text-gray-600 hover:text-blue-600 flex items-center gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            단건이체
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => navigate('/transfer')}
+              className="inline-flex items-center gap-2 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              단건이체
+            </button>
+            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs text-gray-700">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              이체 전 보안 점검
+            </span>
+          </div>
         </div>
         <p className="text-gray-500 mb-6">여러 계좌에 한 번에 이체할 수 있습니다.</p>
 
@@ -409,7 +441,7 @@ export default function BulkTransferPage() {
                        const account = accounts.find(acc => acc.aNo === parseInt(e.target.value));
                        if (account) handleAccountChange(account);
                      }}
-                     className="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                     className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
                      disabled={isLoading}
                    >
                      <option value="">계좌를 선택하세요</option>
@@ -424,7 +456,7 @@ export default function BulkTransferPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-800 mb-1">일괄 메모(선택)</label>
                   <input value={globalMemo} onChange={e => setGlobalMemo(e.target.value)} placeholder="모든 항목에 동일 메모 적용"
-                         className="w-full rounded-lg border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                         className="w-full rounded-lg border-gray-300 bg-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
                 </div>
               </div>
               
@@ -506,10 +538,13 @@ export default function BulkTransferPage() {
                   다음
                 </button>
               </section>
-              <section className="rounded-2xl border bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">보안 주의</h3>
+              <section className="rounded-2xl border bg-amber-50 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900">보안 주의</h3>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 8h.01M12 12v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
                 <div className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  스미싱/피싱이 의심되면 즉시 고객센터로 연락하세요.
+                  스미싱/피싱이 의심되면 즉시 고객센터로 연락하세요. 계좌번호/OTP를 절대 제3자에게 공유하지 마세요.
                 </div>
               </section>
             </div>

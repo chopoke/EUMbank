@@ -371,7 +371,7 @@ function FundSpotlight() {
         {/* flex items-center justify-between */}
         <div className="section-header">
           <h4 className="card-title">예/적금 스포트라이트</h4>
-          <a href="#" className="text-link">모든 예/적금 보기</a>
+          <a href="/depositSavingProductList/open" className="text-link">모든 예/적금 보기</a>
         </div>
         {/* mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 */}
         <div className="fund-grid">

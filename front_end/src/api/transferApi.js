@@ -6,12 +6,18 @@ export const transferApi = {
   getAccounts: () => api.get('/api/transfer/accounts'),
   getAccountBalance: (accountNo) => api.get(`/api/transfer/accounts/${accountNo}/balance`),
   
+  // === 은행 목록 ===
+  getBanks: () => api.get('/api/transfer/banks'),
+  
   // === 이체 관련 ===
   // 일반 이체 (TransferRequestDto)
   createTransfer: (data) => api.post('/api/transfer', data),
   
   // 예약 이체 (TransferOrderDto)
   createReserveTransfer: (data) => api.post('/api/transfer/reserve', data),
+  
+  // 자동이체 (AutoTransferRequestDto)
+  createAutoTransfer: (data) => api.post('/api/transfer/auto', data),
   
   // 다건 이체 (BulkTransferRequestDto)
   createBulkTransfer: (data) => api.post('/api/transfer/bulk', data),
