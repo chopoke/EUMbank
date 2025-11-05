@@ -4,9 +4,9 @@ import api from '../../../../../api/axios';
 /**
  * 가입한 적금 목록 조회
  */
-export async function getMyInstallments(cNo) {
+export async function getMyInstallments() {
     try {
-        const response = await api.get(`/api/installment-management/my-installments/${cNo}`);
+        const response = await api.get(`/api/installment-management/my-installments`);
         return response.data;
     } catch (error) {
         console.error("적금 목록 조회 실패:", error);
