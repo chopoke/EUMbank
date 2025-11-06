@@ -1,6 +1,8 @@
 package com.boot.eumbank.bill.controller;
 
+import com.boot.eumbank.bill.adapter.GasAdapter;
 import com.boot.eumbank.bill.adapter.KepcoAdapter;
+import com.boot.eumbank.bill.adapter.WaterAdapter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,12 +11,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/rates") @RequiredArgsConstructor
+@RequestMapping("/api/rates")
+@RequiredArgsConstructor
 public class RatesController {
     private final KepcoAdapter kepco;
+    private final WaterAdapter water;
+    private final GasAdapter gas;
 
     @GetMapping("/electric")
     public ResponseEntity<?> electric(@RequestParam int year,
@@ -30,6 +36,22 @@ public class RatesController {
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("message", e.getMessage()));
         }
+    }
+
+    @GetMapping("/water")
+    public Map<String,Object> water() {
+        return water.fetchRates();
+    }
+
+    @GetMapping("/gas")
+    public ResponseEntity<?> gas(
+            @RequestParam String regionCd,
+            @RequestParam(defaultValue="1") String svcKindCd,
+            @RequestParam(required=false) String date
+    ){
+        var when = date != null ? LocalDate.parse(date) : LocalDate.now();
+        var data = gas.fetchRates(regionCd, svcKindCd, when);
+        return ResponseEntity.ok(Map.of("data", data));
     }
 }
 

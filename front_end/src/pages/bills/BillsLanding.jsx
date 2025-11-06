@@ -3,6 +3,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchAccounts } from "../../api/accounts";
 import ElectricRateTable from "./components/ElectricRateTable";
+import ElectricRateChart from "./components/ElectricRateChart";
+import GenericRateTable from "./components/GenericRateTable";
+import { fetchWaterRates, fetchGasRates } from "../../api/rates";
+import WaterRateChart from "./components/WaterRateChart";
 
 export default function BillsLanding() {
   const { ubNo: ubNoParam } = useParams();
@@ -10,7 +14,6 @@ export default function BillsLanding() {
   const USE_API = Number.isInteger(ubNo);
   const navigate = useNavigate();
 
-  // 한글 라벨
   const STATUS_LABEL = { READY: "대기", PAID: "완료", FAILED: "실패" };
 
   useEffect(() => {
@@ -30,11 +33,11 @@ export default function BillsLanding() {
     []
   );
 
-  // 내 공과금 목록 보관 → 탭 전환 시 라우팅에 사용
+  // 내 공과금 목록
   const [myBills, setMyBills] = useState([]);
   const onceRef = useRef(false);
 
-  // ubNo 없으면 내 첫 공과금으로 이동 + 내 공과금 목록 캐싱
+  // ubNo 없으면 내 첫 공과금으로 이동 + 목록 캐싱
   useEffect(() => {
     if (onceRef.current) return;
     onceRef.current = true;
@@ -66,7 +69,7 @@ export default function BillsLanding() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ubNoParam, navigate]);
 
-  // 탭(카테고리) 3개
+  // 탭
   const categories = useMemo(
     () => [
       { key: "electric", label: "전기", icon: "ri-flashlight-line", provider: "KEPCO" },
@@ -76,7 +79,6 @@ export default function BillsLanding() {
     []
   );
 
-  // 현재 ubNo의 provider → 탭 동기화
   const [type, setType] = useState("electric");
   useEffect(() => {
     if (!myBills?.length || !ubNo) return;
@@ -87,16 +89,13 @@ export default function BillsLanding() {
     else if (pv === "GAS") setType("gas");
   }, [myBills, ubNo]);
 
-  // 탭 클릭 시 해당 provider의 첫 ubNo로 라우팅
+  // 전환은 항상 허용. 등록된 동일 공급자 ubNo가 있으면 라우팅만 수행.
   function onClickTab(k) {
-    const pv = k === "electric" ? "KEPCO" : k === "water" ? "K_WATER" : "GAS";
-    const target = myBills.find((b) => (b?.provider || "").toUpperCase() === pv);
-    if (!target) {
-      alert(`${labelOf(k)} 등록된 공과금이 없습니다.`);
-      return;
-    }
-    if (target.ubNo !== ubNo) navigate(`/bills/${target.ubNo}`);
     setType(k);
+    const pvMap = { electric: "KEPCO", water: "K_WATER", gas: "GAS" };
+    const pv = pvMap[k];
+    const target = myBills.find((b) => (b?.provider || "").toUpperCase() === pv);
+    if (target && target.ubNo !== ubNo) navigate(`/bills/${target.ubNo}`);
   }
 
   // bills API 동적 import
@@ -135,10 +134,25 @@ export default function BillsLanding() {
   }, [USE_API]);
 
   // 인보이스
+  const [allInvoices, setAllInvoices] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [recentPaid, setRecentPaid] = useState([]);
   const [statusFilter, setStatusFilter] = useState("READY");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+
+  function applyFilterAndRecent(src, filter) {
+    const filtered = !filter ? src : src.filter((v) => v.status === filter);
+    setInvoices(filtered);
+    const paidDesc = src
+      .filter((v) => v.status === "PAID")
+      .sort(
+        (a, b) =>
+          new Date(b.paidAt || b.updateAt || 0) - new Date(a.paidAt || a.updateAt || 0)
+      )
+      .slice(0, 5);
+    setRecentPaid(paidDesc);
+  }
 
   useEffect(() => {
     if (!USE_API || !apis?.listInvoices) return;
@@ -147,10 +161,11 @@ export default function BillsLanding() {
       setLoading(true);
       setMsg("");
       try {
-        const data = await apis.listInvoices(ubNo, {
-          status: statusFilter || undefined,
-        });
-        if (alive) setInvoices(data);
+        const data = await apis.listInvoices(ubNo); // 전체 조회
+        if (!alive) return;
+        const list = Array.isArray(data) ? data : [];
+        setAllInvoices(list);
+        applyFilterAndRecent(list, statusFilter);
       } catch {
         if (alive) setMsg("청구서 조회 실패");
       } finally {
@@ -162,7 +177,11 @@ export default function BillsLanding() {
     };
   }, [USE_API, apis, ubNo, statusFilter]);
 
-  // 납부
+  useEffect(() => {
+    applyFilterAndRecent(allInvoices, statusFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
+
   async function onPayInvoice(biNo) {
     if (!USE_API || !apis?.payInvoice) return;
     if (loading) return;
@@ -175,27 +194,18 @@ export default function BillsLanding() {
     try {
       const res = await apis.payInvoice(biNo, { aNo: selectedANo });
       alert(`결제 상태: ${STATUS_LABEL[res?.status] ?? "성공"}`);
-      const data = await apis.listInvoices(ubNo, {
-        status: statusFilter || undefined,
-      });
-      setInvoices(data);
+      const data = await apis.listInvoices(ubNo);
+      const list = Array.isArray(data) ? data : [];
+      setAllInvoices(list);
+      applyFilterAndRecent(list, statusFilter);
     } catch (e) {
-      const m = e?.response?.data?.message || e?.message || "납부 실패. 다시 시도하세요.";
+      const m =
+        e?.response?.data?.message || e?.message || "납부 실패. 다시 시도하세요.";
       alert(m);
     } finally {
       setLoading(false);
     }
   }
-
-  // 최근 납부완료(현재 표 데이터에서 추림)
-  const recentPaid = useMemo(
-    () =>
-      invoices
-        .filter((x) => x.status === "PAID")
-        .sort((a, b) => (b.paidAt || "").localeCompare(a.paidAt || ""))
-        .slice(0, 5),
-    [invoices]
-  );
 
   return (
     <div className="min-h-screen bg-white">
@@ -242,13 +252,41 @@ export default function BillsLanding() {
 
           <div className="flex flex-col lg:flex-row">
             <div className="flex-1 p-6">
-              {/* 요금표 패널 */}
-              {type === "electric" ? (
-                <ElectricRateTable year={2025} month={8} metroCd="11" svcKindCd="1" />
-              ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 text-sm text-gray-500">
-                  해당 카테고리 요금표는 준비 중
-                </div>
+              {/* 요금표/차트 */}
+              {type === "electric" && (
+                <>
+                  <ElectricRateChart year={2025} month={8} metroCd="11" svcKindCd="1" />
+                  <div className="mt-4">
+                    <ElectricRateTable year={2025} month={8} metroCd="11" svcKindCd="1" />
+                  </div>
+                </>
+              )}
+
+              {type === "water" && (
+                <>
+                  {/* 드롭다운 제거. 고정 값 사용 */}
+                  <WaterRateChart />
+                  <div className="mt-4">
+                    <GenericRateTable
+                      title="수도 요금표"
+                      fetcher={fetchWaterRates}
+                      params={{}} // 단일 요금 (기본요금 70원, 단가 163.7원)
+                    />
+                  </div>
+                </>
+              )}
+
+              {type === "gas" && (
+                <>
+                  {/* 선택 제거 요청은 수도에 한정. 가스는 고정값 서울(11)/가정(1)로 호출 */}
+                  <div className="mt-4">
+                    <GenericRateTable
+                      title="가스 요금표"
+                      fetcher={fetchGasRates}
+                      params={{ regionCd: "11", svcKindCd: "1" }}
+                    />
+                  </div>
+                </>
               )}
 
               {/* 결제 계좌 + 청구서 목록 */}
@@ -280,7 +318,7 @@ export default function BillsLanding() {
                       >
                         <option value="READY">대기</option>
                         <option value="PAID">완료</option>
-                        <option value="FAILED">실패</option>
+                        {/* <option value="FAILED">실패</option> */}
                         <option value="">전체</option>
                       </select>
                     </div>
@@ -473,15 +511,4 @@ function maskAccountNo(n) {
   const s = String(n);
   return s.replace(/\d(?=(?:\D*\d){4})/g, "*");
 }
-function labelOf(key) {
-  switch (key) {
-    case "electric":
-      return "전기";
-    case "water":
-      return "수도";
-    case "gas":
-      return "가스";
-    default:
-      return key;
-  }
-}
+
