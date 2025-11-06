@@ -27,7 +27,7 @@ public class QProductDepositList extends EntityPathBase<ProductDepositList> {
 
     public final StringPath dpDescription = createString("dpDescription");
 
-    public final NumberPath<java.math.BigDecimal> dpEarlyTerminationRate = createNumber("dpEarlyTerminationRate", java.math.BigDecimal.class);
+    public final StringPath dpEarlyTerminationRate = createString("dpEarlyTerminationRate");
 
     public final StringPath dpFeature = createString("dpFeature");
 

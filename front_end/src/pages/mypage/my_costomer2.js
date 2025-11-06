@@ -4,6 +4,8 @@ import { updateProfile } from '../../api/accounts';
 import { CheckPinProvider} from "./contexts/CheckPinContext";
 import { useCheckPin } from "./contexts/CheckPinContext";
 
+import { resetPin } from "../account/api/accountApi";
+
 import axios from 'axios';
 import React from "react";
 import { Link } from 'react-router-dom';
@@ -660,12 +662,60 @@ function ProfileTab({initialData}) {
 
 // SecurityTab Component
 function SecurityTab() {
-    const { checkPin, setCheckPin } = useCheckPin();
+  const { checkPin, setCheckPin } = useCheckPin();
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [pinError, setPinError] = useState('');
+
+// PIN 재설정 API 함수
+    const handleResetPin = async () => {
+        // 유효성 검사
+        if (!newPin || !confirmPin) {
+            setPinError('PIN을 입력해주세요.');
+            return;
+        }
+
+        if (newPin.length !== 6) {
+            setPinError('PIN은 6자리여야 합니다.');
+            return;
+        }
+
+        if (newPin !== confirmPin) {
+            setPinError('PIN이 일치하지 않습니다.');
+            return;
+        }
+
+        setIsLoading(true);
+        setPinError('');
+
+        try {
+            const result = await resetPin(newPin);
+
+            if (result.ok) {
+                alert('PIN이 성공적으로 재설정되었습니다.');
+                handleCloseModal();
+            } else {
+                setPinError(result.message || 'PIN 재설정에 실패했습니다.');
+            }
+        } catch (error) {
+            setPinError(error.message || '서버 연결에 실패했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // 모달 닫기 핸들러
+    const handleCloseModal = () => {
+        setShowOTPModal(false);
+        setNewPin('');
+        setConfirmPin('');
+        setPinError('');
+    };
 
 
-  console.log(checkPin);
 
   return (
     <div className="space-y-6">
@@ -706,24 +756,25 @@ function SecurityTab() {
         </h3>
         <div className="flex items-center justify-between">
             {checkPin ? (
-                <div>
-                    <p className="text-gray-600 mb-1">일회용 핀 인증이 활성화되어 있습니다.</p>
-                </div>
+                <>
+                    <div>
+                        <p className="text-gray-600 mb-1">일회용 핀 인증이 활성화되어 있습니다.</p>
+                    </div>
+                    <div className="flex space-x-2">
+                        <button
+                            onClick={() => setShowOTPModal(true)}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm whitespace-nowrap"
+                        >
+                            재설정
+                        </button>
+                    </div>
+                </>
             ) : (
-
                 <div>
                 <p className="text-gray-600 mb-1">일회용 핀 인증이 비활성화되어 있습니다.</p>
                 </div>
 
             )}
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setShowOTPModal(true)}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm whitespace-nowrap"
-            >
-              재설정
-            </button>
-          </div>
         </div>
       </div>
 
@@ -849,29 +900,79 @@ function SecurityTab() {
         </div>
       </div>
 
-      {/* PIN 모달 */}
-      {showOTPModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">PIN 재설정</h3>
-            <p className="text-gray-600 mb-4">PIN을 재설정하시겠습니까?</p>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowOTPModal(false)}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
-              >
-                취소
-              </button>
-              <button
-                onClick={() => setShowOTPModal(false)}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors whitespace-nowrap"
-              >
-                확인
-              </button>
+        {/* PIN 재설정 모달 */}
+        {showOTPModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+                    <h3 className="text-lg font-semibold mb-4">PIN 재설정</h3>
+                    <p className="text-gray-600 mb-4">새로운 6자리 PIN을 설정해주세요.</p>
+
+                    {/* PIN 입력 필드 */}
+                    <div className="space-y-4 mb-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                새 PIN
+                            </label>
+                            <input
+                                type="password"
+                                maxLength={6}
+                                value={newPin}
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/[^0-9]/g, '');
+                                    setNewPin(value);
+                                    setPinError('');
+                                }}
+                                placeholder="6자리 숫자"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                PIN 확인
+                            </label>
+                            <input
+                                type="password"
+                                maxLength={6}
+                                value={confirmPin}
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/[^0-9]/g, '');
+                                    setConfirmPin(value);
+                                    setPinError('');
+                                }}
+                                placeholder="6자리 숫자"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                disabled={isLoading}
+                            />
+                        </div>
+                    </div>
+
+                    {/* 에러 메시지 */}
+                    {pinError && (
+                        <p className="text-red-500 text-sm mb-4">{pinError}</p>
+                    )}
+
+                    {/* 버튼 */}
+                    <div className="flex space-x-3">
+                        <button
+                            onClick={handleCloseModal}
+                            disabled={isLoading}
+                            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap disabled:opacity-50"
+                        >
+                            취소
+                        </button>
+                        <button
+                            onClick={handleResetPin}
+                            disabled={!newPin || !confirmPin || isLoading}
+                            className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors whitespace-nowrap disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? '처리중...' : '확인'}
+                        </button>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      )}
+        )}
 
       {/* 비밀번호 변경 모달 */}
       {showPasswordModal && (
