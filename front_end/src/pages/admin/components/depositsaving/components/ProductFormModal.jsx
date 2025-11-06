@@ -155,7 +155,7 @@ export default function ProductFormModal({ activeType, onSuccess, onClose }) {
                 maxMonths: Number(formData.maxMonths),
                 ealryTerminationRate: Number(formData.ealryTerminationRate),
                 paymentType: formData.interestPaymentType,
-                features: formData.feature.join(','),
+                features: formData.feature.map(item => `"${item}"`).join(', '),
                 href: formData.href,
                 buttonText: formData.buttonText,
                 isActive: formData.isActive
@@ -286,7 +286,7 @@ export default function ProductFormModal({ activeType, onSuccess, onClose }) {
                                     <>
                                         <option value="정기예금">정기예금</option>
                                         <option value="자유적립식예금">자유적립식예금</option>
-                                        <option value="정기적금">정기예끔</option>
+                                        <option value="정기적금">정기예금</option>
                                     </>
                                 ) : (
                                     <>

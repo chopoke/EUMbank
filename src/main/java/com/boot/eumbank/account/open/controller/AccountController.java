@@ -292,4 +292,34 @@ public class AccountController {
         }
     }
 
+    /**
+     * 핀 변경
+     * @param payload
+     * @return
+     */
+    @PutMapping("/pin-change")
+    public ResponseEntity<Map<String, Object>> verifyChangePin(@RequestBody Map<String, String> payload) {
+
+        logger.info("verifyChangePin => pinNumber = {}", payload.get("pin"));
+
+        return null;
+    }
+
+
+    /**
+     * 핀 변경
+     * @param payload
+     * @return
+     */
+    @PutMapping("/password-change")
+    public ResponseEntity<Map<String, Object>> verifyChangePassword(@RequestBody Map<String, String> payload) {
+
+        logger.info("verifyChangePin => pinNumber = {}", payload.get("principlePassword"));
+        logger.info("verifyChangePin => pinNumber = {}", payload.get("newPassword"));
+        logger.info("verifyChangePin => pinNumber = {}", payload.get("confirmPassword"));
+
+        return null;
+    }
+
+
 }
