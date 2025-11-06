@@ -81,7 +81,7 @@ public class Message {
      */
     public static Message userMessage(String content) {
         return Message.builder()
-            .role("user")
+            .role("templates/user")
             .content(content)
             .timestamp(LocalDateTime.now())
             .status("sent")
