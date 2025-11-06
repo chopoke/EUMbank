@@ -123,6 +123,32 @@ public class MyScheduler {
                                 .update(productDeposit)
                                 .set(productDeposit.dStatus, "NONE")
                                 .execute();
+
+                        // 해당 계좌로 넣어주기
+                        queryFactory
+                                .update(account)
+                                .set(account.balance, account.balance.add(deposit.getDExpectedMaturityAmount()))
+                                .where(account.aNo.eq(deposit.getANo()))
+                                .execute();
+
+                        // 최종 만기 담기
+                        TransferHistory history = TransferHistory.builder()
+                                // transferNo는 자동 생성되므로 제외
+                                .transferId(generateTransferId())  // 고유 ID
+                                .accountNo(Integer.valueOf(deposit.getAAccountNo().replace("-", "")))  // a_no (계좌 PK)
+                                .amount(BigDecimal.valueOf(deposit.getDExpectedMaturityAmount()))  // 거래 금액
+                                .memo("예금 자동이체 최종 만기")  // 메모
+                                .otherBank("EUM_BANK")  // 상대방 은행
+                                .otherAccount(depositEntity.getDAccountNo())  // 상대방 계좌 (예금계좌)
+                                .transferType("입금")  // 이체 유형
+                                .afterBalance(BigDecimal.valueOf(0))  // 거래 후 잔액
+                                .transactionType("DEPOSIT")  // 거래 구분 (출금)
+                                .accountOut(BigDecimal.valueOf(depositEntity.getDPrincipalBal()))  // 출금액
+                                .accountIn(BigDecimal.valueOf(deposit.getDExpectedMaturityAmount()))  // 입금액 (출금이므로 0)
+                                .build();
+
+                        entityManager.persist(history);
+
                         continue;
                     }
 
@@ -246,9 +272,9 @@ public class MyScheduler {
                             .memo("예금 자동이체 - " + depositEntity.getDId())  // 메모
                             .otherBank("EUM_BANK")  // 상대방 은행
                             .otherAccount(depositEntity.getDAccountNo())  // 상대방 계좌 (예금계좌)
-                            .transferType("DEPOSIT_AUTO")  // 이체 유형
+                            .transferType("출금")  // 이체 유형
                             .afterBalance(afterBalance)  // 거래 후 잔액
-                            .transactionType("WITHDRAW")  // 거래 구분 (출금)
+                            .transactionType("DEPOSIT")  // 거래 구분 (출금)
                             .accountOut(BigDecimal.valueOf(depositEntity.getDPrincipalBal()))  // 출금액
                             .accountIn(BigDecimal.ZERO)  // 입금액 (출금이므로 0)
                             .build();
@@ -265,7 +291,7 @@ public class MyScheduler {
 
                     logger.info("기간 증감");
 
-                    // 10. 예금 테이블 업데이트
+                    // 10. 예금 테이블 업데이트(예금 입금)
                     long depositUpdated = queryFactory
                             .update(productDeposit)
                             .set(productDeposit.dAmount,
@@ -313,11 +339,11 @@ public class MyScheduler {
     /**
      * 적금 자동 스케줄러
      */
-    @Scheduled(cron = "*/59 * * * * ?")
+    @Scheduled(cron = "*/20 * * * * ?")
     @Transactional
     public void deductSavingWithLock() {
 
-        //logger.info("MyScheduler => deductSavingWithLock() 시작 - {}", LocalDateTime.now());
+        logger.info("MyScheduler => deductSavingWithLock() 시작 - {}", LocalDateTime.now());
 
         try {
 
@@ -393,12 +419,37 @@ public class MyScheduler {
                                 .where(productInstallment.iNo.eq(saving.getINo()))
                                 .execute();
 
-
+                        // 최종 원금 + 이자 반영
                         queryFactory
                                 .update(productInstallment)
                                 .set(productInstallment.iAmount, productInstallment.iExpectedMaturityAmount)
                                 .where(productInstallment.iNo.eq(saving.getINo()))
                                 .execute();
+
+                        // 해당 계좌로 넣어주기
+                        queryFactory
+                                .update(account)
+                                .set(account.balance, account.balance.add(saving.getIExpectedMaturityAmount()))
+                                .where(account.aNo.eq(saving.getANo()))
+                                .execute();
+
+                        // 최종 만기 담기
+                        TransferHistory history = TransferHistory.builder()
+                                // transferNo는 자동 생성되므로 제외
+                                .transferId(generateTransferId())  // 고유 ID
+                                .accountNo(saving.getANo())// a_no (계좌 PK)
+                                .amount(BigDecimal.valueOf(saving.getIExpectedMaturityAmount()))  // 거래 금액
+                                .memo("적금 자동이체 최종 만기")  // 메모
+                                .otherBank("EUM_BANK")  // 상대방 은행
+                                .otherAccount(saving.getIAccountNo())  // 상대방 계좌 (예금계좌)
+                                .transferType("입금")  // 이체 유형
+                                .afterBalance(BigDecimal.valueOf(0))  // 거래 후 잔액
+                                .transactionType("DEPOSIT")  // 거래 구분 (출금)
+                                .accountOut(BigDecimal.valueOf(saving.getIExpectedMaturityAmount()))  // 출금액
+                                .accountIn(BigDecimal.valueOf(saving.getIExpectedMaturityAmount()))  // 입금액 (출금이므로 0)
+                                .build();
+
+                        entityManager.persist(history);
 
                         continue;
                     }
@@ -463,7 +514,7 @@ public class MyScheduler {
                     // 12. 계좌 잔액 차감
                     long accountUpdated = queryFactory
                             .update(account)
-                            .set(account.balance, account.balance.subtract(expectedAmount))
+                            .set(account.balance, account.balance.subtract(saving.getIPrincipalBal()))
                             .set(account.updatedAt, LocalDateTime.now())
                             .where(account.aNo.eq(saving.getANo()))
                             .execute();
@@ -475,7 +526,7 @@ public class MyScheduler {
                     }
 
                     logger.info("계좌 차감 완료 - 계좌번호: {}, 차감금액: {}",
-                            saving.getAAccountNo(), expectedAmount);
+                            saving.getAAccountNo(), saving.getIPrincipalBal());
 
                     // 13. 거래 히스토리 저장
                     BigDecimal afterBalance = beforeBalance.subtract(BigDecimal.valueOf(savingEntity.getIPrincipalBal()));
@@ -488,9 +539,9 @@ public class MyScheduler {
                                     (saving.getICountPeriod() + 1) + "/" + saving.getIMonth() + "회차)")
                             .otherBank("EUM_BANK")  // 상대방 은행
                             .otherAccount(saving.getAAccountNo())  // 상대방 계좌 (적금계좌)
-                            .transferType("SAVING_AUTO")  // 이체 유형
+                            .transferType("출금")  // 이체 유형
                             .afterBalance(afterBalance)  // 거래 후 잔액
-                            .transactionType("WITHDRAW")  // 거래 구분 (출금)
+                            .transactionType("DEPOSIT")  // 거래 구분 (출금)
                             .accountOut(BigDecimal.valueOf(saving.getIPrincipalBal()))  // 출금액
                             .accountIn(BigDecimal.ZERO)  // 입금액 (출금이므로 0)
                             .build();

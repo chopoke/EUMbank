@@ -105,7 +105,7 @@ const DepositSubscription = () => {
         try {
             // 만기 예상 수령액 계산
             const calculatedResult = calculateMaturityAmount(amount, term, formattedProduct.rateInfo);
-            const expectedMaturityAmount = calculatedResult.total * term;
+            const expectedMaturityAmount = calculatedResult.total;
 
             const formData = new FormData();
 
@@ -202,6 +202,7 @@ const DepositSubscription = () => {
 
                     {/* 계산기 박스 */}
                     <CalculatorBox
+                        type={'deposit'}
                         amount={amount}
                         setAmount={setAmount}
                         term={term}

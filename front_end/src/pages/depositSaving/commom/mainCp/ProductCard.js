@@ -22,6 +22,8 @@ const CheckIcon = () => (
 
 const ProductCard = ({ product, onProductClick }) => {
 
+
+
     /**
          * ✅ 금액 문자열을 포맷팅하는 헬퍼 함수
          * 예: "최소금액: 50000000.00원" -> "최소금액: 50,000,000원"
@@ -49,6 +51,8 @@ const ProductCard = ({ product, onProductClick }) => {
 
     const handleClick = () => {
         // onProductClick 함수가 존재하면, product.id를 인자로 넣어 호출
+        alert("사전 계좌개설이 선행되어야 합니다.")
+
         if (onProductClick) {
             onProductClick(product);
         }
