@@ -75,7 +75,7 @@ export async function checkPinNumber() {
  */
 export async function resetPin(pin) {
     try {
-        const res = await api.put("/api/user/reset-pin", { pin });
+        const res = await api.put("/api/pin-change", { pin: pin });
         return res.data;
     } catch (error) {
         console.error("PIN 재설정 실패:", error.response?.data || error.message);
@@ -88,8 +88,32 @@ export async function resetPin(pin) {
 
 
 /**
+ * 패스워드 재설정
+ * @returns {Promise<{ok:boolean, message:string}>}
+ * @param principlePassword
+ * @param newPassword
+ * @param confirmPassword
+ */
+export async function resetPassword(principlePassword, newPassword, confirmPassword) {
+    try {
+        const res = await api.put("/api/password-change", {
+            principlePassword: principlePassword,
+            newPassword: newPassword,
+            confirmPassword: confirmPassword
+        });
+        return res.data;
+    } catch (error) {
+        console.error("PIN 재설정 실패:", error.response?.data || error.message);
+        throw new Error(
+            error.response?.data?.message ||
+            `PIN 재설정 실패 (${error.response?.status})`
+        );
+    }
+}
+
+/**
  * pin번호 검증
- * @param {object} pinNumber 
+ * @param data
  */
 export async function verifyExistingPin(data) {
 
