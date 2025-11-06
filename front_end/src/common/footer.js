@@ -22,8 +22,8 @@ export function Footer() {
             <div className="footer-title">약관</div>
             <ul className="footer-list">
               <li><Link to='/ftagree' className="hover-underline">전자금융거래약관</Link></li>
-              <li><a href="#privacy" className="hover-underline">개인정보 처리방침</a></li>
-              <li><a href="#disclosure" className="hover-underline">경영공시</a></li>
+              <li><Link to='/ftprivacy' lassName="hover-underline">개인정보 처리방침</Link></li>
+              <li><Link to='/ftdisclosure' className="hover-underline">경영공시</Link></li>
             </ul>
           </div>
           <div className="footer-col">
