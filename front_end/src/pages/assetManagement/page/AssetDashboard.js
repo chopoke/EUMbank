@@ -2,9 +2,136 @@
 import { StatCard } from "../components/StatCard";
 import { Link } from "react-router-dom";
 import { DonutPercentOnly, LineChartWithDatesStatic, TrendFooterStats } from "../components/StaticCharts";
+import { useEffect, useMemo, useState } from "react";
+import api from "../../../api/axios";
+
+// Chart.js 도넛 설정
+import { Doughnut } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  ArcElement, Tooltip, Legend,
+} from "chart.js";
+ChartJS.register(ArcElement, Tooltip, Legend);
+
+const COLOR_MAP = {
+  "입출금": "#2563eb",
+  "외환":   "#f59e0b",
+  "적금":   "#60a5fa",
+  "예금":   "#10b981",
+  "현물":   "#a78bfa",
+  "기타":   "#9ca3af",
+};
+
+function formatKrw(n) {
+  if (n == null) return "-";
+  const num = typeof n === "number" ? n : Number(n);
+  if (Number.isNaN(num)) return String(n);
+  return num.toLocaleString("ko-KR") + "원";
+}
+
+function hexToRgba(hex, a = 0.14) {
+  const clean = hex.replace("#", "");
+  const bigint = parseInt(clean, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+const pct = (v) => `${Math.round(v)}%`;
 
 export default function AssetDashboard() {
-  
+
+  const [data, setData] = useState(null);   // AssetSummaryDto
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const summary = async () => {
+      try {
+        const res = await api.get("/api/asset/dashboard/summary");
+        if(res.status === 200){
+          setData(res.data);
+        }
+      } catch(e) {
+        console.error(e);
+        alert("요약 조회에 실패하였습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    summary();
+  }, []);
+
+  const totalAssets      = data?.totalAssets ?? 0;
+  const totalLiabilities = data?.totalLiabilities ?? 0;
+  const netWorth         = data?.netWorth ?? 0;
+  const monthlyDue       = data?.monthlyDue ?? 0;
+  const composition      = data?.composition ?? [];
+
+  // 도넛 데이터(Chart.js)
+  const donutData = useMemo(() => {
+    const labels = composition.map(c => c.category);
+    const values = composition.map(c => Number(c.amountKrw || 0));
+    const colors = composition.map(c => COLOR_MAP[c.category] || "#9ca3af");
+    const total  = values.reduce((a, b) => a + b, 0);
+
+    // 퍼센트(0~100) 계산
+    const shares = total > 0 ? values.map(v => (v / total) * 100) : values.map(() => 0);
+
+    // 최댓값 카테고리
+    let topIdx = 0;
+    shares.forEach((s, i) => { if (s > shares[topIdx]) topIdx = i; });
+    const top = labels[topIdx] ? {
+      label: labels[topIdx],
+      pct: shares[topIdx] || 0,
+      color: colors[topIdx] || "#9ca3af",
+    } : null;
+    
+    return {
+      total: total || 1,
+      shares, labels, colors,
+      top,
+      chart: {
+        labels,
+        datasets: [{
+          label: "자산 구성",
+          data: values,
+          backgroundColor: colors.map(c => `${c}CC`), // 살짝 투명
+          borderColor: colors,
+          borderWidth: 1.2,
+          hoverOffset: 6,
+          cutout: "62%",       // 두께
+          rotation: 0,       // 12시 시작
+        }]
+      }
+    };
+  }, [composition]);
+
+  const donutOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: {
+      duration: 900,
+      easing: "easeOutQuart",
+      animateRotate: true,
+      animateScale: true,
+    },
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: { usePointStyle: true, boxWidth: 8 }
+      },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const v = ctx.parsed;
+            const pct = Math.round((v / (donutData.total || 1)) * 100);
+            return ` ${ctx.label}: ${formatKrw(v)} (${pct}%)`;
+          }
+        }
+      }
+    }
+  }), [donutData.total]);
+
   return (
     <main className="bg-gray-50 text-gray-900 min-h-screen">
       {/* 상단 타이틀 영역 */}
@@ -34,23 +161,23 @@ export default function AssetDashboard() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
               title="순자산"
-              value="87,520,000원"
+              value={loading ? "..." : formatKrw(netWorth)}
               sub="전일 대비 +320,000원"
             />
             <StatCard
               title="총자산"
-              value="132,000,000원"
-              sub="예금 · 적금 · 투자 · 외화 포함"
+              value={loading ? "..." : formatKrw(totalAssets)}
+              sub="입출금 · 예금 · 적금 · 외화 · 대출 · 현물 포함"
             />
             <StatCard
               title="총부채"
-              value="44,480,000원"
+              value={loading ? "..." : formatKrw(totalLiabilities)}
               sub="주택담보대출 1건"
             />
             <StatCard
               title="이번 달 납입 예정액"
-              value="1,200,000원"
-              sub="적금 · 대출 상환 합산"
+              value={loading ? "..." : formatKrw(monthlyDue)}
+              sub="적금 · 공과금 · 대출 상환 합산"
             />
           </div>
 
@@ -62,56 +189,54 @@ export default function AssetDashboard() {
                 <div>
                   <h2 className="text-base font-semibold text-gray-900">자산 구성 비율</h2>
                   <p className="text-[12px] text-gray-500">
-                    현금성 자산, 적금, 투자, 외화 등 비중입니다.
+                    현금성 자산, 적금, 외화 등 비중입니다.
                   </p>
                 </div>
-                <span className="rounded-full bg-blue-50 text-blue-700 text-[11px] font-medium px-2 py-0.5 border border-blue-200">
-                  예금 비중 높음
-                </span>
+                {/* 동적 배지 */}
+                {(!loading && donutData.top) && (
+                  <span
+                    className="rounded-full text-[11px] font-medium px-2 py-0.5 border"
+                    style={{
+                      backgroundColor: hexToRgba(donutData.top.color, 0.14),
+                      color: donutData.top.color,
+                      borderColor: hexToRgba(donutData.top.color, 0.35),
+                    }}
+                  >
+                    {`${donutData.top.label} 비중 높음 · ${pct(donutData.top.pct)}`}
+                  </span>
+                )}
               </div>
 
-               <DonutPercentOnly
-                  size={140}
-                  stroke={16}
-                  segments={[
-                    { value: 42, color: "#2563eb" }, // 현금성
-                    { value: 28, color: "#60a5fa" }, // 적금·예금
-                    { value: 18, color: "#10b981" }, // 투자
-                    { value: 7,  color: "#f59e0b" }, // 외화
-                    { value: 3,  color: "#a78bfa" }, // 보험
-                    { value: 2,  color: "#9ca3af" }, // 기타
-                  ]}
-                  minLabelPct={6}   // 필요하면 조정
-                  gapDeg={1.5}
-                />
-              {/* <PlaceholderChart label="파이 차트 (자산 비율)" height="h-44" /> */}
+               <div className="w-full" style={{ height: 220 }}>
+                {loading
+                  ? <div className="h-full grid place-items-center text-sm text-gray-500">로딩 중…</div>
+                  : composition.length === 0
+                    ? <div className="h-full grid place-items-center text-sm text-gray-500">표시할 데이터가 없습니다</div>
+                    : <Doughnut data={donutData.chart} options={donutOptions} />
+                }
+              </div>
 
-              <ul className="text-sm text-gray-700 grid grid-cols-2 gap-y-2">
-                <li className="flex flex-col">
-                  <span className="text-gray-500 text-[12px]">현금성 자산</span>
-                  <span className="font-medium text-gray-900">42%</span>
-                </li>
-                <li className="flex flex-col">
-                  <span className="text-gray-500 text-[12px]">적금 · 예금</span>
-                  <span className="font-medium text-gray-900">28%</span>
-                </li>
-                <li className="flex flex-col">
-                  <span className="text-gray-500 text-[12px]">투자</span>
-                  <span className="font-medium text-gray-900">18%</span>
-                </li>
-                <li className="flex flex-col">
-                  <span className="text-gray-500 text-[12px]">외화</span>
-                  <span className="font-medium text-gray-900">7%</span>
-                </li>
-                <li className="flex flex-col">
-                  <span className="text-gray-500 text-[12px]">보험</span>
-                  <span className="font-medium text-gray-900">3%</span>
-                </li>
-                <li className="flex flex-col">
-                  <span className="text-gray-500 text-[12px]">기타</span>
-                  <span className="font-medium text-gray-900">2%</span>
-                </li>
-              </ul>
+              {/* 비율 레전드 */}
+              {!loading && composition.length > 0 && (
+                <ul className="text-sm text-gray-700 grid grid-cols-2 gap-y-2 mt-2">
+                  {donutData.labels.map((label, i) => (
+                    <li key={label} className="flex items-center gap-2">
+                      {/* 색 점(도넛 색과 동일) */}
+                      <span
+                        className="inline-block w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: donutData.colors[i] }}
+                        aria-hidden
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-gray-500 text-[12px]">{label}</span>
+                        <span className="font-medium text-gray-900">
+                          {pct(donutData.shares[i])}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* 순자산 추이 */}
