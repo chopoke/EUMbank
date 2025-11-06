@@ -1,5 +1,7 @@
 import {formatAccountNumber} from '../../utils/formatUtils';
 
+import { useEffect } from 'react';
+
 const SavingAccountInfoSection = ({
                                       linkedAccount,
                                       setLinkedAccount,
@@ -25,6 +27,18 @@ const SavingAccountInfoSection = ({
         const formatted = formatAccountNumber(e.target.value);
         setSavingAccount(formatted);
     };
+
+    // ✅ 컴포넌트가 처음 마운트될 때 한 번만 실행
+    useEffect(() => {
+        // 220-XXX-XXXXXX 형식의 난수 생성
+        const part1 = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+        const part2 = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+        const randomAccount = `220-${part1}-${part2}`;
+
+        // state에 생성된 난수 저장
+        setSavingAccount(randomAccount);
+
+    }, []);
 
     const handleDateChange = (e) => {
         const selectedDay = e.target.value;
@@ -58,6 +72,7 @@ const SavingAccountInfoSection = ({
                         id="savingAccount"
                         value={savingAccount}
                         onChange={handleAccountChange}
+                        readOnly
                         placeholder="220-XXX-XXXXXX 형식으로 입력"
                         autoComplete="off"
                         maxLength="100"
