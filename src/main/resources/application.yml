@@ -188,6 +188,15 @@ jobs:
       cron: "0 */2 * * * *"    # 매일 03:00  --> 임시로 15초마다
   timezone: "Asia/Seoul"
 
+
+# ==================================
+# --- Gemini API ---
+# ==================================
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
+  model: gemini-2.5-pro
+
 # ===================================================================
 # firebase Cloud Messaging
 # ===================================================================
@@ -195,3 +204,12 @@ firebase:
   service-account:
     path: eumbank-86fbd-firebase-adminsdk-fbsvc-d3d743c1eb.json # firebase 마스터리 키 - json파일 필요함
   project-id: eumbank-86fbd # firebase에서 생성된 프로젝트명
+
+  # =================================================================
+  # Thymeleaf 설정
+  # =================================================================
+  spring:
+    thymeleaf:
+      cache: false
+      prefix: classpath:/templates/
+      suffix: .html

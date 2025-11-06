@@ -70,7 +70,7 @@ const Deposit = () => {
     return (
         <div className="containerdepart">
             {/* 헤더 */}
-            <header className='headerType'>
+            <header className='headerType w-[1240px] h-[152px]'>
                 <h1>전체 예/적금 상품</h1>
                 <p>다양한 금융 상품을 둘러보고 나에게 맞는 최적의 상품을 찾아보세요.</p>
             </header>

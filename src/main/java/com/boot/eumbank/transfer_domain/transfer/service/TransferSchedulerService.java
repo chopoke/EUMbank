@@ -51,8 +51,8 @@ public class TransferSchedulerService {
     public void processScheduledTransfers() {
         
         // 로그 기록 - 스케줄러 실행 시작
-        log.info("=== 예약이체 스케줄러 실행 시작 - {} ===", LocalDateTime.now());
-        
+        // log.info("=== 예약이체 스케줄러 실행 시작 - {} ===", LocalDateTime.now());
+
         try {
             // === 1단계: 스케줄된 예약 이체 목록 조회 (Race Condition 방지) ===
             // SELECT FOR UPDATE SKIP LOCKED를 사용하여 동시 실행 방지

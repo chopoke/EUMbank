@@ -13,9 +13,7 @@ export const getTodayString = () => {
  * 날짜 문자열에서 일(day) 추출
  */
 export const getDayFromDateString = (dateStr) => {
-    if (!dateStr) return null;
-    const parts = dateStr.split('-');
-    return parseInt(parts[2], 10);
+    return dateStr;
 };
 
 /**

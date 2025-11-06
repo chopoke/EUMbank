@@ -56,7 +56,7 @@ public class EximClient {
     public List<Row> fetchBy(LocalDate date) {
         String ymd = date.format(DateTimeFormatter.BASIC_ISO_DATE);
         String url = String.format("%s?authkey=%s&data=AP01&searchdate=%s", baseUrl, authKey, ymd);
-        log.info("[EXIM] GET {}", url.replace(authKey, "****"));
+        //log.info("[EXIM] GET {}", url.replace(authKey, "****"));
 
         try {
             HttpHeaders h = new HttpHeaders();
@@ -68,29 +68,29 @@ public class EximClient {
             String loc = res.getHeaders().getFirst(HttpHeaders.LOCATION);
             if (res.getStatusCode().is3xxRedirection() && loc != null) {
                 URI next = resolveAgainst(url, loc);
-                log.warn("[EXIM] 3xx -> Location: {}", loc);
+                //log.warn("[EXIM] 3xx -> Location: {}", loc);
                 res = rt.exchange(next.toString(), HttpMethod.GET, req, Object.class);
             }
 
             Object body = res.getBody();
             if (body == null) {
-                log.warn("[EXIM] Body is null (date={})", ymd);
+                //log.warn("[EXIM] Body is null (date={})", ymd);
                 return List.of();
             }
             if (body instanceof List<?> list) {
-                log.info("[EXIM] Raw Body Type: {} size={}", body.getClass().getName(), list.size());
+                //log.info("[EXIM] Raw Body Type: {} size={}", body.getClass().getName(), list.size());
                 List<Row> out = parseRows(list, date); // 관측일 고정
-                log.info("[EXIM] Parsed {} rows (date={})", out.size(), ymd);
+                //log.info("[EXIM] Parsed {} rows (date={})", out.size(), ymd);
                 return out;
             } else {
-                log.warn("[EXIM] Unexpected body: {}", body);
+                //log.warn("[EXIM] Unexpected body: {}", body);
                 return List.of();
             }
         } catch (HttpStatusCodeException e) {
-            log.error("[EXIM] upstream {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            //log.error("[EXIM] upstream {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
             throw e;
         } catch (Exception e) {
-            log.warn("[EXIM] request failed for date {}: {}", date, e.toString());
+            //log.warn("[EXIM] request failed for date {}: {}", date, e.toString());
             return List.of();
         }
     }
@@ -149,10 +149,10 @@ public class EximClient {
 
         if (res1.getStatusCode().is3xxRedirection() && loc != null) {
             ResponseEntity<String> res2 = rt.exchange(loc, HttpMethod.GET, req, String.class);
-            log.info("[EXIM#2] {} ct={}", res2.getStatusCode(), res2.getHeaders().getContentType());
-            log.info("[EXIM#2] sample={}", sample(res2.getBody()));
+            //log.info("[EXIM#2] {} ct={}", res2.getStatusCode(), res2.getHeaders().getContentType());
+            //log.info("[EXIM#2] sample={}", sample(res2.getBody()));
         } else {
-            log.info("[EXIM#1] sample={}", sample(res1.getBody()));
+            //log.info("[EXIM#1] sample={}", sample(res1.getBody()));
         }
         return Map.of("ok", true);
     }

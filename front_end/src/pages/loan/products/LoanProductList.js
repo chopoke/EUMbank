@@ -1,6 +1,7 @@
 import React from "react";
 import { fetchLoanProducts } from "../../../api/accounts";
 import { Link } from "react-router-dom";
+import '../../../resources/css/other.css';
 
 export default function LoanProductsListPage(){
 
@@ -279,10 +280,12 @@ export default function LoanProductsListPage(){
       
 
       <main className="max-w-7xl mx-auto px-6 pt-8 pb-20">
-        <div className="text-sm text-gray-500 mb-3">금융상품 <span className="mx-1">›</span> 대출</div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">
-          <i className="ri-hand-coin-line  text-4xl  text-lime-800 p-2"></i>
-          대출 상품</h1>
+        {/* <div className="text-sm text-gray-500 mb-3">금융상품 <span className="mx-1">›</span> 대출</div> */}
+        <div className="accb w-[1240px]">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-4">
+            <i className="ri-hand-coin-line  text-4xl  text-lime-800 p-2"></i>
+            대출 상품</h1>
+        </div>
 
         {/* Filters */}
         <section className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 md:p-5 mb-6">

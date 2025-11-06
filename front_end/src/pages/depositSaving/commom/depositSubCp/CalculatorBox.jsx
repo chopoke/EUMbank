@@ -2,6 +2,8 @@ import { formatWon } from '../../utils/formatUtils';
 import { calculateMaturityAmount } from '../../utils/depositCalculator';
 import { useMemo } from 'react';
 
+// 계산식 작성하는 컴포넌트
+
 const CalculatorBox = ({ 
     amount, 
     setAmount, 
@@ -12,6 +14,17 @@ const CalculatorBox = ({
     setIsConfirmed,
     onSubscribe
 }) => {
+
+    console.log("amount:", amount);
+    console.log("setTerm:", setTerm);
+    console.log("setAmount:", setAmount);
+    console.log("term:", term);
+    console.log("isConfirmed:", isConfirmed);
+    console.log("setIsConfirmed:", setIsConfirmed);
+    console.log("onSubscribe:", onSubscribe);
+    console.log("formattedProduct:", formattedProduct);
+
+
     const handleAmountChange = (newAmount) => {
         const minAmt = formattedProduct.minAmount;
         const maxAmt = formattedProduct.maxAmount;
@@ -62,7 +75,7 @@ const CalculatorBox = ({
                 <div className="result-item"><span>세전 이자</span> <span>{formatWon(calculatedResult.interest)}원</span></div>
                 <div className="result-item tax"><span>세금(15.4%)</span> <span>- {formatWon(calculatedResult.tax)}원</span></div>
                 <hr />
-                <div className="result-item total"><span>만기 예상 수령액(세후)</span><strong>{formatWon(calculatedResult.total)}원</strong></div>
+                <div className="result-item total"><span>만기 예상 수령액</span><strong>{formatWon(calculatedResult.total * term)}원</strong></div>
             </div>
 
             {/* 최종 동의 및 가입 버튼 */}
@@ -77,7 +90,7 @@ const CalculatorBox = ({
                     <label htmlFor="confirm-check">상품설명서 및 약관을 모두 확인했으며, 가입에 동의합니다.</label>
                 </div>
                 <button onClick={onSubscribe} className="sub-action-button primary">
-                    총 {formatWon(amount)}원 가입하기
+                    가입하기
                 </button>
             </div>
         </div>

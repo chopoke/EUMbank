@@ -12,6 +12,7 @@ import NoticeSection from '../commom/depositSubCp/NoticeSection.jsx';
 import FAQSection from '../commom/depositSubCp/FAQSection.jsx';
 import SummaryBox from '../commom/depositSubCp/SummaryBox';
 import CalculatorBox from '../commom/depositSubCp/CalculatorBox';
+import {calculateMaturityAmount} from "../utils/depositCalculator";
 
 const SavingSubscription = () => {
     const location = useLocation();
@@ -19,7 +20,7 @@ const SavingSubscription = () => {
     const [productList, setProductList] = useState();
     const [aggreement, setAggreement] = useState();
     const [amount, setAmount] = useState(10000000);
-    const [term, setTerm] = useState(12);
+    const [term, setTerm] = useState(null);
     const [linkedAccount, setLinkedAccount] = useState('');
     const [savingAccount, setSavingAccount] = useState('');
     const [pin, setPin] = useState('');
@@ -70,6 +71,14 @@ const SavingSubscription = () => {
         return formatProductData(productList);
     }, [productList]);
 
+    // formattedProduct가 로드되면 자동으로 첫 번째 term 설정
+    useEffect(() => {
+        if (formattedProduct?.termOptions?.length > 0 && term === null) {
+            setTerm(formattedProduct.termOptions[0]);
+            console.log('초기 term 설정:', formattedProduct.termOptions[0]);
+        }
+    }, [formattedProduct, term]);
+
     const handleSignPdf = () => {
         setIsModalOpen(true);
     };
@@ -96,6 +105,10 @@ const SavingSubscription = () => {
         if (!paymentStartDate) { alert('첫 납입일을 선택해주세요.'); return; }
 
         try {
+            // 만기 예상 수령액 계산
+            const calculatedResult = calculateMaturityAmount(amount, term, formattedProduct.rateInfo);
+            const expectedMaturityAmount = calculatedResult.total * term;
+
             const formData = new FormData();
 
             const subscriptionRequest = {
@@ -106,6 +119,7 @@ const SavingSubscription = () => {
                 linkedAccount: linkedAccount,
                 savingAccount: savingAccount,
                 pin: pin,
+                expectedMaturityAmount: expectedMaturityAmount,
                 payDay: getDayFromDateString(paymentStartDate),
                 signatureDate: signatureData.signatureDate,
                 templatePdfPath: signatureData.templatePdfPath,

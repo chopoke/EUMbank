@@ -60,6 +60,11 @@ import AdminPage from "./pages/admin/page";
 // 공과금
 import BillsLanding from "./pages/bills/BillsLanding";
 
+//import {chatBotRouteElements} from "./pages/chat/router/chatBotRoutes";
+
+// 쳇봇
+import FloatingChatButton from "./pages/chat/page/FloatingChatButton";
+
 function AppWrapper() {
   return <App />;
 }
@@ -120,7 +125,8 @@ function App() {
   return (
     <div className="App">
       <Header isLoggedIn={isLoggedIn} user={user} onLogout={handleLogout} />
-
+      {/*  쳇봇 */}
+      <FloatingChatButton />
       <Routes>
         <Route path="/" element={<BankHome user={user} />} />
         {/* <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} /> */}

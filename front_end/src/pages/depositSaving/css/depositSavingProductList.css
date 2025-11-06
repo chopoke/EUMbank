@@ -209,7 +209,7 @@
   background-position: center;   /* 이미지를 중앙에 배치 */
   background-repeat: no-repeat;  /* 이미지 반복 안 함 */
   color: white; /* 텍스트가 잘 보이도록 흰색으로 변경 */
-  padding: 40px 20px; /* 내부 여백 추가 */
+  padding: 30px 20px; /* 내부 여백 추가 */
   text-align: center; /* 텍스트 중앙 정렬 */
 }
 
