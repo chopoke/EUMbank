@@ -1,4 +1,4 @@
-package com.boot.eumbank.loan.admin.repository;
+package com.boot.eumbank.loan.repository.apply;
 
 
 import com.boot.eumbank.loan.entity.LoanApplicationHistory;

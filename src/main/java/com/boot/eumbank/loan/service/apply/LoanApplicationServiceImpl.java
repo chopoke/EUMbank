@@ -6,8 +6,10 @@ import com.boot.eumbank.loan.dto.apply.LoanApplicationRequestDTO;
 import com.boot.eumbank.loan.dto.apply.LoanApplicationResponseDTO;
 import com.boot.eumbank.loan.dto.apply.LoanSaveConsentsRequestDTO;
 import com.boot.eumbank.loan.entity.LoanApplication;
+import com.boot.eumbank.loan.entity.LoanApplicationHistory;
 import com.boot.eumbank.loan.entity.LoanProduct;
 import com.boot.eumbank.loan.repository.LoanProductRepository;
+import com.boot.eumbank.loan.repository.apply.LoanApplicationHistoryRepository;
 import com.boot.eumbank.loan.repository.apply.LoanApplicationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
     private final LoanProductRepository productRepo;
     private final AccountSelectRepository accountRepository;
     private final ObjectMapper om = new ObjectMapper();
+    private final LoanApplicationHistoryRepository historyRepo;     // 신청기록 테이블 저장(loan_application_history_tbl)
 
     // ============================ 신청 저장
     @Override
@@ -87,7 +90,25 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         la.setChannel((channel == null || channel.isBlank()) ? "WEB" : channel);
         la.setSubmittedAt(LocalDateTime.now());
 
+        // 신청 저장
         appRepo.save(la);
+
+        // ========== 신청내역 테이블에도 기록
+        String bankCode = safeBankCode(payout);
+        String receiveAcc = safeAccountNumber(payout);
+
+        LoanApplicationHistory hist = LoanApplicationHistory.builder()
+                .loanNo(la.getLaNo())                          // ※ 현재 스키마 제약(loanNo NOT NULL) 때문에 la_no를 넣어 추적
+                .disbId(la.getLaId())                          // 신청 식별자
+                .disbDate(la.getSubmittedAt())                 // 신청 일시
+                .amount(applAmt)                               // 신청 금액
+                .bankCode(bankCode)                            // 지급은행(가능하면)
+                .receiveAccount(receiveAcc)                    // 지급계좌(가능하면)
+                .memo("신청 접수(SUBMITTED) - 채널: " + la.getChannel())
+                .build();
+
+        // 내역테이블 저장
+        historyRepo.save(hist);
 
         return new LoanApplicationResponseDTO(
                 la.getLaId(),
@@ -170,6 +191,23 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         String s = raw == null ? "" : raw.trim();
         if (s.equalsIgnoreCase("VARIABLE") || s.contains("변동")) return "변동금리";
         return "고정금리";
+    }
+
+    // 은행코드 꺼내는 유틸
+    private String safeBankCode(Account a) {
+        try {
+            return (String) Account.class.getMethod("getBankCode").invoke(a);
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+    // 계좌 번호 꺼내는 유틸
+    private String safeAccountNumber(Account a) {
+        try {
+            return (String) Account.class.getMethod("getAccountNumber").invoke(a);
+        } catch (Exception ignore) {
+            return String.valueOf(a.getANo()); // 최후: 내부번호 문자열로
+        }
     }
 
 }

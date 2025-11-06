@@ -28,7 +28,7 @@ public class AccountSelectRepositoryImpl implements AccountRepositoryCustom {
     public List<Account> findAccountsByCustomer(int c_no) {
         return jpaQueryFactory
                 .selectFrom(A)
-                .where(A.cNo.eq(c_no))
+                .where(A.cNo.eq(c_no), A.status.eq("ACTIVE"))
                 .orderBy(A.aNo.desc())
                 .fetch();
     }

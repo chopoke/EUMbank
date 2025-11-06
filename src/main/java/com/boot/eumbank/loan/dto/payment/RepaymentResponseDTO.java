@@ -28,6 +28,7 @@ public class RepaymentResponseDTO {
         private Long scheduleId;
         private BigDecimal appliedInterest;
         private BigDecimal appliedPrincipal;
+        private BigDecimal appliedPenalty;      // 회차 또는 벌금 납부한 전용
         private String newStatus;               // DUE/PARTIAL/PAID
         private String lpId;                    // 생성된 payment row의 lp_id
     }

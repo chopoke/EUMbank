@@ -7,6 +7,7 @@ import com.boot.eumbank.loan.entity.Loan;
 import com.boot.eumbank.loan.entity.LoanPayment;
 import com.boot.eumbank.loan.entity.LoanSchedule;
 import com.boot.eumbank.loan.repository.LoanRepository;
+import com.boot.eumbank.loan.repository.delinquency.LoanDelinquencyRepository;
 import com.boot.eumbank.loan.repository.payment.LoanPaymentRepository;
 import com.boot.eumbank.loan.repository.payment.LoanScheduleRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ import java.util.Optional;
 
 /**
  * 들어온 상환금을 회차별로 배분하고 대출잔액 갱신
+ * 연체금 -> 이자 -> 원금 순으로 확인하고 상환
  */
 @Service
 @Slf4j
@@ -35,6 +37,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
     private final LoanScheduleRepository scheduleRepo;
     private final LoanPaymentRepository paymentRepo;
     private final AccountTxnServiceImpl accountTxn;     // 출금용 서비스
+    private final LoanDelinquencyRepository delinquencyRepo;        // 연체 레포
 
     private static final BigDecimal ZERO = new BigDecimal("0.00");
 
@@ -103,14 +106,30 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
             }
         }
 
-        // (2-1) 미납 금액 계산
-        BigDecimal needTotal = targets.stream().map(s->{
+        // 가장 빠른상환부터 상환!
+        targets.sort(
+                java.util.Comparator
+                        .comparing(LoanSchedule::getDueDate)               // 납기일 오름차순
+                        .thenComparing(LoanSchedule::getInstallmentNo)     // 같으면 회차번호 오름차순
+        );
+
+        //  연체료 먼저 확인
+        // (2-0) 연체료 미지급액 계산 (대출 단위)
+        BigDecimal accruedPenalty = nvl(delinquencyRepo.sumDelAmountByLoanUntil(loanNo, payTime));  // 적립된 연체료 합
+        BigDecimal paidPenalty    = nvl(paymentRepo.sumPenaltyPaidByLoanUntil(loanNo, payTime));    // 납부된 연체료 합
+        BigDecimal outstandingPenalty = accruedPenalty.subtract(paidPenalty);
+        if (outstandingPenalty.signum() < 0) outstandingPenalty = ZERO;
+
+        // (2-1) 스케줄 미납 금액 계산
+        BigDecimal needSchTotal = targets.stream().map(s -> {
             BigDecimal needInt = nvl(s.getDueInterest()).subtract(nvl(s.getPaidInterest()));
             if (needInt.signum() < 0) needInt = ZERO;
             BigDecimal needPrin = nvl(s.getDuePrincipal()).subtract(nvl(s.getPaidPrincipal()));
             if (needPrin.signum() < 0) needPrin = ZERO;
             return needInt.add(needPrin);
         }).reduce(ZERO, BigDecimal::add);
+
+        BigDecimal needTotal = outstandingPenalty.add(needSchTotal);
 
         BigDecimal withdrawAmt = receive.min(needTotal); // 요청금액과 실제 필요액 중 작은 값
         if (withdrawAmt.compareTo(ZERO) <= 0) {
@@ -149,6 +168,41 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
         List<RepaymentResponseDTO.Item> items = new ArrayList<>();
         BigDecimal remain = withdrawAmt;
 
+        // (3-0) 연체료 먼저 충당
+        if (outstandingPenalty.compareTo(ZERO) > 0 && remain.compareTo(ZERO) > 0) {
+            BigDecimal payPenalty = min(remain, outstandingPenalty);
+            remain = remain.subtract(payPenalty);
+
+            seq++;
+            String lpId = lpGroupId + "-" + String.format("%02d", seq);
+            LoanPayment p = LoanPayment.builder()
+                    .loanNo(loanNo)
+                    .idempotencyKey(idem)
+                    .lpId(lpId)
+                    .amountReceived(payPenalty) // penalty만 납부
+                    .principalAmt(ZERO)
+                    .interestAmt(ZERO)
+                    .penaltyAmt(payPenalty)
+                    .status("POSTED")
+                    .installmentNo(null)     // 대출 단위 벌금 충당
+                    .paymentTime(payTime)
+                    .scheduleId(null)
+                    .build();
+            paymentRepo.save(p);
+            appliedPenaltyTotal = appliedPenaltyTotal.add(payPenalty);
+
+            items.add(RepaymentResponseDTO.Item.builder()
+                    .installmentNo(null)
+                    .scheduleId(null)
+                    .appliedInterest(ZERO)
+                    .appliedPrincipal(ZERO)
+                    .appliedPenalty(payPenalty)     // vㅐ널티
+                    .newStatus(null)
+                    .lpId(lpId)
+                    .build());
+        }
+
+        // 이자 -> 원금 순으로 배분
         for (LoanSchedule s : targets) {
             if (remain.compareTo(ZERO) <= 0) break;
 
@@ -221,6 +275,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
                         .scheduleId(s.getLsNo())
                         .appliedInterest(payInterest)
                         .appliedPrincipal(payPrincipal)
+                        .appliedPenalty(ZERO)
                         .newStatus(s.getStatus())
                         .lpId(lpId)
                         .build());
@@ -229,6 +284,11 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
 
         // (4) 대출 잔액/상태 갱신 (원금만 차감)
         BigDecimal curBal = nvl(loan.getBalance());
+        if (curBal.compareTo(ZERO) > 0) {
+            curBal = curBal.subtract(appliedPrincipalTotal);
+            if (curBal.compareTo(ZERO) < 0) curBal = ZERO;
+            loan.setBalance(curBal);
+        }
 
         // 최근 납부시간 갱신
         loan.setLastPaidAt(payTime);
@@ -245,6 +305,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
             loan.setStatus("CLOSED");
             loan.setClosedAt(LocalDateTime.now());
         }
+        // 저장
         loanRepo.save(loan);
 
         // (5) 응답

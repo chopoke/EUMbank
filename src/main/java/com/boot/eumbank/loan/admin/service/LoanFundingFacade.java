@@ -3,7 +3,7 @@ package com.boot.eumbank.loan.admin.service;
 
 import com.boot.eumbank.loan.admin.dto.LoanApproveComDTO;
 import com.boot.eumbank.loan.admin.dto.LoanApproveResultDTO;
-import com.boot.eumbank.loan.admin.repository.LoanApplicationHistoryRepository;
+import com.boot.eumbank.loan.repository.apply.LoanApplicationHistoryRepository;
 import com.boot.eumbank.loan.entity.LoanApplication;
 import com.boot.eumbank.loan.entity.LoanApplicationHistory;
 import com.boot.eumbank.loan.service.payment.RepaymentScheduleService;

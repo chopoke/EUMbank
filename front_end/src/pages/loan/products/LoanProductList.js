@@ -6,9 +6,9 @@ export default function LoanProductsListPage(){
 
   const toUiLabel = (t = '') => {
    const u = String(t).toUpperCase();
-    if (u === 'MORTGAGE') return '주택담보';
-    if (u === 'JEONSE')   return '전세자금';
-    if (u === 'CREDIT' ) return '신용대출';
+    if (u === 'MORTGAGE') return '주택담보대출';
+    if (u === 'JEONSE')   return '전세자금대출';
+    if (u === 'AUTO' ) return '자동차대출';
     return t;
   };
   function normalize(arr){
@@ -41,13 +41,13 @@ export default function LoanProductsListPage(){
   const TYPE_TO_PARAM = {
     '주택담보': 'MORTGAGE',
     '전세자금': 'JEONSE',
-    '신용대출': 'CREDIT',
+    '자동차': 'AUTO',
   };
 
   async function loadProductsFor(uiType){
     try {
       if (uiType === '전체') {
-        const types = ['MORTGAGE','JEONSE', 'CREDIT'];
+        const types = ['MORTGAGE','JEONSE', 'AUTO'];
         const resArr = await Promise.all(types.map(t => 
           fetchLoanProducts({ type: t, page: 0, size: 100 })));
         const merged = resArr.flatMap(res => {
@@ -77,7 +77,7 @@ export default function LoanProductsListPage(){
   React.useEffect(() => { loadProductsFor('전체'); }, []);
   React.useEffect(() => { loadProductsFor(type); setPage(1); }, [type]);    // 대출종류 변경시 1페이지로
 
-  const TYPES = ['전체','신용대출','주택담보','전세자금'];
+  const TYPES = ['전체','자동차','주택담보','전세자금'];
   const SORTS = [
     {id:'rateAsc', label:'금리 낮은순'},
     {id:'rateDesc', label:'금리 높은순'},

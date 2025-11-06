@@ -1,11 +1,8 @@
 // src/main/java/com/boot/eumbank/loan/service/FinlifeUpsert.java
 package com.boot.eumbank.loan.service;
 
-import com.boot.eumbank.loan.dto.FinlifeCreditResponseDTO;
-import com.boot.eumbank.loan.entity.LoanCreditOption;
 import com.boot.eumbank.loan.entity.LoanProduct;
 import com.boot.eumbank.loan.entity.LoanRateOption;
-import com.boot.eumbank.loan.repository.LoanCreditRepository;
 import com.boot.eumbank.loan.repository.LoanProductRepository;
 import com.boot.eumbank.loan.repository.LoanRateOptionRepository;
 import lombok.AllArgsConstructor;
@@ -19,8 +16,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 @Service

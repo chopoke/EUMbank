@@ -1,7 +1,6 @@
 // src/main/java/com/boot/eumbank/loan/service/FinlifeSaveSync.java
 package com.boot.eumbank.loan.service;
 
-import com.boot.eumbank.loan.dto.FinlifeCreditResponseDTO;
 import com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO;
 import com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO;
 import com.fasterxml.jackson.databind.DeserializationFeature;

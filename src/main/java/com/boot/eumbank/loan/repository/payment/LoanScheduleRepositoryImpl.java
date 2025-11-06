@@ -25,8 +25,8 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
     @Override
     public List<LoanSchedule> findRepayTargets(Long loanNo) {
         return queryFactory.selectFrom(loanSchedule)
-                .where(loanSchedule.loanNo.eq(loanNo)
-                .and(loanSchedule.status.in("DUE", "PARTIAL")))
+                .where(loanSchedule.loanNo.loe(loanNo)
+                .and(loanSchedule.status.in("DUE", "PARTIAL", "FAILED", "OVERDUE")))
                 .orderBy(loanSchedule.dueDate.asc(),
                         loanSchedule.installmentNo.asc())
                 .fetch();
@@ -47,8 +47,8 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
     public List<LoanSchedule> findAllDueForAutoDebit(LocalDate dueDate) {
         return queryFactory.selectFrom(loanSchedule)
                 .where(
-                        loanSchedule.dueDate.eq(dueDate),
-                        loanSchedule.status.in("DUE", "PARTIAL"),
+                        loanSchedule.dueDate.loe(dueDate),
+                        loanSchedule.status.in("DUE", "PARTIAL", "FAILED", "OVERDUE"),
                         hasRemaining()
                 )
                 .orderBy(loanSchedule.installmentNo.asc())
@@ -64,8 +64,8 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
     public List<LoanSchedule> findNeedRetry(LocalDate forDate) {
         return queryFactory.selectFrom(loanSchedule)
                 .where(
-                        loanSchedule.dueDate.eq(forDate),
-                        loanSchedule.status.in("DUE", "PARTIAL"),
+                        loanSchedule.dueDate.loe(forDate),
+                        loanSchedule.status.in("DUE", "PARTIAL", "FAILED", "OVERDUE"),
                         hasRemaining()
                 )
                 .orderBy(loanSchedule.installmentNo.asc())
@@ -85,7 +85,7 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
         return queryFactory.selectFrom(loanSchedule)
                 .where(
                         loanSchedule.dueDate.before(asOfDate),
-                        loanSchedule.status.in("DUE", "PARTIAL"),
+                        loanSchedule.status.in("DUE", "PARTIAL", "FAILED", "OVERDUE"),
                         hasRemaining()
                 )
                 .orderBy(loanSchedule.dueDate.asc(), loanSchedule.installmentNo.asc())
