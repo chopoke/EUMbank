@@ -22,6 +22,8 @@ import { refreshOnce, logout as apiLogout, fetchMe } from "./api/authApi";
 import MyPage from "./pages/mypage/my_costomer2";
 import Test from './pages/test';
 import Agree from './common/footer/agree';
+import Privacy from './common/footer/privacy';
+import Disclosure from './common/footer/disclosure';
 import ForeignProductsPage from "./pages/foreign/ForeignProductsPage";
 import ForeignRatePage from "./pages/foreign/ForeignRatePage";
 import ForeignOpenPage from "./pages/foreign/ForeignOpenPage";
@@ -296,8 +298,10 @@ function App() {
           </ProtectedRoute>
         } />
 
-        {/* 마이페이지 진입 */}
+        {/* 푸터관련페이지 진입 */}
         <Route path='/ftagree' element={<Agree />} />
+        <Route path='/ftprivacy' element={<Privacy />} />
+        <Route path='/ftdisclosure' element={<Disclosure />} />
       </Routes >
       <Footer />
     </div>
