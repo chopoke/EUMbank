@@ -135,7 +135,7 @@ public class MyScheduler {
                         TransferHistory history = TransferHistory.builder()
                                 // transferNo는 자동 생성되므로 제외
                                 .transferId(generateTransferId())  // 고유 ID
-                                .accountNo(Integer.valueOf(deposit.getAAccountNo()))  // a_no (계좌 PK)
+                                .accountNo(Integer.valueOf(deposit.getAAccountNo().replace("-", "")))  // a_no (계좌 PK)
                                 .amount(BigDecimal.valueOf(deposit.getDExpectedMaturityAmount()))  // 거래 금액
                                 .memo("예금 자동이체 최종 만기")  // 메모
                                 .otherBank("EUM_BANK")  // 상대방 은행
@@ -437,9 +437,9 @@ public class MyScheduler {
                         TransferHistory history = TransferHistory.builder()
                                 // transferNo는 자동 생성되므로 제외
                                 .transferId(generateTransferId())  // 고유 ID
-                                .accountNo(Integer.valueOf(saving.getAAccountNo()))  // a_no (계좌 PK)
+                                .accountNo(saving.getANo())// a_no (계좌 PK)
                                 .amount(BigDecimal.valueOf(saving.getIExpectedMaturityAmount()))  // 거래 금액
-                                .memo("예금 자동이체 최종 만기")  // 메모
+                                .memo("적금 자동이체 최종 만기")  // 메모
                                 .otherBank("EUM_BANK")  // 상대방 은행
                                 .otherAccount(saving.getIAccountNo())  // 상대방 계좌 (예금계좌)
                                 .transferType("입금")  // 이체 유형

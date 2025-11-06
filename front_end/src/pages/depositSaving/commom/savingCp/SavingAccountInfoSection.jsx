@@ -28,7 +28,7 @@ const SavingAccountInfoSection = ({
         setSavingAccount(formatted);
     };
 
-    // ✅ 컴포넌트가 처음 마운트될 때 한 번만 실행
+    // 난수 생성
     useEffect(() => {
         // 220-XXX-XXXXXX 형식의 난수 생성
         const part1 = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
