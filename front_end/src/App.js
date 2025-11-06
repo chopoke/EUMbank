@@ -225,13 +225,6 @@ function App() {
           </ProtectedRoute>
         } />
 
-        {/* 관리자페이지 진입 */}
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            <AdminPage />
-          </ProtectedRoute>
-        } />
-
         {/* 마이페이지 진입 */}
         <Route path="/test" element={<Test />} />
       </Routes >
