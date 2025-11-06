@@ -21,6 +21,7 @@ import { refreshOnce, logout as apiLogout, fetchMe } from "./api/authApi";
 
 import MyPage from "./pages/mypage/my_costomer2";
 import Test from './pages/test';
+import Agree from './common/footer/agree';
 import ForeignProductsPage from "./pages/foreign/ForeignProductsPage";
 import ForeignRatePage from "./pages/foreign/ForeignRatePage";
 import ForeignOpenPage from "./pages/foreign/ForeignOpenPage";
@@ -233,7 +234,7 @@ function App() {
         } />
 
         {/* 마이페이지 진입 */}
-        <Route path="/test" element={<Test />} />
+        <Route path='/ftagree' element={<Agree />} />
       </Routes >
       <Footer />
     </div>
