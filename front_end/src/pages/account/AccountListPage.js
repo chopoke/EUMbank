@@ -45,26 +45,28 @@ function AccountListPage(){
     return `${y}-${m}-${day} ${hh}:${mm}`;
   }
 
-  // 통화코드 유틸ㄹ 추가
-  const CURRENCY_DIGITS = {
-    // 0자리
+  // 통화코드 유틸ㄹ 추가 ----------------
+  // 자릿수 설정
+    const CURRENCY_DIGITS = {   
     KRW: 0, JPY: 0, IDR: 0,
-    // 3자리
     BHD: 3, KWD: 3,
-    // 그 외 기본 2자리
+    // 그 외 기본 2
   };
   function getDigits(code = "KRW") {
-    return CURRENCY_DIGITS[code] ?? 2;
+    return CURRENCY_DIGITS[String(code || "KRW").toUpperCase()] ?? 2;
   }
   // 톻화 포맷터
-  function formatMoney(amt, code = "KRW", style = "code") {
-    const digits = getDigits(code);
-    // 기본: CODE 12,345.67
-    const num = Number(amt || 0).toLocaleString("en-US", {
+  function formatCurrency(amt, code = "KRW") {
+    const cur = String(code || "KRW").toUpperCase();
+    const digits = getDigits(cur);
+    const n = Number(amt || 0);
+    const sign = n < 0 ? "-" : "";
+    const abs = Math.abs(n).toLocaleString("en-US", {
       minimumFractionDigits: digits,
-      maximumFractionDigits: digits
+      maximumFractionDigits: digits,
     });
-    return `${code} ${num}`;
+    if (cur === "KRW") return `${sign}${abs}원`;   // KRW는 원으로 표기
+    return `${sign}${cur} ${abs}`;                  // 원화를 제외하 ㄴ외화는 그대로 통화표기
   }
 
   React.useEffect(()=>{
@@ -139,8 +141,7 @@ function AccountListPage(){
   const typeOptions = ["전체","입출금","자유적금", "예금","적금", "대출","외환"];
 
 
-  // 원화 스케일링에서 -> 통화 표기로 수정
-  const formatCurrency = (amt, cur) => formatMoney(amt, cur, 'code');
+  
 
   // 계좌번호 마스킹
   const maskAcc = (s) =>
@@ -193,7 +194,7 @@ function AccountListPage(){
     const header = ["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"];
     const body = rows.map((r) => [
       r.nickname, r.accountType, r.bank, r.number, r.typeLabel,
-      formatMoney(r.balance, r.currency, 'code'), // 예: SAR 12,345.00
+      formatCurrency(r.balance, r.currency, 'code'), // 예: SAR 12,345.00
       r.currency, r.status, r.lastActivity
     ]);
     const csv = [header, ...body].map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
@@ -229,7 +230,7 @@ function AccountListPage(){
     const head = [["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"]];
     const body = rows.map((r) => [
       r.nickname, r.accountType, r.bank, r.number, r.typeLabel,
-      formatMoney(r.balance, r.currency, 'code'), // 예: SAR 12,345.00
+      formatCurrency(r.balance, r.currency, 'code'), // 예: SAR 12,345.00
       r.currency, r.status, r.lastActivity
     ]);
 

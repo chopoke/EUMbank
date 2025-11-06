@@ -55,7 +55,7 @@ public class LoanBatchService {
     }
 
 
-    // ---- 1) 당일 납부 대상 자동출금 (매일 09:05 KST)
+    // ---- 1) 당일 납부 대상 자동출금
     @Scheduled(cron = "0 */5 * * * *", zone = "Asia/Seoul")        // 50초마다 한달  -> 5분마다 한달
     //@Scheduled(cron = "0 5 9 * * *", zone = "Asia/Seoul")
     public void autoDebitForToday() {
