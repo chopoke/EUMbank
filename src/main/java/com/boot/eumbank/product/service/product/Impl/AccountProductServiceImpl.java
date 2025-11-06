@@ -24,11 +24,11 @@ public class AccountProductServiceImpl implements AccountProductService {
     private final AccountQueryRepository accountQueryRepository;
 
     @Override
-    public List<AccountDTO> findAllAccounts() {
+    public List<AccountDTO> findAllAccounts(Integer accountNo) {
 
         logger.info("DepositServiceImpl => findAllAccounts()");
 
-        List<Account> allAccount = accountQueryRepository.findAllAccount();
+        List<Account> allAccount = accountQueryRepository.findAllAccount(accountNo);
 
         logger.info("" + allAccount);
 

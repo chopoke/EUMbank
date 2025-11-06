@@ -20,6 +20,7 @@ public class ProductManagementDTO {
     private Long maxAmount;
     private Integer minMonths;
     private Integer maxMonths;
+    private String ealryTerminationRate;
     private String period;
     private String paymentType;
     private String isActive;

@@ -100,6 +100,7 @@ public class InstallmentManagementQueryRepository {
                                 .concat("~")
                                 .concat(productInstallmentList.ipMaxMonths.stringValue())
                                 .concat("개월"),
+                        productInstallmentList.ipEarlyTerminationRate,
                         productInstallmentList.ipInterestPaymentType,
                         productInstallmentList.ipIsActive,
                         productInstallmentList.ipFeature,

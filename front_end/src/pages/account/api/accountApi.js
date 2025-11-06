@@ -68,6 +68,24 @@ export async function checkPinNumber() {
   }
 }
 
+/**
+ * PIN 재설정
+ * @param {string} pin - 새로운 6자리 PIN
+ * @returns {Promise<{ok:boolean, message:string}>}
+ */
+export async function resetPin(pin) {
+    try {
+        const res = await api.put("/api/user/reset-pin", { pin });
+        return res.data;
+    } catch (error) {
+        console.error("PIN 재설정 실패:", error.response?.data || error.message);
+        throw new Error(
+            error.response?.data?.message ||
+            `PIN 재설정 실패 (${error.response?.status})`
+        );
+    }
+}
+
 
 /**
  * pin번호 검증

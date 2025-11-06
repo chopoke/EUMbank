@@ -25,6 +25,7 @@ export default function ProductFormModal({ activeType, onSuccess, onClose }) {
         maxAmount: '',
         minMonths: '',
         maxMonths: '',
+        ealryTerminationRate: '',
         interestPaymentType: '',
         feature: [],
         buttonText: '',
@@ -119,6 +120,7 @@ export default function ProductFormModal({ activeType, onSuccess, onClose }) {
         if (!formData.minAmount) newErrors.minAmount = '최소 금액은 필수입니다';
         if (!formData.maxAmount) newErrors.maxAmount = '최대 금액은 필수입니다';
 
+        if (!formData.ealryTerminationRate) newErrors.ealryTerminationRate = '조기금리 입력은 필수 입니다.';
 
         if (!formData.minMonths) newErrors.minMonths = '최소 기간은 필수입니다';
         if (!formData.maxMonths) newErrors.maxMonths = '최대 기간은 필수입니다';
@@ -151,6 +153,7 @@ export default function ProductFormModal({ activeType, onSuccess, onClose }) {
                 maxAmount: Number(formData.maxAmount),
                 minMonths: Number(formData.minMonths),
                 maxMonths: Number(formData.maxMonths),
+                ealryTerminationRate: Number(formData.ealryTerminationRate),
                 paymentType: formData.interestPaymentType,
                 features: formData.feature.join(','),
                 href: formData.href,
@@ -283,7 +286,7 @@ export default function ProductFormModal({ activeType, onSuccess, onClose }) {
                                     <>
                                         <option value="정기예금">정기예금</option>
                                         <option value="자유적립식예금">자유적립식예금</option>
-                                        <option value="정기적금">정기적금</option>
+                                        <option value="정기적금">정기예끔</option>
                                     </>
                                 ) : (
                                     <>
@@ -429,6 +432,24 @@ export default function ProductFormModal({ activeType, onSuccess, onClose }) {
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    조기 금리 (%) <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    name="ealryTerminationRate"
+                                    value={formData.ealryTerminationRate}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="3.5"
+                                />
+                                {errors.ealryTerminationRate && <p className="text-red-500 text-sm mt-1">{errors.ealryTerminationRate}</p>}
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 이자 지급 방식 <span className="text-red-500">*</span>
@@ -479,7 +500,7 @@ export default function ProductFormModal({ activeType, onSuccess, onClose }) {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div>
+                            <div hidden>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     버튼 텍스트
                                 </label>
@@ -492,7 +513,7 @@ export default function ProductFormModal({ activeType, onSuccess, onClose }) {
                                     placeholder="예금상품개설"
                                 />
                             </div>
-                            <div>
+                            <div hidden>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     링크 URL
                                 </label>

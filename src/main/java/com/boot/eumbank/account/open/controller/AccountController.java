@@ -5,6 +5,7 @@ import com.boot.eumbank.account.open.jpa.repository.AccountRepository;
 import com.boot.eumbank.account.open.service.account.AccoutService;
 import com.boot.eumbank.account.open.util.ImageFormats;
 import com.boot.eumbank.account.open.util.KycVerify;
+import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.product.service.product.AccountProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -15,6 +16,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.bind.annotation.*;
@@ -55,7 +58,11 @@ public class AccountController {
     public ResponseEntity<List<AccountDTO>> getAllAccounts() {
 
         logger.info("DepositController => getAllAccounts()");
-        List<AccountDTO> allAccounts = accountProductService.findAllAccounts();
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Customer customer = (Customer) authentication.getPrincipal();
+
+        List<AccountDTO> allAccounts = accountProductService.findAllAccounts(customer.getCustomerNo());
         return ResponseEntity.ok(allAccounts);
     }
 
