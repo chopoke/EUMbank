@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import static com.boot.eumbank.customer.entity.QCustomer.customer;
 import static com.boot.eumbank.account.open.entity.account.QAccount.account;
 import static com.boot.eumbank.foreign.entity.QForeignRate.foreignRate;
 import static com.boot.eumbank.product.entity.product.QProductInstallment.productInstallment;
@@ -86,37 +87,62 @@ public class DashboardRepository {
     }
 
     /**
-     * 적금 총액(현재 납입원금 누계)
+     * 적금 총액(현재 원금잔액)
+     * @param cNo 고객번호
+     * @return BigDecimal
      */
-//    public BigDecimal sumInstallment(int cNo) {
-//        return queryFactory.select(productInstallment.);
-//    }
+    public BigDecimal sumInstallment(int cNo) {
+        NumberExpression<BigDecimal> iAmount = Expressions.numberTemplate(BigDecimal.class, "{0}", productInstallment.iAmount);
+        return queryFactory.select(iAmount.sum().coalesce(BigDecimal.ZERO))
+                .from(productInstallment)
+                .where(
+                        productInstallment.cNo.eq(cNo),
+                        productInstallment.iStatus.in("ACTIVE", "COMPLETE")
+                        //productInstallment.iStatus.eq("ACTIVE")
+                )
+                .fetchOne();
+    }
 
     /**
      * 예금 총액(현재 원금잔액)
      */
-//    public BigDecimal sumDeposit(int cNo) {
-//        return queryFactory.select(productDeposit.dAmount.sum().coalesce(BigDecimal.ZERO))
-//                .from(productDeposit)
-//                .where(
-//                        productDeposit.cNo.eq(cNo),
-//                        productDeposit.dStatus.eq("ACTIVE")
-//                )
-//                .fetchOne();
-//    }
+    public BigDecimal sumDeposit(int cNo) {
+        NumberExpression<BigDecimal> dAmount = Expressions.numberTemplate(BigDecimal.class, "{0}", productDeposit.dAmount);
+        return queryFactory.select(dAmount.sum().coalesce(BigDecimal.ZERO))
+                .from(productDeposit)
+                .where(
+                        productDeposit.cNo.eq(cNo),
+                        productDeposit.dStatus.in("ACTIVE", "NONE")
+                        //productDeposit.dStatus.eq("ACTIVE")
+                )
+                .fetchOne();
+    }
 
     /**
      * 오늘 기준 이번달 납입 예정액(적금, 대출, 공과금)
      */
-//    public BigDecimal sumMonthlyDue(int cNo) {
-//        NumberExpression<BigDecimal> principalPaid = Expressions.numberTemplate(BigDecimal.class, "{0}", productInstallment.iPrincipalPaid);
-//        return queryFactory.select(principalPaid.sum().coalesce(BigDecimal.ZERO))
-//                .from(productInstallment)
-//                .where(
-//                        productInstallment.cNo.eq(cNo),
-//                        productInstallment.iStatus.eq("ACTIVE"),
-//                        productInstallment.iPayDay.gt(LocalDate.now())
-//                ).fetchOne();
-//    }
+    public BigDecimal sumMonthlyDue(int cNo) {
+        int today =LocalDate.now().getDayOfMonth();
+        NumberExpression<Integer> payDay = Expressions.numberTemplate(Integer.class, "cast({0} as integer)", productInstallment.iPayDay);
 
+        NumberExpression<BigDecimal> principalBal = Expressions.numberTemplate(BigDecimal.class, "{0}", productInstallment.iPrincipalBal);
+
+        return queryFactory.select(principalBal.sum().coalesce(BigDecimal.ZERO))
+                .from(productInstallment)
+                .where(
+                        productInstallment.cNo.eq(cNo),
+                        productInstallment.iStatus.eq("ACTIVE"),
+                        payDay.gt(today)
+                ).fetchOne();
+    }
+
+
+    public List<Integer> getCNo() {
+        return queryFactory.select(customer.customerNo)
+                .from(customer)
+                .where(
+                        customer.cStatus.eq("ACTIVE")
+                )
+                .fetch();
+    }
 }

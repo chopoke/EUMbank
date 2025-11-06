@@ -14,10 +14,10 @@ import {
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const COLOR_MAP = {
-  "입출금": "#2563eb",
-  "외환":   "#f59e0b",
-  "적금":   "#60a5fa",
-  "예금":   "#10b981",
+  "입출금": "#53d2f8",
+  "외화":   "#fac569",
+  "적금":   "#fc7fd2",
+  "예금":   "#34dfa6",
   "현물":   "#a78bfa",
   "기타":   "#9ca3af",
 };
@@ -248,9 +248,9 @@ export default function AssetDashboard() {
                     최근 30일 동안의 순자산 변동입니다.
                   </p>
                 </div>
-                <button className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                {/* <button className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
                   자세히 보기
-                </button>
+                </button> */}
               </div>
 
               <LineChartWithDatesStatic
