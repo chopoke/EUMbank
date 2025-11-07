@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside th:fragment="sidebar" class="w-64 h-[calc(100vh-4rem)] bg-white border-r px-4 py-6 space-y-1">
+    <a href="/admin/dashboard" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-50 text-blue-600 font-medium">
+        <i class="ri-dashboard-line"></i> Dashboard
+    </a>
+    <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100">
+        <i class="ri-bank-card-2-line"></i> Loan Management
+    </a>
+    <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100">
+        <i class="ri-safe-2-line"></i> Deposit Management
+    </a>
+    <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100">
+        <i class="ri-user-3-line"></i> User Management
+    </a>
+    <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100">
+        <i class="ri-question-line"></i> Inquiry Management
+    </a>
+    <a class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100">
+        <i class="ri-shield-check-line"></i> Verification
+    </a>
+</aside>
+</body>
+</html>

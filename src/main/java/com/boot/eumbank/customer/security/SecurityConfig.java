@@ -1,5 +1,6 @@
 package com.boot.eumbank.customer.security;
 
+import com.boot.eumbank.customer.repo.AuthRefreshTokenRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.time.Instant;
 import java.util.List;
 
 @Configuration
@@ -29,28 +31,42 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint entryPoint;
     private final AuthenticationSuccessHandler socialSuccessHandler;
     private final RefreshAuthFilter refreshAuthFilter;
+    private final CookieUtil cookieUtil;
+    private final AuthRefreshTokenRepo refreshRepo;
 //    private final CorsProperties corsProps; // app.cors.allowed-origins 사용
 
     /** 관리자: RT 쿠키 기반, CSRF on, CORS off */
     @Bean
     @Order(1)
     public SecurityFilterChain adminChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/admin/**")                   // ← 라우트 기준
+        http.securityMatcher("/admin/**")
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 .cors(AbstractHttpConfigurer::disable)
                 .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint))
                 .authorizeHttpRequests(reg -> reg
-                        // 필요시 진입/차단 페이지만 열어둠
-                        .requestMatchers(
-                                "/admin/enter",
-                                "/admin/forbidden"
-                        ).permitAll()
-                        .anyRequest().hasRole("ADMIN")
-                )
+                        .requestMatchers("/admin/enter", "/admin/forbidden").permitAll()
+                        .anyRequest().hasRole("ADMIN"))
                 .addFilterBefore(refreshAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .oauth2Login(oauth2 -> oauth2.successHandler(socialSuccessHandler));
+                .oauth2Login(oauth2 -> oauth2.successHandler(socialSuccessHandler))
+                .logout(l -> l
+                        .logoutUrl("/admin/logout") // POST /logout
+                        .addLogoutHandler((req, res, auth) -> {
+                            String rt = cookieUtil.getRefreshCookie(req).orElse(null);
+                            if (rt != null) {
+                                String hash = RefreshAuthFilter.sha256(rt);
+                                refreshRepo.findByRtHashAndDeleteAtIsNull(hash).ifPresent(t -> {
+                                    t.setDeleteAt(Instant.now());
+                                    t.setDeleteReason("logout");
+                                    refreshRepo.save(t);
+                                });
+                            }
+                            cookieUtil.deleteRefreshCookie(res);
+                        })
+                        .logoutSuccessHandler((req, res, auth) -> {
+                            res.sendRedirect("http://localhost:3000/"); // React 메인으로
+                        })
+                );
         return http.build();
     }
 

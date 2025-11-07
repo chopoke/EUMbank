@@ -110,9 +110,12 @@ export function Header({ isLoggedIn, user, onLogout }) {
             {/* <span className="search-icon"><Icon path={paths.search} /></span> */}
           {/* </label> */}
           {isLoggedIn && isAdmin && (
-            <Link to="/admin">
-              <button className="login-button">관리자</button>
-            </Link>
+            <button
+              className="login-button"
+              onClick={() => window.location.href = "http://localhost:8081/admin/enter"}
+            >
+              관리자
+            </button>
           )}
           {!isLoggedIn ? (
             <>

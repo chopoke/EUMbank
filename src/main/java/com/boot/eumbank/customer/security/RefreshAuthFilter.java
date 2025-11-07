@@ -76,7 +76,7 @@ public class RefreshAuthFilter extends OncePerRequestFilter {
         return path == null || !path.startsWith("/admin/");
     }
 
-    private String sha256(String value) {
+    public static String sha256(String value) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] bytes = md.digest(value.getBytes(StandardCharsets.UTF_8));
