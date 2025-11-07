@@ -57,7 +57,7 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
 
         // 현재 메시지에 시스템 프롬프트 포함
         String userMessageWithContext = systemPrompt + "\n\n사용자 질문: " + chatRequest.getMessage();
-        contents.add(createContent(userMessageWithContext, "user"));
+        contents.add(createContent(userMessageWithContext, "templates/user"));
 
         // 4. 요청 Body 생성
         GeminiRequest geminiRequest = GeminiRequest.builder()
