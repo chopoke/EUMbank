@@ -94,7 +94,7 @@ public class InstallQueryRepository {
      * @param installDto
      * @return
      */
-    public void installSave(InstallSubscriptionRequestDto installDto, Customer customer, ProductDto installProducts, Account oneAccount) {
+    public void installSave(InstallSubscriptionRequestDto installDto, Customer customer, ProductDto installProducts, Account oneAccount, String signedPdfFilePath) {
 
         logger.info("InstallQueryRepository  => installmentSave()");
 
@@ -130,7 +130,8 @@ public class InstallQueryRepository {
                         productInstallment.iUpdatedAt,              // 21. 수정일
                         productInstallment.aAccountNo,              // 22. 계조번호
                         productInstallment.iPrincipalBal,
-                        productInstallment.iExpectedMaturityAmount
+                        productInstallment.iExpectedMaturityAmount,
+                        productInstallment.iPdfPath
                 ).values(
                         null,
                         installProducts.getNo(), // dposit_product_tbl dpNo
@@ -154,7 +155,8 @@ public class InstallQueryRepository {
                         LocalDateTime.now(),
                         oneAccount.getAccountNo(),
                         installDto.getAmount().intValue(),
-                        installDto.getExpectedMaturityAmount().intValue()
+                        installDto.getExpectedMaturityAmount().intValue(),
+                        signedPdfFilePath
                 ).execute();
     }
 

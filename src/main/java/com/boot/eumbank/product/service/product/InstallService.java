@@ -7,6 +7,6 @@ public interface InstallService {
 
     public String installSubscription(InstallSubscriptionRequestDto requestDto, MultipartFile signedPdfFile);
 
-    public void installSave(InstallSubscriptionRequestDto requestDto);
+    public void installSave(InstallSubscriptionRequestDto requestDto, String signedPdfFilePath);
 
 }
