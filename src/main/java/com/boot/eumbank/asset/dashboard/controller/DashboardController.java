@@ -1,6 +1,7 @@
 package com.boot.eumbank.asset.dashboard.controller;
 
 import com.boot.eumbank.asset.dashboard.dto.AssetSummaryDto;
+import com.boot.eumbank.asset.dashboard.dto.AssetTrendDto;
 import com.boot.eumbank.asset.dashboard.service.DashboardService;
 import com.boot.eumbank.customer.entity.Customer;
 import lombok.RequiredArgsConstructor;
@@ -35,11 +36,16 @@ public class DashboardController {
     /**
      *  매일 05:00 KST 스케줄 실행
      */
-    @Scheduled(cron = "0 0 10 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 5 * * *", zone = "Asia/Seoul")
     public void dailySnapshot() {
         logger.info("<<< DashboardService dailySnapshot >>>");
 
         LocalDate todayKST = LocalDate.now(KST);
         dashboardService.takeDailySnapshot(todayKST);
+    }
+
+    @GetMapping("/trend")
+    public ResponseEntity<AssetTrendDto> trend(@AuthenticationPrincipal Customer customer) {
+        return ResponseEntity.ok(dashboardService.getNetWorthTrend(customer.getCustomerNo()));
     }
 }

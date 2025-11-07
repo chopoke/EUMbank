@@ -2,6 +2,7 @@ package com.boot.eumbank.asset.dashboard.repository;
 
 import com.boot.eumbank.asset.dashboard.dto.AssetCompositionDto;
 import com.boot.eumbank.asset.dashboard.dto.AssetSummaryDto;
+import com.boot.eumbank.asset.dashboard.entity.AssetDailySnapshot;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.StringExpression;
@@ -20,6 +21,7 @@ import static com.boot.eumbank.account.open.entity.account.QAccount.account;
 import static com.boot.eumbank.foreign.entity.QForeignRate.foreignRate;
 import static com.boot.eumbank.product.entity.product.QProductInstallment.productInstallment;
 import static com.boot.eumbank.product.entity.product.QProductDeposit.productDeposit;
+import static com.boot.eumbank.asset.dashboard.entity.QAssetDailySnapshot.assetDailySnapshot;
 
 @Repository
 @RequiredArgsConstructor
@@ -136,7 +138,6 @@ public class DashboardRepository {
                 ).fetchOne();
     }
 
-
     /**
      * 활성화되어 있는 회원 번호 리스트
      * @return List<Integer>
@@ -147,6 +148,36 @@ public class DashboardRepository {
                 .where(
                         customer.cStatus.eq("ACTIVE")
                 )
+                .fetch();
+    }
+
+    /**
+     * 최근 30일 추이 리스트
+     * @param cNo 고객번호
+     * @param from 시작날짜
+     * @param to 마지막날짜
+     * @return List<AssetDailySnapshot>
+     */
+    public List<AssetDailySnapshot> getSnapshots(int cNo, LocalDate from, LocalDate to) {
+        return queryFactory.selectFrom(assetDailySnapshot)
+                .where(
+                        assetDailySnapshot.cNo.eq(cNo),
+                        assetDailySnapshot.adsYmd.between(from, to)
+                )
+                .orderBy(assetDailySnapshot.adsYmd.asc())
+                .fetch();
+    }
+
+    /**
+     * 최근 2일 기록 리스트
+     * @param cNo 고객번호
+     * @return List<AssetDailySnapshot>
+     */
+    public List<AssetDailySnapshot> getLastTwo(int cNo) {
+        return queryFactory.selectFrom(assetDailySnapshot)
+                .where(assetDailySnapshot.cNo.eq(cNo))
+                .orderBy(assetDailySnapshot.adsYmd.desc())
+                .limit(2)
                 .fetch();
     }
 }

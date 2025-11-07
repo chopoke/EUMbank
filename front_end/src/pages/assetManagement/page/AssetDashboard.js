@@ -6,21 +6,51 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../../../api/axios";
 
 // Chart.js 도넛 설정
-import { Doughnut } from "react-chartjs-2";
+import { Doughnut, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   ArcElement, Tooltip, Legend,
+  CategoryScale, LinearScale, PointElement, LineElement, Filler
 } from "chart.js";
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(
+  ArcElement, Tooltip, Legend,
+  CategoryScale, LinearScale, PointElement, LineElement, Filler
+);
 
 const COLOR_MAP = {
   "입출금": "#53d2f8",
-  "외화":   "#fac569",
+  "외환":   "#fac569",
   "적금":   "#fc7fd2",
   "예금":   "#34dfa6",
-  "현물":   "#a78bfa",
+  "현물":   "#ff6161",
   "기타":   "#9ca3af",
 };
+
+const UNITS = [
+  { k: 1e12, s: "조" },
+  { k: 1e8,  s: "억" },
+  { k: 1e4,  s: "만" },
+];
+
+function formatKrwAuto(n, digits = 1) {
+  const v = typeof n === "number" ? n : Number(n || 0);
+  if (!isFinite(v)) return "-";
+  for (const u of UNITS) {
+    if (Math.abs(v) >= u.k) {
+      return `${(v / u.k).toFixed(digits)}${u.s}원`;
+    }
+  }
+  return v.toLocaleString("ko-KR") + "원";  // 원 단위
+}
+function formatKrwSigned(n) {
+  const sign = (n ?? 0) >= 0 ? "+" : "-";
+  return `${sign}${formatKrwAuto(Math.abs(n))}`;
+}
+function formatPct(n, digits = 2) {
+  const v = typeof n === "number" ? n : Number(n || 0);
+  const sign = v >= 0 ? "+" : "-";
+  return `${sign}${Math.abs(v).toFixed(digits)}%`;
+}
 
 function formatKrw(n) {
   if (n == null) return "-";
@@ -41,31 +71,44 @@ const pct = (v) => `${Math.round(v)}%`;
 
 export default function AssetDashboard() {
 
-  const [data, setData] = useState(null);   // AssetSummaryDto
+  const [summary, setSummary] = useState(null);   // AssetSummaryDto
+  const [trend, setTrend] = useState(null); // AssetTrendDto
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const summary = async () => {
+    const run = async () => {
       try {
-        const res = await api.get("/api/asset/dashboard/summary");
-        if(res.status === 200){
-          setData(res.data);
-        }
+        const [s,t] = await Promise.all([
+           api.get("/api/asset/dashboard/summary"),
+           api.get("/api/asset/dashboard/trend")
+        ]);
+        setSummary(s.data);
+        setTrend(t.data);
       } catch(e) {
         console.error(e);
-        alert("요약 조회에 실패하였습니다.");
+        alert("조회에 실패하였습니다.");
       } finally {
         setLoading(false);
       }
     };
-    summary();
+    run();
   }, []);
 
-  const totalAssets      = data?.totalAssets ?? 0;
-  const totalLiabilities = data?.totalLiabilities ?? 0;
-  const netWorth         = data?.netWorth ?? 0;
-  const monthlyDue       = data?.monthlyDue ?? 0;
-  const composition      = data?.composition ?? [];
+  const totalAssets      = summary?.totalAssets ?? 0;
+  const totalLiabilities = summary?.totalLiabilities ?? 0;
+  const netWorth         = summary?.netWorth ?? 0;
+  const monthlyDue       = summary?.monthlyDue ?? 0;
+  const composition      = summary?.composition ?? [];
+
+  const dayDelta  = Number(trend?.dayDelta  || 0);
+  const change30  = Number(trend?.change30  || 0);
+  const maxNW     = Number(trend?.max       || 0);
+  const minNW     = Number(trend?.min       || 0);
+  const changePct = Number(trend?.changePct || 0);
+
+  const tpts   = trend?.points ?? [];                      // [{ymd, netWorth}]
+  const labels = tpts.map(p => p.ymd?.slice(5));           // 'MM-DD'
+  const values = tpts.map(p => Number(p.netWorth || 0));
 
   // 도넛 데이터(Chart.js)
   const donutData = useMemo(() => {
@@ -132,6 +175,66 @@ export default function AssetDashboard() {
     }
   }), [donutData.total]);
 
+  const lineData = useMemo(() => ({
+    labels,
+    datasets: [{
+      label: "순자산",
+      data: values,
+      borderWidth: 2.5,
+      borderColor: "#87259b",
+      pointRadius: 2.8,
+      tension: 0.25,
+      fill: true,
+      backgroundColor: (ctx) => {
+        const { chart } = ctx;
+        const { ctx: c, chartArea } = chart;
+        if (!chartArea) return "rgba(162, 37, 235, 0.08)";
+        const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+        g.addColorStop(0, "rgba(162, 37, 235, 0.25)");
+        g.addColorStop(1, "rgba(162, 37, 235, 0.04)");
+        return g;
+      },
+    }]
+  }), [labels.join(","), values.join(",")]);
+
+  const tickStep = Math.max(1, Math.round((labels.length || 1) / 6));
+
+  const lineOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => ` ${formatKrwAuto(ctx.parsed.y)}`,
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { 
+          autoSkip: false,
+          maxRotation: 0 ,
+          callback: (value, index) =>
+          (index % tickStep === 0 || index === labels.length - 1)
+            ? labels[index]       // step 간격 or 마지막만 라벨 표시
+            : "",
+        },
+        grid: { display: false },
+      },
+      y: {
+        beginAtZero: false,
+        ticks: {
+          callback: (v) => formatKrwAuto(v),
+          maxTicksLimit: 5,
+        },
+        grid: { color: "#F3F4F6" },
+      }
+    }
+  }), [labels, tickStep]);
+
+
   return (
     <main className="bg-gray-50 text-gray-900 min-h-screen">
       {/* 상단 타이틀 영역 */}
@@ -162,12 +265,12 @@ export default function AssetDashboard() {
             <StatCard
               title="순자산"
               value={loading ? "..." : formatKrw(netWorth)}
-              sub="전일 대비 +320,000원"
+              sub={loading ? "..." : `전일 대비 ${formatKrwSigned(dayDelta)}`}
             />
             <StatCard
               title="총자산"
               value={loading ? "..." : formatKrw(totalAssets)}
-              sub="입출금 · 예금 · 적금 · 외화 · 대출 · 현물 포함"
+              sub="입출금 · 예금 · 적금 · 외환 · 대출 · 현물 포함"
             />
             <StatCard
               title="총부채"
@@ -189,7 +292,7 @@ export default function AssetDashboard() {
                 <div>
                   <h2 className="text-base font-semibold text-gray-900">자산 구성 비율</h2>
                   <p className="text-[12px] text-gray-500">
-                    현금성 자산, 적금, 외화 등 비중입니다.
+                    현금성 자산, 적금, 외환 등 비중입니다.
                   </p>
                 </div>
                 {/* 동적 배지 */}
@@ -216,7 +319,7 @@ export default function AssetDashboard() {
                 }
               </div>
 
-              {/* 비율 레전드 */}
+              {/* 비율 */}
               {!loading && composition.length > 0 && (
                 <ul className="text-sm text-gray-700 grid grid-cols-2 gap-y-2 mt-2">
                   {donutData.labels.map((label, i) => (
@@ -253,20 +356,22 @@ export default function AssetDashboard() {
                 </button> */}
               </div>
 
-              <LineChartWithDatesStatic
-                points={[87.3, 87.6, 88.0, 88.2, 88.5, 88.9, 89.3]}
-                labels={["10-01","10-15","오늘"]}
-                height={200}
-                yTicks={4}
-                yFormatter={(v) => `${v.toFixed(1)}억`}   // ← 87.0억, 88.0억 처럼
-              />
+              <div className="w-full" style={{ height: 270 }}>
+                {loading
+                  ? <div className="h-full grid place-items-center text-sm text-gray-500">로딩 중…</div>
+                  : (values.length === 0
+                      ? <div className="h-full grid place-items-center text-sm text-gray-500">표시할 데이터가 없습니다</div>
+                      : <Line data={lineData} options={lineOptions} />)
+                }
+              </div>
+
               {/* <PlaceholderChart label="라인 차트 (순자산 추이)" height="h-52" /> */}
               <TrendFooterStats
                 stats={[
-                  { label: "최근 30일 증감", value: "+1,240,000원" },
-                  { label: "최고값", value: "89,300,000원" },
-                  { label: "최저값", value: "87,300,000원" },
-                  { label: "변동폭", value: "+2.0%" },
+                  { label: "최근 30일 증감", value: loading ? "..." : formatKrwSigned(change30) },
+                  { label: "최고값",         value: loading ? "..." : formatKrwAuto(maxNW) },
+                  { label: "최저값",         value: loading ? "..." : formatKrwAuto(minNW) },
+                  { label: "변동폭",         value: loading ? "..." : formatPct(changePct) },
                 ]}
               />
 
@@ -293,7 +398,7 @@ export default function AssetDashboard() {
                   <div className="text-right">
                     <div className="font-semibold text-gray-900">28,450,000원</div>
                     <div className="text-[12px] text-blue-600 font-medium">
-                      전일 대비 +30,000원
+                      전월 대비 +30,000원
                     </div>
                   </div>
                 </li>
