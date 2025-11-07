@@ -61,15 +61,22 @@ public class InstallServiceImpl implements InstallService {
 
         try (PDDocument document = PDDocument.load(signedPdfFile.getInputStream())) {
 
-            // PDF 첫 페이지 가져오기
-            if (document.getNumberOfPages() == 0) {
+            // PDF 페이지 수 확인
+            int totalPages = document.getNumberOfPages();
+            logger.info("PDF 총 페이지 수: {}", totalPages);
+
+            if (totalPages == 0) {
                 throw new IllegalArgumentException("PDF 문서에 페이지가 없습니다.");
             }
 
-            PDPage firstPage = document.getPage(0);
-            logger.info("PDF 페이지 수: {}", document.getNumberOfPages());
+            // ✅ 두 번째 페이지(상품 가입서)에 정보 추가
+            // 페이지가 2개 이상이면 두 번째 페이지(인덱스 1), 1개면 첫 페이지 사용
+            int targetPageIndex = totalPages > 1 ? 1 : 0;
+            PDPage targetPage = document.getPage(targetPageIndex);
 
-            // 한글 폰트 로드 (선택사항)
+            logger.info("정보를 추가할 페이지: {} (총 {}페이지 중)", targetPageIndex + 1, totalPages);
+
+            // 한글 폰트 로드
             PDFont font;
             try {
                 // ClassPathResource는 'src/main/resources'를 기준으로 경로를 찾습니다.
@@ -83,10 +90,11 @@ public class InstallServiceImpl implements InstallService {
 
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             Customer customer = (Customer) authentication.getPrincipal();
+            ProductDto oneDepositProducts = installQueryRepository.findOneInstallProducts(requestDto.getIpNo());
 
             // ✅ PDF에 정보 추가 로직 변경
             try (PDPageContentStream contentStream = new PDPageContentStream(
-                    document, firstPage, PDPageContentStream.AppendMode.APPEND, true, true)) {
+                    document, targetPage, PDPageContentStream.AppendMode.APPEND, true, true)) {
 
                 // 기본 좌표 및 폰트 크기 설정
                 float yPosition = 683; // 시작 Y 좌표 (페이지 상단 근처)
@@ -111,7 +119,6 @@ public class InstallServiceImpl implements InstallService {
                 yPosition -= lineHeight;
 
                 // -----------------------------------------------
-
                 float underyPosition = 530; // 시작 Y 좌표 (페이지 상단 근처)
                 float underlineHeight = 28;  // 각 라인의 간격
                 float undervalueX = 180;     // 실제 데이터 값의 X 좌표
@@ -150,7 +157,6 @@ public class InstallServiceImpl implements InstallService {
                 underyPosition -= underlineHeight;
 
                 // 적용이율
-                ProductDto oneDepositProducts = installQueryRepository.findOneInstallProducts(requestDto.getIpNo());
                 addText(contentStream, font, underfontSize, undervalueX, underyPosition, oneDepositProducts.getRate());
                 underyPosition -= underlineHeight;
 

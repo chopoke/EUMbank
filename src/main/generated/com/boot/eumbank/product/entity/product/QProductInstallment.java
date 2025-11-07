@@ -27,13 +27,21 @@ public class QProductInstallment extends EntityPathBase<ProductInstallment> {
 
     public final StringPath iAccountNo = createString("iAccountNo");
 
+    public final NumberPath<Long> iAmount = createNumber("iAmount", Long.class);
+
     public final NumberPath<java.math.BigDecimal> iArrearsAmt = createNumber("iArrearsAmt", java.math.BigDecimal.class);
 
     public final NumberPath<Integer> iArrearsCnt = createNumber("iArrearsCnt", Integer.class);
 
     public final NumberPath<java.math.BigDecimal> iBonusAmt = createNumber("iBonusAmt", java.math.BigDecimal.class);
 
+    public final NumberPath<Integer> iCountPeriod = createNumber("iCountPeriod", Integer.class);
+
     public final StringPath iCurrency = createString("iCurrency");
+
+    public final NumberPath<Long> iExpectedMaturityAmount = createNumber("iExpectedMaturityAmount", Long.class);
+
+    public final NumberPath<Integer> iFail = createNumber("iFail", Integer.class);
 
     public final StringPath iId = createString("iId");
 
@@ -47,15 +55,15 @@ public class QProductInstallment extends EntityPathBase<ProductInstallment> {
 
     public final NumberPath<Integer> iMonth = createNumber("iMonth", Integer.class);
 
-    public final NumberPath<Integer> iMonthlyAmt = createNumber("iMonthlyAmt", Integer.class);
-
     public final NumberPath<Integer> iNo = createNumber("iNo", Integer.class);
 
     public final NumberPath<Integer> iPaidInstallments = createNumber("iPaidInstallments", Integer.class);
 
-    public final NumberPath<Integer> iPayDay = createNumber("iPayDay", Integer.class);
+    public final StringPath iPayDay = createString("iPayDay");
 
     public final NumberPath<Integer> ipNo = createNumber("ipNo", Integer.class);
+
+    public final NumberPath<Long> iPrincipalBal = createNumber("iPrincipalBal", Long.class);
 
     public final NumberPath<Integer> iPrincipalPaid = createNumber("iPrincipalPaid", Integer.class);
 

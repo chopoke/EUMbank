@@ -56,6 +56,7 @@ const Deposit = () => {
 
     // 최초 한번 DB에서 전체 상품 데이터 가져오기
     useEffect(() => {
+
         const fetchProducts = async () => {
             try {
                 const data = await depsoitProductList();
@@ -70,7 +71,7 @@ const Deposit = () => {
     return (
         <div className="containerdepart">
             {/* 헤더 */}
-            <header className='headerType'>
+            <header className='headerType w-[1240px] h-[152px]'>
                 <h1>전체 예/적금 상품</h1>
                 <p>다양한 금융 상품을 둘러보고 나에게 맞는 최적의 상품을 찾아보세요.</p>
             </header>

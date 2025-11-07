@@ -34,6 +34,11 @@ public class DepositSubscriptionRequestDto {
     private Integer period;
 
     /**
+     * 계정 번호
+     */
+    private Long linkedAccountAno;
+
+    /**
      * 출금 계좌 번호
      */
     private String linkedAccount;
@@ -47,6 +52,11 @@ public class DepositSubscriptionRequestDto {
      * 계좌 비밀번호
      */
     private String pin;
+
+    /**
+     * 만기 예상금액
+     */
+    private String expectedMaturityAmount;
 
     /**
      * 서명 날짜
