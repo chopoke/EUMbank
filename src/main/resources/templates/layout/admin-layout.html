@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko" th:fragment="layout(content)">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title} ?: 'Admin'">Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
+
+    <!-- 헤더 전용 스타일: 여기(레이아웃 head)에 둔다 -->
+    <style>
+        .hdr{height:64px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+        .left{display:flex;align-items:center;gap:18px}
+        .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;color:#1f3a8a;text-decoration:none}
+        .logo img{height:28px}
+        .nav{display:flex;align-items:center;gap:18px;color:#374151}
+        .nav a{color:#374151;text-decoration:none;white-space:nowrap}
+        .nav a.active{color:#1f3a8a;font-weight:600}
+        .bell{font-size:20px;color:#111827}
+        .right{display:flex;align-items:center;gap:12px}
+        .btn{border:none;border-radius:9999px;padding:8px 14px;font-weight:600;cursor:pointer;white-space:nowrap}
+        .btn-blue{background:#3f5efb;color:#fff}
+        .btn-blue:hover{background:#3956e6}
+        .btn-ghost{background:#fff;border:1px solid #e5e7eb;color:#111827}
+        .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:9999px;padding:6px 10px;background:#fff;color:#111827;white-space:nowrap}
+        .idchip{display:flex;align-items:center;gap:6px;white-space:nowrap}
+        .idchip i{font-size:18px;color:#374151}
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+<!-- Header -->
+<div th:replace="fragments/admin-header :: header"></div>
+
+<div class="mx-auto w-[1280px] flex">
+    <!-- Sidebar -->
+    <div th:replace="fragments/admin-sidebar :: sidebar"></div>
+
+    <!-- Main slot -->
+    <main class="flex-1 p-8" th:insert="${content}"></main>
+</div>
+
+</body>
+</html>
