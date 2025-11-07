@@ -94,7 +94,7 @@ public class DepositQueryRepository {
      * @param requestDto
      * @return
      */
-    public void depositSave(DepositSubscriptionRequestDto requestDto, Customer customer, ProductDto depositProducts, Account oneAccount) {
+    public void depositSave(DepositSubscriptionRequestDto requestDto, Customer customer, ProductDto depositProducts, Account oneAccount, String signedPdfFilePath) {
 
         logger.info("DepositQueryRepository => findOneDepositProducts()");
 
@@ -125,7 +125,8 @@ public class DepositQueryRepository {
                         productDeposit.dPrincipalBal,
                         productDeposit.aAccountNo,
                         productDeposit.dPeriod,
-                        productDeposit.dExpectedMaturityAmount
+                        productDeposit.dExpectedMaturityAmount,
+                        productDeposit.dPdfPath
                 ).values(
                         null,
                         depositProducts.getNo(), // dposit_product_tbl dpNo
@@ -146,7 +147,8 @@ public class DepositQueryRepository {
                         new BigDecimal(requestDto.getAmount()),      // 16. dPrincipalBal - 원금잔액 (초기 예금액)
                         oneAccount.getAccountNo(),
                         requestDto.getPeriod(),
-                        requestDto.getExpectedMaturityAmount()
+                        requestDto.getExpectedMaturityAmount(),
+                        signedPdfFilePath
                 ).execute();
     }
 
