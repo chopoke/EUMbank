@@ -17,6 +17,11 @@ public interface AccountSelectService {
     // 단건조회
     Optional<AccountDetailDTO> detail(int a_no);
 
+    // 적금계좌 상세
+    Optional<AccountDetailDTO> depositDetail(int dNo);
+    // 예금계조 상세
+    Optional<AccountDetailDTO> installmentDetail(int iNo);
+
     //별명검증
     public void updateNickname(int a_no, String nickName);
 }

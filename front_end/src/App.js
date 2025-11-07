@@ -10,6 +10,8 @@ import ProtectedRoute from "./pages/account/component/ProtectedRoute";
 // 앞단에서 로그인 유무 판단하여 페이지 보호하기
 import { AccountListPage } from "./pages/account/AccountListPage";
 import { AccountHistoryPage } from "./pages/account/AccountHistoryPage";
+import { DepositHistoryPage } from "./pages/account/DepositHistoryPage";
+import { InstallmentHistoryPage } from "./pages/account/InstallmentHistoryPage";
 
 //로그인 및 회원가입
 import LoginPage from "./pages/login/login";
@@ -148,6 +150,10 @@ function App() {
           <ProtectedRoute>
             <AccountHistoryPage />
           </ProtectedRoute>} />
+        {/* 적금계좌 이체내역 */}
+        <Route path="/accounts/installment/:i_no" element={<ProtectedRoute>< InstallmentHistoryPage /></ProtectedRoute>} />
+        {/* 예금계좌 이체내역 */}
+        <Route path="/accounts/deposit/:d_no" element={<ProtectedRoute><DepositHistoryPage/></ProtectedRoute>} />
 
         {/* 주택담보대출 상품 목록 */}
         <Route path="/loan/products" element={<LoanProductList />} />

@@ -6,6 +6,7 @@ import com.boot.eumbank.account.select.dto.AccountSummaryDTO;
 import com.boot.eumbank.account.select.repository.AccountSelectRepository;
 import com.boot.eumbank.account.select.repository.DepoSelectRepository;
 import com.boot.eumbank.account.select.repository.InstSelectRepository;
+import com.boot.eumbank.product.entity.product.ProductDeposit;
 import com.boot.eumbank.product.entity.product.ProductInstallment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,8 +14,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -31,13 +34,12 @@ public class AccountSelectServiceImpl implements AccountSelectService {
         List<AccountSummaryDTO> basicAcc = accountRepository.findAccountsByCustomer(c_no).stream()
                 .map(this::toSummaryDTO).toList();
         // 적금
-//        List<AccountSummaryDTO> instAcc = instRepo.findByCNo(c_no).stream()
-//                .map(this::toSummaryDTO).toList();
+        List<AccountSummaryDTO> instAcc = instRepo.findByCNo(c_no).stream()
+                .map(this::toInstDTO).toList();
         //예금
-//        List<AccountSummaryDTO> depoAcc = depoRepo.findByCNo(c_no).stream()
-//                .map(this::toSummaryDTO).toList();
-        return accountRepository.findAccountsByCustomer(c_no)
-                .stream().map(this::toSummaryDTO).toList();
+        List<AccountSummaryDTO> depoAcc = depoRepo.findByCNo(c_no).stream()
+                .map(this::toDepoDTO).toList();
+        return Stream.of(basicAcc, instAcc, depoAcc).flatMap(List::stream).toList();
     }
 
     // 페이지네이션
@@ -52,6 +54,20 @@ public class AccountSelectServiceImpl implements AccountSelectService {
     public Optional<AccountDetailDTO> detail(int a_no) {
         return accountRepository.findById(a_no)
                 .map(this::toDetailDTO);
+    }
+    
+    // 예금 상세
+    @Override
+    public Optional<AccountDetailDTO> depositDetail(int dNo) {
+        return depoRepo.findById((long) dNo)
+                .map(this::toDepositDetailDTO);
+    }
+
+    // 적금 상세
+    @Override
+    public Optional<AccountDetailDTO> installmentDetail(int iNo) {
+        return instRepo.findById((long) iNo)
+                .map(this::toInstallmentDetailDTO);
     }
 
     @Override
@@ -87,20 +103,44 @@ public class AccountSelectServiceImpl implements AccountSelectService {
         return dto;
     }
 
-//    // 적금
-//    private AccountSummaryDTO toInstDTO(ProductInstallment inst){
-//        AccountSummaryDTO dto = new AccountSummaryDTO();
-//
-//        dto.setANo(inst.getINo());      //ㅂ ㅓㄴ호
-//        dto.setAId(inst.getIId());      // 유니크
-//        dto.setAccountNo(inst.getIAccountNo());     //계좌번호
-//        dto.setProductCode("I+난수");
-//        dto.setAccountType("적금");
-//        dto.setCurrency(inst.getICurrency());
-//
-//
-//    }
+    // 적금
+    private AccountSummaryDTO toInstDTO(ProductInstallment inst){
+        AccountSummaryDTO dto = new AccountSummaryDTO();
 
+        dto.setANo(inst.getINo());      //ㅂ ㅓㄴ호
+        dto.setAId(inst.getIId());      // 유니크
+        dto.setAccountNo(inst.getIAccountNo());     //계좌번호
+        dto.setProductCode(inst.getIpNo() != null ? String.valueOf(inst.getIpNo()) : null);
+        dto.setAccountType("적금");
+        dto.setCurrency(inst.getICurrency() != null ? inst.getICurrency() : "KRW");
+        // 타입변환
+        long balanceSrc = inst.getIAmount();
+        dto.setBalance(BigDecimal.valueOf(balanceSrc));
+        dto.setNickname(null);
+        dto.setStatus(inst.getIStatus());
+        dto.setLastTransferAt(inst.getIUpdatedAt() != null ? inst.getIUpdatedAt() : inst.getIJoinDate());
+        return dto;
+    }
+    // 예금
+    private AccountSummaryDTO toDepoDTO(ProductDeposit depo){
+        AccountSummaryDTO dto = new AccountSummaryDTO();
+
+        dto.setANo(depo.getDNo());      //ㅂ ㅓㄴ호
+        dto.setAId(depo.getDId());      // 유니크
+        dto.setAccountNo(depo.getDAccountNo());     //계좌번호
+        dto.setProductCode(depo.getDpNo() != null ? String.valueOf(depo.getDpNo()) : null);
+        dto.setAccountType("예금");
+        dto.setCurrency("KRW");
+        long balanceSrc = depo.getDAmount();
+        dto.setBalance(BigDecimal.valueOf(balanceSrc));
+        dto.setNickname(null);
+        dto.setStatus(depo.getDStatus());
+        dto.setLastTransferAt(depo.getDUpdatedAt());
+        return dto;
+    }
+
+    // ========================================= 매핑 DTO 모음
+    // 일반계좌
     private AccountDetailDTO toDetailDTO(Account a) {
         AccountDetailDTO dto = new AccountDetailDTO();
         dto.setA_no(a.getANo());
@@ -117,6 +157,48 @@ public class AccountSelectServiceImpl implements AccountSelectService {
         dto.setA_opened_at(a.getOpenedAt());
         dto.setA_closed_at(a.getClosedAt());
         dto.setA_last_tx_at(a.getLastTxAt());
+        return dto;
+    }
+
+    // 예금 상세
+    private AccountDetailDTO toDepositDetailDTO(ProductDeposit d) {
+        AccountDetailDTO dto = new AccountDetailDTO();
+        dto.setA_no(d.getDNo());                           // 화면에서 식별용
+        dto.setC_no(d.getCNo());
+        dto.setA_product_code(d.getDpNo() != null ? String.valueOf(d.getDpNo()) : null);
+        dto.setA_id(d.getDId());
+        dto.setA_account_no(d.getDAccountNo());
+        dto.setA_account_type("예금");
+        dto.setA_currency("KRW");                          // 필요 시 d.getCurrency() 로
+        long balanceSrc = d.getDAmount();
+        dto.setA_balance(BigDecimal.valueOf(balanceSrc));
+        dto.setA_rate(d.getDInterestRate());
+        dto.setA_status(d.getDStatus());
+        dto.setA_nickname(null);
+        dto.setA_opened_at(d.getDJoinDate());
+        dto.setA_closed_at(d.getDMaturityDate());
+        dto.setA_last_tx_at(d.getDUpdatedAt());
+        return dto;
+    }
+
+    // 적금 상세
+    private AccountDetailDTO toInstallmentDetailDTO(ProductInstallment i) {
+        AccountDetailDTO dto = new AccountDetailDTO();
+        dto.setA_no(i.getINo());                           // 화면에서 식별용
+        dto.setC_no(i.getCNo());
+        dto.setA_product_code(i.getIpNo() != null ? String.valueOf(i.getIpNo()) : null);
+        dto.setA_id(i.getIId());
+        dto.setA_account_no(i.getIAccountNo());
+        dto.setA_account_type("적금");
+        dto.setA_currency(i.getICurrency() != null ? i.getICurrency() : "KRW");
+        long balanceSrc = i.getIAmount();
+        dto.setA_balance(BigDecimal.valueOf(balanceSrc));
+        dto.setA_rate(i.getIInterestRate());
+        dto.setA_status(i.getIStatus());
+        dto.setA_nickname(null);
+        dto.setA_opened_at(i.getIJoinDate());
+        dto.setA_closed_at(i.getIMaturityDate());
+        dto.setA_last_tx_at(i.getIUpdatedAt());
         return dto;
     }
 }

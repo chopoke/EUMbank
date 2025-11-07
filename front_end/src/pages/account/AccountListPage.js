@@ -20,6 +20,18 @@ function AccountListPage(){
   const [statuses, setStatuses] = React.useState(new Set());
   const [sortKey, setSortKey] = React.useState("recent");
 
+  // 계좌 타입 판단
+  const getDetailHref = (row) => {
+    if (row.accountType === "예금") {
+      return `/accounts/deposit/${row.id}`;
+    }
+    if (row.accountType === "적금") {
+      return `/accounts/installment/${row.id}`;
+    }
+    // 나머지는 입출금
+    return `/accounts/${row.id}`;
+  };
+
   // 폰트 캐시
   const fontCache = React.useRef ({regular: ""});
   async function loadFontBase64(url){
@@ -486,7 +498,7 @@ function AccountListPage(){
                               <Link to={`/transfer`} state={{ fromAccountNumber: row.number }}>
                               <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">이체</button>
                               </Link>
-                              <Link to={`/accounts/${row.id}`}>
+                              <Link to={getDetailHref(row)}>
                                 <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">상세내역</button>
                               </Link>
                             </div>

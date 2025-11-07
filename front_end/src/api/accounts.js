@@ -12,6 +12,20 @@ export const fetchAccountDetail = (a_no) =>
 export const fetchAccountTransactions = (a_no, { type, from, to, page = 0, size = 20 } = {}) =>
   api.get(`/api/accounts/${a_no}/transfers`, { params: { type, from, to, page, size } });
 
+// 예금계좌 상세
+export const fetchDepositDetail = (d_no) =>
+  api.get(`/api/accounts/deposit/${d_no}`);
+// 예금 거래내역
+export const fetchDepositTransactions = (d_no, { type, from, to, page = 0, size = 20 } = {}) =>
+  api.get(`/api/accounts/deposit/${d_no}/transfers`, { params: { type, from, to, page, size } });
+
+// 적금 상세
+export const fetchInstallmentDetail = (i_no) =>
+  api.get(`/api/accounts/installment/${i_no}`);
+// 적금 거래내역
+export const fetchInstallmentTransactions = (i_no, { type, from, to, page = 0, size = 20 } = {}) =>
+  api.get(`/api/accounts/installment/${i_no}/transfers`, { params: { type, from, to, page, size } });
+
 // 계좌 이체내역에서 별명 변경
 export const updateAccountAlias = (a_no, alias) =>
   api.post(`/api/accounts/${a_no}/alias`, { a_nickname: alias })

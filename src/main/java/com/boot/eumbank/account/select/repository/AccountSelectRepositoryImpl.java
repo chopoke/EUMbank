@@ -33,22 +33,22 @@ public class AccountSelectRepositoryImpl implements AccountRepositoryCustom {
                 .fetch();
     }
 
-    @Override
-    public Optional<Account> findByAccountNo(String a_account_no) {
-        Account one = jpaQueryFactory.selectFrom(A)
-                .where(A.accountNo.eq(a_account_no))
-                .fetchFirst();      // 유니크면 fetchOne 모르겠으면 fetchFirst
-        return Optional.ofNullable(one);
-    }
+//    @Override
+//    public Optional<Account> findByAccountNo(String a_account_no) {
+//        Account one = jpaQueryFactory.selectFrom(A)
+//                .where(A.accountNo.eq(a_account_no))
+//                .fetchFirst();      // 유니크면 fetchOne 모르겠으면 fetchFirst
+//        return Optional.ofNullable(one);
+//    }
 
-    @Override
-    public Optional<Account> findByAccountId(String a_id) {
-        Account one = jpaQueryFactory
-                .selectFrom(A)
-                .where(A.aId.eq(a_id))
-                .fetchOne();
-        return Optional.ofNullable(one);
-    }
+//    @Override
+//    public Optional<Account> findByAccountId(String a_id) {
+//        Account one = jpaQueryFactory
+//                .selectFrom(A)
+//                .where(A.aId.eq(a_id))
+//                .fetchOne();
+//        return Optional.ofNullable(one);
+//    }
 
     // 페이지네이션 적용 버전
     @Override

@@ -27,6 +27,40 @@ public interface TransferHistoryRepository extends JpaRepository<TransferHistory
             Pageable pageable
     );
 
+    // 2) 예금 - 예금 FK 기준
+    @Query("""
+        select t from TransferHistory t
+        where t.accountNo = :d_no
+          and (:type    is null or t.transferType = :type)
+          and (:from_at is null or t.transferAt >= :from_at)
+          and (:to_at   is null or t.transferAt <  :to_at)
+        order by t.transferAt desc
+    """)
+    Page<TransferHistory> searchByDeposit(
+            @Param("d_no") int dNo,
+            @Param("type") String type,
+            @Param("from_at") Timestamp fromAt,
+            @Param("to_at") Timestamp toAt,
+            Pageable pageable
+    );
+
+    // 3) 적금 - 적금 FK 기준
+    @Query("""
+        select t from TransferHistory t
+        where t.accountNo = :i_no
+          and (:type    is null or t.transferType = :type)
+          and (:from_at is null or t.transferAt >= :from_at)
+          and (:to_at   is null or t.transferAt <  :to_at)
+        order by t.transferAt desc
+    """)
+    Page<TransferHistory> searchByInstallment(
+            @Param("i_no") int iNo,
+            @Param("type") String type,
+            @Param("from_at") Timestamp fromAt,
+            @Param("to_at") Timestamp toAt,
+            Pageable pageable
+    );
+
     // 상환내역 찍기
     boolean existsByAccountNoAndTransferId(Integer accountNo, String transferId);
 }
