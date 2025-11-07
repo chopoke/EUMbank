@@ -27,6 +27,7 @@ public class InstallmentProductService {
                 .ipMaxMonths(dto.getMaxMonths())
                 .ipMinMonthlyAmount(dto.getMinAmount())
                 .ipMaxMonthlyAmount(dto.getMaxAmount())
+                .ipEarlyTerminationRate(dto.getEalryTerminationRate())
                 .ipRate(dto.getRate())
                 .ipInterestPaymentType(dto.getPaymentType())
                 .ipFeature(dto.getFeatures())

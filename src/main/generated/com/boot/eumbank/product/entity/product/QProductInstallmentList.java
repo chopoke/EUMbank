@@ -27,7 +27,7 @@ public class QProductInstallmentList extends EntityPathBase<ProductInstallmentLi
 
     public final StringPath ipDescription = createString("ipDescription");
 
-    public final NumberPath<java.math.BigDecimal> ipEarlyTerminationRate = createNumber("ipEarlyTerminationRate", java.math.BigDecimal.class);
+    public final StringPath ipEarlyTerminationRate = createString("ipEarlyTerminationRate");
 
     public final StringPath ipFeature = createString("ipFeature");
 

@@ -23,12 +23,13 @@ public class AccountQueryRepository {
      * 계좌에 가져오기
      * @return
      */
-    public List<Account> findAllAccount() {
+    public List<Account> findAllAccount(Integer accountNo) {
 
         logger.info("AccountQueryRepository => findAllAccount()");
 
         return queryFactory
                 .selectFrom(account)
+                .where(account.cNo.eq(accountNo))
                 .fetch();
 
     }
