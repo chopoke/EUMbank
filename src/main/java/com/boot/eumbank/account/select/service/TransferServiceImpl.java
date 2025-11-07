@@ -37,28 +37,28 @@ public class TransferServiceImpl implements TransferService {
     @Override
     public Page<TransactionDTO> depositTransactions(int dNo, String type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
         // 예끔엔티티에서 dNo 연결
-        ProductDeposit depo = depoRepo.findById((long)dNo)
+        ProductDeposit depo = depoRepo.findById((long) dNo)
                 .orElseThrow(() -> new IllegalArgumentException("예금 계좌 없음: " + dNo));
 
-        // 연결된 일반 계좌 a_no 사용
-        int accountNo = depo.getANo();
+        String depoAccountNo = depo.getDAccountNo();  // 예금 계좌번호
         Timestamp fromAt = from != null ? Timestamp.valueOf(from) : null;
         Timestamp toAt   = to   != null ? Timestamp.valueOf(to)   : null;
-        return repo.searchByDeposit(accountNo, type, fromAt, toAt, pageable)
+
+        return repo.searchByOtherAccount(depoAccountNo, type, fromAt, toAt, pageable)
                 .map(this::toDTO);
 
     }
 
     @Override
     public Page<TransactionDTO> installmentTransactions(int iNo, String type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
-        ProductInstallment inst = instRepo.findById((long)iNo)
+        ProductInstallment inst = instRepo.findById((long) iNo)
                 .orElseThrow(() -> new IllegalArgumentException("적금 계좌 없음: " + iNo));
 
-        int accountNo = inst.getANo();
+        String instAccountNo = inst.getIAccountNo();  // 적금 계좌번호
         Timestamp fromAt = from != null ? Timestamp.valueOf(from) : null;
         Timestamp toAt   = to   != null ? Timestamp.valueOf(to)   : null;
 
-        return repo.searchByInstallment(accountNo, type, fromAt, toAt, pageable)
+        return repo.searchByOtherAccount(instAccountNo, type, fromAt, toAt, pageable)
                 .map(this::toDTO);
     }
 

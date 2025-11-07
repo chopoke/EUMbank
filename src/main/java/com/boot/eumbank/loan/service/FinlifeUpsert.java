@@ -92,8 +92,10 @@ public class FinlifeUpsert {
             List<O> opts = optsByProduct.getOrDefault(finPrdtCd, Collections.emptyList());
 
             // ─ 금리 집계
-            BigDecimal rateMin = minFiltered(opts, o_lendRateMin);
+            BigDecimal rateMinRaw = minFiltered(opts, o_lendRateMin);
             BigDecimal rateMax = maxFiltered(opts, o_lendRateMax);
+
+            BigDecimal rateMin = withDefaultRateMin(rateMinRaw);
 
             // ─ 한도/LTV 파싱
             String loanLmtRaw = safe(b_loanLmt, b);
@@ -110,6 +112,7 @@ public class FinlifeUpsert {
                 product.setSourceType("API");
             }
 
+            // api로 끌고온 fss 기본 메타데이터 매핑하기
             product.setLoanName(safe(b_finPrdtNm, b));
             product.setBankName(safe(b_korCoNm, b));
             product.setFinCoNo(safe(b_finCoNo, b));
@@ -133,24 +136,33 @@ public class FinlifeUpsert {
             product.setRateMin(rateMin);
             product.setRateMax(rateMax);
 
+            // 저장
             product = productRepo.save(product);
 
-            // 기존 옵션 제거 후 다시 적재
+            // 기존 옵션 제거 후 다시 적재 ==================
             var oldRateOpts = rateOptRepo.findByProduct(product);
             if (!oldRateOpts.isEmpty()) rateOptRepo.deleteAll(oldRateOpts);
 
             if (!opts.isEmpty()) {
                 List<LoanRateOption> entities = new ArrayList<>(opts.size());
+
                 for (var o : opts) {
                     LoanRateOption e = new LoanRateOption();
                     e.setProduct(product);
+
+                    // 상환유형 기본
                     e.setRpayTypeNm(safe(o_rpayTypeNm, o));
+                    // 금리 유형 기본
                     e.setLendRateTypeNm(safe(o_lendRateTypeNm, o));
-                    e.setLendRateMin(safe(o_lendRateMin, o));
+
+                    // 최저금리
+                    BigDecimal optRateMin = withDefaultRateMin(safe(o_lendRateMin, o));
+                    e.setLendRateMin(optRateMin);
+                    // 최고금리 , 평균금리
                     e.setLendRateMax(safe(o_lendRateMax, o));
                     e.setLendRateAvg(safe(o_lendRateAvg, o));
 
-                    // 스키마에 mrtgTypeNm 컬럼이 없다면 note에 병기
+                    // 스키마에 mrtgTypeNm 컬럼이 없다면 note에
                     String note = safe(o_note, o);
                     String mrtg = safe(o_mrtgTypeNm, o);
                     if (mrtg != null && (note == null || !note.contains("담보유형:"))) {
@@ -172,12 +184,13 @@ public class FinlifeUpsert {
 
 
     // ================ 공통 유틸
+    // 널포인트 방지용 . 예외를 던지거나 null이면 null 리턴
     private static <T, R> R safe(Function<T, R> f, T v) {
         if (f == null) return null;
         try { return f.apply(v); } catch (Exception ignore) { return null; }
     }
 
-    // 금리 가드: null 제외 + (0,50) 구간만 인정
+    // 금리 가드: null 제외 + (0,50) 구간만 인정, 아니면 null
     private static <O> BigDecimal minFiltered(List<O> list, Function<O, BigDecimal> getter) {
         BigDecimal lower = new BigDecimal("0");
         BigDecimal upper = new BigDecimal("50");
@@ -185,12 +198,20 @@ public class FinlifeUpsert {
                 .filter(r -> r.compareTo(lower) > 0 && r.compareTo(upper) < 0)
                 .min(BigDecimal::compareTo).orElse(null);
     }
+    // 옵션리스ㅡㅌ 최대금리 추출
+    // minFiltered와 동일 , 최댓값만 추출
     private static <O> BigDecimal maxFiltered(List<O> list, Function<O, BigDecimal> getter) {
         BigDecimal lower = new BigDecimal("0");
         BigDecimal upper = new BigDecimal("50");
         return list.stream().map(getter).filter(Objects::nonNull)
                 .filter(r -> r.compareTo(lower) > 0 && r.compareTo(upper) < 0)
                 .max(BigDecimal::compareTo).orElse(null);
+    }
+
+    // 최저금리 null일시, 기본값으로 2.0 부여
+    private static final BigDecimal DEFAULT_RATE_MIN = new BigDecimal("2.0");
+    private static BigDecimal withDefaultRateMin(BigDecimal value) {
+        return (value != null) ? value : DEFAULT_RATE_MIN;
     }
 
     //-- 한도/ltv 파서 (문구 -> 숫자)
@@ -202,10 +223,11 @@ public class FinlifeUpsert {
             java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*만(?:원)?");
     private static final java.util.regex.Pattern P_WON =
             java.util.regex.Pattern.compile("(\\d{1,3}(?:,\\d{3})+|\\d+)\\s*원");
-    private static final BigDecimal U_EOK      = new BigDecimal("100000000");
-    private static final BigDecimal U_CHEONMAN = new BigDecimal("10000000");
-    private static final BigDecimal U_MAN      = new BigDecimal("10000");
+    private static final BigDecimal U_EOK      = new BigDecimal("100000000");       // 1억
+    private static final BigDecimal U_CHEONMAN = new BigDecimal("10000000");        // 1천만원
+    private static final BigDecimal U_MAN      = new BigDecimal("10000");           // 1만우언
 
+    // 한도 원문에서 '원' 금액 추출
     private static BigDecimal extractMaxWon(String raw){
         if (raw == null) return null;
         String s = raw.replaceAll("\\s+", "");
@@ -217,6 +239,7 @@ public class FinlifeUpsert {
         return max;
     }
 
+    // 정규식으로 모든 매치 돌아가면서 group1 * unit 의 최댓값을 구함
     private static BigDecimal scanAll(String s, java.util.regex.Pattern p, BigDecimal unit, boolean stripComma) {
         var m = p.matcher(s);
         BigDecimal max = null;
@@ -237,6 +260,7 @@ public class FinlifeUpsert {
         return a.max(b);
     }
 
+    // ltv 최대 유틸
     private static Integer extractMaxLtv(String raw){
         if (raw == null) return null;
         var m = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%").matcher(raw);

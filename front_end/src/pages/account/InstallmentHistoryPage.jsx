@@ -8,6 +8,12 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import "../../resources/css/other.css";
 
+// 아이콘 (스타일 전용)
+import {
+  ShieldCheck, Wallet2, Banknote, CalendarDays, FileDown, FileSpreadsheet,
+  Filter, ChevronLeft, ChevronRight, RefreshCcw, Search
+} from "lucide-react";
+
 // ===================== 통화 유틸 =====================
 const CURRENCY_DECIMALS = {
   KRW: 0, JPY: 0, VND: 0,
@@ -99,9 +105,6 @@ function InstallmentHistoryPage() {
     fetchInstallmentDetail(Number(i_no))
       .then((res) => {
         const d = res.data;
-
-        // 👉 이 부분은 백엔드 DTO 필드에 맞게 조정
-        // 예시: i_account_no, i_currency, i_amount, i_join_date, i_rate ...
         const cur = (d.i_currency ?? d.currency ?? "KRW").toUpperCase();
 
         setAccount({
@@ -142,23 +145,17 @@ function InstallmentHistoryPage() {
             r.th_amount ?? r.th_account_in ?? r.th_account_out ?? 0
           );
 
-          const isIn =
-            tp.endsWith("_IN") ||
-            tp === "입금" ||
-            tp === "DEPOSIT" ||
-            tp === "IN";
-          const isOut =
-            tp.endsWith("_OUT") ||
-            tp === "출금" ||
-            tp === "WITHDRAWAL" ||
-            tp === "OUT";
+          // 예금계좌 관점으로 보여주기 (표현만 변경)
+          let displayType = r.th_transfer_type || "-";
+          let signed = base;
 
-          const signed = isOut ? -Math.abs(base) : Math.abs(base);
-          const displayType = isIn
-            ? "입금"
-            : isOut
-            ? "출금"
-            : r.th_transfer_type || "-";
+          if (tp === "출금" || tp === "WITHDRAWAL" || tp.endsWith("_OUT")) {
+            displayType = "입금";
+            signed = Math.abs(base);
+          } else if (tp === "입금" || tp === "DEPOSIT" || tp.endsWith("_IN")) {
+            displayType = "출금";
+            signed = -Math.abs(base);
+          }
 
           const rowCurrency = String(
             r.th_currency ?? r.currency ?? account?.currency ?? "KRW"
@@ -184,23 +181,21 @@ function InstallmentHistoryPage() {
 
         setRows(mapped);
         setTotalElements(p.totalElements ?? mapped.length);
-        setTotalPages(
-          p.totalPages ?? (p.totalElements ? p.totalPages : 1)
-        );
+        setTotalPages(p.totalPages ?? (p.totalElements ? p.totalPages : 1));
       })
       .catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [i_no, kinds, dateFrom, dateTo, page, pageSize, memoQv, sortKey, account?.currency]);
 
-  // ===== Chip =====
+  // ===== Chip (스타일만 개선) =====
   const Chip = ({ active, children, onClick }) => (
     <button
       onClick={onClick}
       className={
-        "px-3 py-1.5 rounded-full text-xs border transition " +
+        "px-3 py-1.5 rounded-full text-xs border transition shadow-sm " +
         (active
-          ? "bg-blue-50 text-blue-700 border-blue-300"
-          : "hover:bg-gray-50")
+          ? "bg-blue-600/10 text-blue-700 border-blue-300 ring-1 ring-blue-200"
+          : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200")
       }
     >
       {children}
@@ -243,9 +238,7 @@ function InstallmentHistoryPage() {
     });
 
     if (sortKey === "amount") {
-      out = [...out].sort(
-        (a, b) => Math.abs(b.amount) - Math.abs(a.amount)
-      );
+      out = [...out].sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
     } else {
       out = [...out].sort((a, b) => b.ts - a.ts);
     }
@@ -286,24 +279,13 @@ function InstallmentHistoryPage() {
       r.type,
       r.counterparty,
       r.memo,
-      formatCurrencyRaw(
-        r.amount,
-        r.currency || account.currency || "KRW"
-      ),
+      formatCurrencyRaw(r.amount, r.currency || account.currency || "KRW"),
       formatCurrencyRaw(r.balance, account.currency || "KRW"),
     ]);
     const csv = [header, ...body]
-      .map((r) =>
-        r
-          .map((v) =>
-            `"${String(v).replaceAll('"', '""')}"`
-          )
-          .join(",")
-      )
+      .map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(","))
       .join("\n");
-    const blob = new Blob(["\uFEFF" + csv], {
-      type: "text/csv;charset=utf-8;",
-    });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -316,9 +298,7 @@ function InstallmentHistoryPage() {
     if (!account) return;
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     if (!fontCache.current.regular) {
-      fontCache.current.regular = await loadFontBase64(
-        "/font/NotoSansKR.ttf"
-      );
+      fontCache.current.regular = await loadFontBase64("/font/NotoSansKR.ttf");
     }
     doc.addFileToVFS("NotoSansKR.ttf", fontCache.current.regular);
     doc.addFont("NotoSansKR.ttf", "NotoSansKR", "normal");
@@ -327,11 +307,7 @@ function InstallmentHistoryPage() {
     doc.setFontSize(15);
     doc.text("적금 계좌 이체 내역", 40, 40);
     doc.setFontSize(10);
-    doc.text(
-      `출력일 : ${new Date().toLocaleString("ko-KR")}`,
-      40,
-      58
-    );
+    doc.text(`출력일 : ${new Date().toLocaleString("ko-KR")}`, 40, 58);
 
     const head = [["일시", "구분", "상대", "메모", "금액(±)", "잔액"]];
     const body = list.map((r) => [
@@ -339,10 +315,7 @@ function InstallmentHistoryPage() {
       r.type,
       r.counterparty,
       r.memo,
-      formatCurrencyRaw(
-        r.amount,
-        r.currency || account.currency || "KRW"
-      ),
+      formatCurrencyRaw(r.amount, r.currency || account.currency || "KRW"),
       formatCurrencyRaw(r.balance, account.currency || "KRW"),
     ]);
 
@@ -350,22 +323,9 @@ function InstallmentHistoryPage() {
       head,
       body,
       startY: 76,
-      styles: {
-        font: "NotoSansKR",
-        fontSize: 9,
-        cellPadding: 6,
-        fontStyle: "normal",
-      },
-      headStyles: {
-        font: "NotoSansKR",
-        fontStyle: "normal",
-        fillColor: [242, 242, 242],
-        textColor: 20,
-      },
-      columnStyles: {
-        4: { halign: "right", cellWidth: 120 },
-        5: { halign: "right", cellWidth: 120 },
-      },
+      styles: { font: "NotoSansKR", fontSize: 9, cellPadding: 6, fontStyle: "normal" },
+      headStyles: { font: "NotoSansKR", fontStyle: "normal", fillColor: [242, 242, 242], textColor: 20 },
+      columnStyles: { 4: { halign: "right", cellWidth: 120 }, 5: { halign: "right", cellWidth: 120 } },
       didDrawPage: (data) => {
         const pageCnt = doc.getNumberOfPages();
         const str = `Page ${data.pageNumber} / ${pageCnt}`;
@@ -385,7 +345,7 @@ function InstallmentHistoryPage() {
   const backBtn = () => navigate(-1);
 
   return (
-    <div className="bg-gray-50 py-8">
+    <div className="bg-gradient-to-b from-slate-50 to-white">
       {/* 타이틀 */}
       <section className="border-b bg-white">
         <div className="checkb mx-auto max-w-[1240px] px-6 py-6">
@@ -393,7 +353,7 @@ function InstallmentHistoryPage() {
             적금 계좌 상세
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            선택한 적금 계좌의 정보와 거래내역을 함께 확인하세요.
+            선택한 적금 계좌의 정보와 거래내역을 확인할 수 있습니다.
           </p>
         </div>
       </section>
@@ -405,33 +365,35 @@ function InstallmentHistoryPage() {
           <div className="col-span-12 lg:col-span-8">
             <div className="rounded-2xl border bg-white p-5 shadow-sm flex items-center justify-between">
               <div>
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="mx-auto">{account.bank}</div>
-                  <span>·</span>
-                  <div className="text-sm text-gray-600">적금 계좌</div>
+                <div className="mt-1 flex items-center gap-2 text-sm">
+                  <div className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 text-emerald-700 px-2.5 py-1">
+                    <Wallet2 className="h-4 w-4" />
+                    <span className="font-medium">{account.bank}</span>
+                  </div>
+                  <span className="text-gray-300">·</span>
+                  <span className="text-sm text-gray-600">적금 계좌</span>
                 </div>
-                <div className="text-lg font-semibold text-gray-900">
-                  {account.number}
-                </div>
+                <div className="text-lg font-semibold text-gray-900 mt-2">{account.number}</div>
                 <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-900">
-                  <div>
+                  <div className="inline-flex items-center gap-1.5 py-1.5">
+                    <CalendarDays className="h-4 w-4 text-gray-400" />
                     개설: {account.openAt ? toISODate(account.openAt) : "-"}
                   </div>
-                  <div className="pl-3">
+                  <div className="inline-flex items-center gap-1.5 py-1.5 pl-3">
+                    <Banknote className="h-4 w-4 text-gray-400" />
                     이율: {account.rate ?? "-"}
                   </div>
-                  <div className="pl-3">
-                    통화: {account.currency}
+                  <div className="inline-flex items-center gap-1.5 py-1.5 pl-3">
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                      {account.currency}
+                    </span>
                   </div>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-gray-500">현재 잔액</div>
-                <div className="text-3xl font-bold">
-                  {formatCurrencyRaw(
-                    account.balance,
-                    account.currency || "KRW"
-                  )}
+                <div className="text-3xl font-extrabold tracking-tight">
+                  {formatCurrencyRaw(account.balance, account.currency || "KRW")}
                 </div>
               </div>
             </div>
@@ -440,8 +402,8 @@ function InstallmentHistoryPage() {
           {/* 빠른 필터 */}
           <div className="col-span-12 lg:col-span-4">
             <div className="rounded-2xl border bg-white p-5 shadow-sm">
-              <div className="text-sm font-medium text-gray-800 mb-2">
-                빠른 필터
+              <div className="text-sm font-medium text-gray-800 mb-3 flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gray-400" /> 빠른 필터
               </div>
               <div className="flex flex-wrap gap-2">
                 <Chip onClick={() => quickRange(1)}>오늘</Chip>
@@ -449,15 +411,12 @@ function InstallmentHistoryPage() {
                 <Chip onClick={() => quickRange(7)}>7일</Chip>
                 <Chip onClick={() => quickRange(30)}>한달</Chip>
               </div>
-              <div className="mt-3 flex gap-2">
-                <button className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100">
-                  이체
-                </button>
+              <div className="mt-4 flex gap-2">
                 <button
                   onClick={backBtn}
-                  className="rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100"
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs hover:bg-gray-100"
                 >
-                  계좌목록
+                  <ChevronLeft className="h-4 w-4" /> 계좌목록
                 </button>
               </div>
             </div>
@@ -472,76 +431,49 @@ function InstallmentHistoryPage() {
           <aside className="col-span-12 md:col-span-3">
             <div className="rounded-2xl border bg-white p-4 md:p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-gray-800">
-                  검색 / 필터
-                </h2>
-                <button
-                  onClick={resetFilters}
-                  className="text-xs text-gray-500 hover:underline"
-                >
-                  초기화
-                </button>
+                <h2 className="text-sm font-semibold text-gray-800">검색 / 필터</h2>
+                <button onClick={resetFilters} className="text-xs text-gray-500 hover:underline">초기화</button>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
-                    시작일
-                  </label>
+                  <label className="block text-xs text-gray-600 mb-1">시작일</label>
                   <input
                     type="date"
                     value={dateFrom}
-                    onChange={(e) => {
-                      setDateFrom(e.target.value);
-                      setPage(0);
-                    }}
-                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                    onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
+                    className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
-                    종료일
-                  </label>
+                  <label className="block text-xs text-gray-600 mb-1">종료일</label>
                   <input
                     type="date"
                     value={dateTo}
-                    onChange={(e) => {
-                      setDateTo(e.target.value);
-                      setPage(0);
-                    }}
-                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                    onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
+                    className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div className="mt-4">
-                <div className="text-xs text-gray-600 mb-1">
-                  거래 구분
-                </div>
+                <div className="text-xs text-gray-600 mb-1">거래 구분</div>
                 <div className="flex flex-wrap gap-2">
                   {["입금", "출금"].map((k) => (
-                    <Chip
-                      key={k}
-                      active={kinds.has(k)}
-                      onClick={() => toggleKind(k)}
-                    >
-                      {k}
-                    </Chip>
+                    <Chip key={k} active={kinds.has(k)} onClick={() => toggleKind(k)}>{k}</Chip>
                   ))}
                 </div>
               </div>
 
               <div className="mt-4">
-                <div className="text-xs text-gray-600 mb-1">
-                  금액 범위
-                </div>
+                <div className="text-xs text-gray-600 mb-1">금액 범위</div>
                 <div className="flex items-center gap-2">
                   <input
                     value={minAmt}
                     onChange={(e) => setMinAmt(e.target.value)}
                     type="number"
                     placeholder="최소"
-                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                    className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                   />
                   <span className="text-gray-400">~</span>
                   <input
@@ -549,33 +481,31 @@ function InstallmentHistoryPage() {
                     onChange={(e) => setMaxAmt(e.target.value)}
                     type="number"
                     placeholder="최대"
-                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                    className="w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div className="mt-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  메모/상대 검색
-                </label>
-                <input
-                  value={memoQuery}
-                  onChange={(e) => setMemoQuery(e.target.value)}
-                  type="text"
-                  placeholder="예) 자동이체, 적립"
-                  className="w-full rounded-lg border px-3 py-2 text-sm placeholder:text-gray-400"
-                />
+                <label className="block text-xs text-gray-600 mb-1">메모/상대 검색</label>
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-2.5 top-2.5 text-gray-400" />
+                  <input
+                    value={memoQuery}
+                    onChange={(e) => setMemoQuery(e.target.value)}
+                    type="text"
+                    placeholder="예) 자동이체, 적립"
+                    className="w-full rounded-lg border pl-8 pr-3 py-2 text-sm placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
               <div className="mt-5">
                 <button
-                  onClick={() => {
-                    setPage(0);
-                    setMemoQv((v) => v + 1);
-                  }}
-                  className="w-full rounded-lg bg-blue-700 text-white py-2.5 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  onClick={() => { setPage(0); setMemoQv((v) => v + 1); }}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 text-white py-2.5 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
                 >
-                  조회
+                  <Filter className="h-4 w-4" /> 조회
                 </button>
               </div>
             </div>
@@ -587,56 +517,38 @@ function InstallmentHistoryPage() {
               {/* 상단 컨트롤 */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="text-gray-600">
-                    총{" "}
-                    <b className="text-gray-900">
-                      {totalElements}
-                    </b>
-                    건
-                  </span>
+                  <span className="text-gray-600">총 <b className="text-gray-900">{totalElements}</b>건</span>
                   <span className="hidden md:inline-block w-px h-4 bg-gray-200" />
                   <div className="flex items-center gap-2">
-                    <label className="text-gray-600">
-                      정렬
-                    </label>
+                    <label className="text-gray-600">정렬</label>
                     <select
                       value={sortKey}
-                      onChange={(e) =>
-                        setSortKey(e.target.value)
-                      }
-                      className="rounded-md border px-2.5 py-1.5 text-sm"
+                      onChange={(e) => setSortKey(e.target.value)}
+                      className="rounded-md border px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="latest">
-                        최신순
-                      </option>
-                      <option value="amount">
-                        금액 큰순
-                      </option>
+                      <option value="latest">최신순</option>
+                      <option value="amount">금액 큰순</option>
                     </select>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() =>
-                      downloadCsv(displayFilter)
-                    }
-                    className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+                    onClick={() => downloadCsv(displayFilter)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
                   >
-                    CSV 다운로드
+                    <FileSpreadsheet className="h-4 w-4" /> CSV
                   </button>
                   <button
-                    onClick={() =>
-                      downloadPdf(displayFilter)
-                    }
-                    className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+                    onClick={() => downloadPdf(displayFilter)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
                   >
-                    PDF 다운로드
+                    <FileDown className="h-4 w-4" /> PDF
                   </button>
                   <button
                     onClick={() => window.location.reload()}
-                    className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
                   >
-                    새로고침
+                    <RefreshCcw className="h-4 w-4" /> 새로고침
                   </button>
                 </div>
               </div>
@@ -645,80 +557,50 @@ function InstallmentHistoryPage() {
               <div className="mt-4 overflow-auto">
                 <table className="min-w-[820px] w-full text-sm">
                   <thead className="text-gray-600">
-                    <tr className="border-b bg-gray-50">
-                      <th className="text-left font-medium px-3 py-2">
-                        일시
-                      </th>
-                      <th className="text-left font-medium px-3 py-2">
-                        구분
-                      </th>
-                      <th className="text-left font-medium px-3 py-2">
-                        상대
-                      </th>
-                      <th className="text-right font-medium px-3 py-2">
-                        금액(±)
-                      </th>
-                      <th className="text-right font-medium px-3 py-2">
-                        잔액
-                      </th>
-                      <th className="text-left font-medium px-3 py-2">
-                        내용
-                      </th>
+                    <tr className="border-b bg-gray-50/80">
+                      <th className="text-left font-medium px-3 py-2">일시</th>
+                      <th className="text-left font-medium px-3 py-2">구분</th>
+                      <th className="text-left font-medium px-3 py-2">상대</th>
+                      <th className="text-right font-medium px-3 py-2">금액(±)</th>
+                      <th className="text-right font-medium px-3 py-2">잔액</th>
+                      <th className="text-left font-medium px-3 py-2">내용</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {displayFilter.length === 0 ? (
                       <tr>
-                        <td
-                          colSpan={6}
-                          className="px-3 py-10 text-center text-gray-500"
-                        >
-                          조건에 맞는 내역이 없습니다.
-                        </td>
+                        <td colSpan={6} className="px-3 py-10 text-center text-gray-500">조건에 맞는 내역이 없습니다.</td>
                       </tr>
                     ) : (
                       displayFilter.map((r) => (
-                        <tr
-                          key={r.id}
-                          className="hover:bg-gray-50"
-                        >
+                        <tr key={r.id} className="hover:bg-gray-50">
                           <td className="px-3 py-3 whitespace-nowrap">
-                            {r.ts
-                              ? `${toISODate(
-                                  r.ts
-                                )} ${r.time}`
-                              : "-"}
+                            {r.ts ? `${toISODate(r.ts)} ${r.time}` : "-"}
                           </td>
                           <td className="px-3 py-3">
-                            {r.type}
+                            <span
+                              className={
+                                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs " +
+                                (r.type === "입금"
+                                  ? "bg-emerald-600/10 text-emerald-700 whitespace-nowrap"
+                                  : "bg-rose-600/10 text-rose-700 whitespace-nowrap")
+                              }
+                            >
+                              <Banknote className="h-3.5 w-3.5" />
+                              {r.type}
+                            </span>
                           </td>
-                          <td className="px-3 py-3">
-                            {r.counterparty}
+                          <td className="px-3 py-3">{r.counterparty}</td>
+                          {/* 금액+통화 */}
+                          <td className={"px-3 py-3 text-right " + (r.amount < 0 ? "text-rose-600 whitespace-nowrap" : "text-emerald-700 whitespace-nowrap")}>
+                            {formatCurrencyRaw(r.amount, r.currency || account.currency || "KRW")}
                           </td>
-                          <td
-                            className={
-                              "px-3 py-3 text-right " +
-                              (r.amount < 0
-                                ? "text-red-600"
-                                : "text-emerald-700")
-                            }
-                          >
-                            {formatCurrencyRaw(
-                              r.amount,
-                              r.currency ||
-                                account.currency ||
-                                "KRW"
-                            )}
+                          {/* 잔액+통화 */}
+                          <td className="px-3 py-3 text-right whitespace-nowrap">
+                            {formatCurrencyRaw(r.balance, account.currency || "KRW")}
                           </td>
-                          <td className="px-3 py-3 text-right">
-                            {formatCurrencyRaw(
-                              r.balance,
-                              account.currency || "KRW"
-                            )}
-                          </td>
-                          <td className="px-3 py-3">
-                            {r.memo}
-                          </td>
+                          {/* 메모 */}
+                          <td className="px-3 py-3">{r.memo}</td>
                         </tr>
                       ))
                     )}
@@ -729,25 +611,17 @@ function InstallmentHistoryPage() {
               {/* 페이지네이션 */}
               <div className="mt-4 flex items-center justify-center gap-2 text-sm">
                 <button
-                  onClick={() =>
-                    setPage((p) => Math.max(0, p - 1))
-                  }
-                  className="rounded-md border px-2 py-1 hover:bg-gray-50"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 hover:bg-gray-50"
                 >
-                  〈
+                  <ChevronLeft className="h-4 w-4" /> 이전
                 </button>
-                <span className="text-gray-600">
-                  {page + 1} / {totalPages}
-                </span>
+                <span className="text-gray-600">{page + 1} / {totalPages}</span>
                 <button
-                  onClick={() =>
-                    setPage((p) =>
-                      Math.min(totalPages - 1, p + 1)
-                    )
-                  }
-                  className="rounded-md border px-2 py-1 hover:bg-gray-50"
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 hover:bg-gray-50"
                 >
-                  〉
+                  다음 <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             </div>

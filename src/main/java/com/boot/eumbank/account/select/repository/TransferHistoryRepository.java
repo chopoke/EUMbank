@@ -27,37 +27,19 @@ public interface TransferHistoryRepository extends JpaRepository<TransferHistory
             Pageable pageable
     );
 
-    // 2) 예금 - 예금 FK 기준
     @Query("""
         select t from TransferHistory t
-        where t.accountNo = :d_no
-          and (:type    is null or t.transferType = :type)
-          and (:from_at is null or t.transferAt >= :from_at)
-          and (:to_at   is null or t.transferAt <  :to_at)
+        where t.otherAccount = :otherAccount
+          and (:type   is null or t.transferType = :type)
+          and (:fromAt is null or t.transferAt >= :fromAt)
+          and (:toAt   is null or t.transferAt <  :toAt)
         order by t.transferAt desc
     """)
-    Page<TransferHistory> searchByDeposit(
-            @Param("d_no") int dNo,
+    Page<TransferHistory> searchByOtherAccount(
+            @Param("otherAccount") String otherAccount,
             @Param("type") String type,
-            @Param("from_at") Timestamp fromAt,
-            @Param("to_at") Timestamp toAt,
-            Pageable pageable
-    );
-
-    // 3) 적금 - 적금 FK 기준
-    @Query("""
-        select t from TransferHistory t
-        where t.accountNo = :i_no
-          and (:type    is null or t.transferType = :type)
-          and (:from_at is null or t.transferAt >= :from_at)
-          and (:to_at   is null or t.transferAt <  :to_at)
-        order by t.transferAt desc
-    """)
-    Page<TransferHistory> searchByInstallment(
-            @Param("i_no") int iNo,
-            @Param("type") String type,
-            @Param("from_at") Timestamp fromAt,
-            @Param("to_at") Timestamp toAt,
+            @Param("fromAt") Timestamp fromAt,
+            @Param("toAt") Timestamp toAt,
             Pageable pageable
     );
 

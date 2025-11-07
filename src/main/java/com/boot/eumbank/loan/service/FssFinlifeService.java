@@ -1,8 +1,5 @@
 package com.boot.eumbank.loan.service;
 
-import com.boot.eumbank.loan.dto.FinlifeMortgageResponseDTO;
-import com.boot.eumbank.loan.dto.LoanProductDTO;
-import com.boot.eumbank.loan.dto.LoanProductDetailDTO;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +11,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Finlife (금감원 API) 호출 담당 Service
@@ -22,7 +18,7 @@ import java.util.stream.Collectors;
  * -> API를 호출해서 JSON반환(raw)
  * getMortgageProductRaw : 주택담보대출 API호출
  * getJeonseProductRaw : 전세자금대출 API호출
- * getCreditProductRaw : 신용대출 API 호출
+ * getCreditProductRaw : 신용대출 API 호출 --> 제거
  * -
  * topFinGrpNo 은 금융사 코드라고 할 수 있음 지금처럼 020000?은 은행이고 050000은 보험 
  * -> 일단 은행것만 끌어올라궁
@@ -67,7 +63,7 @@ public class FssFinlifeService {
         log.info("[FSS] BODY {}", body == null ? "null" : body.substring(0, Math.min(200, body.length())));
 
         if (body == null || body.isBlank()) {
-            throw new IllegalStateException("FSS empty body (status=" + resp.getStatusCode() + ")");
+            throw new IllegalStateException("FSS 주담대 API body 비어있음 (status=" + resp.getStatusCode() + ")");
         }
         return body;
     }
@@ -81,7 +77,8 @@ public class FssFinlifeService {
                 .build(true).toUri();
         var resp = client.get().uri(uri).retrieve().toEntity(String.class);
         String body = resp.getBody();
-        if (body == null || body.isBlank()) throw new IllegalStateException("FSS empty body (jeonse)");
+        if (body == null || body.isBlank()) 
+            throw new IllegalStateException("FSS 전세자금 API body 비어있음 (status=" + resp.getStatusCode() + ")");
         return body;
     }
 
@@ -98,7 +95,7 @@ public class FssFinlifeService {
 //        return body;
 //    }
 
-    //  파서 유틸(문구 → 숫자) -----------
+    //  파서 유틸(문구 -> 숫자) -----------
     private static final java.util.regex.Pattern P_EOK =
             java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*억(?:원)?");
     private static final java.util.regex.Pattern P_CHEONMAN =
@@ -158,6 +155,5 @@ public class FssFinlifeService {
         return (max == null) ? null : max.setScale(0, RoundingMode.HALF_UP).intValue();
     }
 
-    private static boolean notBlank(String s){ return s != null && !s.isBlank(); }
 
 }
