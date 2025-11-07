@@ -21,17 +21,20 @@ export function Footer() {
           <div className="footer-col">
             <div className="footer-title">약관</div>
             <ul className="footer-list">
-              <li><a href="#tos" className="hover-underline">전자금융거래약관</a></li>
-              <li><a href="#privacy" className="hover-underline">개인정보 처리방침</a></li>
-              <li><a href="#disclosure" className="hover-underline">경영공시</a></li>
+              <li><Link to='/ftagree' className="hover-underline">전자금융거래약관</Link></li>
+              <li><Link to='/ftprivacy' lassName="hover-underline">개인정보 처리방침</Link></li>
+              <li><Link to='/ftdisclosure' className="hover-underline">경영공시</Link></li>
             </ul>
           </div>
           <div className="footer-col">
             <div className="footer-title">고객지원</div>
             <ul className="footer-list">
-              <li><a href="#faq" className="hover-underline">FAQ</a></li>
+              {/* <li><a href="#faq" className="hover-underline">FAQ</a></li>
               <li><a href="#branch" className="hover-underline">지점/ATM 찾기</a></li>
-              <li><a href="#contact" className="hover:underline">문의하기</a></li>
+              <li><a href="#contact" className="hover:underline">문의하기</a></li> */}
+              <li>고객센터 02-000-0000</li>
+              <li>평일 AM 09:30 ~ PM 06:30</li>
+              <li>휴무 : 토,일요일 및 공휴일</li>
             </ul>
           </div>
           <div className="footer-col">

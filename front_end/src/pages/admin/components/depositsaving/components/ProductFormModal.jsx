@@ -286,7 +286,7 @@ export default function ProductFormModal({ activeType, onSuccess, onClose }) {
                                     <>
                                         <option value="정기예금">정기예금</option>
                                         <option value="자유적립식예금">자유적립식예금</option>
-                                        <option value="정기적금">정기예금</option>
+                                        <option value="장기정기예금">장기정기예금</option>
                                     </>
                                 ) : (
                                     <>

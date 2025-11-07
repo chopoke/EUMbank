@@ -39,49 +39,59 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
 
     @Override
     public String chat(ChatRequest chatRequest) {
-        // 1. DB에서 예금/적금 상품 정보 조회
+        // 1. DB에서 상품 정보 조회
         String productsInfo = getProductsInfoFromDB();
-
-        // 2. 시스템 프롬프트 + DB 데이터 결합
         String systemPrompt = createSystemPrompt(productsInfo);
 
-        // 3. Gemini API 요청 생성
+        // 2. Gemini API 요청 생성
         List<GeminiContent> contents = new ArrayList<>();
 
-        // 대화 이력 추가
-        if (chatRequest.getHistory() != null) {
+        // 첫 번째 메시지에 시스템 프롬프트 포함
+        boolean isFirstMessage = (chatRequest.getHistory() == null || chatRequest.getHistory().isEmpty());
+
+        if (isFirstMessage) {
+            // 시스템 프롬프트를 첫 user 메시지에 포함
+            String firstMessage = systemPrompt + "\n\n사용자 질문: " + chatRequest.getMessage();
+            contents.add(createContent(firstMessage, "user"));
+        } else {
+            // 대화 이력이 있는 경우
+            // 첫 번째 메시지에 시스템 프롬프트가 이미 포함되어 있다고 가정
             for (Message msg : chatRequest.getHistory()) {
                 contents.add(createContent(msg.getContent(), msg.getRole()));
             }
+            // 현재 메시지 추가
+            contents.add(createContent(chatRequest.getMessage(), "user"));
         }
 
-        // 현재 메시지에 시스템 프롬프트 포함
-        String userMessageWithContext = systemPrompt + "\n\n사용자 질문: " + chatRequest.getMessage();
-        contents.add(createContent(userMessageWithContext, "user"));
-
-        // 4. 요청 Body 생성
+        // 3. 요청 Body 생성
         GeminiRequest geminiRequest = GeminiRequest.builder()
                 .contents(contents)
                 .generationConfig(GeminiGenerationConfig.builder()
                         .temperature(0.7)
                         .maxOutputTokens(2048)
+                        .topP(0.95)
+                        .topK(40)
                         .build())
                 .build();
 
         try {
-            // 5. Gemini Pro API 호출 - webClient.post() 사용
+            // 4. Gemini API 호출
             Map<String, Object> response = webClient.post()
-                    .uri("/" + model + ":generateContent?key=" + apiKey)
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/" + model + ":generateContent")
+                            .queryParam("key", apiKey)
+                            .build())
                     .bodyValue(geminiRequest)
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block();
 
-            // 6. 응답 파싱
+            // 5. 응답 파싱
             return parseGeminiResponse(response);
 
         } catch (Exception e) {
             e.printStackTrace();
+            System.err.println("Gemini API Error: " + e.getMessage());
             return "죄송합니다. 일시적인 오류가 발생했습니다. eum_bank 고객센터 1544-2311로 연락 주세요.";
         }
     }

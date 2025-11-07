@@ -158,15 +158,17 @@ const QuickActions = ({ isAdmin = false }) => {
     { id: "fx", label: "외화", icon: paths.fx, href: "/foreign/rate" },
     { id: "spot", label: "현물", icon: paths.card, href: "/" },
     { id: "deposit", label: "예적금가입", icon: paths.bank, href: "/depositSavingProductList/open" },
-    { id: "mypage", label: isAdmin ? "관리자페이지" : "마이페이지", icon: paths.arrowR, href: isAdmin ? "/admin" : "/mypage" },
+    { id: "mypage", label: isAdmin ? "관리자페이지" : "마이페이지", icon: paths.arrowR, href: isAdmin ? "__ADMIN__" : "/mypage" },
   ];
 
   const handleActionClick = (href) => {
-    if (href) {
-      navigate(href);
-    } else {
-      alert("이 기능은 현재 준비 중입니다.");
+    if (!href) return alert("준비 중");
+    if (href === "__ADMIN__") {
+      // 타임리프 관리자 진입: 8081로 정식 네비게이션
+      window.location.assign("http://localhost:8081/admin/enter");
+      return;
     }
+    navigate(href);
   };
 
   return (
