@@ -44,14 +44,8 @@ public class RatesController {
     }
 
     @GetMapping("/gas")
-    public ResponseEntity<?> gas(
-            @RequestParam String regionCd,
-            @RequestParam(defaultValue="1") String svcKindCd,
-            @RequestParam(required=false) String date
-    ){
-        var when = date != null ? LocalDate.parse(date) : LocalDate.now();
-        var data = gas.fetchRates(regionCd, svcKindCd, when);
-        return ResponseEntity.ok(Map.of("data", data));
+    public Map<String,Object> gas() {
+        return gas.fetchRates();
     }
 }
 

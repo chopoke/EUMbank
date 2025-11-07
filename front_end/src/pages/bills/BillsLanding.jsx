@@ -7,6 +7,7 @@ import ElectricRateChart from "./components/ElectricRateChart";
 import GenericRateTable from "./components/GenericRateTable";
 import { fetchWaterRates, fetchGasRates } from "../../api/rates";
 import WaterRateChart from "./components/WaterRateChart";
+import GasRateChart from "./components/GasRateChart";
 
 export default function BillsLanding() {
   const { ubNo: ubNoParam } = useParams();
@@ -279,11 +280,12 @@ export default function BillsLanding() {
               {type === "gas" && (
                 <>
                   {/* 선택 제거 요청은 수도에 한정. 가스는 고정값 서울(11)/가정(1)로 호출 */}
+                  <GasRateChart/>
                   <div className="mt-4">
                     <GenericRateTable
                       title="가스 요금표"
                       fetcher={fetchGasRates}
-                      params={{ regionCd: "11", svcKindCd: "1" }}
+                      params={{}}
                     />
                   </div>
                 </>
