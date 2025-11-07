@@ -1,6 +1,8 @@
 package com.boot.eumbank.loan.controller;
 
+import com.boot.eumbank.account.open.jpa.repository.custom.CustomerRepository;
 import com.boot.eumbank.customer.entity.Customer;
+import com.boot.eumbank.customer.repo.CustomerRepo;
 import com.boot.eumbank.loan.dto.LoanProductDTO;
 import com.boot.eumbank.loan.dto.LoanProductDetailDTO;
 import com.boot.eumbank.loan.dto.apply.*;
@@ -11,7 +13,11 @@ import com.boot.eumbank.loan.service.apply.LoanConsentService;
 import com.boot.eumbank.loan.service.apply.LoanQuoteService;
 import com.boot.eumbank.loan.service.LoanService;
 import com.boot.eumbank.loan.service.payment.LoanRepaymentService;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 @RestController
 @RequestMapping("/api/loan")
-@RequiredArgsConstructor
+@RequiredArgsConstructor @Slf4j
 public class LoanController {
 
     // DB 로드용 서비스  (상세조횟)
@@ -32,6 +38,7 @@ public class LoanController {
 
     // 신청 저장용
     private final LoanApplicationService loanApplicationService;
+    private final CustomerRepository customerRepo;
 
     // 약관 저장용
     private final LoanConsentService loanConsentService;
@@ -67,6 +74,22 @@ public class LoanController {
         return ResponseEntity.ok(loanQuoteService.quote(loanCode, req, customer));
     }
 
+    /**
+     * DB에 저장된 사용자의 PIN번호 확인하여 대출신청허가
+     */
+    @PostMapping("/{code}/pin-verify")        // 기존 pin검사로 이동
+    public ResponseEntity<PinRes> checkPin(@PathVariable("code") String loanCode,
+                                           @AuthenticationPrincipal Customer cus,
+                                           @RequestBody PinReq pinReq){
+        Integer customer = cus.getCustomerNo();
+        Customer cust = customerRepo.findById(customer).orElseThrow(()-> new IllegalArgumentException("존재하지 않는 회원 정보입니다. "));
+        String dbPin = cust.getPinNumber();
+        String inputPin = pinReq.getPin();
+        boolean ok = dbPin != null && inputPin != null  && dbPin.trim().equals(inputPin.trim());
+        log.info("@@@@@@@@ PIN결과 : {}", ok);
+        return ResponseEntity.ok(new PinRes(ok));
+    }
+
     // 대출 신청 저장 ----------------------------------------
     @PostMapping("/{code}/applications")
     public ResponseEntity<LoanApplicationResponseDTO> apply(
@@ -76,9 +99,8 @@ public class LoanController {
 
         // 로그인 사용자에서 고객번호 주입
         if (req.getCustomerNo() == null && customer != null) {
-            req.setCustomerNo(customer.getCustomerNo()); // 엔티티 필드 이름에 맞는 getter
+            req.setCustomerNo(customer.getCustomerNo()); 
         }
-        // 프론트 V1/V2 혼용 지원: productCode 없고 route code만 있을 때 대비
         if (req.getProductCode() == null || req.getProductCode().isBlank()) {
             req.setProductCode(loanCode);
         }
@@ -103,6 +125,18 @@ public class LoanController {
                                                       @RequestBody RepaymentRequestDTO req) {
         RepaymentResponseDTO res = repaymentService.repay(loanNo, req);
         return ResponseEntity.ok(res);
+    }
+
+    /**
+     * PIN번호 확인용 응답/요청 DTO
+     */
+    @Data @AllArgsConstructor @NoArgsConstructor
+    public static class PinReq{
+        private String pin;
+    }
+    @Data @AllArgsConstructor @NoArgsConstructor
+    public static class PinRes{
+        private Boolean ok;
     }
 
 //    // -- 상환 내역 목록 진입

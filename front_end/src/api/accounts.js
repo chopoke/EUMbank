@@ -19,6 +19,7 @@ export const updateAccountAlias = (a_no, alias) =>
 export const testmypage = () =>
   api.get(`/api/mypage`, {});
 
+// =================================   [ 대출 ]   ===========================
 // 대출 상품 리스트
 export const fetchLoanProducts = ({ type = "MORTGAGE", page = 0, size = 20 } = {}) =>
   api.get("/api/loan/products", { params: { type, page, size } });
@@ -32,6 +33,10 @@ export const fetchLoanProductDetail = (code) =>
 export const fetchLoanQuote = (code, req) =>
   api.post(`/api/loan/${encodeURIComponent(code)}/quote`, req);
 
+
+// 대출 신청 전, pin검사
+export const verifyLoanPin = (code, pin) =>
+  api.post(`/api/loan/${encodeURIComponent(code)}/pin-verify`, { pin });
 
 /** 신청 생성: POST /api/loan/:code/applications
  */

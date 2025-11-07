@@ -4,6 +4,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ApplyLayout, ApplyGuard } from "./ApplyLayoutGuard";
 import { loadFlow, saveFlow } from "./ApplyStorage";
 import { createLoanApplication } from "../../../api/accounts";
+import Modal from "../../account/component/pinConponent/Modal";
+import { PinPadModal } from "../../account/component/pinConponent/PinPadModal";
+import api from "../../../api/axios";
 
 function pick(val, ...keys) {
   for (const k of keys) {
@@ -28,6 +31,7 @@ function normProduct(p = {}) {
 export default function ApplySubmitPage() {
   const { code } = useParams();
   const nav = useNavigate();
+  const [pinOpen, setPinOpen] = React.useState(false);    //pin검사
 
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -161,11 +165,44 @@ export default function ApplySubmitPage() {
           <button
             className={`px-4 py-2 rounded-xl text-white ${submitting ? "bg-gray-400" : "bg-blue-700 hover:bg-blue-800"}`}
             disabled={submitting}
-            onClick={onSubmit}
+            onClick={() => setPinOpen(true)}
           >
             {submitting ? "제출중…" : "신청 제출"}
           </button>
         </div>
+
+        <Modal
+          open={pinOpen}
+          close={() => !submitting && setPinOpen(false)}
+          header="거래 PIN 6자리 입력"
+        >
+          <PinPadModal
+            length={6}
+            onSubmit={async (val) => {
+              try {
+                // 1) 서버에 PIN 검증 요청
+                const { data } = await api.post(
+                  `/api/loan/${encodeURIComponent(code)}/pin-verify`,
+                  { pin: val }
+                );
+
+                if (!data?.ok) {
+                  alert("등록된 PIN과 일치하지 않습니다.");
+                  return; // 모달은 유지해서 다시 입력하게
+                }
+
+                // 2) 일치하면 모달 닫고 실제 신청 진행
+                setPinOpen(false);
+                await onSubmit(); // 기존 신청 로직 호출
+
+              } catch (e) {
+                console.error(e);
+                alert("PIN 확인 중 오류가 발생했습니다.");
+              }
+            }}
+            onCancel={() => !submitting && setPinOpen(false)}
+          />
+        </Modal>
       </ApplyLayout>
     </ApplyGuard>
   );

@@ -93,23 +93,6 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         // 신청 저장
         appRepo.save(la);
 
-        // ========== 신청내역 테이블에도 기록
-        String bankCode = safeBankCode(payout);
-        String receiveAcc = safeAccountNumber(payout);
-
-        LoanApplicationHistory hist = LoanApplicationHistory.builder()
-                .loanNo(la.getLaNo())                          // ※ 현재 스키마 제약(loanNo NOT NULL) 때문에 la_no를 넣어 추적
-                .disbId(la.getLaId())                          // 신청 식별자
-                .disbDate(la.getSubmittedAt())                 // 신청 일시
-                .amount(applAmt)                               // 신청 금액
-                .bankCode(bankCode)                            // 지급은행(가능하면)
-                .receiveAccount(receiveAcc)                    // 지급계좌(가능하면)
-                .memo("신청 접수(SUBMITTED) - 채널: " + la.getChannel())
-                .build();
-
-        // 내역테이블 저장
-        historyRepo.save(hist);
-
         return new LoanApplicationResponseDTO(
                 la.getLaId(),
                 la.getStatus(),
