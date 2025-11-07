@@ -225,6 +225,7 @@ function App() {
         {/* 공과금페이지 */}
         <Route path="/bills" element={<BillsLanding />} />
 
+<<<<<<< HEAD
         {/* ✅ 현물(Spot) 라우팅 */}
         <Route path="/spot" element={
           <ProtectedRoute>
@@ -256,18 +257,15 @@ function App() {
             <SpotPriceHistoryPage />
           </ProtectedRoute>
         } />
+=======
+        {/* 관리자페이지 */}
+        <Route path="/admin" element={<AdminPage/>} />
+>>>>>>> origin/dev
 
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={
           <ProtectedRoute>
             <MyPage />
-          </ProtectedRoute>
-        } />
-
-        {/* 관리자페이지 진입 */}
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            <AdminPage />
           </ProtectedRoute>
         } />
 

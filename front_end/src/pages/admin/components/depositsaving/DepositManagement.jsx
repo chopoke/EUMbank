@@ -27,7 +27,7 @@ export default function DepositManagement() {
                         onClick={() => setMainTab('subscribed')}
                         className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${
                             mainTab === 'subscribed'
-                                ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md'
+                                ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-md'
                                 : 'text-gray-600 hover:bg-gray-100'
                         }`}
                     >

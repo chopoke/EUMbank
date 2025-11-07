@@ -204,6 +204,7 @@ const SavingSubscription = () => {
 
                     {/* 계산기 박스 */}
                     <CalculatorBox
+                        type={'saving'}
                         amount={amount}
                         setAmount={setAmount}
                         term={term}

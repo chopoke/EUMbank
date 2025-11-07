@@ -1,4 +1,5 @@
 import { formatDepositAccount } from '../../utils/formatUtils';
+import {useEffect} from "react";
 
 const AccountInfoSection = ({
     linkedAccount,
@@ -31,6 +32,17 @@ const AccountInfoSection = ({
         setLinkedAccount(selectedAccount);
     };
 
+    // 난수 생성
+    useEffect(() => {
+        const part1 = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+        const part2 = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+        const randomAccount = `220-${part1}-${part2}`;
+
+        // state에 생성된 난수 저장
+        setDepositAccount(randomAccount);
+
+    }, []);
+
     return (
         <section className="info-section">
             <h3>계좌 정보</h3>
@@ -58,6 +70,7 @@ const AccountInfoSection = ({
                         id="depositAccount"
                         value={depositAccount}
                         onChange={handleDepositAccountChange}
+                        readOnly
                         placeholder="220-XXX-XXXXXX 입력해주세요."
                         autoComplete="off"
                         style={{ width: '100%' }}

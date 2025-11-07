@@ -33,6 +33,7 @@ export default function MyProductsManagement({ activeType }) {
         try {
             if (activeType === '예금') {
                 const data = await getMyDeposits();
+
                 setMyDeposits(data);
             } else {
                 const data = await getMyInstallments();
@@ -259,8 +260,8 @@ export default function MyProductsManagement({ activeType }) {
                             <p className="text-sm text-gray-600">전체</p>
                             <p className="text-2xl font-bold text-gray-900 mt-1">{myDeposits.length}건</p>
                         </div>
-                        <div className={`p-3 rounded-full ${activeType === '예금' ? 'bg-red-100' : 'bg-blue-100'}`}>
-                            <i className={`ri-bank-line text-2xl ${activeType === '예금' ? 'text-red-600' : 'text-blue-600'}`}></i>
+                        <div className={`p-3 rounded-full ${activeType === '예금' ? 'bg-indigo-100' : 'bg-blue-100'}`}>
+                            <i className={`ri-bank-line text-2xl ${activeType === '예금' ? 'text-indigo-600' : 'text-blue-600'}`}></i>
                         </div>
                     </div>
                 </div>
@@ -329,7 +330,7 @@ export default function MyProductsManagement({ activeType }) {
                                 <th className="text-left py-3 px-4 font-medium text-gray-500">금리</th>
                                 <th className="text-left py-3 px-4 font-medium text-gray-500">가입일</th>
                                 <th className="text-left py-3 px-4 font-medium text-gray-500">만기일</th>
-                                <th className="text-left py-3 px-4 font-medium text-gray-500">상태</th>
+                                <th className="w-[80px] text-left py-3 px-4 font-medium text-gray-500">상태</th>
                                 <th className="text-left py-3 px-4 font-medium text-gray-500">상태 변경</th>
                                 <th className="text-left py-3 px-4 font-medium text-gray-500">관리</th>
                             </tr>

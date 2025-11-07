@@ -34,7 +34,7 @@ const ChatBotModal = ({ isOpen, onClose, buttonPosition }) => {
     useEffect(() => {
         const welcomeMessage = {
             role: 'assistant',
-            content: '안녕하세요! 🏦 eum_bank 상담 챗봇입니다.\n예금, 적금 상품에 대해 무엇이든 물어보세요!',
+            content: '안녕하세요! 🏦 이음은행 상담 챗봇입니다.\n예금, 적금 상품에 대해 무엇이든 물어보세요!',
             timestamp: new Date().toISOString(),
         };
         setMessages([welcomeMessage]);
@@ -169,7 +169,7 @@ const ChatBotModal = ({ isOpen, onClose, buttonPosition }) => {
                     <div className="header-title">
                         <span className="bank-logo">🏦</span>
                         <div>
-                            <h3>eum_bank 상담봇</h3>
+                            <h3>이음은행 상담봇</h3>
                             <p className="header-subtitle">예금·적금 상품 문의</p>
                         </div>
                     </div>

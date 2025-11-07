@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -49,7 +48,7 @@ public class ProductInstallmentList {
     private Long ipMaxMonthlyAmount;
 
     @Column(name = "ip_early_termination_rate", precision = 5, scale = 2)
-    private BigDecimal ipEarlyTerminationRate;
+    private String ipEarlyTerminationRate;
 
     @Column(name = "ip_interest_payment_type", length = 20)
     private String ipInterestPaymentType;

@@ -122,8 +122,8 @@ export default function ProductCatalogManagement({ activeType }) {
                             <p className="text-sm text-gray-600">전체 {activeType} 상품</p>
                             <p className="text-2xl font-bold text-gray-900 mt-1">{products.length}개</p>
                         </div>
-                        <div className={`p-3 rounded-full ${activeType === '예금' ? 'bg-red-100' : 'bg-blue-100'}`}>
-                            <i className={`ri-bank-line text-2xl ${activeType === '예금' ? 'text-red-600' : 'text-blue-600'}`}></i>
+                        <div className={`p-3 rounded-full ${activeType === '예금' ? 'bg-indigo-100' : 'bg-blue-100'}`}>
+                            <i className={`ri-bank-line text-2xl ${activeType === '예금' ? 'text-indigo-600' : 'text-blue-600'}`}></i>
                         </div>
                     </div>
                 </div>
@@ -164,7 +164,7 @@ export default function ProductCatalogManagement({ activeType }) {
                         <table className="w-full">
                             <thead>
                             <tr className="border-b border-gray-200">
-                                <th className="text-left py-3 px-4 font-medium text-gray-500">상품명</th>
+                                <th className="w-[440px] text-left py-3 px-4 font-medium text-gray-500">상품명</th>
                                 <th className="text-left py-3 px-4 font-medium text-gray-500">금리</th>
                                 <th className="text-left py-3 px-4 font-medium text-gray-500">금액범위</th>
                                 <th className="text-left py-3 px-4 font-medium text-gray-500">기간</th>

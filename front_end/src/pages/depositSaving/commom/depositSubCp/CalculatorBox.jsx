@@ -4,7 +4,8 @@ import { useMemo } from 'react';
 
 // 계산식 작성하는 컴포넌트
 
-const CalculatorBox = ({ 
+const CalculatorBox = ({
+    type,
     amount, 
     setAmount, 
     term, 
@@ -75,7 +76,17 @@ const CalculatorBox = ({
                 <div className="result-item"><span>세전 이자</span> <span>{formatWon(calculatedResult.interest)}원</span></div>
                 <div className="result-item tax"><span>세금(15.4%)</span> <span>- {formatWon(calculatedResult.tax)}원</span></div>
                 <hr />
-                <div className="result-item total"><span>만기 예상 수령액</span><strong>{formatWon(calculatedResult.total * term)}원</strong></div>
+                {type === 'deposit' ? (
+                    <div className="result-item total">
+                        <span>만기 예상 수령액</span>
+                        <strong>{formatWon(calculatedResult.total)}원</strong>
+                    </div>
+                ) : (
+                    <div className="result-item total">
+                        <span>만기 예상 수령액</span>
+                        <strong>{formatWon(calculatedResult.total * term)}원</strong>
+                    </div>
+                )}
             </div>
 
             {/* 최종 동의 및 가입 버튼 */}
