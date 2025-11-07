@@ -26,28 +26,32 @@ public class AssetAnalysisController {
 
     /**
      * 자산 분석 전체 데이터 조회
-     * GET /api/asset/analysis?period=WEEKLY&count=4
+     * GET /api/asset/analysis?period=WEEKLY&count=4&chartPeriod=MONTHLY&chartCount=4
      * 
      * @param customer 현재 로그인한 고객 정보
      * @param period 비교 기간 (DAILY, WEEKLY, MONTHLY) - 기본값: WEEKLY
      * @param count 비교 개수 (일간: 1-10, 주간: 1-5, 월간: 1-6) - 기본값: period별 기본값
+     * @param chartPeriod 차트 기간 (MINUTELY, HOURLY, DAILY, WEEKLY, MONTHLY) - 기본값: MONTHLY
+     * @param chartCount 차트 개수 - 기본값: 4
      * @return AssetAnalysisResponse 자산 분석 전체 응답
      */
     @GetMapping("/analysis")
     public ResponseEntity<?> getAssetAnalysis(
             @AuthenticationPrincipal Customer customer,
             @RequestParam(required = false, defaultValue = "WEEKLY") String period,
-            @RequestParam(required = false) Integer count) {
+            @RequestParam(required = false) Integer count,
+            @RequestParam(required = false, defaultValue = "MONTHLY") String chartPeriod,
+            @RequestParam(required = false, defaultValue = "4") Integer chartCount) {
         try {
             if (customer == null) {
                 return ResponseEntity.status(401).body("로그인이 필요합니다.");
             }
 
-            log.info("자산 분석 조회: customerNo={}, userId={}, period={}, count={}", 
-                    customer.getCustomerNo(), customer.getUserId(), period, count);
+            log.info("자산 분석 조회: customerNo={}, userId={}, period={}, count={}, chartPeriod={}, chartCount={}", 
+                    customer.getCustomerNo(), customer.getUserId(), period, count, chartPeriod, chartCount);
 
             AssetAnalysisResponse response = assetAnalysisService.getAssetAnalysis(
-                    customer.getCustomerNo(), period, count);
+                    customer.getCustomerNo(), period, count, chartPeriod, chartCount);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {

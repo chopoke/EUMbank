@@ -16,7 +16,6 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -221,7 +220,8 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
         // 각 주의 시작일과 종료일을 계산하여 주차별로 그룹핑
         List<WeeklyDeltaDto> result = new java.util.ArrayList<>();
         
-        for (int weekIndex = 0; weekIndex < weeks; weekIndex++) {
+        // 오래된 주부터 최근 주 순서로 리스트에 추가 (차트에서 왼쪽에서 오른쪽으로 시간 순서)
+        for (int weekIndex = weeks - 1; weekIndex >= 0; weekIndex--) {
             // 각 주의 시작일과 종료일 계산
             // 주차는 역순으로 계산 (0주차 = 현재 주, 1주차 = 지난 주, ...)
             // 각 주는 월요일 00:00:00 ~ 일요일 23:59:59
@@ -266,7 +266,8 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
 
             // 증감액 계산 (천원 단위)
             BigDecimal delta = in.subtract(out).divide(BigDecimal.valueOf(1000), 0, RoundingMode.DOWN);
-            String weekLabel = String.format("%d주", weekIndex + 1);
+            // 역순으로 정렬했으므로 라벨도 역순으로 (가장 오래된 주가 1주)
+            String weekLabel = String.format("%d주", weeks - weekIndex);
 
             result.add(WeeklyDeltaDto.builder()
                     .weekLabel(weekLabel)
@@ -297,7 +298,9 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
 
         List<WeeklyDeltaDto> result = new java.util.ArrayList<>();
         
-        for (int dayIndex = 0; dayIndex < days; dayIndex++) {
+        // 최근 날짜부터 역순으로 (오래된 날짜부터 최근 날짜 순서로 리스트에 추가)
+        // 차트에서는 왼쪽에서 오른쪽으로 시간 순서대로 표시되므로 역순으로 정렬
+        for (int dayIndex = days - 1; dayIndex >= 0; dayIndex--) {
             // 각 일의 시작일과 종료일 계산 (00:00:00 ~ 23:59:59)
             LocalDateTime dayStart = now.minusDays(dayIndex).withHour(0).withMinute(0).withSecond(0).withNano(0);
             LocalDateTime dayEnd = now.minusDays(dayIndex).withHour(23).withMinute(59).withSecond(59);
@@ -325,7 +328,7 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
             // 증감액 계산 (천원 단위)
             BigDecimal delta = in.subtract(out).divide(BigDecimal.valueOf(1000), 0, RoundingMode.DOWN);
             
-            // 날짜 라벨 (예: "10/15", "10/14")
+            // 날짜 라벨 (예: "11/1", "11/2")
             String dayLabel = dayStart.format(java.time.format.DateTimeFormatter.ofPattern("M/d", Locale.KOREAN));
 
             result.add(WeeklyDeltaDto.builder()
@@ -357,7 +360,8 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
 
         List<WeeklyDeltaDto> result = new java.util.ArrayList<>();
         
-        for (int monthIndex = 0; monthIndex < months; monthIndex++) {
+        // 오래된 월부터 최근 월 순서로 리스트에 추가 (차트에서 왼쪽에서 오른쪽으로 시간 순서)
+        for (int monthIndex = months - 1; monthIndex >= 0; monthIndex--) {
             // 각 월의 시작일과 종료일 계산
             LocalDateTime monthEnd;
             LocalDateTime monthStart;
@@ -409,10 +413,9 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
     }
 
     @Override
-    public List<MonthlyTrendDto> getMonthlyTrends(Integer customerNo, int months) {
+    public List<WeeklyDeltaDto> getHourlyDeltas(Integer customerNo, int hours) {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startDate = now.minusMonths(months);
-
+        
         // 해당 고객의 모든 계좌번호 조회
         List<Integer> accountNos = queryFactory
                 .select(account.aNo)
@@ -427,50 +430,221 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
             return List.of();
         }
 
-        // 월별 적금 납입 금액 (만원 단위)
-        List<Tuple> monthlyData = queryFactory
-                .select(
-                        transferHistory.transferAt.year(),
-                        transferHistory.transferAt.month(),
-                        transferHistory.accountIn.sum()
-                )
-                .from(transferHistory)
-                .join(account).on(transferHistory.accountNo.eq(account.aNo))
+        List<WeeklyDeltaDto> result = new java.util.ArrayList<>();
+        
+        // 오래된 시간부터 최근 시간 순서로 리스트에 추가
+        for (int hourIndex = hours - 1; hourIndex >= 0; hourIndex--) {
+            // 각 시간의 시작과 종료 계산 (00분 00초 ~ 59분 59초)
+            LocalDateTime hourStart = now.minusHours(hourIndex).withMinute(0).withSecond(0).withNano(0);
+            LocalDateTime hourEnd = now.minusHours(hourIndex).withMinute(59).withSecond(59).withNano(999999999);
+
+            // 해당 시간의 입출금 합계 조회
+            Tuple hourData = queryFactory
+                    .select(
+                            transferHistory.accountIn.sum(),
+                            transferHistory.accountOut.sum()
+                    )
+                    .from(transferHistory)
+                    .where(
+                            transferHistory.accountNo.in(accountNos)
+                                    .and(transferHistory.transferAt.between(hourStart, hourEnd))
+                    )
+                    .fetchOne();
+
+            BigDecimal in = hourData != null && hourData.get(transferHistory.accountIn.sum()) != null
+                    ? hourData.get(transferHistory.accountIn.sum())
+                    : BigDecimal.ZERO;
+            BigDecimal out = hourData != null && hourData.get(transferHistory.accountOut.sum()) != null
+                    ? hourData.get(transferHistory.accountOut.sum())
+                    : BigDecimal.ZERO;
+
+            // 증감액 계산 (천원 단위)
+            BigDecimal delta = in.subtract(out).divide(BigDecimal.valueOf(1000), 0, RoundingMode.DOWN);
+            
+            // 시간 라벨 (예: "14시", "15시")
+            String hourLabel = hourStart.format(java.time.format.DateTimeFormatter.ofPattern("H시", Locale.KOREAN));
+
+            result.add(WeeklyDeltaDto.builder()
+                    .weekLabel(hourLabel)
+                    .deltaAmount(delta)
+                    .build());
+        }
+
+        return result;
+    }
+
+    @Override
+    public List<WeeklyDeltaDto> getMinutelyDeltas(Integer customerNo, int minutes) {
+        LocalDateTime now = LocalDateTime.now();
+        
+        // 해당 고객의 모든 계좌번호 조회
+        List<Integer> accountNos = queryFactory
+                .select(account.aNo)
+                .from(account)
                 .where(
-                        transferHistory.accountNo.in(accountNos)
-                                .and(transferHistory.transferAt.after(startDate))
-                                .and(account.accountType.in("INSTALLMENT", "DEPOSIT"))
+                        account.cNo.eq(customerNo)
+                                .and(account.status.eq("ACTIVE"))
                 )
-                .groupBy(
-                        transferHistory.transferAt.year(),
-                        transferHistory.transferAt.month()
-                )
-                .orderBy(
-                        transferHistory.transferAt.year().desc(),
-                        transferHistory.transferAt.month().desc()
-                )
-                .limit(months)
                 .fetch();
 
-        return monthlyData.stream()
-                .map(tuple -> {
-                    Integer year = tuple.get(transferHistory.transferAt.year());
-                    Integer month = tuple.get(transferHistory.transferAt.month());
-                    BigDecimal saving = tuple.get(transferHistory.accountIn.sum()) != null
-                            ? tuple.get(transferHistory.accountIn.sum()).divide(BigDecimal.valueOf(10000), 0, RoundingMode.DOWN)
-                            : BigDecimal.ZERO;
+        if (accountNos.isEmpty()) {
+            return List.of();
+        }
 
-                    String monthLabel = LocalDate.of(year, month, 1)
-                            .format(java.time.format.DateTimeFormatter.ofPattern("M월", Locale.KOREAN));
+        List<WeeklyDeltaDto> result = new java.util.ArrayList<>();
+        
+        // 오래된 분부터 최근 분 순서로 리스트에 추가
+        for (int minuteIndex = minutes - 1; minuteIndex >= 0; minuteIndex--) {
+            // 각 분의 시작과 종료 계산 (00초 ~ 59초)
+            LocalDateTime minuteStart = now.minusMinutes(minuteIndex).withSecond(0).withNano(0);
+            LocalDateTime minuteEnd = now.minusMinutes(minuteIndex).withSecond(59).withNano(999999999);
 
-                    return MonthlyTrendDto.builder()
-                            .month(monthLabel)
-                            .savingAmount(saving)
-                            .investmentAmount(BigDecimal.ZERO) // 투자는 추후 구현
-                            .netAssetChange(BigDecimal.ZERO) // 순자산 변화는 추후 구현
-                            .build();
-                })
-                .toList();
+            // 해당 분의 입출금 합계 조회
+            Tuple minuteData = queryFactory
+                    .select(
+                            transferHistory.accountIn.sum(),
+                            transferHistory.accountOut.sum()
+                    )
+                    .from(transferHistory)
+                    .where(
+                            transferHistory.accountNo.in(accountNos)
+                                    .and(transferHistory.transferAt.between(minuteStart, minuteEnd))
+                    )
+                    .fetchOne();
+
+            BigDecimal in = minuteData != null && minuteData.get(transferHistory.accountIn.sum()) != null
+                    ? minuteData.get(transferHistory.accountIn.sum())
+                    : BigDecimal.ZERO;
+            BigDecimal out = minuteData != null && minuteData.get(transferHistory.accountOut.sum()) != null
+                    ? minuteData.get(transferHistory.accountOut.sum())
+                    : BigDecimal.ZERO;
+
+            // 증감액 계산 (천원 단위)
+            BigDecimal delta = in.subtract(out).divide(BigDecimal.valueOf(1000), 0, RoundingMode.DOWN);
+            
+            // 분 라벨 (예: "14:30", "14:31")
+            String minuteLabel = minuteStart.format(java.time.format.DateTimeFormatter.ofPattern("H:mm", Locale.KOREAN));
+
+            result.add(WeeklyDeltaDto.builder()
+                    .weekLabel(minuteLabel)
+                    .deltaAmount(delta)
+                    .build());
+        }
+
+        return result;
+    }
+
+    @Override
+    public List<MonthlyTrendDto> getTrendsByPeriod(Integer customerNo, String period, int count) {
+        LocalDateTime now = LocalDateTime.now();
+        
+        // 해당 고객의 모든 계좌번호 조회
+        List<Integer> accountNos = queryFactory
+                .select(account.aNo)
+                .from(account)
+                .where(
+                        account.cNo.eq(customerNo)
+                                .and(account.status.eq("ACTIVE"))
+                )
+                .fetch();
+
+        if (accountNos.isEmpty()) {
+            return List.of();
+        }
+
+        List<MonthlyTrendDto> result = new java.util.ArrayList<>();
+        
+        // period에 따라 기간별로 이체 내역 집계
+        for (int index = count - 1; index >= 0; index--) {
+            LocalDateTime periodStart;
+            LocalDateTime periodEnd;
+            String periodLabel;
+            
+            switch (period) {
+                case "MINUTELY":
+                    periodStart = now.minusMinutes(index).withSecond(0).withNano(0);
+                    periodEnd = now.minusMinutes(index).withSecond(59).withNano(999999999);
+                    periodLabel = periodStart.format(java.time.format.DateTimeFormatter.ofPattern("H:mm", Locale.KOREAN));
+                    break;
+                case "HOURLY":
+                    periodStart = now.minusHours(index).withMinute(0).withSecond(0).withNano(0);
+                    periodEnd = now.minusHours(index).withMinute(59).withSecond(59).withNano(999999999);
+                    periodLabel = periodStart.format(java.time.format.DateTimeFormatter.ofPattern("H시", Locale.KOREAN));
+                    break;
+                case "DAILY":
+                    periodStart = now.minusDays(index).withHour(0).withMinute(0).withSecond(0).withNano(0);
+                    periodEnd = now.minusDays(index).withHour(23).withMinute(59).withSecond(59).withNano(999999999);
+                    periodLabel = periodStart.format(java.time.format.DateTimeFormatter.ofPattern("M/d", Locale.KOREAN));
+                    break;
+                case "WEEKLY":
+                    if (index == 0) {
+                        java.time.DayOfWeek currentDayOfWeek = now.getDayOfWeek();
+                        int daysFromMonday = currentDayOfWeek.getValue() - 1;
+                        periodStart = now.minusDays(daysFromMonday).withHour(0).withMinute(0).withSecond(0).withNano(0);
+                        periodEnd = now;
+                    } else {
+                        LocalDateTime targetWeekEnd = now.minusWeeks(index);
+                        java.time.DayOfWeek dayOfWeek = targetWeekEnd.getDayOfWeek();
+                        int daysFromMonday = dayOfWeek.getValue() - 1;
+                        periodStart = targetWeekEnd.minusDays(daysFromMonday).withHour(0).withMinute(0).withSecond(0).withNano(0);
+                        periodEnd = periodStart.plusDays(6).withHour(23).withMinute(59).withSecond(59).withNano(999999999);
+                    }
+                    periodLabel = periodStart.format(java.time.format.DateTimeFormatter.ofPattern("M/d")) + "주";
+                    break;
+                case "MONTHLY":
+                default:
+                    if (index == 0) {
+                        periodStart = now.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+                        periodEnd = now;
+                    } else {
+                        LocalDateTime targetMonth = now.minusMonths(index);
+                        periodStart = targetMonth.withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+                        periodEnd = periodStart.plusMonths(1).minusDays(1).withHour(23).withMinute(59).withSecond(59).withNano(999999999);
+                    }
+                    periodLabel = periodStart.format(java.time.format.DateTimeFormatter.ofPattern("M월", Locale.KOREAN));
+                    break;
+            }
+
+            // 해당 기간의 입금(수익)과 출금(소비) 집계
+            Tuple periodData = queryFactory
+                    .select(
+                            transferHistory.accountIn.sum(),
+                            transferHistory.accountOut.sum()
+                    )
+                    .from(transferHistory)
+                    .where(
+                            transferHistory.accountNo.in(accountNos)
+                                    .and(transferHistory.transferAt.between(periodStart, periodEnd))
+                    )
+                    .fetchOne();
+
+            BigDecimal income = periodData != null && periodData.get(transferHistory.accountIn.sum()) != null
+                    ? periodData.get(transferHistory.accountIn.sum())
+                    : BigDecimal.ZERO;
+            BigDecimal expense = periodData != null && periodData.get(transferHistory.accountOut.sum()) != null
+                    ? periodData.get(transferHistory.accountOut.sum())
+                    : BigDecimal.ZERO;
+
+            // 만원 단위로 변환
+            BigDecimal incomeInMan = income.divide(BigDecimal.valueOf(10000), 0, RoundingMode.DOWN);
+            BigDecimal expenseInMan = expense.divide(BigDecimal.valueOf(10000), 0, RoundingMode.DOWN);
+            BigDecimal net = incomeInMan.subtract(expenseInMan);
+
+            result.add(MonthlyTrendDto.builder()
+                    .month(periodLabel)
+                    .income(incomeInMan)
+                    .expense(expenseInMan)
+                    .net(net)
+                    .build());
+        }
+
+        return result;
+    }
+
+    @Override
+    public List<MonthlyTrendDto> getMonthlyTrends(Integer customerNo, int months) {
+        // getTrendsByPeriod를 사용하여 일관성 유지
+        return getTrendsByPeriod(customerNo, "MONTHLY", months);
     }
 
     @Override
@@ -490,33 +664,42 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
         if (accountNos.isEmpty()) {
             return MonthlyTrendDto.builder()
                     .month("30일")
-                    .savingAmount(BigDecimal.ZERO)
-                    .investmentAmount(BigDecimal.ZERO)
-                    .netAssetChange(BigDecimal.ZERO)
+                    .income(BigDecimal.ZERO)
+                    .expense(BigDecimal.ZERO)
+                    .net(BigDecimal.ZERO)
                     .build();
         }
 
-        // 30일간 적금 납입 금액
-        BigDecimal savingTotal = queryFactory
-                .select(transferHistory.accountIn.sum())
+        // 30일간 입금(수익)과 출금(소비) 집계
+        Tuple summaryData = queryFactory
+                .select(
+                        transferHistory.accountIn.sum(),
+                        transferHistory.accountOut.sum()
+                )
                 .from(transferHistory)
-                .join(account).on(transferHistory.accountNo.eq(account.aNo))
                 .where(
                         transferHistory.accountNo.in(accountNos)
                                 .and(transferHistory.transferAt.after(startDate))
-                                .and(account.accountType.in("INSTALLMENT", "DEPOSIT"))
                 )
                 .fetchOne();
 
-        if (savingTotal == null) {
-            savingTotal = BigDecimal.ZERO;
-        }
+        BigDecimal incomeTotal = summaryData != null && summaryData.get(transferHistory.accountIn.sum()) != null
+                ? summaryData.get(transferHistory.accountIn.sum())
+                : BigDecimal.ZERO;
+        BigDecimal expenseTotal = summaryData != null && summaryData.get(transferHistory.accountOut.sum()) != null
+                ? summaryData.get(transferHistory.accountOut.sum())
+                : BigDecimal.ZERO;
+
+        // 만원 단위로 변환
+        BigDecimal incomeInMan = incomeTotal.divide(BigDecimal.valueOf(10000), 0, RoundingMode.DOWN);
+        BigDecimal expenseInMan = expenseTotal.divide(BigDecimal.valueOf(10000), 0, RoundingMode.DOWN);
+        BigDecimal net = incomeInMan.subtract(expenseInMan);
 
         return MonthlyTrendDto.builder()
                 .month("30일")
-                .savingAmount(savingTotal.divide(BigDecimal.valueOf(10000), 0, RoundingMode.DOWN))
-                .investmentAmount(BigDecimal.ZERO)
-                .netAssetChange(BigDecimal.ZERO)
+                .income(incomeInMan)
+                .expense(expenseInMan)
+                .net(net)
                 .build();
     }
 

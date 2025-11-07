@@ -15,9 +15,11 @@ public interface AssetAnalysisService {
      * @param customerNo 고객번호
      * @param period 비교 기간 (DAILY, WEEKLY, MONTHLY)
      * @param count 비교 개수 (일간: 1-10, 주간: 1-5, 월간: 1-6)
+     * @param chartPeriod 차트 기간 (MINUTELY, HOURLY, DAILY, WEEKLY, MONTHLY)
+     * @param chartCount 차트 개수
      * @return AssetAnalysisResponse 자산 분석 전체 응답
      */
-    AssetAnalysisResponse getAssetAnalysis(Integer customerNo, String period, Integer count);
+    AssetAnalysisResponse getAssetAnalysis(Integer customerNo, String period, Integer count, String chartPeriod, Integer chartCount);
 
     /**
      * 자산 목표 설정 또는 수정

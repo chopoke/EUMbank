@@ -10,11 +10,17 @@ import api from './axios';
  * @param {number} count - 비교 개수 (일간: 1-10, 주간: 1-5, 월간: 1-6) - 기본값: period별 기본값
  * @returns {Promise} AssetAnalysisResponse
  */
-export const getAssetAnalysis = async (period = 'WEEKLY', count = null) => {
+export const getAssetAnalysis = async (period = 'WEEKLY', count = null, chartPeriod = null, chartCount = null) => {
   try {
     const params = { period };
     if (count !== null) {
       params.count = count;
+    }
+    if (chartPeriod !== null) {
+      params.chartPeriod = chartPeriod;
+    }
+    if (chartCount !== null) {
+      params.chartCount = chartCount;
     }
     const response = await api.get('/api/asset/analysis', { params });
     return response.data;

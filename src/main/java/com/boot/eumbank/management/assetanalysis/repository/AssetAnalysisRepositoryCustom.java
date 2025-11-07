@@ -38,7 +38,25 @@ public interface AssetAnalysisRepositoryCustom {
     List<WeeklyDeltaDto> getMonthlyDeltas(Integer customerNo, int months);
 
     /**
-     * 최근 4개월간 월별 추이 (적금, 투자, 순자산 변화)
+     * 최근 N시간간 시간별 증감 계산
+     */
+    List<WeeklyDeltaDto> getHourlyDeltas(Integer customerNo, int hours);
+
+    /**
+     * 최근 N분간 분별 증감 계산
+     */
+    List<WeeklyDeltaDto> getMinutelyDeltas(Integer customerNo, int minutes);
+
+    /**
+     * 기간별 추이 조회 (적금, 투자, 순자산 변화)
+     * @param customerNo 고객번호
+     * @param period 기간 (MINUTELY, HOURLY, DAILY, WEEKLY, MONTHLY)
+     * @param count 개수
+     */
+    List<MonthlyTrendDto> getTrendsByPeriod(Integer customerNo, String period, int count);
+
+    /**
+     * 최근 N개월간 월별 추이 (적금, 투자, 순자산 변화)
      */
     List<MonthlyTrendDto> getMonthlyTrends(Integer customerNo, int months);
 

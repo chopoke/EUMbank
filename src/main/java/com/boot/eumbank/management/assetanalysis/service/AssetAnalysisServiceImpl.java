@@ -27,19 +27,20 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
 
     @Override
     @Transactional(readOnly = true)
-    public AssetAnalysisResponse getAssetAnalysis(Integer customerNo, String period, Integer count) {
+    public AssetAnalysisResponse getAssetAnalysis(Integer customerNo, String period, Integer count, String chartPeriod, Integer chartCount) {
         // 기본값 설정
         if (period == null || period.isEmpty()) {
             period = "WEEKLY";
         }
         if (count == null) {
-            // period별 기본값
-            switch (period) {
-                case "DAILY": count = 7; break;
-                case "WEEKLY": count = 4; break;
-                case "MONTHLY": count = 6; break;
-                default: count = 4;
-            }
+            // 모든 기간에서 기본값 4로 통일
+            count = 4;
+        }
+        
+        // 최대값 제한 (카드 크기 고려)
+        int maxCount = "DAILY".equals(period) ? 7 : 5; // 일별만 7일, 나머지는 5개
+        if (count > maxCount) {
+            count = maxCount;
         }
         
         log.info("자산 분석 시작: customerNo={}, period={}, count={}", customerNo, period, count);
@@ -53,8 +54,46 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
         // 3. 자산 증감 상태 (period와 count에 따라)
         AssetDeltaSummaryDto deltaSummaryDto = calculateDeltaSummary(customerNo, period, count);
 
-        // 4. 월별 변화 추이
-        List<MonthlyTrendDto> monthlyTrends = analysisRepository.getMonthlyTrends(customerNo, 4);
+        // 4. 차트 변화 추이 (chartPeriod와 chartCount에 따라)
+        if (chartPeriod == null || chartPeriod.isEmpty()) {
+            chartPeriod = "MONTHLY";
+        }
+        if (chartCount == null) {
+            chartCount = 4;
+        }
+        // 차트는 드래그/줌으로 탐색하므로 충분한 데이터를 가져옴
+        int defaultChartCount = switch (chartPeriod) {
+            case "MINUTELY" -> 1440; // 최대 24시간 (1440분)
+            case "HOURLY" -> 720;    // 최대 30일 (720시간)
+            case "DAILY" -> 365;     // 최대 1년 (365일)
+            case "WEEKLY" -> 104;    // 최대 2년 (104주)
+            case "MONTHLY" -> 24;    // 최대 2년 (24개월)
+            default -> 12;
+        };
+        // chartCount가 지정되지 않았거나 너무 크면 기본값 사용
+        if (chartCount == null || chartCount > defaultChartCount) {
+            chartCount = defaultChartCount;
+        }
+        List<MonthlyTrendDto> monthlyTrends = analysisRepository.getTrendsByPeriod(customerNo, chartPeriod, chartCount);
+
+        // 요청한 개수보다 많다면 최근 chartCount개만 유지
+        if (monthlyTrends.size() > chartCount) {
+            monthlyTrends = monthlyTrends.subList(monthlyTrends.size() - chartCount, monthlyTrends.size());
+        }
+
+        // 각 기간의 순자산 계산 (현재 순자산에서 역순으로 순변동 누적)
+        BigDecimal currentNetWorth = analysisRepository.calculateCurrentNetWorth(customerNo);
+        for (int i = monthlyTrends.size() - 1; i >= 0; i--) {
+            MonthlyTrendDto trend = monthlyTrends.get(i);
+            // 순변동을 원 단위로 변환 (만원 -> 원)
+            BigDecimal netChange = trend.getNet() != null 
+                ? trend.getNet().multiply(BigDecimal.valueOf(10000))
+                : BigDecimal.ZERO;
+            // 현재 순자산에서 순변동을 빼서 해당 기간 말 순자산 계산
+            trend.setNetWorth(currentNetWorth);
+            // 다음 기간을 위해 순변동 차감
+            currentNetWorth = currentNetWorth.subtract(netChange);
+        }
 
         return AssetAnalysisResponse.builder()
                 .goal(goalDto)
@@ -183,8 +222,8 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
                 .weeklyDeltas(weeklyDeltas)
                 .totalDelta30Days(totalDelta.multiply(BigDecimal.valueOf(1000))) // 천원 단위를 원 단위로 변환
                 .trendDescription(trendDescription)
-                .savingTotal(last30Days.getSavingAmount())
-                .investmentTotal(last30Days.getInvestmentAmount())
+                .incomeTotal(last30Days.getIncome())
+                .expenseTotal(last30Days.getExpense())
                 .build();
     }
 

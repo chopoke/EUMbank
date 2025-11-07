@@ -19,8 +19,8 @@ public class AssetDeltaSummaryDto {
     private List<WeeklyDeltaDto> weeklyDeltas;
     private BigDecimal totalDelta30Days;
     private String trendDescription;
-    private BigDecimal savingTotal;
-    private BigDecimal investmentTotal;
+    private BigDecimal incomeTotal;      // 30일간 총 수익 (입금액, 만원 단위)
+    private BigDecimal expenseTotal;     // 30일간 총 소비 (출금액, 만원 단위)
 }
 
 

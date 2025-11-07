@@ -14,27 +14,53 @@ export default function AssetAnalysis() {
   const [submitting, setSubmitting] = useState(false);
   const [period, setPeriod] = useState("WEEKLY"); // DAILY, WEEKLY, MONTHLY
   const [count, setCount] = useState(null); // null이면 기본값 사용
+  const [chartPeriod, setChartPeriod] = useState("MONTHLY"); // 월별 변화 추이 기간: MINUTELY, HOURLY, DAILY, WEEKLY, MONTHLY
+  const [chartDataTypes, setChartDataTypes] = useState({
+    income: true,    // 수익 (입금)
+    expense: true,   // 소비 (출금)
+    net: true,       // 순변동 (수익 - 소비)
+  });
+  const [chartSlice, setChartSlice] = useState(12); // 최근 N개 구간 표시
 
   // period별 기본값과 최대값
   const getDefaultCount = (period) => {
-    switch (period) {
-      case "DAILY": return 7;
-      case "WEEKLY": return 4;
-      case "MONTHLY": return 6;
-      default: return 4;
-    }
+    // 모든 기간에서 기본값 4로 통일
+    return 4;
   };
 
   const getMaxCount = (period) => {
-    // 모든 기간에서 최대 5개로 제한 (카드 크기 고려)
+    // 일별만 최대 7일, 나머지는 5개로 제한
+    if (period === "DAILY") {
+      return 7; // 1주일
+    }
     return 5;
+  };
+
+  // chartPeriod별 기본 데이터 개수 (드래그/줌으로 탐색 가능하도록 충분히 가져옴)
+  const getChartDefaultCount = (period) => {
+    switch (period) {
+      case "MINUTELY":
+        return 1440; // 최대 24시간 (1440분)
+      case "HOURLY":
+        return 720;  // 최대 30일 (720시간)
+      case "DAILY":
+        return 365;  // 최대 1년 (365일)
+      case "WEEKLY":
+        return 104;  // 최대 2년 (104주)
+      case "MONTHLY":
+        return 24;   // 최대 2년 (24개월)
+      default:
+        return 12;
+    }
   };
 
   useEffect(() => {
     const fetchAnalysis = async () => {
       try {
         setLoading(true);
-        const data = await getAssetAnalysis(period, count);
+        const defaultChartCount = getChartDefaultCount(chartPeriod);
+        const sliceCount = chartSlice || defaultChartCount;
+        const data = await getAssetAnalysis(period, count, chartPeriod, sliceCount);
         setAnalysisData(data);
       } catch (err) {
         console.error("자산 분석 조회 실패:", err);
@@ -45,7 +71,29 @@ export default function AssetAnalysis() {
     };
 
     fetchAnalysis();
-  }, [period, count]);
+  }, [period, count, chartPeriod, chartSlice]);
+
+  // 차트 기간 변경 시 데이터 다시 조회
+  useEffect(() => {
+    const fetchChartData = async () => {
+      if (!analysisData) return; // 초기 로딩 중이면 스킵
+      
+      try {
+        // 차트 기간에 따라 데이터 조회 (기존 period는 유지하고 chartPeriod만 변경)
+        const defaultChartCount = getChartDefaultCount(chartPeriod);
+        const sliceCount = chartSlice || defaultChartCount;
+        const data = await getAssetAnalysis(period, count, chartPeriod, sliceCount);
+        setAnalysisData(prev => ({
+          ...prev,
+          monthlyTrends: data.monthlyTrends, // 차트 데이터만 업데이트
+        }));
+      } catch (err) {
+        console.error("차트 데이터 조회 실패:", err);
+      }
+    };
+
+    fetchChartData();
+  }, [chartPeriod, period, count, chartSlice]);
 
   // 목표 설정 제출 핸들러
   const handleGoalSubmit = async () => {
@@ -67,7 +115,9 @@ export default function AssetAnalysis() {
       // 데이터 새로고침
       const fetchAnalysis = async () => {
         try {
-          const data = await getAssetAnalysis(period, count);
+          const defaultChartCount = getChartDefaultCount(chartPeriod);
+          const sliceCount = chartSlice || defaultChartCount;
+          const data = await getAssetAnalysis(period, count, chartPeriod, sliceCount);
           setAnalysisData(data);
         } catch (err) {
           console.error("자산 분석 조회 실패:", err);
@@ -130,12 +180,23 @@ export default function AssetAnalysis() {
   // 주차별 증감 데이터 변환 (천원 단위)
   // 데이터가 없으면 빈 배열 대신 0으로 채운 배열 사용
   const weeklyDeltas = deltaSummary?.weeklyDeltas || [];
-  const weeklyDeltaData = weeklyDeltas.length > 0 
-    ? weeklyDeltas.map(w => Number(w.deltaAmount) || 0)
-    : [0, 0, 0, 0]; // 데이터가 없으면 모두 0
-  const weeklyDeltaLabels = weeklyDeltas.length > 0
-    ? weeklyDeltas.map(w => w.weekLabel)
-    : ["1주", "2주", "3주", "4주"];
+  const maxCount = getMaxCount(period);
+  const defaultCount = getDefaultCount(period);
+  const requestedCount = count || defaultCount;
+  
+  // 요청한 개수만큼만 사용 (백엔드에서 더 많이 반환할 수 있으므로 제한)
+  const limitedDeltas = weeklyDeltas.slice(0, Math.min(requestedCount, maxCount));
+  
+  const weeklyDeltaData = limitedDeltas.length > 0 
+    ? limitedDeltas.map(w => Number(w.deltaAmount) || 0)
+    : Array(requestedCount).fill(0); // 데이터가 없으면 요청한 개수만큼 0으로 채움
+  const weeklyDeltaLabels = limitedDeltas.length > 0
+    ? limitedDeltas.map(w => w.weekLabel)
+    : Array(requestedCount).fill(0).map((_, i) => {
+        if (period === "DAILY") return `${i + 1}일`;
+        if (period === "WEEKLY") return `${i + 1}주`;
+        return `${i + 1}개월`;
+      });
 
   // 30일 증감 (원 단위로 받아서 표시)
   const totalDelta30 = deltaSummary?.totalDelta30Days 
@@ -319,12 +380,12 @@ export default function AssetAnalysis() {
           </div>
 
           {/* 월별 변화 추이 */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-base font-semibold text-gray-900">월별 변화 추이</h2>
+                <h2 className="text-base font-semibold text-gray-900">자산 변화 추이</h2>
                 <p className="text-[12px] text-gray-500">
-                  월별 순자산 변화와 적금·투자 납입 현황입니다.
+                  기간별 수익(입금)과 소비(출금) 내역입니다. 선 그래프는 해당 기간 말 순자산을 나타냅니다.
                 </p>
               </div>
               <button className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
@@ -332,22 +393,86 @@ export default function AssetAnalysis() {
               </button>
             </div>
 
+            {/* 기간 선택 및 데이터 타입 선택 */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* 기간 선택 */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600">기간:</label>
+                <select
+                  value={chartPeriod}
+                  onChange={(e) => setChartPeriod(e.target.value)}
+                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="MINUTELY">분별</option>
+                  <option value="HOURLY">시간별</option>
+                  <option value="DAILY">일별</option>
+                  <option value="WEEKLY">주간</option>
+                  <option value="MONTHLY">월간</option>
+                </select>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-600">최근 구간:</label>
+                  <select
+                    value={chartSlice}
+                    onChange={(e) => setChartSlice(Number(e.target.value))}
+                    className="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={6}>최근 6개</option>
+                    <option value={12}>최근 12개</option>
+                    <option value={24}>최근 24개</option>
+                    <option value={48}>최근 48개</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 데이터 타입 선택 */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600">표시:</label>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={chartDataTypes.income}
+                      onChange={(e) => setChartDataTypes({ ...chartDataTypes, income: e.target.checked })}
+                      className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">수익</span>
+                  </label>
+                  <label className="flex items-center gap-1 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={chartDataTypes.expense}
+                      onChange={(e) => setChartDataTypes({ ...chartDataTypes, expense: e.target.checked })}
+                      className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">소비</span>
+                  </label>
+                  <label className="flex items-center gap-1 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={chartDataTypes.net}
+                      onChange={(e) => setChartDataTypes({ ...chartDataTypes, net: e.target.checked })}
+                      className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="text-gray-700">순자산</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <CompactMonthlyChart
               data={monthlyTrends?.map(t => ({
                 m: t.month,
-                save: t.savingAmount ? Number(t.savingAmount) : 0,
-                invest: t.investmentAmount ? Number(t.investmentAmount) : 0,
-                net: t.netAssetChange ? Number(t.netAssetChange) : 0
-              })) || [
-                {m : "7월", save:350, invest:120, net:420},
-                { m: "8월",  save: 300, invest: 140, net: 360 },
-                { m: "9월",  save: 320, invest:  90, net: 280 },
-                { m: "10월", save: 330, invest: 110, net: 410 },
-              ]}
+                income: chartDataTypes.income ? (t.income ? Number(t.income) : 0) : 0,
+                expense: chartDataTypes.expense ? (t.expense ? Number(t.expense) : 0) : 0,
+                net: chartDataTypes.net ? (t.netWorth ? Number(t.netWorth) / 10000 : 0) : 0, // 순자산을 만원 단위로 변환
+              })) || []}
                height={420}
                yMode="bar"
                yUnitLabel="만"
                yTicks={4}
+               showIncome={chartDataTypes.income}
+               showExpense={chartDataTypes.expense}
+               showNet={chartDataTypes.net}
             />
             {/* <StackedBarMonthlyStatic /> */}
             {/* <PlaceholderChart label="누적 막대 + 라인 복합 차트" height="h-64" /> */}
@@ -360,15 +485,15 @@ export default function AssetAnalysis() {
                 </div>
               </div>
               <div className="rounded-md bg-gray-50 border border-gray-200 p-4">
-                <div className="text-[12px] text-gray-500">적금 납입 합계</div>
+                <div className="text-[12px] text-gray-500">30일간 총 수익</div>
                 <div className="font-semibold text-gray-900">
-                  {deltaSummary?.savingTotal ? new Intl.NumberFormat('ko-KR').format(Number(deltaSummary.savingTotal) * 10000) : 0}원
+                  {deltaSummary?.incomeTotal ? new Intl.NumberFormat('ko-KR').format(Number(deltaSummary.incomeTotal) * 10000) : 0}원
                 </div>
               </div>
               <div className="rounded-md bg-gray-50 border border-gray-200 p-4">
-                <div className="text-[12px] text-gray-500">투자 매수 금액</div>
+                <div className="text-[12px] text-gray-500">30일간 총 소비</div>
                 <div className="font-semibold text-gray-900">
-                  {deltaSummary?.investmentTotal ? new Intl.NumberFormat('ko-KR').format(Number(deltaSummary.investmentTotal) * 10000) : 0}원
+                  {deltaSummary?.expenseTotal ? new Intl.NumberFormat('ko-KR').format(Number(deltaSummary.expenseTotal) * 10000) : 0}원
                 </div>
               </div>
             </div>
