@@ -56,6 +56,7 @@ const Deposit = () => {
 
     // 최초 한번 DB에서 전체 상품 데이터 가져오기
     useEffect(() => {
+
         const fetchProducts = async () => {
             try {
                 const data = await depsoitProductList();

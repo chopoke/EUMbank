@@ -27,6 +27,7 @@ public class DepositProductService {
                 .dpMaxAmount(dto.getMaxAmount())
                 .dpMinMonths(dto.getMinMonths())
                 .dpMaxMonths(dto.getMaxMonths())
+                .dpEarlyTerminationRate(dto.getEalryTerminationRate())
                 .dpRate(dto.getRate())
                 .dpFeature(dto.getFeatures())
                 .dpButtonText(dto.getButtonText())

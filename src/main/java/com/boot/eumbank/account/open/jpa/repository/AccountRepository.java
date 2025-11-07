@@ -4,9 +4,9 @@ import com.boot.eumbank.account.open.dto.account.CustomerDTO;
 import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.account.open.entity.account.QAccount;
 import com.boot.eumbank.account.open.util.AccountIds;
-
 import com.boot.eumbank.customer.entity.QCustomer;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.StringTemplate;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -115,12 +115,23 @@ public class AccountRepository {
         logger.info("customer.getCNo() => " + customer.getCNo());
 
         qf.update(c)
-                .set(c.pinNumber, pinNumber)
+                // ▼ c.pinNumber 필드에 대한 조건부 set
+                .set(c.pinNumber, new CaseBuilder()
+                        // 1. WHEN: c.pinNumber가 NULL일 때 (존재하지 않는다면)
+                        .when(c.pinNumber.isNull().or(c.pinNumber.eq("")))
+                        // 2. THEN: 새로운 pinNumber 값으로 세팅 (업데이트)
+                        .then(pinNumber)
+                        // 3. ELSE: 그 외의 경우 (이미 존재한다면)
+                        //    c.pinNumber 자신(기존 값)으로 세팅 (업데이트 안 함)
+                        .otherwise(c.pinNumber)
+                )
+                // ▼ 나머지 필드는 항상 업데이트
                 .set(c.cGenderCd, gender)
                 .set(c.cRrnHash, rrn13FormId)
                 .set(c.cAddress, addressFromId)
                 .set(c.cZipCode, czipcode)
-                .where(c.customerNo.eq(customer.getCNo())).execute();
+                .where(c.customerNo.eq(customer.getCNo()))
+                .execute();
     }
 
 

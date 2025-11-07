@@ -102,6 +102,7 @@ public class DepositManagementQueryRepository {
                                 .concat("~")
                                 .concat(productDepositList.dpMaxMonths.stringValue())
                                 .concat("개월"),
+                        productDepositList.dpEarlyTerminationRate,
                         productDepositList.dpInterestPaymentType,
                         productDepositList.dpIsActive,
                         productDepositList.dpFeature,

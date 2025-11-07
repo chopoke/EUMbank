@@ -54,6 +54,9 @@ public class DepositServiceImpl implements DepositService {
             MultipartFile signedPdfFile) {
 
         logger.info("=== PDF 처리 시작 ===");
+        logger.info("상품명: {}", requestDto.getProductName());
+        logger.info("금액: {}", requestDto.getAmount());
+        logger.info("기간: {}", requestDto.getPeriod());
 
         try (PDDocument document = PDDocument.load(signedPdfFile.getInputStream())) {
 
@@ -86,10 +89,8 @@ public class DepositServiceImpl implements DepositService {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             Customer customer = (Customer) authentication.getPrincipal();
             ProductDto oneDepositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
-            Account oneAccount = accountQueryRepository.findAOneAccount(Math.toIntExact(requestDto.getLinkedAccountAno()));
 
             System.out.println("=== PDF 처리 시작 === one" + requestDto);
-            System.out.println("=== PDF 처리 시작 === twe" + oneAccount);
             System.out.println("=== PDF 처리 시작 === three" + customer);
             System.out.println("=== PDF 처리 시작 === four" + oneDepositProducts);
 
@@ -166,6 +167,7 @@ public class DepositServiceImpl implements DepositService {
 
                 // 적용이율
                 addText(contentStream, font, underfontSize, undervalueX, underyPosition, oneDepositProducts.getRate());
+                underyPosition -= underlineHeight;
 
                 logger.info("상품 정보 추가 완료");
                 logger.info("페이지 {}에 모든 정보 추가 완료", targetPageIndex + 1);
