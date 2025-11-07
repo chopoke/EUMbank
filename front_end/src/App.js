@@ -218,6 +218,9 @@ function App() {
         {/* 공과금페이지 */}
         <Route path="/bills" element={<BillsLanding />} />
 
+        {/* 관리자페이지 */}
+        <Route path="/admin" element={<AdminPage/>} />
+
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={
           <ProtectedRoute>
