@@ -92,6 +92,7 @@ export default function ApplyFormPage() {
     customerId: "1",
     preferredPayDay: null,      // 1~28
     preferredFirstDueDate: "",  // 'YYYY-MM-DD'
+    carType: "NEW",     // 신차 중고차
   });
 
   // ====== 초기 로드: flow/상품/계좌 ======
@@ -123,6 +124,7 @@ export default function ApplyFormPage() {
           payoutAccountNo: f.form?.payoutAccountNo || "",
           repayAccountNo:  f.form?.repayAccountNo  || "",
           customerId: f.form?.customerId || "1",
+          carType: f.form?.carType || "NEW",
         }));
 
         // 3) 상품 로드
@@ -206,9 +208,20 @@ export default function ApplyFormPage() {
   }, [opts, form.rpayType]);
 
   // ====== 타입 가시성 & 담보 필요 여부 ======
-  const loanType = String(product?.type || "");
-  const { isMortgage, isJeonse, isPersonal, isBullet } = computeVisibility(loanType, form.rpayType);
-  const needsCollateral = isMortgage || isJeonse;
+  const loanTypeRaw = String(product?.type || "");
+  const loanType = loanTypeRaw.toUpperCase();
+
+  const isMortgage =
+    loanType.includes("MORTGAGE") ||
+    loanTypeRaw.includes("담보");
+  const isJeonse =
+    loanType.includes("JEONSE") ||
+    loanTypeRaw.includes("전세");
+  const isAuto =
+    loanType.includes("AUTO") ||
+    loanTypeRaw.includes("자동차");
+  const isBullet = /만기일시/.test(String(form.rpayType));
+  const needsCollateral = isMortgage || isJeonse || isAuto;
 
   // ====== 폼 값 보정 ======
   React.useEffect(() => {
@@ -228,7 +241,11 @@ export default function ApplyFormPage() {
     if (!needsCollateral) {
       setForm((s) => ({ ...s, collateralValue: null, jeonseDeposit: null }));
     }
-  }, [allowedTerms, allowedRateTypesKo, allowedRpayTypesKo, product, needsCollateral]); // eslint-disable-line react-hooks/exhaustive-deps
+    // 자동차 아닌 경우 carType 정리
+    if (!isAuto && form.carType !== "NEW") {
+      setForm((s) => ({ ...s, carType: "NEW" }));
+    }
+  }, [allowedTerms, allowedRateTypesKo, allowedRpayTypesKo, needsCollateral,isAuto]); 
 
   // ====== 유효성 ======
   const invalidCollateral = isMortgage && (!form.collateralValue || Number(form.collateralValue) <= 0);
@@ -295,8 +312,7 @@ export default function ApplyFormPage() {
       rpayType: normalizeRpayKo(form.rpayType),
       collateralValue: needsCollateral ? form.collateralValue : null,
       jeonseDeposit:  needsCollateral ? form.jeonseDeposit  : null,
-      employer: isPersonal ? form.employer : "",
-      creditScore: isPersonal ? form.creditScore : null,
+      carType: isAuto ? (form.carType || "NEW") : undefined,      // 백엔드에 전달ㄹ
     };
 
     const next = {
@@ -407,7 +423,7 @@ export default function ApplyFormPage() {
                     </label>
 
                     {/* 담보/전세금 입력 (타입별 조건) */}
-                    {isMortgage && (
+                    {(isMortgage|| isAuto) && (
                       <label className="block text-sm md:col-span-2">
                         <span className="text-gray-600">담보가치(원)</span>
                         <NumberInput
@@ -435,6 +451,44 @@ export default function ApplyFormPage() {
                         <KoreanMoneyHint value={form.jeonseDeposit} showWon />
                         {fieldErr?.jeonseDeposit && <div className="text-xs text-red-600 mt-1">{fieldErr.jeonseDeposit}</div>}
                       </label>
+                    )}
+
+                    {/* 자동차대출 신차인지 중고차(+0.7%)인지*/}
+                    {isAuto && (
+                      <div className="block text-sm md:col-span-2">
+                        <span className="text-gray-600">차량 유형</span>
+                        <div className="mt-2 inline-flex rounded-xl border border-gray-200 overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setForm(s => ({ ...s, carType: "NEW" }))}
+                            className={
+                              "px-4 py-2 text-sm transition " +
+                              (form.carType === "NEW"
+                                ? "bg-gray-900 text-white"
+                                : "bg-white text-gray-700 hover:bg-gray-50")
+                            }
+                          >
+                            신차
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setForm(s => ({ ...s, carType: "USED" }))}
+                            className={
+                              "px-4 py-2 text-sm transition border-l border-gray-200 " +
+                              (form.carType === "USED"
+                                ? "bg-gray-900 text-white"
+                                : "bg-white text-gray-700 hover:bg-gray-50")
+                            }
+                          >
+                            중고차
+                          </button>
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          {form.carType === "USED"
+                            ? "중고차 선택 시 기준 금리에 0.7%p 가산되어 적용됩니다."
+                            : "신차 선택 시 상품 기본 금리가 적용됩니다."}
+                        </div>
+                      </div>
                     )}
                   </div>
 
@@ -489,9 +543,9 @@ export default function ApplyFormPage() {
                   </label>
                 </div>
 
-                {/* 🔵 계좌 선택: '입출금'만 전달 */}
+                {/* 계좌 선택: 입출금만 전달 */}
                 <AccountPickers
-                  accounts={eligibleAccounts}           // ✅ 핵심: 입출금 필터링된 목록만
+                  accounts={eligibleAccounts}           
                   useSameAccount={useSameAccount}
                   setUseSameAccount={setUseSameAccount}
                   form={form}

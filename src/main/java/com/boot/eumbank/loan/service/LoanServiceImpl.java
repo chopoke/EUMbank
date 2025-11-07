@@ -40,7 +40,7 @@ public class LoanServiceImpl implements LoanService {
         LoanProduct p = productRepo.findByLoanCode(loanCode)
                 .orElseThrow(() -> new NoSuchElementException("상품 없음: " + loanCode));
 
-        // 👉 모든 타입 공통: rate_option에서 옵션 로드
+        //  모든 타입 공통: rate_option에서 옵션 로드
         var ros = rateOptRepo.findByProduct(p);
         List<LoanProductDetailDTO.RateOption> optionDtos = ros.stream()
                 .map(o -> LoanProductDetailDTO.RateOption.builder()
@@ -139,8 +139,7 @@ public class LoanServiceImpl implements LoanService {
         return switch (type==null? "" : type.toUpperCase()) {
             case "MORTGAGE" -> "주택담보";
             case "JEONSE"   -> "전세자금";
-            case "CREDIT"   -> "신용대출";
-            case "PERSONAL" -> "신용대출";
+            case "AUTO"   -> "자동차";
             default         -> "대출";
         };
     }
@@ -150,7 +149,7 @@ public class LoanServiceImpl implements LoanService {
         return switch (t) {
             case "MORTGAGE" -> List.of(120, 240, 360);
             // 자동차/전세/개인대출 등은 1~3년 범용 기본값
-            case "AUTO", "JEONSE", "PERSONAL", "" -> List.of(12, 24, 36);
+            case "AUTO", "JEONSE", "" -> List.of(12, 24, 36);
             default -> List.of(12, 24, 36);
         };
     }

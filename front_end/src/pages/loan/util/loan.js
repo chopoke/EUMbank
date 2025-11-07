@@ -18,9 +18,9 @@ export function computeVisibility(productType = "", rpayKo = "") {
   const t = String(productType).toUpperCase();
   const isMortgage = t.includes("MORTGAGE") || t.includes("담보");
   const isJeonse   = t.includes("JEONSE")   || t.includes("전세");
-  const isPersonal = !isMortgage && !isJeonse;
+  const isAuto = t.includes("AUTO") || t.includes("자동차")
   const isBullet   = /만기일시/.test(String(rpayKo));
-  return { isMortgage, isJeonse, isPersonal, isBullet };
+  return { isMortgage, isJeonse, isAuto, isBullet };
 }
 
 export function monthlyAnnuity(P, n, annualRate) {

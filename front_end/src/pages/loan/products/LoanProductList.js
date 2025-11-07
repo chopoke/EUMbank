@@ -6,16 +6,21 @@ import '../../../resources/css/other.css';
 export default function LoanProductsListPage(){
 
   const toUiLabel = (t = '') => {
-   const u = String(t).toUpperCase();
-    if (u === 'MORTGAGE') return '주택담보대출';
-    if (u === 'JEONSE')   return '전세자금대출';
-    if (u === 'AUTO' ) return '자동차대출';
+   const u = String(t).toUpperCase().trim();
+    if (u === 'MORTGAGE') return '주택담보';
+    if (u === 'JEONSE')   return '전세자금';
+    if (u === 'AUTO')   return '자동차';
     return t;
   };
-  function normalize(arr){
+
+  function normalize(arr, defaultType){
     return arr.map(p => {
-      const rawType = p.type || p.loanType || p.lpdType; // 백엔드 필드 어느 걸 쓰든 커버
-      return { ...p, typeLabel: p.typeLabel || toUiLabel(rawType) };
+      const rawType = (p.type || p.loanType || p.lpdType || p.lpd_type || defaultType || '').toUpperCase();
+      return { 
+        ...p,
+        rawType,                           
+        typeLabel: p.typeLabel || toUiLabel(rawType), 
+      };
     });
   }
   
@@ -37,6 +42,16 @@ export default function LoanProductsListPage(){
   const [selected, setSelected] = React.useState([]); // 비교 선택 id 배열 (최대 3)
   const [page, setPage] = React.useState(1);
   const PAGE_SIZE = 4;
+
+    // 모달 상태
+  const [showCompare, setShowCompare] = React.useState(false);    // 바교 모달
+  const [showPrequal, setShowPrequal] = React.useState(false);    // 간편 비교
+
+  // 간편조회(사전심사 모의) 입력값
+  const [income, setIncome] = React.useState(40_000_000); // 연소득
+  const [credit, setCredit] = React.useState(820);        // 신용점수(350~900)
+  const CREDIT_MIN=350;
+  const CREDIT_MAX=999;
   
   // UI 타입 -> API 타입 매핑
   const TYPE_TO_PARAM = {
@@ -58,6 +73,7 @@ export default function LoanProductsListPage(){
                : Array.isArray(d?.content) ? d.content
                : [];
         });
+        // normalize 거쳐서 넣어줌
         setPRODUCTS(normalize(merged));
       } else {
         const apiType = TYPE_TO_PARAM[uiType] || 'MORTGAGE';
@@ -67,7 +83,8 @@ export default function LoanProductsListPage(){
                     : Array.isArray(d?.items) ? d.items
                     : Array.isArray(d?.content) ? d.content
                     : [];
-        setPRODUCTS(normalize(items));
+        console.log('[유형별]', uiType, '=>', apiType, 'items:', items.length, items);
+        setPRODUCTS(normalize(items, apiType));
       }
     } catch (e) {
            console.error('대출상품 불러오기 실패', e);
@@ -75,8 +92,14 @@ export default function LoanProductsListPage(){
     }
   }
 
-  React.useEffect(() => { loadProductsFor('전체'); }, []);
-  React.useEffect(() => { loadProductsFor(type); setPage(1); }, [type]);    // 대출종류 변경시 1페이지로
+  // 페이지 로드하면 전체 상품 채우기
+  React.useEffect(() => { 
+    loadProductsFor('전체'); 
+  }, []);
+  // 종류 변경하면 1페이지로
+  React.useEffect(() => { 
+    loadProductsFor(type); setPage(1); 
+  }, [type]);    // 대출종류 변경시 1페이지로
 
   const TYPES = ['전체','자동차','주택담보','전세자금'];
   const SORTS = [
@@ -86,20 +109,15 @@ export default function LoanProductsListPage(){
     {id:'termDesc', label:'기간 긴순'},
   ];
 
-  
 
-  // 모달 상태
-  const [showCompare, setShowCompare] = React.useState(false);    // 바교 모달
-  const [showPrequal, setShowPrequal] = React.useState(false);    // 간편 비교
-
-  // 간편조회(사전심사 모의) 입력값
-  const [income, setIncome] = React.useState(40_000_000); // 연소득
-  const [credit, setCredit] = React.useState(820);        // 신용점수(350~900)
-  const CREDIT_MIN=350, CREDIT_MAX=999;
-
-
-  // 파생 계산 ----------------
+  // 파생 계산 ------------====================================
   const filterFn = (p)=>{
+    console.log(`[필터링 체크] 상품: ${p.name}`);
+    const typeCheck = type !== '전체' && (p.typeLabel || toUiLabel(p.type)) !== type;
+    if (typeCheck) {
+      console.log(`- FAIL: 타입 필터 (상품: ${p.typeLabel}, 선택: ${type})`);
+      return false;
+    }
     // 타입필터
     if (type !== '전체' && (p.typeLabel || toUiLabel(p.type)) !== type) return false;
     // 검색어 필터
@@ -113,7 +131,9 @@ export default function LoanProductsListPage(){
     // 최장기간 필터
     const maxTerm = (Array.isArray(p.termMonths) && p.termMonths.length) ? Math.max(...p.termMonths) : 0;
     if (termMin && maxTerm < termMin) return false;
+    
     return true;
+    
   };
 
   const sortFn = (a,b)=>{
