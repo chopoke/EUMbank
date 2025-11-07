@@ -53,6 +53,9 @@ import AdminPage from "./pages/admin/page";
 // 공과금
 import BillsLanding from "./pages/bills/BillsLanding";
 
+// 마이페이지 - 상품 대시보드
+import MyProductsPage from "./pages/mypage/MyProductsPage";
+
 function AppWrapper() {
   return <App />;
 }
@@ -226,8 +229,13 @@ function App() {
           </ProtectedRoute>
         } />
 
+        {/* 마이페이지 상품 대시보드 진입 */}
+        <Route path="/deposits" element={<MyProductsPage />} />
+
         {/* 마이페이지 진입 */}
         <Route path="/test" element={<Test />} />
+
+
       </Routes >
       <Footer />
     </div>

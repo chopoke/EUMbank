@@ -21,91 +21,55 @@ public class MypageController {
     private MypageServiceImpl service;
 
 
-    /* =========================
-       1) 마이페이지 기본 조회
-       ========================= */
+
     @GetMapping("/mypage")
     public ResponseEntity<?> findcustomer() {
         System.out.println("test0");
-        Integer customerNo = currentCustomerNoOrNull();
-        if (customerNo == null) {
-            return new ResponseEntity<>("UNAUTHORIZED", HttpStatus.UNAUTHORIZED);
-        }
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Customer customer = (Customer) authentication.getPrincipal();
+        String test = customer.getCNameKr();
+        int test1 = customer.getCustomerNo();
 
+        System.out.println(test);
+        System.out.println(test1);
         Map<String, String> response = new HashMap<>();
-        String customerName = currentCustomerNameOrNull();
-        if (customerName != null) response.put("customerName", customerName);
+        response.put("customerName", test);
         System.out.println(response);
-
-        MypageCustomer myc = service.mypageCustomer(customerNo);
+        MypageCustomer myc = service.mypageCustomer(test1);
+        myc.getCustomerNo();
+//        System.out.println(tt);
         return new ResponseEntity<>(myc, HttpStatus.OK);
     }
 
-    /* =========================
-       2) 마이페이지 업데이트
-       ========================= */
     @PutMapping("/mypage")
     public ResponseEntity<?> updatecustomer(@RequestBody MypageCustomer updatedDto) {
         try {
             System.out.println("=== PUT /api/mypage 요청 시작 ===");
+
+            // 1. 넘어온 DTO 전체 출력 (JSON 파싱 성공 여부 확인)
             System.out.println("Received DTO: " + updatedDto);
 
-            Integer principalNo = currentCustomerNoOrNull();
-            if (principalNo == null) {
-                return new ResponseEntity<>("UNAUTHORIZED", HttpStatus.UNAUTHORIZED);
-            }
-            System.out.println("Authenticated Principal No: " + principalNo);
+            // 2. 인증 정보 확인 (토큰은 성공했지만, Principal이 살아있는지 확인)
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            Customer principal = (Customer) authentication.getPrincipal(); // 여기서 Null 또는 ClassCast 발생 가능
+            System.out.println("Authenticated Principal No: " + principal.getCustomerNo());
 
+            // 3. DTO의 필수 키가 넘어왔는지 확인 (예: customerNo)
             if (updatedDto.getCustomerNo() == 0) {
                 System.err.println("FATAL: customerNo 필드 누락!");
                 return new ResponseEntity<>("Customer ID is missing.", HttpStatus.BAD_REQUEST);
             }
 
-            // (선택) 본인 계정만 수정하도록 보호
-            if (updatedDto.getCustomerNo() != principalNo) {
-                return new ResponseEntity<>("FORBIDDEN", HttpStatus.FORBIDDEN);
-            }
-
+            // 4. (서비스 호출 및 저장)
             service.updateMypage(updatedDto);
+
             System.out.println("=== PUT /api/mypage 처리 완료 ===");
             return new ResponseEntity<>("Update successful", HttpStatus.OK);
 
         } catch (Exception e) {
+            // ⭐ 이 catch 블록에서 예외를 출력하면 500 에러의 원인을 알 수 있습니다.
             e.printStackTrace();
             return new ResponseEntity<>("Server Error during update.", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-   
-
-    /* =========================
-       헬퍼: 현재 로그인 사용자 정보
-       ========================= */
-    private Integer currentCustomerNoOrNull() {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || authentication.getPrincipal() == null) return null;
-            Object principal = authentication.getPrincipal();
-            if (principal instanceof Customer c) {
-                return c.getCustomerNo();
-            }
-            return null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private String currentCustomerNameOrNull() {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || authentication.getPrincipal() == null) return null;
-            Object principal = authentication.getPrincipal();
-            if (principal instanceof Customer c) {
-                return c.getCNameKr();
-            }
-            return null;
-        } catch (Exception e) {
-            return null;
         }
     }
 }

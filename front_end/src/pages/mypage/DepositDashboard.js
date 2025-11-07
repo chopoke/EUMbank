@@ -1,126 +1,209 @@
-// src/pages/mypage/DepositDashboard.js
-import React from "react";
+// src/pages/mypage/DepositDashboard.jsx
+import React, { useMemo } from "react";
 
-/** 원형 진행률 SVG (라벨 제거) */
-function Ring({ percent = 0, size = 96, stroke = 10 }) {
-  const p = Math.max(0, Math.min(100, percent));
+const clampPct = (n) => Math.max(0, Math.min(100, Math.round(n || 0)));
+const toNum = (v, f = 0) => (Number.isFinite(+v) ? +v : f);
+
+function Donut({ id, value = 0, size = 80, stroke = 10, caption }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const dash = (p / 100) * c;
+  const offset = c - (c * clampPct(value)) / 100;
+  const gradId = `grad-${id}`;
 
   return (
-    <svg width={size} height={size} className="shrink-0">
-      <circle cx={size / 2} cy={size / 2} r={r} strokeWidth={stroke} stroke="#e5e7eb" fill="none" />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        stroke="#3b82f6"
-        fill="none"
-        strokeDasharray={`${dash} ${c - dash}`}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
-      <text
-        x="50%"
-        y="50%"
-        dominantBaseline="middle"
-        textAnchor="middle"
-        className="text-sm font-semibold fill-gray-800"
-      >
-        {Math.round(p)}%
-      </text>
-    </svg>
+    <div className="flex items-center gap-4">
+      <svg width={size} height={size} className="shrink-0">
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#4f46e5" />
+            <stop offset="100%" stopColor="#0ea5a4" />
+          </linearGradient>
+        </defs>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          strokeWidth={stroke}
+          className="text-gray-200"
+          stroke="currentColor"
+          fill="none"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          stroke={`url(#${gradId})`}
+          fill="none"
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+        <text
+          x="50%"
+          y="50%"
+          dominantBaseline="central"
+          textAnchor="middle"
+          className="fill-gray-900 font-extrabold"
+          style={{ fontSize: 13 }}
+        >
+          {clampPct(value)}%
+        </text>
+      </svg>
+      {caption}
+    </div>
   );
 }
 
-export default function DepositDashboard({ summary, deposits = [], savings = [] }) {
-  // ---  배열로 들어오면 자동 계산 ---
-  let paidInstallments, targetInstallments, nextDueDate, installmentProgress;
-
-  if (Array.isArray(savings) && savings.length) {
-    paidInstallments = savings.reduce((s, v) => s + (v.paidInstallments ?? 0), 0);
-    targetInstallments = savings.reduce((s, v) => s + (v.totalInstallments ?? 0), 0);
-    installmentProgress = targetInstallments > 0 ? (paidInstallments / targetInstallments) * 100 : 0;
-
-    // 가장 빠른 다음 납입일(문자열로 가정)
-    const dates = savings.map((s) => s.nextDueDate).filter(Boolean);
-    nextDueDate = dates.length ? dates.sort()[0] : "-";
-  } else {
-
-    const {
-      installmentProgress: p = 0,
-      paidInstallments: pi = 0,
-      targetInstallments: ti = 0,
-      nextDueDate: nd = "-",
-    } = summary || {};
-    installmentProgress = p;
-    paidInstallments = pi;
-    targetInstallments = ti;
-    nextDueDate = nd;
-  }
-
-  // 예금 달성률(있으면 표시)
-  const depositPercent = (() => {
-    if (!Array.isArray(deposits) || !deposits.length) return 0;
-    const now = new Date();
-    const arr = deposits.map((d) => {
-      if (d.goalAmount && d.goalAmount > 0) return ((d.balance ?? 0) / d.goalAmount) * 100;
-      const opened = d.openedAt ? new Date(d.openedAt) : null;
-      const maturity = d.maturityAt ? new Date(d.maturityAt) : null;
-      if (opened && maturity && maturity > opened) {
-        const t = (now - opened) / (maturity - opened);
-        return Math.max(0, Math.min(100, t * 100));
-      }
-      return 0;
+export default function DepositDashboard({ deposits = [], savings = [] }) {
+  const savingRows = useMemo(() => {
+    return (savings || []).map((s, i) => {
+      const paid = toNum(s.paidInstallments, 0);
+      const total = toNum(s.totalInstallments, 0);
+      const pct = total > 0 ? (paid / total) * 100 : 0;
+      return {
+        id: `saving-${s.id ?? i}`,
+        name: s.productName ?? "적금",
+        paid,
+        total,
+        next: s.nextDueDate ?? null,
+        percent: pct,
+      };
     });
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
-  })();
+  }, [savings]);
+
+  const depositRows = useMemo(() => {
+    return (deposits || []).map((d, i) => {
+      const term = toNum(d.termMonths, 0);
+      const elapsed = Math.min(term || 0, toNum(d.elapsedMonths, 0));
+      const pct = term > 0 ? (elapsed / term) * 100 : 0;
+      return {
+        id: `deposit-${d.id ?? i}`,
+        name: d.productName ?? "예금",
+        term,
+        elapsed,
+        maturity: d.maturityAt ?? null,
+        percent: pct,
+      };
+    });
+  }, [deposits]);
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-xl font-bold text-gray-800">예·적금 대시보드</h3>
+    <div className="space-y-8">
+      <h3 className="text-2xl md:text-[26px] font-black tracking-tight text-gray-900 flex items-center gap-2">
+        <i className="ri-pie-chart-2-line text-indigo-600" />
+        예·적금 대시보드
+      </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* 적금 진행률(원형) */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="text-sm text-gray-500 mb-2">적금 진행률</div>
-          <div className="flex items-center gap-4">
-            <Ring percent={installmentProgress || 0} />
-            <div>
-              <div className="text-2xl font-extrabold text-gray-800">
-                {Math.round(installmentProgress || 0)}%
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                납입 {paidInstallments ?? 0} / {targetInstallments ?? 0} 회
-              </div>
-            </div>
+      {/* 적금 진행률 */}
+      <section className="rounded-3xl border border-indigo-100 bg-white p-6 shadow-[0_10px_28px_rgba(17,24,39,0.06)]">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+            <i className="ri-safe-2-line" />
+          </span>
+          <div className="text-[17px] font-bold text-gray-900">적금 진행률</div>
+        </div>
+
+        {savingRows.length === 0 ? (
+          <div className="rounded-2xl bg-gray-50 p-8 text-base text-gray-700">
+            가입된 적금이 없습니다.
           </div>
-        </div>
-
-        {/* 예금 달성률(원형) */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="text-sm text-gray-500 mb-2">예금 달성률</div>
-          <div className="flex items-center gap-4">
-            <Ring percent={depositPercent || 0} />
-            <div>
-              <div className="text-2xl font-extrabold text-gray-800">
-                {Math.round(depositPercent || 0)}%
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {savingRows.map((row) => (
+              <div
+                key={row.id}
+                className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 hover:shadow-md transition"
+              >
+                {/* 연출용 배경은 카드 뒤쪽으로만 (텍스트는 불투명 흰 배경 위) */}
+                <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-gradient-to-br from-indigo-100 to-teal-100 blur-2xl opacity-60" />
+                <Donut
+                  id={row.id}
+                  value={row.percent}
+                  caption={
+                    <div className="min-w-0">
+                      <div className="font-semibold text-gray-900 text-base truncate">
+                        {row.name}
+                      </div>
+                      <div className="text-[13.5px] text-gray-700 mt-0.5">
+                        납입{" "}
+                        <span className="tabular-nums font-semibold text-gray-900">
+                          {row.paid} / {row.total}
+                        </span>{" "}
+                        회
+                        {row.next && (
+                          <>
+                            {" "}
+                            · 다음 납입{" "}
+                            <span className="tabular-nums">{row.next}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  }
+                />
               </div>
-              <div className="text-xs text-gray-500 mt-1">
-                가입 예금 {Array.isArray(deposits) ? deposits.length : 0}개
-              </div>
-            </div>
+            ))}
           </div>
+        )}
+      </section>
+
+      {/* 예금 달성률 */}
+      <section className="rounded-3xl border border-teal-100 bg-white p-6 shadow-[0_10px_28px_rgba(17,24,39,0.06)]">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-teal-100 text-teal-600">
+            <i className="ri-timer-2-line" />
+          </span>
+          <div className="text-[17px] font-bold text-gray-900">예금 달성률</div>
         </div>
 
-        {/* 다음 납입일 */}
-        <div className="bg-white rounded-xl border border-gray-100 p-5">
-          <div className="text-sm text-gray-500 mb-1">다음 납입 예정일</div>
-          <div className="text-2xl font-bold text-gray-800">{nextDueDate || "-"}</div>
-        </div>
-      </div>
+        {depositRows.length === 0 ? (
+          <div className="rounded-2xl bg-gray-50 p-8 text-base text-gray-700">
+            보유 중인 예금이 없습니다.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {depositRows.map((row) => (
+              <div
+                key={row.id}
+                className="relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 hover:shadow-md transition"
+              >
+                <div className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-gradient-to-br from-teal-100 to-indigo-100 blur-2xl opacity-60" />
+                <Donut
+                  id={row.id}
+                  value={row.percent}
+                  caption={
+                    <div className="min-w-0">
+                      <div className="font-semibold text-gray-900 text-base truncate">
+                        {row.name}
+                      </div>
+                      <div className="text-[13.5px] text-gray-700 mt-0.5">
+                        경과{" "}
+                        <span className="tabular-nums font-semibold text-gray-900">
+                          {row.elapsed}
+                        </span>{" "}
+                        개월 / 약정{" "}
+                        <span className="tabular-nums font-semibold text-gray-900">
+                          {row.term}
+                        </span>{" "}
+                        개월
+                        {row.maturity && (
+                          <>
+                            {" "}
+                            · 만기{" "}
+                            <span className="tabular-nums">{row.maturity}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
