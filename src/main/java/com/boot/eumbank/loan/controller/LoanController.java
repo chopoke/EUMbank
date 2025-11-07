@@ -8,11 +8,14 @@ import com.boot.eumbank.loan.dto.LoanProductDetailDTO;
 import com.boot.eumbank.loan.dto.apply.*;
 import com.boot.eumbank.loan.dto.payment.RepaymentRequestDTO;
 import com.boot.eumbank.loan.dto.payment.RepaymentResponseDTO;
+import com.boot.eumbank.loan.entity.LoanApplication;
+import com.boot.eumbank.loan.repository.apply.LoanApplicationRepository;
 import com.boot.eumbank.loan.service.apply.LoanApplicationService;
 import com.boot.eumbank.loan.service.apply.LoanConsentService;
 import com.boot.eumbank.loan.service.apply.LoanQuoteService;
 import com.boot.eumbank.loan.service.LoanService;
 import com.boot.eumbank.loan.service.payment.LoanRepaymentService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,6 +44,7 @@ public class LoanController {
 
     // 약관 저장용
     private final LoanConsentService loanConsentService;
+    private final LoanApplicationRepository appRepo;
 
     // 상환서비스
     private final LoanRepaymentService repaymentService;
@@ -118,6 +121,33 @@ public class LoanController {
         return ResponseEntity.ok(res);
     }
 
+    @GetMapping("/applications/{laId}/consents")
+    public ResponseEntity<?> getConsentsByApplication(@PathVariable("laId") String laId) {
+
+        // laId -> LoanApplication
+        LoanApplication app = appRepo.findByLaId(laId)
+                .orElseThrow(() -> new IllegalArgumentException("신청 정보를 찾을 수 없습니다: " + laId));
+
+        // laNo 기준으로 consents 조회
+        var consents = loanConsentService.getConsentsByLaNo(app.getLaNo());
+
+        if (consents == null || consents.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        var body = consents.stream()
+                .map(c -> new LoanConsentViewDTO(
+                        c.getTermCode(),
+                        c.getTermTitle(),
+                        c.getVersion(),
+                        c.getBodyMd(),
+                        c.isAgreed(),
+                        c.getAgreedAt()
+                ))
+                .toList();
+
+        return ResponseEntity.ok(body);
+    }
 
     // --   상환(Repayment) 추가 엔드포인트
     @PostMapping("/loans/{lNo}/repayments")

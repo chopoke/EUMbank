@@ -95,7 +95,7 @@ export const adminReject = (laId, payload) =>
 api.post(`/api/loan/admin/applications/${encodeURIComponent(laId)}/reject`, payload);
 
 
-
+// ================================ [ 대출 끝 ] ============================
 
 
 export const updateProfile = (profile) => {

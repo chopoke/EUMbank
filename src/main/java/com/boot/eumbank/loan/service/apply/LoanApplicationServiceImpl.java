@@ -31,7 +31,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
     private final LoanProductRepository productRepo;
     private final AccountSelectRepository accountRepository;
     private final ObjectMapper om = new ObjectMapper();
-    private final LoanApplicationHistoryRepository historyRepo;     // 신청기록 테이블 저장(loan_application_history_tbl)
+    private final LoanConsentService loanConsentService;    // 약곤저장
 
     // ============================ 신청 저장
     @Override
@@ -92,6 +92,16 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
 
         // 신청 저장
         appRepo.save(la);
+
+        // laNo귀속
+        try {
+            loanConsentService.attachConsentsToApplication(
+                    cNo,
+                    la.getLaNo()
+            );
+        } catch (Exception e) {
+            log.warn("약관-신청 매핑 실패 laNo={}, msg={}", la.getLaNo(), e.getMessage());
+        }
 
         return new LoanApplicationResponseDTO(
                 la.getLaId(),

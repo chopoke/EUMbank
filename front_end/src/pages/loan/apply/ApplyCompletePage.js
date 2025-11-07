@@ -1,46 +1,153 @@
-// src/pages/loan/apply/ApplyCompletePage.js
 import React from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 import { ApplyLayout } from "./ApplyLayoutGuard";
 import { loadFlow } from "./ApplyStorage";
+import autoTable from "jspdf-autotable";
+import jsPDF from "jspdf";
 import api from "../../../api/axios";
 
 const won = (n) => Number(n || 0).toLocaleString("ko-KR");
 
-// 약관 동의 PDF 다운로드 (원래 로직 그대로)
+// 폰트로드 ==========
+let koreanFontLoaded = false;
+
+async function ensureKoreanFont(doc) {
+  if (koreanFontLoaded) {
+    doc.setFont("NotoSansKR", "normal");
+    return;
+  }
+  // CRA / Vite 기준: public 폴더 기준 경로
+  const fontUrl = "/font/NotoSansKR.ttf";
+
+  const res = await fetch(fontUrl);
+  if (!res.ok) {
+    console.error("폰트 로드 실패:", res.status, res.statusText);
+    return; // 실패 시 기본 폰트로라도 진행
+  }
+
+  const buffer = await res.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  // ArrayBuffer -> base64
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64 = window.btoa(binary);
+
+  // jsPDF에 등록
+  doc.addFileToVFS("NotoSansKR.ttf", base64);
+  doc.addFont("NotoSansKR.ttf", "NotoSansKR", "normal");
+  doc.setFont("NotoSansKR", "normal");
+  doc.addFont("NotoSansKR.ttf", "NotoSansKR", "bold");
+
+  koreanFontLoaded = true;
+}
+
+// 약관 동의 PDF 다운로드
 async function downloadConsentsPdf(laId) {
   if (!laId || String(laId).trim() === "") {
     alert("신청번호(laId)가 비어 있습니다.");
     return;
   }
 
-  const url = `/api/loan/applications/${laId}/consents.pdf`;
-  console.log("[PDF] requesting:", url);
+  try {
+    // 1) 약관 동의 내역 JSON 조회
+    const res = await api.get(`/api/loan/applications/${laId}/consents`, {
+      validateStatus: (s) => s < 500,
+    });
 
-  const res = await api.get(url, {
-    responseType: "blob",
-    validateStatus: (s) => s < 500,
-  });
-
-  if (res.status >= 400) {
-    try {
-      const text = await res.data.text();
-      alert(text || `PDF 생성 실패 (HTTP ${res.status})`);
-    } catch {
-      alert(`PDF 생성 실패 (HTTP ${res.status})`);
+    if (res.status === 404 || !res.data || res.data.length === 0) {
+      alert("해당 신청번호의 약관 동의 내역이 없습니다.");
+      return;
     }
-    return;
-  }
+    if (res.status >= 400) {
+      alert(res.data?.message || `약관 조회 실패 (HTTP ${res.status})`);
+      return;
+    }
 
-  const blob = new Blob([res.data], { type: "application/pdf" });
-  const blobUrl = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = blobUrl;
-  a.download = `loan-consents_${laId}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(blobUrl);
+    const consents = res.data;
+
+    // 2) jsPDF로 PDF 생성
+    const doc = new jsPDF({
+      unit: "pt",
+      format: "a4",
+    });
+    
+    await ensureKoreanFont(doc);  // 폰트로드
+    const marginLeft = 40;
+    let cursorY = 50;
+
+    doc.setFontSize(14);
+    doc.text("이음은행 대출 약관 동의서", marginLeft, cursorY);
+    cursorY += 20;
+    doc.setFontSize(10);
+    doc.text(`신청번호: ${laId}`, marginLeft, cursorY);
+    cursorY += 16;
+    doc.text(
+      "아래 내용은 해당 신청에 대해 고객이 동의한 약관의 주요 정보입니다.",
+      marginLeft,
+      cursorY
+    );
+    cursorY += 20;
+
+    // 테이블 형태로 정리
+    const rows = consents.map((c) => [
+      c.termCode || "",
+      c.title || "",
+      c.version || "",
+      c.agreed ? "동의" : "미동의",
+      c.agreedAt ? String(c.agreedAt).replace("T", " ").substring(0, 19) : "",
+    ]);
+
+    autoTable(doc, {
+      startY: cursorY,
+      head: [["코드", "약관명", "버전", "동의 여부", "동의 일시"]],
+      body: rows,
+      styles: {font: "NotoSansKR",fontSize: 8,},
+      headStyles: { font: "NotoSansKR", fontStyle: "bold", fontSize: 8, fillColor: [30, 64, 175] }, 
+    });
+
+    // 약관 전문
+    let y = doc.lastAutoTable.finalY + 20;
+    doc.setFontSize(9);
+    doc.setFont("NotoSansKR", "normal");
+
+    consents.forEach((c, idx) => {
+      if (!c.body) return;
+      if (y > 780) {
+        doc.addPage();
+        doc.setFont("NotoSansKR", "normal");
+        y = 40;
+      }
+      doc.text(
+        `[${idx + 1}] ${c.title || c.termCode || ""} (v${c.version || "-"})`,
+        marginLeft,
+        y
+      );
+      y += 12;
+
+      const textLines = doc.splitTextToSize(
+        String(c.body),
+        515 
+      );
+      textLines.forEach((line) => {
+        if (y > 780) {
+          doc.addPage();
+          y = 40;
+        }
+        doc.text(line, marginLeft, y);
+        y += 11;
+      });
+      y += 8;
+    });
+
+    // 3) 다운로드
+    doc.save(`loan-consents_${laId}.pdf`);
+  } catch (err) {
+    console.error(err);
+    alert("약관 동의서 PDF 생성 중 오류가 발생했습니다.");
+  }
 }
 
 export default function ApplyCompletePage() {
@@ -48,7 +155,7 @@ export default function ApplyCompletePage() {
   const nav = useNavigate();
   const { state } = useLocation() || {};
 
-  // 완료 직전 단계에서 저장해둔 플로우 (있으면 요약용으로만 사용)
+  // 완료 직전 단계에서 저장해둔 플로우로드 
   const flow = loadFlow(code);
   const product = flow?.product;
   const form = flow?.form;
@@ -100,7 +207,7 @@ export default function ApplyCompletePage() {
               </h2>
               <p className="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">
                 접수된 신청은 이음은행 심사 기준에 따라 순차적으로 검토됩니다.
-                처리 결과는 마이페이지의 신청 내역 및 알림으로 안내드릴게요.
+                처리 결과는 마이페이지의 신청 내역에서 확인하실 수 있습니다.
               </p>
 
               {/* 신청번호 / 상태 */}
