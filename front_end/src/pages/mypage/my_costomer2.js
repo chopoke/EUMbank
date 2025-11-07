@@ -377,7 +377,7 @@ function ProfileTab({initialData}) {
               : 'bg-blue-500 text-white hover:bg-blue-600'
           }`}
         >
-          {isEditing ? '저장' : '편집'}
+          {isEditing ? '저장' : '수정'}
         </button>
       </div>
 
@@ -450,11 +450,11 @@ function ProfileTab({initialData}) {
                   type="text"
                   value={profileData.enname}
                   onChange={(e) => setProfileData({...profileData, enname: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full h-40px px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled
                 />
               ) : (
-                <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.enname}</div>
+                <div className="h-40px px-3 py-2 bg-gray-50 rounded-lg">{profileData.enname}</div>
               )}
             </div>
             <div>
@@ -468,9 +468,9 @@ function ProfileTab({initialData}) {
                             id="gender-male"
                             name="gender"
                             type="radio"
-                            value="m"
+                            value="M"
                             disabled={true}
-                            checked={gender === 'm'}
+                            checked={gender === 'M'}
                             onChange={handleGenderChange}
                             className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                         />
@@ -485,9 +485,9 @@ function ProfileTab({initialData}) {
                             id="gender-female"
                             name="gender"
                             type="radio"
-                            value="f"
+                            value="F"
                             disabled={true}
-                            checked={gender === 'f'}
+                            checked={gender === 'F'}
                             onChange={handleGenderChange}
                             className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                         />

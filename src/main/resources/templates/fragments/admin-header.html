@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<body>
+<header th:fragment="header" class="hdr">
+    <!-- Left: 로고 + 메뉴 + 종 -->
+    <div class="left">
+        <a href="http://localhost:3000/" class="logo">
+            <img th:src="@{/img/eumonly.png}" alt="이음은행">
+            <span>이음은행</span>
+        </a>
+
+        <nav class="nav">
+            <a href="http://localhost:3000/accounts">개인</a>
+
+            <div class="nav">
+                <span>상품</span>
+                <!-- 드롭다운 필요 시 별도 구현 -->
+            </div>
+
+            <a href="http://localhost:3000/wealth" class="active">자산관리</a>
+            <a href="http://localhost:3000/foreign/rate">외환/환율</a>
+
+            <i class="ri-notification-2-line bell" sec:authorize="isAuthenticated()" aria-label="알림"></i>
+        </nav>
+    </div>
+
+    <!-- Right: 관리자 버튼 + 로그인 상태 + 보안 + 로그아웃 -->
+    <div class="right">
+        <a sec:authorize="hasRole('ADMIN')" href="/admin/enter"><button class="btn btn-blue">관리자</button></a>
+
+        <span class="idchip" sec:authorize="isAuthenticated()">
+          <i class="ri-user-line"></i>
+          <span th:text="${#authentication?.principal?.UserId} + '님 접속중'">고객님 접속중</span>
+        </span>
+
+        <span class="chip" aria-label="보안">
+          <span>보안</span>
+        </span>
+
+        <!-- 로그아웃: POST /logout (SecurityConfig에서 3000으로 리다이렉트) -->
+        <form th:action="@{/admin/logout}" method="post" class="inline">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <button type="submit" class="btn btn-blue">로그아웃</button>
+        </form>
+    </div>
+</header>
+</body>
+</html>

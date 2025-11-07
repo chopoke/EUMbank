@@ -32,9 +32,6 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder encoder;
     private final JwtTokenProvider jwt;
 
-
-
-
     @Transactional
     @Override
     public void signup(SignupRequest req) {
@@ -123,8 +120,6 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     @Override
     public AuthResponse refresh(String refreshToken, String userAgent, String clientIp) {
-        log.info("[REFRESH] raw RT={}", refreshToken);
-        log.info("[REFRESH] RT hash={}", sha256(refreshToken));
         if (refreshToken == null || refreshToken.isBlank())
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "missing rt");
 
@@ -146,11 +141,10 @@ public class AuthServiceImpl implements AuthService {
         String newRT = jwt.createRefreshToken(userId);
         String newHash = sha256(newRT);
 
-        var now = Instant.now();
         var nt = new AuthRefreshToken();
         nt.setCustomerNo(t.getCustomerNo());
         nt.setRtHash(newHash);
-        nt.setIssuedAt(now);
+        nt.setIssuedAt(Instant.now());
         nt.setExpiresAt(jwt.getExpiryFromRefresh(newRT));
         nt.setDeviceId(userAgent);
         // t_from/t_next 쓰면 여기 연결
