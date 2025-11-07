@@ -82,4 +82,7 @@ public class ProductDeposit {
 
     @Column(name= "d_expected_maturity_amount")
     private long dExpectedMaturityAmount;
+
+    @Column(name= "d_pdf_path")
+    private String dPdfPath;
 }
