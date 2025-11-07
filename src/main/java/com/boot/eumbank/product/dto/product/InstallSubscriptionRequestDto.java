@@ -50,6 +50,11 @@ public class InstallSubscriptionRequestDto {
     private String pin;
 
     /**
+     * 예상 이자+ 원금
+     */
+    private Long expectedMaturityAmount;
+
+    /**
      * 납입일 (매월 납입할 날짜, 1~31)
      */
     private Integer payDay;
@@ -68,6 +73,5 @@ public class InstallSubscriptionRequestDto {
      * 약관 동의
      */
     private String agreements;
-
 
 }

@@ -42,7 +42,7 @@ public class DepositQueryRepository {
                         productDepositList.dpName, // 상품이름
                         productDepositList.dpType, // 타입 = 예금종류
                         productDepositList.dpDescription, // 상품설명
-                        productDepositList.dpEarlyTerminationRate.stringValue().append("%"), // 예시: 이율을 문자열로
+                        productDepositList.dpRate.stringValue().append("%"), // 예시: 이율을 문자열로
                         productDepositList.dpMaxAmount.stringValue().prepend("최대금액").append("원"),
                         productDepositList.dpMinAmount.stringValue().prepend("최소금액: ").append("원"),
                         productDepositList.dpMinMonths, // 최소 개월수
@@ -103,8 +103,6 @@ public class DepositQueryRepository {
         logger.info("depositProducts : " + depositProducts);
         logger.info("oneAccount : " + oneAccount);
 
-        logger.info(oneAccount.getAccountNo());
-
         queryFactory
                 .insert(productDeposit)
                 .columns(
@@ -125,7 +123,9 @@ public class DepositQueryRepository {
                         productDeposit.dApy,
                         productDeposit.dAccrInt,
                         productDeposit.dPrincipalBal,
-                        productDeposit.aAccountNo
+                        productDeposit.aAccountNo,
+                        productDeposit.dPeriod,
+                        productDeposit.dExpectedMaturityAmount
                 ).values(
                         null,
                         depositProducts.getNo(), // dposit_product_tbl dpNo
@@ -144,7 +144,9 @@ public class DepositQueryRepository {
                         new BigDecimal(depositProducts.getRate()),  // 14. dApy - 연이율 (이자율과 동일하게 설정)
                         BigDecimal.ZERO,                            // 15. dAccrInt - 경과이자 (초기값: 0)
                         new BigDecimal(requestDto.getAmount()),      // 16. dPrincipalBal - 원금잔액 (초기 예금액)
-                        oneAccount.getAccountNo()
+                        oneAccount.getAccountNo(),
+                        requestDto.getPeriod(),
+                        requestDto.getExpectedMaturityAmount()
                 ).execute();
     }
 
@@ -156,15 +158,9 @@ public class DepositQueryRepository {
 
         logger.info("AccountQueryRepository => findOneAccount()");
 
-        String fullText = requestDto.getLinkedAccount(); // "(110-784-589413) - 계좌 종류 : 자유적금"
-
-        String accountPart = fullText.split(" - ")[0]; // 결과: "(110-784-589413)"
-
-        String accountNumber = accountPart.substring(1, accountPart.length() - 1);
-
         return queryFactory
                 .selectFrom(account)
-                .where(account.cNo.eq(customer.getCustomerNo()).and(account.accountNo.eq(accountNumber)))
+                .where(account.cNo.eq(customer.getCustomerNo()).and(account.aNo.eq(Math.toIntExact(requestDto.getLinkedAccountAno()))))
                 .fetchOne();
 
     }

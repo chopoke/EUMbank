@@ -1,16 +1,19 @@
 package com.boot.eumbank.product.entity.product;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "DEPOSIT_PRODUCT_TBL")
 public class ProductDepositList {
@@ -33,10 +36,10 @@ public class ProductDepositList {
     private String dpType;
 
     @Column(name = "dp_min_amount")
-    private BigDecimal dpMinAmount;
+    private Long dpMinAmount;
 
     @Column(name = "dp_max_amount")
-    private BigDecimal dpMaxAmount;
+    private Long dpMaxAmount;
 
     @Column(name = "dp_min_months")
     private Integer dpMinMonths;
@@ -45,7 +48,7 @@ public class ProductDepositList {
     private Integer dpMaxMonths;
 
     @Column(name = "dp_early_termination_rate", precision = 5, scale = 2)
-    private BigDecimal dpEarlyTerminationRate;
+    private String dpEarlyTerminationRate;
 
     @Column(name = "dp_interest_payment_type", length = 20)
     private String dpInterestPaymentType;
@@ -72,4 +75,5 @@ public class ProductDepositList {
 
     @Column(name = "dp_href")
     private String dpHref;
+
 }

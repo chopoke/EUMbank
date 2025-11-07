@@ -49,11 +49,13 @@ public class QMypageCustomer extends EntityPathBase<MypageCustomer> {
 
     public final StringPath cIsSanctionHit = createString("cIsSanctionHit");
 
-    public final StringPath cNameEn = createString("cNameEn");
+    public final StringPath cnameEn = createString("cnameEn");
 
     public final StringPath cNameKr = createString("cNameKr");
 
     public final StringPath cNationalityCd = createString("cNationalityCd");
+
+    public final StringPath cnaverid = createString("cnaverid");
 
     public final StringPath cPassword = createString("cPassword");
 

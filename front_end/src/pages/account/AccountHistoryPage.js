@@ -3,6 +3,8 @@ import { fetchAccountDetail, fetchAccountTransactions, updateAccountAlias } from
 import { useNavigate, useParams } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import '../../resources/css/other.css';
+
 
 // ===================== 통화 유틸
 // 각 통화의 소수 자릿수(대표값). 없으면 2
@@ -328,10 +330,10 @@ function AccountHistoryPage() {
   const backBtn = () => { navigate(-1); };
 
   return (
-    <div className="bg-gray-50">
+    <div className="bg-gray-50 py-8">
       {/* 타이틀 */}
       <section className="border-b bg-white">
-        <div className="mx-auto max-w-screen-xl px-6 py-6">
+        <div className="checkb mx-auto max-w-[1240px] px-6 py-6">
           <h1 className="text-xl md:text-2xl font-semibold tracking-tight">내 계좌 상세</h1>
           <p className="text-sm text-gray-600 mt-1">선택한 계좌의 정보와 거래내역을 함께 확인하세요.</p>
         </div>
@@ -355,11 +357,11 @@ function AccountHistoryPage() {
                     className="rounded-lg border px-3 py-2 text-sm"
                   />
                   <button
-                    onClick={saveAlias}
-                    disabled={saving || !changeAlias.trim() || changeAlias.trim() === (account.nickname || "")}
-                    className={"rounded-lg px-3 py-2 text-sm text-white " + (saving ? "bg-gray-400" : "bg-blue-700 hover:bg-blue-800")}
-                  >
-                    {saving ? "저장중..." : "저장"}
+                   onClick={saveAlias}
+                   disabled={saving || !changeAlias.trim() || changeAlias.trim() === (account.nickname || "")}
+                   className={"rounded-lg px-2 py-2 text-sm text-white " + (saving ? "bg-gray-400" : "bg-blue-700 hover:bg-blue-800")}
+                    >
+                  {saving ? "저장중..." : "저장"}
                   </button>
                 </div>
                 <div className="text-lg font-semibold text-gray-900">{account.alias}</div>

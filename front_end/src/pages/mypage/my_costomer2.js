@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { testmypage } from '../../api/accounts';
 import { updateProfile } from '../../api/accounts';
+import { CheckPinProvider} from "./contexts/CheckPinContext";
+import { useCheckPin } from "./contexts/CheckPinContext";
+
+import { resetPin, resetPassword } from "../account/api/accountApi";
+
 import axios from 'axios';
 import React from "react";
 import { Link } from 'react-router-dom';
@@ -194,6 +199,7 @@ function OverviewTab({onTabSwitch}) {
 function ProfileTab({initialData}) {
   const [isEditing, setIsEditing] = useState(false);
   const [gender, setGender] = useState(initialData?.cgenderCd || null);
+  const [checkPin, setCheckPin] = useState('');
   const [profileData, setProfileData] = useState({
     name: '',
     enname: '',
@@ -209,7 +215,9 @@ function ProfileTab({initialData}) {
     naverid: '',
   });
 
-  const [isTermsPopupOpen, setIsTermsPopupOpen] = useState(false); 
+  const [isTermsPopupOpen, setIsTermsPopupOpen] = useState(false);
+
+
 
   useEffect(() => {
     // initialData가 존재하고, DTO의 핵심 필드가 채워졌을 때만 실행
@@ -301,6 +309,8 @@ function ProfileTab({initialData}) {
     `;
 
   const handleSave = () => {
+
+
         // 서버로 전송할 DTO 형식에 맞게 데이터를 매핑합니다.
         // 현재 ProfileData 키(name, email, phone)를 DTO 키(cnameKr, cemail, cphoneMobile)로 다시 변환해야 합니다.
         console.log("프론트 상태 (profileData.name):", profileData.name);
@@ -349,6 +359,7 @@ function ProfileTab({initialData}) {
     // return axios.put('../../api/accounts');
   };
 
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -366,7 +377,7 @@ function ProfileTab({initialData}) {
               : 'bg-blue-500 text-white hover:bg-blue-600'
           }`}
         >
-          {isEditing ? '저장' : '편집'}
+          {isEditing ? '저장' : '수정'}
         </button>
       </div>
 
@@ -439,11 +450,11 @@ function ProfileTab({initialData}) {
                   type="text"
                   value={profileData.enname}
                   onChange={(e) => setProfileData({...profileData, enname: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full h-40px px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   disabled
                 />
               ) : (
-                <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.enname}</div>
+                <div className="h-40px px-3 py-2 bg-gray-50 rounded-lg">{profileData.enname}</div>
               )}
             </div>
             <div>
@@ -457,9 +468,9 @@ function ProfileTab({initialData}) {
                             id="gender-male"
                             name="gender"
                             type="radio"
-                            value="m"
+                            value="M"
                             disabled={true}
-                            checked={gender === 'm'}
+                            checked={gender === 'M'}
                             onChange={handleGenderChange}
                             className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                         />
@@ -474,9 +485,9 @@ function ProfileTab({initialData}) {
                             id="gender-female"
                             name="gender"
                             type="radio"
-                            value="f"
+                            value="F"
                             disabled={true}
-                            checked={gender === 'f'}
+                            checked={gender === 'F'}
                             onChange={handleGenderChange}
                             className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                         />
@@ -651,8 +662,120 @@ function ProfileTab({initialData}) {
 
 // SecurityTab Component
 function SecurityTab() {
-  const [showOTPModal, setShowOTPModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+      const { checkPin, setCheckPin } = useCheckPin();
+      const [showOTPModal, setShowPinModal] = useState(false);
+      const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+      // 핀번호
+      const [newPin, setNewPin] = useState('');
+      const [confirmPin, setConfirmPin] = useState('');
+
+      // 비밀번호
+      const [principlePassword, setPrinciPassword] = useState('');
+      const [newPassword, setNewPassword] = useState('');
+      const [confirmPassword, setConfirmPassword] = useState('');
+
+      const [isLoading, setIsLoading] = useState(false);
+      const [pinError, setError] = useState('');
+
+    // PIN 재설정 API 함수
+    const handleResetPin = async () => {
+        // 유효성 검사
+        if (!newPin || !confirmPin) {
+            setError('PIN을 입력해주세요.');
+            return;
+        }
+
+        if (newPin.length !== 6) {
+            setError('PIN은 6자리여야 합니다.');
+            return;
+        }
+
+        if (newPin !== confirmPin) {
+            setError('PIN이 일치하지 않습니다.');
+            return;
+        }
+
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const result = await resetPin(newPin);
+
+            if (result.ok) {
+                alert('PIN이 성공적으로 재설정되었습니다.');
+                handlePinCloseModal();
+            } else {
+                setError(result.message || 'PIN 재설정에 실패했습니다.');
+            }
+        } catch (error) {
+            setError(error.message || '서버 연결에 실패했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+
+    // 비밀번호 재설정 API 함수
+    const handleResetPassword = async () => {
+
+        alert("test");
+
+        // 유효성 검사
+        if(!principlePassword) {
+            setError("현재 비밀번호를 입력하지 않았습니다.")
+        }
+
+        if (!newPassword || !confirmPassword) {
+            setError('비밀번호를 입력해주세요.');
+            return;
+        }
+
+        if (newPassword.length !== 6) {
+            setError('비밀번호는 6자리여야 합니다.');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setError('비밀번호가 일치하지 않습니다.');
+            return;
+        }
+
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const result = await resetPassword(principlePassword, newPassword, confirmPassword);
+
+            if (result.ok) {
+                alert('PIN이 성공적으로 재설정되었습니다.');
+                handlePinCloseModal();
+            } else {
+                setError(result.message || '패스워드 재설정에 실패했습니다.');
+            }
+        } catch (error) {
+            setError(error.message || '서버 연결에 실패했습니다.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // PIN 모달 닫기 핸들러
+    const handlePinCloseModal = () => {
+        setShowPinModal(false);
+        setNewPin('');
+        setConfirmPin('');
+        setError('');
+    };
+
+    // PASSWORD 모달 닫기 핸들러
+    const handlePasswordCloseModal = () => {
+        setShowPasswordModal(false);
+        setNewPin('');
+        setConfirmPin('');
+        setError('');
+    };
 
   return (
     <div className="space-y-6">
@@ -689,24 +812,29 @@ function SecurityTab() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-smartphone-line text-blue-600 mr-2"></i>
-          아마도 핀번호 인증
+            핀번호 변경
         </h3>
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-gray-600 mb-1">일회용 비밀번호 인증이 활성화되어 있습니다.</p>
-            <p className="text-sm text-green-600">등록된 기기: iPhone 14 Pro</p>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setShowOTPModal(true)}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm whitespace-nowrap"
-            >
-              재설정
-            </button>
-            <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm whitespace-nowrap">
-              비활성화
-            </button>
-          </div>
+            {checkPin ? (
+                <>
+                    <div>
+                        <p className="text-gray-600 mb-1">일회용 핀 인증이 활성화되어 있습니다.</p>
+                    </div>
+                    <div className="flex space-x-2">
+                        <button
+                            onClick={() => setShowPinModal(true)}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm whitespace-nowrap"
+                        >
+                            재설정
+                        </button>
+                    </div>
+                </>
+            ) : (
+                <div>
+                <p className="text-gray-600 mb-1">일회용 핀 인증이 비활성화되어 있습니다.</p>
+                </div>
+
+            )}
         </div>
       </div>
 
@@ -718,10 +846,6 @@ function SecurityTab() {
         </h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div>
-              <p className="font-medium text-gray-800">로그인 비밀번호</p>
-              <p className="text-sm text-gray-600">마지막 변경: 2024년 1월 15일</p>
-            </div>
             <button
               onClick={() => setShowPasswordModal(true)}
               className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm whitespace-nowrap"
@@ -832,29 +956,79 @@ function SecurityTab() {
         </div>
       </div>
 
-      {/* OTP 모달 */}
-      {showOTPModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">OTP 재설정</h3>
-            <p className="text-gray-600 mb-4">새로운 기기에서 OTP를 설정하시겠습니까?</p>
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowOTPModal(false)}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
-              >
-                취소
-              </button>
-              <button
-                onClick={() => setShowOTPModal(false)}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors whitespace-nowrap"
-              >
-                확인
-              </button>
+        {/* PIN 재설정 모달 */}
+        {showOTPModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+                    <h3 className="text-lg font-semibold mb-4">PIN 재설정</h3>
+                    <p className="text-gray-600 mb-4">새로운 6자리 PIN을 설정해주세요.</p>
+
+                    {/* PIN 입력 필드 */}
+                    <div className="space-y-4 mb-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                새 PIN
+                            </label>
+                            <input
+                                type="password"
+                                maxLength={6}
+                                value={newPin}
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/[^0-9]/g, '');
+                                    setNewPin(value);
+                                    setError('');
+                                }}
+                                placeholder="6자리 숫자"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                PIN 확인
+                            </label>
+                            <input
+                                type="password"
+                                maxLength={6}
+                                value={confirmPin}
+                                onChange={(e) => {
+                                    const value = e.target.value.replace(/[^0-9]/g, '');
+                                    setConfirmPin(value);
+                                    setError('');
+                                }}
+                                placeholder="6자리 숫자"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                disabled={isLoading}
+                            />
+                        </div>
+                    </div>
+
+                    {/* 에러 메시지 */}
+                    {pinError && (
+                        <p className="text-red-500 text-sm mb-4">{pinError}</p>
+                    )}
+
+                    {/* 버튼 */}
+                    <div className="flex space-x-3">
+                        <button
+                            onClick={handlePinCloseModal}
+                            disabled={isLoading}
+                            className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap disabled:opacity-50"
+                        >
+                            취소
+                        </button>
+                        <button
+                            onClick={handleResetPin}
+                            disabled={!newPin || !confirmPin || isLoading}
+                            className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors whitespace-nowrap disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? '처리중...' : '확인'}
+                        </button>
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-      )}
+        )}
 
       {/* 비밀번호 변경 모달 */}
       {showPasswordModal && (
@@ -864,29 +1038,67 @@ function SecurityTab() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">현재 비밀번호</label>
-                <input type="password" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <input
+                    type="password"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={(e ) => {
+                        const value = e.target.value;
+                        setPrinciPassword(value)
+                        setError('')
+
+                    }}
+                    maxLength={6}
+                    disabled={isLoading}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">새 비밀번호</label>
-                <input type="password" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <input
+                    type="password"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={(e ) => {
+                        const value = e.target.value;
+                        setNewPassword(value)
+                        setError('')
+                    }}
+                    maxLength={6}
+                    disabled={isLoading}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">새 비밀번호 확인</label>
-                <input type="password" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                <input
+                    type="password"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={(e ) => {
+                        const value = e.target.value;
+                        setConfirmPassword(value)
+                        setError('')
+                    }}
+                    maxLength={6}
+                    disabled={isLoading}
+                />
               </div>
             </div>
+
+              {/* 에러 메시지 */}
+              {pinError && (
+                  <p className="text-red-500 text-sm mb-4">{pinError}</p>
+              )}
+
             <div className="flex space-x-3 mt-6">
               <button
-                onClick={() => setShowPasswordModal(false)}
+                onClick={handlePasswordCloseModal}
                 className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
+
               >
                 취소
               </button>
               <button
-                onClick={() => setShowPasswordModal(false)}
+                onClick={handleResetPassword}
                 className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors whitespace-nowrap"
               >
-                변경
+                  {isLoading ? '처리중...' : '변경'}
               </button>
             </div>
           </div>
@@ -1901,21 +2113,23 @@ function MyPage() {
   
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50">
-      {/* <Header /> */}
-      <div className="container mx-auto px-38 py-10">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-          <div className="flex">
-            <div className="flex-1 p-6">
-              {renderTabContent()}
+      <CheckPinProvider>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50">
+          {/* <Header /> */}
+          <div className="container mx-auto px-38 py-10">
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+              <div className="flex">
+                <div className="flex-1 p-6">
+                  {renderTabContent()}
+                </div>
+                <Sidebar customerName={customerName} customerPhone={customerPhone} />
+              </div>
             </div>
-            <Sidebar customerName={customerName} customerPhone={customerPhone} /> 
           </div>
+          {/* <Footer /> */}
         </div>
-      </div>
-      {/* <Footer /> */}
-    </div>
+      </CheckPinProvider>
   );
 }
 

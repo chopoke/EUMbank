@@ -57,8 +57,6 @@ public class QForeignExchange extends EntityPathBase<ForeignExchange> {
 
     public final StringPath feStatus = createString("feStatus");
 
-    public final NumberPath<Integer> fpNo = createNumber("fpNo", Integer.class);
-
     public QForeignExchange(String variable) {
         super(ForeignExchange.class, forVariable(variable));
     }

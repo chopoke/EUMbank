@@ -3,6 +3,8 @@ import { fetchAccounts } from "../../api/accounts";
 import { Link } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import '../../resources/css/other.css';
+
 
 function AccountListPage(){
   
@@ -311,16 +313,16 @@ function AccountListPage(){
   if (error) return <div className="p-6 text-red-600">계좌 조회 실패: {String(error)}</div>;
 
   return (
-    <div className="bg-gray-50">
+    <div className="bg-gray-50 py-8">
       {/* 타이틀 배너 */}
       <section className="border-b bg-white">
-        <div className="mx-auto max-w-screen-xl px-6 py-6">
+        <div className="checkb mx-auto max-w-[1240px] px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl md:text-2xl font-semibold tracking-tight">계좌 목록 조회</h1>
               <p className="text-sm text-gray-600 mt-1">보유 중인 계좌를 한눈에 확인하고, 빠르게 이체/관리하세요.</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-42">
               <Link to={`/account/open`}>
               <button className="rounded-full border px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200">계좌개설</button>
               </Link>

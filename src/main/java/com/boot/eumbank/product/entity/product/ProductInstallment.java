@@ -1,6 +1,8 @@
 package com.boot.eumbank.product.entity.product;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -9,6 +11,8 @@ import java.time.LocalDateTime;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "INSTALLMENT_TBL")
 public class ProductInstallment {
@@ -42,8 +46,8 @@ public class ProductInstallment {
     @Column(name = "i_month")
     private Integer iMonth;
 
-    @Column(name = "i_monthly_amt", precision = 15, scale = 2)
-    private Integer iMonthlyAmt;
+    @Column(name = "i_amount", precision = 15, scale = 2)
+    private long iAmount;
 
     @Column(name = "i_currency", length = 10)
     private String iCurrency;
@@ -52,7 +56,7 @@ public class ProductInstallment {
     private BigDecimal iInterestRate;
 
     @Column(name = "i_pay_day")
-    private Integer iPayDay;
+    private String iPayDay;
 
     @Column(name = "i_status", length = 20)
     private String iStatus;
@@ -80,4 +84,16 @@ public class ProductInstallment {
 
     @Column(name = "a_account_no")
     private String aAccountNo;
+
+    @Column(name= "i_count_period")
+    private Integer iCountPeriod;
+
+    @Column(name= "i_fail")
+    private Integer iFail;
+
+    @Column(name = "i_principal_bal")
+    private long iPrincipalBal;
+
+    @Column(name = "i_expected_maturity_amount")
+    private long iExpectedMaturityAmount;
 }

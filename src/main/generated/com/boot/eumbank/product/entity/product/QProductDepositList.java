@@ -27,7 +27,7 @@ public class QProductDepositList extends EntityPathBase<ProductDepositList> {
 
     public final StringPath dpDescription = createString("dpDescription");
 
-    public final NumberPath<java.math.BigDecimal> dpEarlyTerminationRate = createNumber("dpEarlyTerminationRate", java.math.BigDecimal.class);
+    public final StringPath dpEarlyTerminationRate = createString("dpEarlyTerminationRate");
 
     public final StringPath dpFeature = createString("dpFeature");
 
@@ -37,11 +37,11 @@ public class QProductDepositList extends EntityPathBase<ProductDepositList> {
 
     public final StringPath dpIsActive = createString("dpIsActive");
 
-    public final NumberPath<java.math.BigDecimal> dpMaxAmount = createNumber("dpMaxAmount", java.math.BigDecimal.class);
+    public final NumberPath<Long> dpMaxAmount = createNumber("dpMaxAmount", Long.class);
 
     public final NumberPath<Integer> dpMaxMonths = createNumber("dpMaxMonths", Integer.class);
 
-    public final NumberPath<java.math.BigDecimal> dpMinAmount = createNumber("dpMinAmount", java.math.BigDecimal.class);
+    public final NumberPath<Long> dpMinAmount = createNumber("dpMinAmount", Long.class);
 
     public final NumberPath<Integer> dpMinMonths = createNumber("dpMinMonths", Integer.class);
 
