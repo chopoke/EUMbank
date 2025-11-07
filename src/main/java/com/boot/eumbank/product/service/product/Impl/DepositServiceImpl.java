@@ -1,10 +1,12 @@
 package com.boot.eumbank.product.service.product.Impl;
 
 import com.boot.eumbank.account.open.entity.account.Account;
+import com.boot.eumbank.account.open.enums.FileType;
+import com.boot.eumbank.account.open.jpa.repository.mypage.DocumentRepository;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.product.dto.product.DepositSubscriptionRequestDto;
 import com.boot.eumbank.product.dto.product.ProductDto;
-import com.boot.eumbank.product.jpa.repository.AccountQueryRepository;
+import com.boot.eumbank.product.entity.product.DocumentFile;
 import com.boot.eumbank.product.jpa.repository.DepositQueryRepository;
 import com.boot.eumbank.product.service.product.DepositService;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +44,7 @@ public class DepositServiceImpl implements DepositService {
 
     private final DepositQueryRepository depositQueryRepository;
 
-    private final AccountQueryRepository accountQueryRepository;
+    private final DocumentRepository documentRepository;
 
     @Value("${file.upload-dir}")
     private String uploadDir;
@@ -57,6 +59,8 @@ public class DepositServiceImpl implements DepositService {
         logger.info("상품명: {}", requestDto.getProductName());
         logger.info("금액: {}", requestDto.getAmount());
         logger.info("기간: {}", requestDto.getPeriod());
+
+
 
         try (PDDocument document = PDDocument.load(signedPdfFile.getInputStream())) {
 
@@ -195,6 +199,17 @@ public class DepositServiceImpl implements DepositService {
 
             Path filePath = Paths.get(uploadDir, fileName);
 
+            // DB에 기록 남기기
+            DocumentFile documentFile = DocumentFile.builder()
+                    .type(FileType.예금확인서)
+                    .pdfPath(filePath.toString())  // ✅ Path를 String으로 변환
+                    .pdfName(originalFilename)     // ✅ 원본 파일명 저장
+                    .cNo(customer.getCustomerNo())
+                    // createdAt은 @CreationTimestamp로 자동 설정
+                    .build();
+
+            documentRepository.save(documentFile);
+
             // PDF 저장
             document.save(filePath.toFile());
             logger.info("PDF 파일 저장 완료: {}", filePath);
@@ -213,7 +228,7 @@ public class DepositServiceImpl implements DepositService {
     }
 
     @Override
-    public void depositSave(DepositSubscriptionRequestDto requestDto) {
+    public void depositSave(DepositSubscriptionRequestDto requestDto, String signedPdfFilePath) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
@@ -221,7 +236,7 @@ public class DepositServiceImpl implements DepositService {
         ProductDto depositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
         Account oneAccount = depositQueryRepository.findOneAccount(customer, requestDto);
 
-        depositQueryRepository.depositSave(requestDto, customer, depositProducts, oneAccount);
+        depositQueryRepository.depositSave(requestDto, customer, depositProducts, oneAccount, signedPdfFilePath);
     }
 
     private void addText(PDPageContentStream contentStream, PDFont font, int fontSize, float x, float y, String text) throws IOException {
