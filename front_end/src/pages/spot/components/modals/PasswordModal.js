@@ -102,26 +102,9 @@ const PasswordModal = ({
     if (value.length <= 6) {
       setPassword(value);
       setError('');
+      
     }
   };
-
-  // 고객번호 추출 유틸 (다양한 저장 포맷 대응)
-  const resolveCustomerNo = () => {
-    try {
-      const storedUser = localStorage.getItem('user') || localStorage.getItem('loginUser') || localStorage.getItem('customer');
-      if (storedUser) {
-        const u = JSON.parse(storedUser);
-        return (
-          u?.customerNo || u?.c_no || u?.customer_no || u?.cNo || u?.id || null
-        );
-      }
-    } catch {}
-    // 개별 키로 저장된 경우
-    const direct = localStorage.getItem('customerNo') || localStorage.getItem('c_no') || localStorage.getItem('cNo');
-    if (direct) return direct;
-    return null;
-  };
-
 
   const resolveWalletPin = (walletName) => {
     console.log('=== 월렛 PIN 조회 시작 ===');

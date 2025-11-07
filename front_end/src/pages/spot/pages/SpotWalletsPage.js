@@ -80,6 +80,7 @@ const SpotWalletsPage = () => {
         const formattedWallets = dbWallets.map(wallet => ({
           id: wallet.gwNo,
           name: wallet.gwWalletName,
+          accountNo: wallet.accountNo || wallet.gwAccountNo || '',
           pin: wallet.gwPin,
           balance: Number(wallet.gwCashBalance) || 0,
           goldBalance: Number(wallet.gwGoldBalance) || 0,

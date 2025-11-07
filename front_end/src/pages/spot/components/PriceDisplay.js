@@ -23,8 +23,6 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
   const navigate = useNavigate();
   
   // 그래프 데이터 상태
-  const [domesticChartData, setDomesticChartData] = useState([]);
-  const [internationalChartData, setInternationalChartData] = useState([]);
   const [goldDomesticChartData, setGoldDomesticChartData] = useState([]);
   const [goldInternationalChartData, setGoldInternationalChartData] = useState([]);
   const [silverDomesticChartData, setSilverDomesticChartData] = useState([]);
@@ -121,76 +119,33 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
   // 기간별 차트 데이터 생성
   const generateChartDataByRange = (range) => {
     const now = new Date();
-    let dataPoints, timeInterval, domesticPrices, internationalPrices;
+    let dataPoints, timeInterval;
     
     switch(range) {
       case '실시간':
         dataPoints = 24; // 시간 단위로 더 촘촘하게
         timeInterval = 60 * 60 * 1000; // 1시간
-        // 국내: 더 급격한 변동성, 국제: 더 안정적 (3.75g 기준)
-        domesticPrices = generatePriceData(2250000, 3375000, dataPoints, 'domestic_realtime', 'AU');
-        internationalPrices = generatePriceData(30000, 60000, dataPoints, 'international_realtime', 'AU');
         break;
       case '1개월':
         dataPoints = 30; // 일 단위
         timeInterval = 24 * 60 * 60 * 1000; // 1일
-        domesticPrices = generatePriceData(2250000, 3375000, dataPoints, 'domestic_volatile', 'AU');
-        internationalPrices = generatePriceData(30000, 60000, dataPoints, 'international_volatile', 'AU');
         break;
       case '5개월':
         dataPoints = 30; // 1개월과 동일한 간격(가독성 향상)
         timeInterval = 5 * 24 * 60 * 60 * 1000; // 5일 간격로 5개월 커버
-        domesticPrices = generatePriceData(2437500, 3187500, dataPoints, 'domestic_trending', 'AU');
-        internationalPrices = generatePriceData(35000, 55000, dataPoints, 'international_trending', 'AU');
         break;
       case '1년':
         dataPoints = 52; // 주 단위
         timeInterval = 7 * 24 * 60 * 60 * 1000; // 1주
-        domesticPrices = generatePriceData(2625000, 3000000, dataPoints, 'domestic_stable', 'AU');
-        internationalPrices = generatePriceData(35000, 55000, dataPoints, 'international_stable', 'AU');
         break;
       case '3년':
         dataPoints = 36; // 월 단위(3년)
         timeInterval = 30 * 24 * 60 * 60 * 1000; // 1개월
-        domesticPrices = generatePriceData(2812500, 3187500, dataPoints, 'domestic_longterm', 'AU');
-        internationalPrices = generatePriceData(35000, 55000, dataPoints, 'international_longterm', 'AU');
         break;
       default:
         dataPoints = 15;
         timeInterval = 24 * 60 * 60 * 1000;
-        domesticPrices = generatePriceData(2250000, 3375000, dataPoints, 'domestic_volatile', 'AU');
-        internationalPrices = generatePriceData(30000, 60000, dataPoints, 'international_volatile', 'AU');
     }
-    
-    // 국내 시세 데이터 생성
-    const domesticData = domesticPrices.map((price, i) => {
-      const time = new Date(now.getTime() - (dataPoints - 1 - i) * timeInterval);
-      const month = time.getMonth() + 1;
-      const year = time.getFullYear();
-      
-      return {
-        time: range === '실시간' ? `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}` : 
-              range === '1개월' ? `${month}/${time.getDate()}` : 
-              `${year}-${month.toString().padStart(2, '0')}`,
-        price: price,
-        fullTime: time
-      };
-    });
-    
-    // 국제 시세 데이터 생성
-    const internationalData = internationalPrices.map((price, i) => {
-      const time = new Date(now.getTime() - (dataPoints - 1 - i) * timeInterval);
-      const month = time.getMonth() + 1;
-      const year = time.getFullYear();
-      
-      return {
-        time: range === '실시간' ? `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}` : 
-              range === '1개월' ? `${month}/${time.getDate()}` : 
-              `${year}-${month.toString().padStart(2, '0')}`,
-        price: price,
-        fullTime: time
-      };
-    });
 
     // 금과 은의 데이터를 별도로 생성
     const goldDomesticPrices = generatePriceData(2250000, 3375000, dataPoints, 'domestic_realtime', 'AU');
@@ -254,8 +209,6 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
       };
     });
     
-    setDomesticChartData(domesticData);
-    setInternationalChartData(internationalData);
     setGoldDomesticChartData(goldDomesticData);
     setGoldInternationalChartData(goldInternationalData);
     setSilverDomesticChartData(silverDomesticData);

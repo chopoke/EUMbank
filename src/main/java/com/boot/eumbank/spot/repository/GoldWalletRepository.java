@@ -63,4 +63,12 @@ public interface GoldWalletRepository extends JpaRepository<GoldWallet, Integer>
     // 월렛명으로 조회
     @Query("SELECT gw FROM GoldWallet gw WHERE gw.customer.customerNo = :customerNo AND gw.gwWalletName = :walletName")
     Optional<GoldWallet> findByCustomerCustomerNoAndGwWalletName(@Param("customerNo") Long customerNo, @Param("walletName") String walletName);
+    
+    // 계좌번호로 조회
+    @Query("SELECT gw FROM GoldWallet gw WHERE gw.gwAccountNo = :accountNo")
+    Optional<GoldWallet> findByGwAccountNo(@Param("accountNo") String accountNo);
+    
+    // 계좌번호 존재 여부 확인
+    @Query("SELECT COUNT(gw) > 0 FROM GoldWallet gw WHERE gw.gwAccountNo = :accountNo")
+    boolean existsByGwAccountNo(@Param("accountNo") String accountNo);
 }

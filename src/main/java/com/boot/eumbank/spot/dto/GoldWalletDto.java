@@ -12,6 +12,7 @@ public class GoldWalletDto {
     public Integer gwNo; /** 월렛 번호 */
     public Integer customerNo; /** 고객 번호 */
     public String walletName; /** 월렛 이름 */
+    public String accountNo; /** 현물계좌 통장 계좌번호 */
     public String pin; /** 월렛 PIN 번호 */
     public BigDecimal cashBalance; /** 현금 잔액 */
     public BigDecimal goldBalance; /** 금 보유량 (그램) */

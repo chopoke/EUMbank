@@ -152,6 +152,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
         const formatted = {
           id: wallet.gwNo || wallet.id || 0,
           name: wallet.walletName || wallet.gwWalletName || wallet.name || '이름없음',
+          accountNo: wallet.accountNo || wallet.gwAccountNo || '',
           pin: wallet.pin || wallet.gwPin || '',
           balance: Number(wallet.cashBalance) || Number(wallet.gwCashBalance) || 0,
           cashBalance: Number(wallet.cashBalance) || Number(wallet.gwCashBalance) || 0,
@@ -166,6 +167,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
         console.log('월렛 변환 후:', formatted);
         console.log(`월렛 "${formatted.name}" PIN: ${formatted.pin}`);
         console.log(`월렛 "${formatted.name}" 잔고: ${formatted.balance}`);
+        console.log(`월렛 "${formatted.name}" 계좌번호: ${formatted.accountNo}`);
         
         return formatted;
       });
@@ -259,6 +261,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
       const newWallet = {
         id: result.gwNo,
         name: result.gwWalletName,
+        accountNo: result.gwAccountNo || '',
         balance: Number(result.gwCashBalance) || 0,
         cashBalance: Number(result.gwCashBalance) || 0,
         goldBalance: Number(result.gwGoldBalance) || 0,
@@ -634,6 +637,14 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
               <h3 className="font-semibold text-gray-800 truncate">{wallet.name}</h3>
             </div>
             
+            {/* 현물계좌번호 표시 */}
+            <div className="mb-2">
+              <p className="text-xs text-gray-500">현물계좌</p>
+              <p className="text-sm font-mono text-gray-700">
+                {wallet.accountNo || wallet.gwAccountNo || '계좌번호 없음'}
+              </p>
+            </div>
+            
             <div className="mb-3">
               <p className="text-sm text-gray-600">현물계좌 잔고</p>
               <p className={`text-lg sm:text-xl font-bold break-all ${
@@ -709,6 +720,12 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
       {selectedWallet && (
         <div className="mt-6 bg-gray-50 rounded-lg p-4">
           <h3 className="font-semibold text-gray-800 mb-3">선택된 지갑: {selectedWallet.name}</h3>
+          {selectedWallet.accountNo && (
+            <div className="mb-3 bg-white rounded-lg p-3">
+              <span className="text-gray-600 block text-sm">현물계좌번호</span>
+              <span className="text-base font-mono text-gray-800">{selectedWallet.accountNo}</span>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
             <div className="bg-white rounded-lg p-3">
               <span className="text-gray-600 block">현금 잔고</span>

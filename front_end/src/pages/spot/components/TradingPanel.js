@@ -170,28 +170,63 @@ const TradingPanel = ({
   }, []);
 
   /**
-   * 수수료 계산 (수량 기반)
+   * 실제 거래 금액 계산 (수량 기반, 백엔드와 동일)
+   * 백엔드는 totalPrice = currentPrice.getPBuyPrice().multiply(quantity)로 계산
+   * 반올림하지 않고 정밀한 값 유지 (최종 합계에서만 반올림)
+   * 
+   * 중요: 백엔드로 전달되는 정확한 quantity를 기준으로 계산
+   * 프론트엔드에서 quantity = tradingAmount / buyPrice로 계산하고,
+   * 백엔드는 이 quantity를 받아서 실시간 가격으로 totalPrice를 계산합니다.
+   * 
+   * 백엔드와 정확히 일치시키기 위해, 백엔드로 전달되는 quantity를 정확히 계산합니다.
+   */
+  const calculateActualTotalPrice = useCallback(() => {
+    // 백엔드로 전달되는 정확한 quantity 계산 (tradingAmount / buyPrice)
+    const quantity = getCalculatedQuantity();
+    if (quantity <= 0) return 0;
+    const currentPrice = selectedProduct === 'gold' ? goldPrice : silverPrice;
+    const pricePerGram = tradingSide === 'buy' ? currentPrice.buyPrice : currentPrice.sellPrice;
+    
+    // 백엔드와 동일하게: totalPrice = buyPrice * quantity
+    // 정밀도 유지를 위해 부동소수점 연산 사용
+    return pricePerGram * quantity; // 반올림하지 않음
+  }, [getCalculatedQuantity, selectedProduct, goldPrice, silverPrice, tradingSide]);
+
+  /**
+   * 수수료 계산 (수량 기반, 백엔드와 동일)
+   * 백엔드는 feeAmount = totalPrice.multiply(feeRate)로 계산
+   * 반올림하지 않고 정밀한 값 유지
    */
   const calculateFee = useCallback(() => {
     const quantity = getCalculatedQuantity();
     if (quantity <= 0) return 0;
     const feeRate = calculateFeeRate(quantity);
-    return Math.round(tradingAmount * feeRate);
-  }, [tradingAmount, getCalculatedQuantity, calculateFeeRate]);
+    const totalPrice = calculateActualTotalPrice();
+    return totalPrice * feeRate; // 반올림하지 않음
+  }, [getCalculatedQuantity, calculateFeeRate, calculateActualTotalPrice]);
 
   /**
-   * 세금 계산 (VAT 10%)
+   * 세금 계산 (VAT 10%, 백엔드와 동일)
+   * 백엔드는 taxAmount = totalPrice.multiply(TAX_RATE)로 계산
+   * 반올림하지 않고 정밀한 값 유지
    */
   const calculateTax = useCallback(() => {
-    return Math.round(tradingAmount * 0.1); // 10% VAT
-  }, [tradingAmount]);
+    const totalPrice = calculateActualTotalPrice();
+    return totalPrice * 0.1; // 반올림하지 않음
+  }, [calculateActualTotalPrice]);
 
   /**
-   * 총액 계산 (체결가 + 수수료 + 세금)
+   * 총액 계산 (체결가 + 수수료 + 세금, 백엔드와 동일)
+   * 백엔드는 finalAmount = totalPrice.add(feeAmount).add(taxAmount).setScale(0, RoundingMode.HALF_UP)
+   * 최종 합계만 반올림 (각 단계를 반올림하면 누적 오차 발생)
    */
   const calculateTotal = useCallback(() => {
-    return tradingAmount + calculateFee() + calculateTax();
-  }, [tradingAmount, calculateFee, calculateTax]);
+    const totalPrice = calculateActualTotalPrice();
+    const feeAmount = calculateFee();
+    const taxAmount = calculateTax();
+    const total = totalPrice + feeAmount + taxAmount;
+    return Math.round(total); // 최종 합계만 반올림
+  }, [calculateActualTotalPrice, calculateFee, calculateTax]);
 
   /**
    * 매도 시 예상 체결가 계산 (프리미엄 없음)
@@ -540,13 +575,13 @@ const TradingPanel = ({
               {tradingSide === 'buy' ? '거래 금액' : '예상 매도가'}
             </span>
             <p className="text-base sm:text-lg font-semibold text-gray-800">
-              ₩{tradingSide === 'buy' ? Math.round(tradingAmount).toLocaleString() : Math.round(calculateSellPrice()).toLocaleString()}
+              ₩{tradingSide === 'buy' ? Math.round(calculateActualTotalPrice()).toLocaleString() : Math.round(calculateSellPrice()).toLocaleString()}
             </p>
           </div>
           <div>
             <span className="text-xs sm:text-sm text-gray-600">세금 (VAT 10%)</span>
             <p className="text-base sm:text-lg font-semibold text-gray-800">
-              ₩{tradingSide === 'buy' ? calculateTax().toLocaleString() : Math.round(calculateSellPrice() * 0.1).toLocaleString()}
+              ₩{tradingSide === 'buy' ? Math.round(calculateTax()).toLocaleString() : Math.round(calculateSellPrice() * 0.1).toLocaleString()}
             </p>
           </div>
           
@@ -562,7 +597,7 @@ const TradingPanel = ({
               수수료 ({getFeeRateText(getCalculatedQuantity())})
             </span>
             <p className="text-base sm:text-lg font-semibold text-gray-800">
-              ₩{tradingSide === 'buy' ? calculateFee().toLocaleString() : (() => {
+              ₩{tradingSide === 'buy' ? Math.round(calculateFee()).toLocaleString() : (() => {
                 const sellPrice = calculateSellPrice();
                 const quantity = getCalculatedQuantity();
                 if (quantity <= 0) return 0;

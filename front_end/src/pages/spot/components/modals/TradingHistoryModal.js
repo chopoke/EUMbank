@@ -17,14 +17,14 @@ const TradingHistoryModal = ({
 }) => {
   console.log('TradingHistoryModal 렌더링:', { isOpen, customerNo, walletsCount: wallets?.length });
   const [loading, setLoading] = useState(false);
-  const [rows, setRows] = useState([]);
-  const [page, setPage] = useState(0);
-  const [size, setSize] = useState(10);
-  const [totalElements, setTotalElements] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const [rows, setRows] = useState([]);  // 거래 목록
+  const [page, setPage] = useState(0);   // 현재 페이지
+  const [size, setSize] = useState(10);   // 페이지 크기
+  const [totalElements, setTotalElements] = useState(0); // 거래유형 필터 (매수/매도)
+  const [totalPages, setTotalPages] = useState(0);  // 금속 필터 (금/은)
   const [txType, setTxType] = useState(''); // BUY/SELL/''(전체)
   const [metal, setMetal] = useState('');   // AU/AG/''(전체)
-  const [walletId, setWalletId] = useState(''); // 특정 현물통장 or 전체
+  const [walletId, setWalletId] = useState(''); // 현물통장 필터
   const [summary, setSummary] = useState({}); // 총합 정보
 
   // 거래번호 기준 내림차순 정렬

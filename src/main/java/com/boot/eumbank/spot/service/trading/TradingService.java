@@ -28,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.Random;
@@ -113,12 +114,18 @@ public class TradingService {
             // 수수료 계산
             log.info("수수료 계산 시작 - productId: {}, quantity: {}", productId, quantity);
             BigDecimal feeRate = calculateFeeRate(productId, quantity);
+            // 각 단계를 정밀하게 계산한 후 마지막에만 반올림 (프론트엔드와 일치시키기 위해)
             BigDecimal totalPrice = currentPrice.getPBuyPrice().multiply(quantity);
             BigDecimal feeAmount = totalPrice.multiply(feeRate);
             BigDecimal taxAmount = totalPrice.multiply(TAX_RATE);
-            BigDecimal finalAmount = totalPrice.add(feeAmount).add(taxAmount);
+            // 최종 금액만 반올림 (각 단계를 반올림하면 누적 오차 발생)
+            BigDecimal finalAmount = totalPrice.add(feeAmount).add(taxAmount).setScale(0, RoundingMode.HALF_UP);
+            // DB 저장용으로는 각 단계도 반올림
+            BigDecimal roundedTotalPrice = totalPrice.setScale(0, RoundingMode.HALF_UP);
+            BigDecimal roundedFeeAmount = feeAmount.setScale(0, RoundingMode.HALF_UP);
+            BigDecimal roundedTaxAmount = taxAmount.setScale(0, RoundingMode.HALF_UP);
             log.info("수수료 계산 완료 - feeRate: {}, totalPrice: {}, feeAmount: {}, taxAmount: {}, finalAmount: {}", 
-                    feeRate, totalPrice, feeAmount, taxAmount, finalAmount);
+                    feeRate, roundedTotalPrice, roundedFeeAmount, roundedTaxAmount, finalAmount);
             
             // 월렛 조회 및 PIN 검증
             log.info("월렛 조회 시작 - customerNo: {}, walletName: {}", customerNo, walletName);
@@ -142,7 +149,11 @@ public class TradingService {
             
             if (wallet.getGwCashBalance().compareTo(finalAmount) < 0) {
                 log.error("잔액 부족 - 필요금액: {}, 보유금액: {}", finalAmount, wallet.getGwCashBalance());
-                throw new RuntimeException("잔액이 부족합니다. 필요금액: " + finalAmount + "원, 보유금액: " + wallet.getGwCashBalance() + "원");
+                // 금액을 정수로 반올림하고 콤마 포맷팅
+                BigDecimal formattedFinalAmount = finalAmount.setScale(0, RoundingMode.HALF_UP);
+                BigDecimal formattedBalance = wallet.getGwCashBalance().setScale(0, RoundingMode.HALF_UP);
+                DecimalFormat df = new DecimalFormat("#,###");
+                throw new RuntimeException("잔액이 부족합니다. 필요금액: " + df.format(formattedFinalAmount) + "원, 보유금액: " + df.format(formattedBalance) + "원");
             }
             log.info("잔액 확인 완료 - 거래 가능");
             
@@ -155,9 +166,9 @@ public class TradingService {
                 .gTransactionType(GoldTbl.TransactionType.BUY)
                 .gQuantity(quantity)
                 .gPricePerG(currentPrice.getPBuyPrice())
-                .gTotalPrice(totalPrice)
-                .gTaxAmount(taxAmount)
-                .gFeeAmount(feeAmount)
+                .gTotalPrice(roundedTotalPrice)
+                .gTaxAmount(roundedTaxAmount)
+                .gFeeAmount(roundedFeeAmount)
                 .gStatus(GoldTbl.TransactionStatus.COMPLETED)
                 .gWalletName(walletName)
                 .build();
@@ -780,6 +791,7 @@ public class TradingService {
         dto.gwNo = wallet.getGwNo();
         dto.customerNo = wallet.getCustomer() != null ? wallet.getCustomer().getCustomerNo() : null;
         dto.walletName = wallet.getGwWalletName();
+        dto.accountNo = wallet.getGwAccountNo();
         dto.pin = wallet.getGwPin();
         dto.cashBalance = wallet.getGwCashBalance();
         dto.goldBalance = wallet.getGwGoldBalance();
@@ -863,7 +875,7 @@ public class TradingService {
     /**
      * 고객 월렛 목록 조회 (DTO 반환)
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<GoldWalletDto> getCustomerWalletsDto(Long customerNo) {
         try {
             log.info("월렛 조회 시작 (DTO): customerNo={}", customerNo);
@@ -875,6 +887,17 @@ public class TradingService {
             // 월렛 조회
             List<GoldWallet> wallets = goldWalletRepository.findByCustomerCustomerNo(customerNo);
             log.info("월렛 조회 성공: customerNo={}, 조회된 월렛 수={}", customerNo, wallets.size());
+            
+            // 기존 월렛 중 계좌번호가 없는 경우 자동 생성
+            for (GoldWallet wallet : wallets) {
+                if (wallet.getGwAccountNo() == null || wallet.getGwAccountNo().trim().isEmpty()) {
+                    log.info("계좌번호가 없는 월렛 발견, 자동 생성: walletNo={}", wallet.getGwNo());
+                    String accountNo = generateAccountNo(wallet.getGwNo());
+                    wallet.setGwAccountNo(accountNo);
+                    goldWalletRepository.save(wallet);
+                    log.info("계좌번호 생성 완료: walletNo={}, accountNo={}", wallet.getGwNo(), accountNo);
+                }
+            }
             
             // DTO 변환
             return toGoldWalletDtos(wallets);
@@ -901,6 +924,7 @@ public class TradingService {
                 Map<String, Object> walletInfo = new HashMap<>();
                 walletInfo.put("id", dto.gwNo);
                 walletInfo.put("name", dto.walletName);
+                walletInfo.put("accountNo", dto.accountNo);
                 walletInfo.put("pin", dto.pin);
                 walletInfo.put("cashBalance", dto.cashBalance);
                 walletInfo.put("goldBalance", dto.goldBalance);
@@ -928,6 +952,16 @@ public class TradingService {
             pin.append(random.nextInt(10));
         }
         return pin.toString();
+    }
+    
+    /**
+     * 현물계좌 통장 계좌번호 생성 (DB 스키마 형식)
+     * 형식: WL + 월렛번호(6자리)
+     * 예: WL000001 (월렛번호 1)
+     * 주의: 월렛 번호는 저장 후에 생성되므로, 저장 후 이 메서드를 호출해야 함
+     */
+    private String generateAccountNo(Integer walletNo) {
+        return "WL" + String.format("%06d", walletNo);
     }
     
     /**
@@ -981,11 +1015,12 @@ public class TradingService {
                 throw new RuntimeException("월렛명 중복 확인 중 오류가 발생했습니다: " + e.getMessage());
             }
             
-            // 월렛 생성
+            // 월렛 생성 (계좌번호는 저장 후 생성)
             log.info("월렛 객체 생성 시작");
             GoldWallet wallet = GoldWallet.builder()
                 .customer(customer)
                 .gwWalletName(walletName.trim())
+                .gwAccountNo(null) // 저장 후 월렛 번호로 생성
                 .gwPin(walletPin)
                 .gwCashBalance(BigDecimal.ZERO)
                 .gwGoldBalance(BigDecimal.ZERO)
@@ -1001,6 +1036,15 @@ public class TradingService {
             try {
                 savedWallet = goldWalletRepository.save(wallet);
                 log.info("월렛 저장 완료 - walletNo: {}", savedWallet.getGwNo());
+                
+                // 저장 후 월렛 번호로 계좌번호 생성 (DB 스키마 형식: WL + 월렛번호)
+                String accountNo = generateAccountNo(savedWallet.getGwNo());
+                log.info("생성된 계좌번호: {}", accountNo);
+                
+                // 계좌번호 업데이트
+                savedWallet.setGwAccountNo(accountNo);
+                savedWallet = goldWalletRepository.save(savedWallet);
+                log.info("계좌번호 업데이트 완료 - walletNo: {}, accountNo: {}", savedWallet.getGwNo(), accountNo);
             } catch (Exception e) {
                 log.error("월렛 저장 중 오류: customerNo={}, walletName={}, error={}", customerNo, walletName, e.getMessage(), e);
                 throw new RuntimeException("월렛 저장 중 오류가 발생했습니다: " + e.getMessage());
@@ -1010,6 +1054,7 @@ public class TradingService {
             result.put("message", "월렛이 생성되었습니다. 설정한 PIN: " + walletPin);
             result.put("gwNo", savedWallet.getGwNo());
             result.put("gwWalletName", savedWallet.getGwWalletName());
+            result.put("gwAccountNo", savedWallet.getGwAccountNo());
             result.put("gwPin", savedWallet.getGwPin());
             result.put("generatedPin", walletPin);
             result.put("gwCashBalance", savedWallet.getGwCashBalance());

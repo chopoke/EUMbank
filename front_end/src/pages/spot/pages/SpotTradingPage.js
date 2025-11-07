@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import TradingPanel from '../components/TradingPanel'; //거래패널
+
+
 import PriceDisplay from '../components/PriceDisplay'; // 시세표시
-import BalanceCard from '../components/BalanceCard'; // 잔고
-import WalletManager from '../components/WalletManager'; //월렛
+import TradingPanel from '../components/TradingPanel'; //거래표시
+import WalletManager from '../components/WalletManager'; //월렛표시
+import BalanceCard from '../components/BalanceCard'; // 잔고표시
 // ===== 다이얼로그/모달 컴포넌트들 =====
-import TransferModal from '../components/modals/TransferModal';
-import PasswordModal from '../components/modals/PasswordModal';
-import TradingHistoryModal from '../components/modals/TradingHistoryModal';
+import TransferModal from '../components/modals/TransferModal'; //이체
+import PasswordModal from '../components/modals/PasswordModal'; // pin 확인
+import TradingHistoryModal from '../components/modals/TradingHistoryModal'; //거래내역
 // =====================================
 import spotApi from '../api/spotApi';
-import api, { getAccessToken } from '../../../api/axios';
+import { getAccessToken } from '../../../api/axios';
 import { fetchMe } from '../../../api/authApi';
 
 /**
@@ -20,18 +21,6 @@ import { fetchMe } from '../../../api/authApi';
  * - 성능 최적화: React.memo, useMemo, useCallback으로 리렌더링 최적화
  */
 const SpotTradingPage = () => {
-  const navigate = useNavigate();
-  
-  const navItems = [
-    { path: '/spot', label: '메인' },
-    { path: '/spot/trade', label: '매수/매도' },
-    { path: '/spot/balance', label: '잔고현황' },
-    { path: '/spot/wallets', label: '통장관리' },
-    { path: '/spot/history', label: '거래내역' },
-    { path: '/spot/transfer', label: '이체관리' },
-    { path: '/spot/SpotPriceHistory', label: '시세이력' }
-  ];
-  
   // === 상태 관리 ===
   
   // 가격 관련 상태 - API에서 받은 가격 사용
@@ -281,6 +270,7 @@ const SpotTradingPage = () => {
         const formattedWallets = dbWallets.map(wallet => ({
           id: wallet.gwNo,
           name: wallet.gwWalletName,
+          accountNo: wallet.accountNo || wallet.gwAccountNo || '',
           pin: wallet.gwPin,
           balance: Number(wallet.gwCashBalance) || 0,
           goldBalance: Number(wallet.gwGoldBalance) || 0,
