@@ -13,9 +13,9 @@ public class AccountSummaryDTO {
     @JsonProperty("a_no")           private int aNo;           // 계좌no
     @JsonProperty("a_id")           private String aId;
     @JsonProperty("a_account_no")   private String accountNo;    // 계좌번호
-    @JsonProperty("a_product_code") private String productCode;
-    @JsonProperty("a_account_type") private String accountType;      // 상품타입이지만, 여기선 대출 표현 용도로
-    @JsonProperty("a_currency")     private String currency;  // 계좌 타입
+    @JsonProperty("a_product_code") private String productCode;         // 상품 코드 또는 입출금에선 대출표현
+    @JsonProperty("a_account_type") private String accountType;      // 상품타입
+    @JsonProperty("a_currency")     private String currency;        // 계좌 통화
     @JsonProperty("a_balance")      private BigDecimal balance;
     @JsonProperty("a_nickname")     private String nickname;  // 잔액
     @JsonProperty("a_status")       private String status;      // 별칭

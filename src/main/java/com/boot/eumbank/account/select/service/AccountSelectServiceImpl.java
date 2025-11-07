@@ -4,6 +4,9 @@ import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.account.select.dto.AccountDetailDTO;
 import com.boot.eumbank.account.select.dto.AccountSummaryDTO;
 import com.boot.eumbank.account.select.repository.AccountSelectRepository;
+import com.boot.eumbank.account.select.repository.DepoSelectRepository;
+import com.boot.eumbank.account.select.repository.InstSelectRepository;
+import com.boot.eumbank.product.entity.product.ProductInstallment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,9 +22,20 @@ import java.util.Optional;
 public class AccountSelectServiceImpl implements AccountSelectService {
 
     private final AccountSelectRepository accountRepository;
+    private final InstSelectRepository instRepo;
+    private final DepoSelectRepository depoRepo;
 
     @Override
     public List<AccountSummaryDTO> list(int c_no) {
+        // 기본 입출금계좌들 (Account)
+        List<AccountSummaryDTO> basicAcc = accountRepository.findAccountsByCustomer(c_no).stream()
+                .map(this::toSummaryDTO).toList();
+        // 적금
+//        List<AccountSummaryDTO> instAcc = instRepo.findByCNo(c_no).stream()
+//                .map(this::toSummaryDTO).toList();
+        //예금
+//        List<AccountSummaryDTO> depoAcc = depoRepo.findByCNo(c_no).stream()
+//                .map(this::toSummaryDTO).toList();
         return accountRepository.findAccountsByCustomer(c_no)
                 .stream().map(this::toSummaryDTO).toList();
     }
@@ -72,6 +86,20 @@ public class AccountSelectServiceImpl implements AccountSelectService {
         dto.setLastTransferAt(a.getLastTxAt());
         return dto;
     }
+
+//    // 적금
+//    private AccountSummaryDTO toInstDTO(ProductInstallment inst){
+//        AccountSummaryDTO dto = new AccountSummaryDTO();
+//
+//        dto.setANo(inst.getINo());      //ㅂ ㅓㄴ호
+//        dto.setAId(inst.getIId());      // 유니크
+//        dto.setAccountNo(inst.getIAccountNo());     //계좌번호
+//        dto.setProductCode("I+난수");
+//        dto.setAccountType("적금");
+//        dto.setCurrency(inst.getICurrency());
+//
+//
+//    }
 
     private AccountDetailDTO toDetailDTO(Account a) {
         AccountDetailDTO dto = new AccountDetailDTO();
