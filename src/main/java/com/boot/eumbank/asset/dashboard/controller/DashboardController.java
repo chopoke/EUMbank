@@ -4,25 +4,42 @@ import com.boot.eumbank.asset.dashboard.dto.AssetSummaryDto;
 import com.boot.eumbank.asset.dashboard.service.DashboardService;
 import com.boot.eumbank.customer.entity.Customer;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 @RestController
 @RequestMapping("/api/asset/dashboard")
 @RequiredArgsConstructor
 public class DashboardController {
 
+    private static final Logger logger = LoggerFactory.getLogger(DashboardController.class);
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     private final DashboardService dashboardService;
 
     @GetMapping("/summary")
     public ResponseEntity<AssetSummaryDto> summary(@AuthenticationPrincipal Customer customer) {
         return ResponseEntity.ok(dashboardService.getDashboardSummary(customer.getCustomerNo()));
+    }
+
+    /**
+     *  매일 05:00 KST 스케줄 실행
+     */
+    @Scheduled(cron = "0 0 10 * * *", zone = "Asia/Seoul")
+    public void dailySnapshot() {
+        logger.info("<<< DashboardService dailySnapshot >>>");
+
+        LocalDate todayKST = LocalDate.now(KST);
+        dashboardService.takeDailySnapshot(todayKST);
     }
 }

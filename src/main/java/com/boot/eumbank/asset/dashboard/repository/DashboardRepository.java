@@ -137,6 +137,10 @@ public class DashboardRepository {
     }
 
 
+    /**
+     * 활성화되어 있는 회원 번호 리스트
+     * @return List<Integer>
+     */
     public List<Integer> getCNo() {
         return queryFactory.select(customer.customerNo)
                 .from(customer)

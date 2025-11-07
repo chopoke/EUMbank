@@ -8,13 +8,11 @@ import com.boot.eumbank.asset.dashboard.repository.DashboardRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +21,7 @@ import java.util.List;
 public class DashboardServiceImpl implements DashboardService{
 
     private static final Logger logger = LoggerFactory.getLogger(DashboardServiceImpl.class);
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
 
     private final DashboardRepository dashboardRepository;
     private final AssetDailySnapshotRepository assetDailySnapshotRepository;
@@ -59,6 +57,7 @@ public class DashboardServiceImpl implements DashboardService{
     }
 
     @Transactional
+    @Override
     public void takeDailySnapshot(LocalDate ymd) {
         logger.info("<<< DashboardService takeDailySnapshot >>>");
 
@@ -92,14 +91,5 @@ public class DashboardServiceImpl implements DashboardService{
 
     }
 
-    /**
-     *  매일 05:00 KST 스케줄 실행
-     */
-    @Scheduled(cron = "0 0 5 * * *", zone = "Asia/Seoul")
-    public void dailySnapshot() {
-        logger.info("<<< DashboardService dailySnapshot >>>");
 
-        LocalDate todayKST = LocalDate.now(KST);
-        takeDailySnapshot(todayKST);
-    }
 }
