@@ -134,7 +134,7 @@ public class RepaymentScheduleService {
                 .divide(new BigDecimal("12"), 10, RoundingMode.HALF_UP);
     }
     private static LocalDate dueDate (LocalDate start,int k, int payDay){
-        LocalDate base = start.plusMonths(k);
+        LocalDate base = start.plusMonths(k-1);
         int day = Math.min(payDay, base.lengthOfMonth());
         return LocalDate.of(base.getYear(), base.getMonth(), day);
     }
