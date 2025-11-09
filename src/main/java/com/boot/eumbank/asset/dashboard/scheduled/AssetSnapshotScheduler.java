@@ -22,7 +22,7 @@ public class AssetSnapshotScheduler {
     /**
      *  매일 05:00 KST 스케줄 실행
      */
-    @Scheduled(cron = "0 0 5 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 20 * * *", zone = "Asia/Seoul")
     public void runDailySnapshot() {
         LocalDate todayKst = LocalDate.now(KST);
         logger.info("<<< AssetSnapshotScheduler dailySnapshot : {} >>>", todayKst);

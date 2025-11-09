@@ -69,21 +69,31 @@ function hexToRgba(hex, a = 0.14) {
 }
 const pct = (v) => `${Math.round(v)}%`;
 
+const formatRate = (v) =>
+  (v == null ? "-" : `${Number(v).toFixed(2)}%`);
+
+const formatMonths = (m) =>
+  (m == null ? "-" : `${m}개월`);
+
+
 export default function AssetDashboard() {
 
   const [summary, setSummary] = useState(null);   // AssetSummaryDto
   const [trend, setTrend] = useState(null); // AssetTrendDto
+  const [topSavings, setTopSavings] = useState(null);   // TopSavingsDto
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const run = async () => {
       try {
-        const [s,t] = await Promise.all([
+        const [s,t,ts] = await Promise.all([
            api.get("/api/asset/dashboard/summary"),
-           api.get("/api/asset/dashboard/trend")
+           api.get("/api/asset/dashboard/trend"),
+           api.get("/api/asset/dashboard/top-savings")
         ]);
         setSummary(s.data);
         setTrend(t.data);
+        setTopSavings(ts.data);
       } catch(e) {
         console.error(e);
         alert("조회에 실패하였습니다.");
@@ -183,7 +193,7 @@ export default function AssetDashboard() {
       borderWidth: 2.5,
       borderColor: "#87259b",
       pointRadius: 2.8,
-      tension: 0.25,
+      tension: 0.15,
       fill: true,
       backgroundColor: (ctx) => {
         const { chart } = ctx;
@@ -346,10 +356,11 @@ export default function AssetDashboard() {
             <div className="col-span-1 xl:col-span-2 flex flex-col gap-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-base font-semibold text-gray-900">순자산 추이</h2>
-                  <p className="text-[12px] text-gray-500">
-                    최근 30일 동안의 순자산 변동입니다.
-                  </p>
+                  <h2 className="text-base font-semibold text-gray-900">최근 30일 순자산 추이</h2>
+                  <span className="mt-1 text-[12px] text-blue-700 flex items-center gap-2">
+                    본 화면의 수치는 <strong>매일 05:00(KST) </strong> 기준으로 집계됩니다.
+                    당일 중 변동분은 다음날 새벽 반영됩니다.
+                  </span>
                 </div>
                 {/* <button className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
                   자세히 보기
@@ -385,37 +396,59 @@ export default function AssetDashboard() {
               <div>
                 <h3 className="text-base font-semibold text-gray-900">예금 · 적금</h3>
                 <div className="text-[12px] text-gray-500 -mt-1">
-                  가장 잔액이 큰 순으로 정렬했습니다.
+                  가장 잔액이 큰 상품만 보여줍니다.
                 </div>
               </div>
-
-              <ul className="divide-y divide-gray-200 text-sm">
-                <li className="py-3 flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">e-UM 자유입출금</div>
-                    <div className="text-[12px] text-gray-500">111-2222-333333</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-gray-900">28,450,000원</div>
-                    <div className="text-[12px] text-blue-600 font-medium">
-                      전월 대비 +30,000원
+              
+              <div className="divide-y divide-gray-200 text-sm">
+                {/* 적금 */}
+              {loading ? (<div className="h-16 grid place-items-center text-sm text-gray-500">로딩 중…</div>)
+                : topSavings?.installment ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                       <div className="font-medium text-gray-900">{topSavings.installment.productName}</div>
+                       <div className="text-[12px] text-gray-500">
+                         {formatMonths(topSavings.installment.month)} · {formatRate(topSavings.installment.rate)}
+                       </div>
+                     </div>
+                     <div className="text-right">
+                        <div className="font-semibold text-gray-900">{formatKrw(topSavings.installment.amount)}</div>
+                        <div className="text-[12px] text-gray-500">월 납입 {formatKrw(topSavings.installment.principalBal)}</div>
+                      </div>
                     </div>
-                  </div>
-                </li>
+                ) : (
+                  <button
+                   className="w-full inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 mt-3 text-xs font-medium text-blue-700 hover:bg-gray-50 border-blue-200 text-blue-700"
+                   onClick={() => (window.location.href = "/depositSavingProductList/open")}>
+                   적금 상품 가입하기
+                 </button>
+                )
+              }
 
-                <li className="py-3 flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-gray-900">e-UM 고정적금</div>
-                    <div className="text-[12px] text-gray-500">12개월 만기 · 4.2%</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold text-gray-900">12,000,000원</div>
-                    <div className="text-[12px] text-gray-500">
-                      월 납입 1,000,000원
+              {/* 예금 */}
+              {loading ? (<div className="h-16 grid place-items-center text-sm text-gray-500">로딩 중…</div>)
+                : topSavings?.deposit ? (
+                    <div className="py-3 flex items-center justify-between">
+                      <div>
+                       <div className="font-medium text-gray-900">{topSavings.deposit.productName}</div>
+                       <div className="text-[12px] text-gray-500">
+                         {formatMonths(topSavings.deposit.month)} · {formatRate(topSavings.deposit.rate)}
+                       </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-gray-900">{formatKrw(topSavings.deposit.amount)}</div>
+                      </div>
                     </div>
-                  </div>
-                </li>
-              </ul>
+                ) : (
+                  <button
+                   className="w-full inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 mt-7 text-xs font-medium text-blue-700 hover:bg-gray-50 border-blue-200 text-blue-700"
+                   onClick={() => (window.location.href = "/depositSavingProductList/open")}>
+                   예금 상품 가입하기
+                 </button>
+                )
+              }
+              </div>
+              
             </div>
 
             {/* 대출 현황 */}

@@ -2,7 +2,10 @@ package com.boot.eumbank.asset.dashboard.repository;
 
 import com.boot.eumbank.asset.dashboard.dto.AssetCompositionDto;
 import com.boot.eumbank.asset.dashboard.dto.AssetSummaryDto;
+import com.boot.eumbank.asset.dashboard.dto.TopDepositDto;
+import com.boot.eumbank.asset.dashboard.dto.TopInstallmentDto;
 import com.boot.eumbank.asset.dashboard.entity.AssetDailySnapshot;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.StringExpression;
@@ -15,12 +18,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static com.boot.eumbank.customer.entity.QCustomer.customer;
 import static com.boot.eumbank.account.open.entity.account.QAccount.account;
 import static com.boot.eumbank.foreign.entity.QForeignRate.foreignRate;
 import static com.boot.eumbank.product.entity.product.QProductInstallment.productInstallment;
+import static com.boot.eumbank.product.entity.product.QProductInstallmentList.productInstallmentList;
 import static com.boot.eumbank.product.entity.product.QProductDeposit.productDeposit;
+import static com.boot.eumbank.product.entity.product.QProductDepositList.productDepositList;
 import static com.boot.eumbank.asset.dashboard.entity.QAssetDailySnapshot.assetDailySnapshot;
 
 @Repository
@@ -122,6 +128,8 @@ public class DashboardRepository {
 
     /**
      * 오늘 기준 이번달 납입 예정액(적금, 대출, 공과금)
+     * @param cNo 고객번호
+     * @return BigDecimal
      */
     public BigDecimal sumMonthlyDue(int cNo) {
         int today =LocalDate.now().getDayOfMonth();
@@ -179,5 +187,60 @@ public class DashboardRepository {
                 .orderBy(assetDailySnapshot.adsYmd.desc())
                 .limit(2)
                 .fetch();
+    }
+
+    /**
+     * 잔액이 가장 많은 적금 조회
+     * @param cNo 고객번호
+     * @return TopInstallmentDto
+     */
+    public Optional<TopInstallmentDto> getTopInstallment(int cNo) {
+        TopInstallmentDto installmentDto = queryFactory
+                .select(Projections.constructor(TopInstallmentDto.class,
+                                productInstallmentList.ipName,          // 상품명
+                                productInstallment.iMonth,              // 가입개월
+                                productInstallmentList.ipRate,          // 이율
+                                productInstallment.iAmount,             // 잔액
+                                productInstallment.iPrincipalBal        // 월 납입액
+                ))
+                .from(productInstallment)
+                .join(productInstallmentList)
+                .on(productInstallment.ipNo.eq(productInstallmentList.ipNo))
+                .where(
+                        productInstallment.cNo.eq(cNo),
+                        productInstallment.iStatus.in("ACTIVE", "COMPLETE")
+                )
+                .orderBy(productInstallment.iAmount.desc())
+                .limit(1)
+                .fetchOne();
+
+        return Optional.ofNullable(installmentDto);
+    }
+
+    /**
+     * 잔액이 가장 많은 예금 조회
+     * @param cNo 고객번호
+     * @return TopDepositDto
+     */
+    public Optional<TopDepositDto> getTopDeposit(int cNo) {
+        TopDepositDto depositDto = queryFactory
+                .select(Projections.constructor(TopDepositDto.class,
+                        productDepositList.dpName,
+                        productDeposit.dPeriod,
+                        productDeposit.dApy,
+                        productDeposit.dAmount
+                ))
+                .from(productDeposit)
+                .join(productDepositList)
+                .on(productDeposit.dpNo.eq(productDepositList.dpNo))
+                .where(
+                        productDeposit.cNo.eq(cNo),
+                        productDeposit.dStatus.in("ACTIVE", "NONE")
+                )
+                .orderBy(productDeposit.dAmount.desc())
+                .limit(1)
+                .fetchOne();
+
+        return Optional.ofNullable(depositDto);
     }
 }

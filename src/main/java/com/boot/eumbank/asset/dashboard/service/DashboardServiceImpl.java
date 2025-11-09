@@ -1,9 +1,6 @@
 package com.boot.eumbank.asset.dashboard.service;
 
-import com.boot.eumbank.asset.dashboard.dto.AssetCompositionDto;
-import com.boot.eumbank.asset.dashboard.dto.AssetSummaryDto;
-import com.boot.eumbank.asset.dashboard.dto.AssetTrendDto;
-import com.boot.eumbank.asset.dashboard.dto.AssetTrendPoint;
+import com.boot.eumbank.asset.dashboard.dto.*;
 import com.boot.eumbank.asset.dashboard.entity.AssetDailySnapshot;
 import com.boot.eumbank.asset.dashboard.repository.AssetDailySnapshotRepository;
 import com.boot.eumbank.asset.dashboard.repository.DashboardRepository;
@@ -63,7 +60,7 @@ public class DashboardServiceImpl implements DashboardService{
     }
 
     /**
-     * 하루에 한번 활성화되어있는 고개들 자산 스냅샷
+     * 하루에 한번 활성화되어있는 고객들 자산 스냅샷
      * @param ymd 오늘날짜
      */
     @Transactional
@@ -153,4 +150,22 @@ public class DashboardServiceImpl implements DashboardService{
 
         return new AssetTrendDto(points, dayDelta, change30, max, min, changePct);
     }
+
+    /**
+     * 잔액이 가장 많은 예,적금 조회 
+     * @param cNo 고객번호
+     * @return TopSavingsDto
+     */
+    @Override
+    public TopSavingsDto getTopSavings(int cNo) {
+        logger.info("<<< DashboardService getTopSavings >>>");
+
+        TopInstallmentDto installment =
+                dashboardRepository.getTopInstallment(cNo).orElse(null);
+        TopDepositDto deposit =
+                dashboardRepository.getTopDeposit(cNo).orElse(null);
+
+        return new TopSavingsDto(installment, deposit);
+    }
+
 }
