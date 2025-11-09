@@ -1,3 +1,4 @@
+// src/pages/mypage/contexts/ProductDashboard.js
 import React, { useMemo } from "react";
 
 /** 숫자 → 퍼센트(0~100) 안전 변환 */

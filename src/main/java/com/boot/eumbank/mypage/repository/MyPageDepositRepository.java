@@ -5,55 +5,104 @@ import com.boot.eumbank.mypage.dto.MyDepositDTO;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Date;
-import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 @Repository
-@Transactional(readOnly = true)
 public class MyPageDepositRepository {
 
     @PersistenceContext
     private EntityManager em;
 
+    /** 예금 목록: MyDepositDTO(카멜 DTO)로 반환 */
+    @SuppressWarnings("unchecked")
     public List<MyDepositDTO> findMyDeposits(int customerNo) {
         String sql = """
             SELECT
-              d.d_no                                              AS id,
-              p.dp_name                                           AS productName,
-              d.d_principal_bal                                   AS balance,
-              DATE(d.d_join_date)                                 AS openDate,
-              DATE(d.d_maturity_date)                             AS maturityAt,
-              GREATEST(
-                1,
-                TIMESTAMPDIFF(MONTH, DATE(d.d_join_date), DATE(d.d_maturity_date))
-                + IF(DAY(d.d_maturity_date) >= DAY(d.d_join_date), 1, 0)
-              )                                                   AS termMonths
-            FROM DEPOSIT_TBL d
-            JOIN DEPOSIT_PRODUCT_TBL p ON p.dp_no = d.dp_no
-            WHERE d.c_no = :cno
-            ORDER BY d.d_join_date DESC
-        """;
+                d.d_no                                       AS id,
+                p.dp_name                                    AS productName,
+                d.d_principal_bal                            AS dPrincipalBal,
+                d.d_amount                                   AS dAmount,
+                DATE_FORMAT(d.d_join_date, '%Y-%m-%d')       AS openedAt,
+                DATE_FORMAT(d.d_maturity_date, '%Y-%m-%d')   AS maturityAt,
+                TIMESTAMPDIFF(MONTH, d.d_join_date, d.d_maturity_date) AS termMonths,
 
-        @SuppressWarnings("unchecked")
+                -- product spec (카멜 alias 권장)
+                p.dp_type                                    AS dpType,
+                p.dp_rate                                    AS dpRate,
+                p.dp_min_months                              AS dpMinMonths,
+                p.dp_max_months                              AS dpMaxMonths,
+                p.dp_min_amount                              AS dpMinAmount,
+                p.dp_max_amount                              AS dpMaxAmount,
+                p.dp_interest_payment_type                   AS dpInterestPaymentType,
+                p.dp_early_termination_rate                  AS dpEarlyTerminationRate,
+                p.dp_feature                                 AS dpFeature,
+                p.dp_button_text                             AS dpButtonText,
+                p.dp_href                                    AS dpHref
+            FROM deposit_tbl d
+            JOIN deposit_product_tbl p ON p.dp_no = d.dp_no
+            WHERE d.c_no = :cno
+            ORDER BY d.d_no DESC
+            """;
+
         List<Object[]> rows = em.createNativeQuery(sql)
                 .setParameter("cno", customerNo)
                 .getResultList();
 
         List<MyDepositDTO> out = new ArrayList<>(rows.size());
         for (Object[] r : rows) {
-            Integer id          = ((Number) r[0]).intValue();
-            String  name        = (String) r[1];
-            Long    bal         = r[2] == null ? 0L : ((Number) r[2]).longValue();
-            LocalDate openDate  = r[3] == null ? null : ((Date) r[3]).toLocalDate();
-            LocalDate maturity  = r[4] == null ? null : ((Date) r[4]).toLocalDate();
-            Integer termMonths  = r[5] == null ? null : ((Number) r[5]).intValue();
+            // 인덱스는 SELECT 순서와 1:1 대응
+            String  id          = String.valueOf(((Number) r[0]).intValue());
+            String  name        = str(r[1]);
+            Integer balance     = toInt(r[2]);
+            Integer goalAmount  = toInt(r[3]);
+            String  openedAt    = str(r[4]);  // yyyy-MM-dd
+            String  maturityAt  = str(r[5]);  // yyyy-MM-dd
+            Integer termMonths  = toInt(r[6]);
 
-            out.add(new MyDepositDTO(id, name, bal, openDate, maturity, termMonths));
+            // product (inner record) 채움
+            MyDepositDTO.Product product = new MyDepositDTO.Product(
+                    name,                // dpName
+                    str(r[7]),           // dpType
+                    toBD(r[8]),          // dpRate
+                    toInt(r[9]),         // dpMinMonths
+                    toInt(r[10]),        // dpMaxMonths
+                    toBD(r[11]),         // dpMinAmount
+                    toBD(r[12]),         // dpMaxAmount
+                    str(r[13]),          // dpInterestPaymentType
+                    toBD(r[14]),         // dpEarlyTerminationRate
+                    str(r[15]),          // dpFeature (문자열/CSV 형식 그대로)
+                    str(r[16]),          // dpButtonText
+                    str(r[17])           // dpHref
+            );
+
+            out.add(new MyDepositDTO(
+                    id, name, balance, goalAmount,
+                    openedAt, maturityAt, termMonths, product
+            ));
         }
         return out;
+    }
+
+    /* ---------- 캐스팅 유틸 ---------- */
+    private static String str(Object o) {
+        if (o == null) return null;
+        String s = o.toString().trim();
+        return s.isEmpty() ? null : s;
+    }
+    private static Integer toInt(Object o) {
+        if (o == null) return null;
+        if (o instanceof Number n) return n.intValue();
+        try { return new BigDecimal(o.toString().trim()).intValue(); }
+        catch (Exception e) { return null; }
+    }
+    private static BigDecimal toBD(Object o) {
+        if (o == null) return null;
+        if (o instanceof BigDecimal b) return b;
+        if (o instanceof Number n) return new BigDecimal(n.toString());
+        try { return new BigDecimal(o.toString().trim()); }
+        catch (Exception e) { return null; }
     }
 }

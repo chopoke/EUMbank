@@ -1,13 +1,35 @@
 // src/main/java/com/boot/eumbank/mypage/dto/MyDepositDTO.java
 package com.boot.eumbank.mypage.dto;
 
-import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
+import java.math.BigDecimal;
+
+@JsonInclude(Include.NON_NULL)
 public record MyDepositDTO(
-        Integer id,
+        String  id,
         String  productName,
-        Long    balance,
-        LocalDate openDate,     // d_join_date (yyyy-MM-dd)
-        LocalDate maturityAt,   // d_maturity_date (yyyy-MM-dd)
-        Integer termMonths      // 총 개월 수 (없어도 되지만 있으면 프론트가 더 정확)
-) {}
+        Integer balance,
+        Integer goalAmount,
+        String  openedAt,     // yyyy-MM-dd
+        String  maturityAt,   // yyyy-MM-dd
+        Integer termMonths,
+        Product product
+) {
+    @JsonInclude(Include.NON_NULL)
+    public static record Product(
+            String     dpName,
+            String     dpType,
+            BigDecimal dpRate,
+            Integer    dpMinMonths,
+            Integer    dpMaxMonths,
+            BigDecimal dpMinAmount,
+            BigDecimal dpMaxAmount,
+            String     dpInterestPaymentType,
+            BigDecimal dpEarlyTerminationRate,
+            Object     dpFeature,   // String or List<String>
+            String     dpButtonText,
+            String     dpHref
+    ) {}
+}
