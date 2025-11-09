@@ -3,6 +3,7 @@ package com.boot.eumbank.account.open.controller;
 import com.boot.eumbank.account.open.dto.account.*;
 import com.boot.eumbank.account.open.jpa.repository.AccountRepository;
 import com.boot.eumbank.account.open.service.account.AccoutService;
+import com.boot.eumbank.account.open.service.account.DocumentService;
 import com.boot.eumbank.account.open.util.ImageFormats;
 import com.boot.eumbank.account.open.util.KycVerify;
 import com.boot.eumbank.customer.entity.Customer;
@@ -21,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,6 +51,8 @@ public class AccountController {
     private final AccountProductService accountProductService;
 
     private final AccoutService accoutService;
+
+    private final DocumentService documentService;
 
     /**
      * 계좌정보가져오기
@@ -132,9 +136,12 @@ public class AccountController {
 
             logger.info("UserController => res = " + res.getBody());
 
+            // 주민드록증 파일 저장하기
+            documentService.saveDocument(file);
+
             return ResponseEntity.status(res.getStatusCode()).body(res.getBody());
 
-        } catch (org.springframework.web.client.HttpStatusCodeException ex) {
+        } catch (HttpStatusCodeException ex) {
             String upstream = ex.getResponseBodyAsString();
             // upstream JSON에 traceId/code가 있을 때 꺼내 보기
             String code = "OCR_UPSTREAM_" + ex.getStatusCode().value();
@@ -307,7 +314,7 @@ public class AccountController {
 
 
     /**
-     * 핀 변경
+     * 비밀번호 변경
      * @param payload
      * @return
      */

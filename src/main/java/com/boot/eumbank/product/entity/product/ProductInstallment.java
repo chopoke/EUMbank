@@ -96,4 +96,7 @@ public class ProductInstallment {
 
     @Column(name = "i_expected_maturity_amount")
     private long iExpectedMaturityAmount;
+
+    @Column(name = "i_pdf_path")
+    private String iPdfPath;
 }

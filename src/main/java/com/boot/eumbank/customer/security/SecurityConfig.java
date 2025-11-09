@@ -1,24 +1,26 @@
 package com.boot.eumbank.customer.security;
 
-import com.boot.eumbank.customer.security.CorsProperties;
-import com.boot.eumbank.customer.security.JwtAuthenticationEntryPoint;
-import com.boot.eumbank.customer.security.JwtAuthenticationFilter;
+import com.boot.eumbank.customer.repo.AuthRefreshTokenRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.time.Instant;
 import java.util.List;
 
 @Configuration
@@ -28,71 +30,106 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtFilter;
     private final JwtAuthenticationEntryPoint entryPoint;
     private final AuthenticationSuccessHandler socialSuccessHandler;
+    private final RefreshAuthFilter refreshAuthFilter;
+    private final CookieUtil cookieUtil;
+    private final AuthRefreshTokenRepo refreshRepo;
 //    private final CorsProperties corsProps; // app.cors.allowed-origins 사용
 
+    // SecurityConfig.java (핵심만)
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .cors(c -> c.configurationSource(corsConfigurationSource()))
+    @Order(1)
+    public SecurityFilterChain adminChain(HttpSecurity http) throws Exception {
+        final String FRONT_HOME = "http://localhost:3000/";
+
+        http.securityMatcher("/admin/**", "/oauth2/**", "/login/**")
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+                .cors(AbstractHttpConfigurer::disable)
+                .exceptionHandling(e -> e
+                        .authenticationEntryPoint((req,res,ex) -> {
+                            if (req.getRequestURI().startsWith("/admin")) res.sendRedirect(FRONT_HOME);
+                            else res.sendError(401);
+                        })
+                        .accessDeniedHandler((req,res,ex) -> {
+                            if (req.getRequestURI().startsWith("/admin")) res.sendRedirect(FRONT_HOME);
+                            else res.sendError(403);
+                        })
+                )
+                .authorizeHttpRequests(reg -> reg
+                        .requestMatchers("/oauth2/**", "/login/**").permitAll()
+                        .requestMatchers("/admin/enter", "/admin/forbidden").permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .anyRequest().permitAll()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(socialSuccessHandler)   // ← 핸들러에서 메인으로 보냄
+                )
+                .addFilterBefore(refreshAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .logout(l -> l
+                        .logoutUrl("/admin/logout")
+                        .addLogoutHandler((req,res,auth) -> { /* RT 삭제 로직 그대로 */ })
+                        .logoutSuccessHandler((req,res,auth) -> res.sendRedirect(FRONT_HOME))
+                );
+        return http.build();
+    }
+
+    /** API: AT(Bearer) 기반, CSRF off, CORS on */
+    @Bean
+    @Order(2)
+    public SecurityFilterChain apiChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/api/**")
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(c -> c.configurationSource(corsConfigurationSource()))
                 .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint))
                 .authorizeHttpRequests(reg -> reg
-                        // 인증 없이 허용할 엔드포인트(두 설정의 합집합)
                         .requestMatchers(
-                                "/api/auth/**",        // 로그인/회원가입/리프레시 등
-                                "/api/address/**",     // 주소 API
-                                "/api/email/**",       // 이메일 API(사용 시)
-                                "/api/social/link",     // 소셜로그인 연동
-                                "/actuator/health",
-                                "/", "/index.html", "/favicon.ico",
-                                "/assets/**", "/static/**", "/public/**",
+                                "/api/auth/**",
+                                "/api/address/**",
+                                "/api/email/**",
+                                "/api/social/link",
                                 "/api/v1/auth/**",
                                 "/api/v1/join/**",
                                 "/api/v1/email/**",
                                 "/api/v1/customers/exists-email",
                                 "/api/foreign/exchange/calculate",
                                 "/api/foreign/exchange",
-                                "/actuator/**",
                                 "/api/foreign/rates/**",
-                                "/api/healthz"
+                                "/api/health",
+                                "/actuator/**",
+                                "/actuator/health",
+                                "/api/rates/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
-                        // 그 외는 보호
                         .anyRequest().authenticated()
                 )
-                // JWT 필터는 UsernamePasswordAuthenticationFilter 앞
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(socialSuccessHandler));
-
+                .oauth2Login(oauth2 -> oauth2.successHandler(socialSuccessHandler));
         return http.build();
     }
 
-    @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
-        return cfg.getAuthenticationManager();
-    }
-
-    /** CORS: app.cors.allowed-origins 에 정의된 도메인 허용(쉼표 구분) */
+    /** CORS: API 체인에서만 사용 */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:3000"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true); // 쿠키 전송 핵심
+        config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    @Bean public BCryptPasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
+        return cfg.getAuthenticationManager();
     }
 }

@@ -6,7 +6,7 @@ import { useCheckPin } from "./contexts/CheckPinContext";
 
 import { resetPin, resetPassword } from "../account/api/accountApi";
 
-import axios from 'axios';
+import axios from '../../api/axios';
 import React from "react";
 import { Link } from 'react-router-dom';
 // Header Component
@@ -849,6 +849,10 @@ function SecurityTab() {
         </h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                  <p className="font-medium text-gray-800">거래 비밀번호</p>
+                  <p className="text-sm text-gray-600">마지막 변경: 2024년 1월 10일</p>
+              </div>
             <button
               onClick={() => setShowPasswordModal(true)}
               className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm whitespace-nowrap"
@@ -1331,223 +1335,555 @@ function LimitTab() {
   );
 }
 
+/**
+ * 서류 곤리 부분
+ * @returns {JSX.Element}
+ * @constructor
+ */
+
 // DocumentTab Component
 function DocumentTab() {
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedDocType, setSelectedDocType] = useState('');
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [selectedDocType, setSelectedDocType] = useState('');
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [documents, setDocuments] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-  const documents = [
-    {
-      type: '신분증',
-      name: '주민등록증_조원빈.pdf',
-      uploadDate: '2024.01.15',
-      status: '승인완료',
-      icon: 'ri-id-card-line',
-      color: 'green'
-    },
-    {
-      type: '소득증명서',
-      name: '근로소득원천징수영수증_2023.pdf',
-      uploadDate: '2024.01.10',
-      status: '승인완료',
-      icon: 'ri-file-text-line',
-      color: 'blue'
-    },
-    {
-      type: '재직증명서',
-      name: '재직증명서_테크컴퍼니.pdf',
-      uploadDate: '2024.01.08',
-      status: '심사중',
-      icon: 'ri-building-line',
-      color: 'orange'
-    },
-    {
-      type: '통장사본',
-      name: '통장사본_하나은행.pdf',
-      uploadDate: '2024.01.05',
-      status: '승인완료',
-      icon: 'ri-bank-line',
-      color: 'purple'
-    }
-  ];
+    // 페이징 상태
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const pageSize = 10;
 
-  const requiredDocs = [
-    { type: '신분증', required: true, submitted: true },
-    { type: '소득증명서', required: true, submitted: true },
-    { type: '재직증명서', required: true, submitted: true },
-    { type: '통장사본', required: true, submitted: true },
-    { type: '거주지 확인서', required: false, submitted: false },
-    { type: '사업자등록증', required: false, submitted: false }
-  ];
+    // 파일 타입별 아이콘 매핑
+    const docTypeConfig = {
+        '주민등록증': { icon: 'ri-id-card-line', color: 'green', displayName: '신분증' },
+        '적금확인서': { icon: 'ri-file-text-line', color: 'blue', displayName: '적금확인서' },
+        '예금확인서': { icon: 'ri-building-line', color: 'orange', displayName: '예금확인서' },
+        '통장사본': { icon: 'ri-bank-line', color: 'purple', displayName: '통장사본' },
+        '거주지확인서': { icon: 'ri-home-line', color: 'indigo', displayName: '거주지 확인서' },
+        '사업자등록증': { icon: 'ri-briefcase-line', color: 'cyan', displayName: '사업자등록증' }
+    };
 
-  const handleUpload = (docType) => {
-    setSelectedDocType(docType);
-    setShowUploadModal(true);
-  };
+    // 서류 목록 체크리스트
+    const requiredDocs = [
+        { type: '주민등록증', required: true },
+        { type: '적금확인서', required: true },
+        { type: '예금확인서', required: true },
+        { type: '통장사본', required: true },
+        { type: '거주지확인서', required: false },
+        { type: '사업자등록증', required: false }
+    ];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-          <i className="ri-file-text-line text-indigo-600"></i>
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800">증빙 서류</h2>
-      </div>
+    // 컴포넌트 마운트 시 서류 목록 조회
+    useEffect(() => {
+        fetchDocuments(currentPage);
+    }, [currentPage]);
 
-      {/* 서류 제출 현황 */}
-      <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <i className="ri-checkbox-circle-fill text-green-600 text-xl"></i>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800">서류 제출 완료</h3>
-              <p className="text-gray-600">필수 서류가 모두 제출되었습니다.</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-green-600">100%</div>
-            <div className="text-sm text-gray-500">완료율</div>
-          </div>
-        </div>
-      </div>
+    /**
+     * 서류 목록 조회
+     */
+    const fetchDocuments = async (page) => {
+        setLoading(true);
+        try {
+            const response = await axios.get(`/api/documents`, {
+                params: { page, size: pageSize }
+            });
 
-      {/* 제출된 서류 목록 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-            <i className="ri-folder-line text-blue-600 mr-2"></i>
-            제출된 서류
-          </h3>
-        </div>
-        <div className="divide-y divide-gray-100">
-          {documents.map((doc, index) => (
-            <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-10 h-10 bg-${doc.color}-100 rounded-lg flex items-center justify-center`}>
-                    <i className={`${doc.icon} text-${doc.color}-600`}></i>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-800">{doc.type}</h4>
-                    <p className="text-sm text-gray-600">{doc.name}</p>
-                    <p className="text-xs text-gray-500">업로드: {doc.uploadDate}</p>
-                  </div>
+            const data = response.data;
+            setDocuments(data.documents);
+            setTotalPages(data.totalPages);
+            setTotalElements(data.totalElements);
+            setCurrentPage(data.currentPage);
+        } catch (error) {
+            console.error('서류 목록 조회 실패:', error);
+            alert('서류 목록을 불러오는데 실패했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * 서류 업로드
+     */
+    const handleUpload = async () => {
+        if (!selectedFile) {
+            alert('파일을 선택해주세요.');
+            return;
+        }
+
+        // 파일 크기 체크 (10MB)
+        if (selectedFile.size > 10 * 1024 * 1024) {
+            alert('파일 크기는 10MB를 초과할 수 없습니다.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('type', selectedDocType);
+
+        setLoading(true);
+        try {
+            await axios.post('/api/documents/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            alert('업로드가 완료되었습니다.');
+            setShowUploadModal(false);
+            setSelectedFile(null);
+            setSelectedDocType('');
+            fetchDocuments(currentPage); // 목록 새로고침
+        } catch (error) {
+            console.error('업로드 실패:', error);
+            alert(error.response?.data || '업로드에 실패했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * 서류 다운로드
+     */
+    const handleDownload = async (dNo, fileName) => {
+
+        console.log(dNo, fileName);
+
+        try {
+            const response = await axios.get(`/api/download/${dNo}`, {
+                responseType: 'blob'
+            });
+
+            // Blob을 다운로드
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('다운로드 실패:', error);
+            alert('다운로드에 실패했습니다.');
+        }
+    };
+
+    /**
+     * 서류 미리보기 (새 창)
+     */
+    const handleView = async(dNo, fileName) => {
+
+        try {
+            const response = await axios.get(`/api/view/${dNo}`, {
+                responseType: 'blob'
+            });
+
+            // 파일 타입 확인
+            const contentType = response.headers['content-type'];
+
+            const blob = new Blob([response.data], {type: contentType});
+            const url = window.URL.createObjectURL(blob);
+
+            const newWindow = window.open(url, '_blank');
+
+            // 새 창이 차단되었는지 확인
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                alert('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.');
+                window.URL.revokeObjectURL(url);
+                return;
+            }
+
+            // 새 창에 제목 설정
+            newWindow.document.title = fileName;
+
+        } catch (error) {
+            console.error('미리보기 실패:', error);
+            if (error.response?.status === 401) {
+                alert('인증이 만료되었습니다. 다시 로그인해주세요.');
+            } else if (error.response?.status === 403) {
+                alert('접근 권한이 없습니다.');
+            } else {
+                alert('미리보기에 실패했습니다.');
+            }
+        }
+
+    };
+
+    /**
+     * 서류 삭제
+     */
+    const handleDelete = async (dNo) => {
+        if (!window.confirm('정말 삭제하시겠습니까?')) {
+            return;
+        }
+
+        try {
+            await axios.delete(`/api/documents/${dNo}`);
+            alert('삭제되었습니다.');
+            fetchDocuments(currentPage);
+        } catch (error) {
+            console.error('삭제 실패:', error);
+            alert(error.response?.data || '삭제에 실패했습니다.');
+        }
+    };
+
+    /**
+     * 파일 선택 핸들러
+     */
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // 파일 타입 검증
+            const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('PDF, PNG, JPG 파일만 업로드 가능합니다.');
+                return;
+            }
+            setSelectedFile(file);
+        }
+    };
+
+    /**
+     * 업로드 모달 열기
+     */
+    const openUploadModal = (docType) => {
+        setSelectedDocType(docType);
+        setSelectedFile(null);
+        setShowUploadModal(true);
+    };
+
+    /**
+     * 상태별 스타일
+     */
+    const getStatusStyle = (status) => {
+        switch (status) {
+            case 'APPROVED':
+                return 'bg-green-100 text-green-800';
+            case 'PENDING':
+                return 'bg-orange-100 text-orange-800';
+            case 'REJECTED':
+                return 'bg-red-100 text-red-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    /**
+     * 상태 한글 변환
+     */
+    const getStatusText = (status) => {
+        switch (status) {
+            case 'APPROVED':
+                return '승인완료';
+            case 'PENDING':
+                return '심사중';
+            case 'REJECTED':
+                return '반려';
+            default:
+                return status;
+        }
+    };
+
+    /**
+     * 날짜 포맷
+     */
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).replace(/\. /g, '.').replace(/\.$/, '');
+    };
+
+    /**
+     * 제출 완료율 계산
+     */
+    const calculateCompletionRate = () => {
+        const requiredCount = requiredDocs.filter(d => d.required).length;
+        const submittedRequiredCount = documents.filter(doc =>
+            requiredDocs.find(rd => rd.type === doc.type && rd.required)
+        ).length;
+
+        return requiredCount > 0 ? Math.round((submittedRequiredCount / requiredCount) * 100) : 0;
+    };
+
+    /**
+     * 서류 제출 여부 확인
+     */
+    const isDocSubmitted = (docType) => {
+        return documents.some(doc => doc.type === docType);
+    };
+
+    const completionRate = calculateCompletionRate();
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <i className="ri-file-text-line text-indigo-600"></i>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    doc.status === '승인완료'
-                      ? 'bg-green-100 text-green-800'
-                      : doc.status === '심사중'
-                      ? 'bg-orange-100 text-orange-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {doc.status}
-                  </span>
-                  <button className="text-blue-600 hover:text-blue-700 text-sm">
-                    <i className="ri-download-line"></i>
-                  </button>
-                  <button className="text-gray-400 hover:text-gray-600 text-sm">
-                    <i className="ri-delete-bin-line"></i>
-                  </button>
-                </div>
-              </div>
+                <h2 className="text-2xl font-bold text-gray-800">증빙 서류</h2>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* 서류 제출 체크리스트 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <i className="ri-task-line text-purple-600 mr-2"></i>
-          서류 제출 체크리스트
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {requiredDocs.map((doc, index) => (
-            <div key={index} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  doc.submitted
-                    ? 'bg-green-100 text-green-600'
-                    : 'bg-gray-100 text-gray-400'
-                }`}>
-                  <i className={doc.submitted ? 'ri-check-line' : 'ri-time-line'} style={{ fontSize: '12px' }}></i>
+            {/* 서류 제출 현황 */}
+            <div className={`bg-gradient-to-r ${
+                completionRate === 100 ? 'from-green-50 to-blue-50' : 'from-orange-50 to-yellow-50'
+            } rounded-xl p-6`}>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                        <div className={`w-12 h-12 ${
+                            completionRate === 100 ? 'bg-green-100' : 'bg-orange-100'
+                        } rounded-full flex items-center justify-center`}>
+                            <i className={`${
+                                completionRate === 100 ? 'ri-checkbox-circle-fill text-green-600' : 'ri-time-line text-orange-600'
+                            } text-xl`}></i>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-800">
+                                {completionRate === 100 ? '서류 제출 완료' : '서류 제출 진행중'}
+                            </h3>
+                            <p className="text-gray-600">
+                                {completionRate === 100
+                                    ? '필수 서류가 모두 제출되었습니다.'
+                                    : '필수 서류를 제출해주세요.'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className={`text-2xl font-bold ${
+                            documents.length > 1 ? 'text-green-600' : 'text-orange-600'
+                        }`}>{documents.length}개</div>
+                    </div>
                 </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-800">{doc.type}</span>
-                  {doc.required && <span className="text-xs text-red-500 ml-1">*필수</span>}
+            </div>
+
+            {/* 제출된 서류 목록 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <i className="ri-folder-line text-blue-600 mr-2"></i>
+                        제출된 서류 ({totalElements}건)
+                    </h3>
                 </div>
-              </div>
-              {!doc.submitted && (
-                <button
-                  onClick={() => handleUpload(doc.type)}
-                  className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors whitespace-nowrap"
-                >
-                  업로드
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* 서류 업로드 안내 */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6">
-        <div className="flex items-start space-x-4">
-          <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <i className="ri-information-line text-amber-600 text-xl"></i>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">서류 업로드 안내</h3>
-            <ul className="text-gray-600 space-y-1 text-sm">
-              <li>• 파일 형식: PDF, JPG, PNG (파일 크기 10MB 이하)</li>
-              <li>• 글씨가 선명하고 네 모서리가 모두 보이도록 촬영해주세요</li>
-              <li>• 신분증의 경우 주민등록번호 뒷자리는 가려주세요</li>
-              <li>• 서류 심사는 영업일 기준 1-2일 소요됩니다</li>
-              <li>• 서류에 문제가 있을 경우 재제출을 요청드릴 수 있습니다</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+                {loading ? (
+                    <div className="p-8 text-center text-gray-500">
+                        <i className="ri-loader-4-line animate-spin text-2xl"></i>
+                        <p className="mt-2">로딩 중...</p>
+                    </div>
+                ) : documents.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">
+                        <i className="ri-file-list-line text-4xl mb-2"></i>
+                        <p>제출된 서류가 없습니다.</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="divide-y divide-gray-100">
+                            {documents.map((doc) => {
+                                const config = docTypeConfig[doc.type] || {
+                                    icon: 'ri-file-line',
+                                    color: 'gray',
+                                    displayName: doc.type
+                                };
 
-      {/* 업로드 모달 */}
-      {showUploadModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">{selectedDocType} 업로드</h3>
-            <div className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <i className="ri-upload-cloud-line text-4xl text-gray-400 mb-2"></i>
-                <p className="text-gray-600 mb-2">파일을 여기로 드래그하거나</p>
-                <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm whitespace-nowrap">
-                  파일 선택
-                </button>
-              </div>
-              <div className="text-xs text-gray-500 text-center">
-                지원 형식: PDF, JPG, PNG (최대 10MB)
-              </div>
+                                console.log(doc.dno);
+
+                                return (
+                                    <div key={doc.dno} className="p-4 hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center space-x-4 flex-1">
+                                                <div className={`w-10 h-10 bg-${config.color}-100 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                                                    <i className={`${config.icon} text-${config.color}-600`}></i>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-medium text-gray-800">{config.displayName}</h4>
+                                                    <p className="text-sm text-gray-600 truncate">{doc.pdfName}</p>
+                                                    <p className="text-xs text-gray-500">
+                                                        업로드: {formatDate(doc.createdAt)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
+                                                <span className={`px-2 py-1 text-xs rounded-full ${getStatusStyle(doc.status)}`}>
+                                                  {getStatusText(doc.status)}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleView(doc.dno, doc.pdfName)}
+                                                    className="text-blue-600 hover:text-blue-700 text-sm p-1"
+                                                    title="미리보기"
+                                                >
+                                                    <i className="ri-eye-line text-lg"></i>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDownload(doc.dno, doc.pdfName)}
+                                                    className="text-blue-600 hover:text-blue-700 text-sm p-1"
+                                                    title="다운로드"
+                                                >
+                                                    <i className="ri-download-line text-lg"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* 페이징 */}
+                        {totalPages > 1 && (
+                            <div className="p-4 border-t border-gray-100 flex items-center justify-center space-x-2">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                                    disabled={currentPage === 0}
+                                    className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                >
+                                    <i className="ri-arrow-left-s-line"></i>
+                                </button>
+
+                                {[...Array(totalPages)].map((_, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setCurrentPage(idx)}
+                                        className={`px-3 py-1 rounded ${
+                                            currentPage === idx
+                                                ? 'bg-blue-500 text-white'
+                                                : 'border border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {idx + 1}
+                                    </button>
+                                ))}
+
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                                    disabled={currentPage === totalPages - 1}
+                                    className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                >
+                                    <i className="ri-arrow-right-s-line"></i>
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
-              >
-                취소
-              </button>
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors whitespace-nowrap"
-              >
-                업로드
-              </button>
-            </div>
-          </div>
+
+            {/*/!* 서류 제출 체크리스트 *!/*/}
+            {/*<div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">*/}
+            {/*    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">*/}
+            {/*        <i className="ri-task-line text-purple-600 mr-2"></i>*/}
+            {/*        서류 제출 체크리스트*/}
+            {/*    </h3>*/}
+            {/*    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">*/}
+            {/*        {requiredDocs.map((doc, index) => {*/}
+            {/*            const submitted = isDocSubmitted(doc.type);*/}
+            {/*            const config = docTypeConfig[doc.type];*/}
+
+            {/*            return (*/}
+            {/*                <div key={index} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">*/}
+            {/*                    <div className="flex items-center space-x-3">*/}
+            {/*                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${*/}
+            {/*                            submitted ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'*/}
+            {/*                        }`}>*/}
+            {/*                            <i className={submitted ? 'ri-check-line' : 'ri-time-line'} style={{ fontSize: '12px' }}></i>*/}
+            {/*                        </div>*/}
+            {/*                        <div>*/}
+            {/*                            <span className="text-sm font-medium text-gray-800">{config?.displayName || doc.type}</span>*/}
+            {/*                            {doc.required && <span className="text-xs text-red-500 ml-1">*필수</span>}*/}
+            {/*                        </div>*/}
+            {/*                    </div>*/}
+            {/*                    {!submitted && (*/}
+            {/*                        <button*/}
+            {/*                            onClick={() => openUploadModal(doc.type)}*/}
+            {/*                            className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors whitespace-nowrap"*/}
+            {/*                        >*/}
+            {/*                            업로드*/}
+            {/*                        </button>*/}
+            {/*                    )}*/}
+            {/*                </div>*/}
+            {/*            );*/}
+            {/*        })}*/}
+            {/*    </div>*/}
+            {/*</div>*/}
+
+            {/*/!* 서류 업로드 안내 *!/*/}
+            {/*<div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6">*/}
+            {/*    <div className="flex items-start space-x-4">*/}
+            {/*        <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">*/}
+            {/*            <i className="ri-information-line text-amber-600 text-xl"></i>*/}
+            {/*        </div>*/}
+            {/*        <div>*/}
+            {/*            <h3 className="text-lg font-semibold text-gray-800 mb-2">서류 업로드 안내</h3>*/}
+            {/*            <ul className="text-gray-600 space-y-1 text-sm">*/}
+            {/*                <li>• 파일 형식: PDF, JPG, PNG (파일 크기 10MB 이하)</li>*/}
+            {/*                <li>• 글씨가 선명하고 네 모서리가 모두 보이도록 촬영해주세요</li>*/}
+            {/*                <li>• 신분증의 경우 주민등록번호 뒷자리는 가려주세요</li>*/}
+            {/*                <li>• 서류 심사는 영업일 기준 1-2일 소요됩니다</li>*/}
+            {/*                <li>• 서류에 문제가 있을 경우 재제출을 요청드릴 수 있습니다</li>*/}
+            {/*            </ul>*/}
+            {/*        </div>*/}
+            {/*    </div>*/}
+            {/*</div>*/}
+
+            {/* 업로드 모달 */}
+            {showUploadModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+                        <h3 className="text-lg font-semibold mb-4">
+                            {docTypeConfig[selectedDocType]?.displayName || selectedDocType} 업로드
+                        </h3>
+                        <div className="space-y-4">
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                                <i className="ri-upload-cloud-line text-4xl text-gray-400 mb-2"></i>
+                                {selectedFile ? (
+                                    <div className="text-sm text-gray-700">
+                                        <p className="font-medium">{selectedFile.name}</p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <p className="text-gray-600 mb-2">파일을 선택해주세요</p>
+                                        <label className="inline-block px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm cursor-pointer">
+                                            파일 선택
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.png,.jpg,.jpeg"
+                                                className="hidden"
+                                                onChange={handleFileChange}
+                                            />
+                                        </label>
+                                    </>
+                                )}
+                            </div>
+                            <div className="text-xs text-gray-500 text-center">
+                                지원 형식: PDF, JPG, PNG (최대 10MB)
+                            </div>
+                        </div>
+                        <div className="flex space-x-3 mt-6">
+                            <button
+                                onClick={() => {
+                                    setShowUploadModal(false);
+                                    setSelectedFile(null);
+                                }}
+                                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                                disabled={loading}
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleUpload}
+                                disabled={!selectedFile || loading}
+                                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? '업로드 중...' : '업로드'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
 
 // TaxTab Component

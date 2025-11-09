@@ -104,7 +104,7 @@ public class DepositController {
             );
             logger.info("서비스 레이어 호출 완료. 저장 경로: {}", savedFilePath);
 
-            depositService.depositSave(requestDto);
+            depositService.depositSave(requestDto, savedFilePath);
 
             logger.info("========================================");
             logger.info("예금 테이블 저장 완료 (성공)");

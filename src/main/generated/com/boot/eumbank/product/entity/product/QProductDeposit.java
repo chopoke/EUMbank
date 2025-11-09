@@ -53,6 +53,8 @@ public class QProductDeposit extends EntityPathBase<ProductDeposit> {
 
     public final NumberPath<Integer> dNo = createNumber("dNo", Integer.class);
 
+    public final StringPath dPdfPath = createString("dPdfPath");
+
     public final NumberPath<Integer> dPeriod = createNumber("dPeriod", Integer.class);
 
     public final NumberPath<Integer> dpNo = createNumber("dpNo", Integer.class);

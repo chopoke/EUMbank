@@ -1,10 +1,12 @@
 package com.boot.eumbank.product.service.product.Impl;
 
 import com.boot.eumbank.account.open.entity.account.Account;
+import com.boot.eumbank.account.open.enums.FileType;
+import com.boot.eumbank.account.open.jpa.repository.mypage.DocumentRepository;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.product.dto.product.InstallSubscriptionRequestDto;
 import com.boot.eumbank.product.dto.product.ProductDto;
-import com.boot.eumbank.product.jpa.repository.AccountQueryRepository;
+import com.boot.eumbank.product.entity.product.DocumentFile;
 import com.boot.eumbank.product.jpa.repository.InstallQueryRepository;
 import com.boot.eumbank.product.service.product.InstallService;
 import lombok.RequiredArgsConstructor;
@@ -40,9 +42,9 @@ public class InstallServiceImpl implements InstallService {
 
     private Logger logger = LoggerFactory.getLogger(InstallServiceImpl.class);
 
-    private final AccountQueryRepository accountQueryRepository;
-
     private final InstallQueryRepository installQueryRepository;
+
+    private final DocumentRepository documentRepository;
 
     // application.properties에서 파일 저장 경로를 주입받음
     @Value("${file.upload-dir}")
@@ -178,13 +180,24 @@ public class InstallServiceImpl implements InstallService {
                     : ".pdf";
 
             String fileName = String.format(
-                    "deposit_%s_%s%s",
+                    "installment_%s_%s%s",
                     LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")),
                     UUID.randomUUID().toString().substring(0, 8),
                     fileExtension
             );
 
             Path filePath = Paths.get(uploadDir, fileName);
+
+            // DB에 기록 남기기
+            DocumentFile documentFile = DocumentFile.builder()
+                    .type(FileType.적금확인서)
+                    .pdfPath(filePath.toString())  // ✅ Path를 String으로 변환
+                    .pdfName(originalFilename)     // ✅ 원본 파일명 저장
+                    .cNo(customer.getCustomerNo())
+                    // createdAt은 @CreationTimestamp로 자동 설정
+                    .build();
+
+            documentRepository.save(documentFile);
 
             // PDF 저장
             document.save(filePath.toFile());
@@ -207,7 +220,7 @@ public class InstallServiceImpl implements InstallService {
 
 
     @Override
-    public void installSave(InstallSubscriptionRequestDto requestDto) {
+    public void installSave(InstallSubscriptionRequestDto requestDto, String signedPdfFilePath) {
 
         // --- 1. 현재 로그인한 사용자(JWT) 정보 가져오기 ---
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -217,7 +230,7 @@ public class InstallServiceImpl implements InstallService {
 
         Account oneAccount = installQueryRepository.findOneAccount(customer, requestDto);
 
-        installQueryRepository.installSave(requestDto, customer, installProducts, oneAccount);
+        installQueryRepository.installSave(requestDto, customer, installProducts, oneAccount, signedPdfFilePath);
     }
 
     // ✅ 헬퍼 메소드 추가: 지정된 좌표에 텍스트를 추가하는 로직
