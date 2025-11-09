@@ -47,7 +47,7 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
     public List<LoanSchedule> findAllDueForAutoDebit(LocalDate dueDate) {
         return queryFactory.selectFrom(loanSchedule)
                 .where(
-                        loanSchedule.dueDate.loe(dueDate),
+                        loanSchedule.dueDate.eq(dueDate),
                         loanSchedule.status.in("DUE", "PARTIAL", "FAILED", "OVERDUE"),
                         hasRemaining()
                 )
@@ -64,7 +64,7 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
     public List<LoanSchedule> findNeedRetry(LocalDate forDate) {
         return queryFactory.selectFrom(loanSchedule)
                 .where(
-                        loanSchedule.dueDate.loe(forDate),
+                        loanSchedule.dueDate.eq(forDate),
                         loanSchedule.status.in("DUE", "PARTIAL", "FAILED", "OVERDUE"),
                         hasRemaining()
                 )

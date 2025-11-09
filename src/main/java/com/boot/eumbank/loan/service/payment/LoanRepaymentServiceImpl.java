@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 /**
@@ -85,27 +86,30 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
 
         // (2) 상환 대상 스케줄 조회
         List<LoanSchedule> targets;
+
         if (req.getInstallmentNo() != null) {
             targets = scheduleRepo.findRepayTargets(loanNo).stream()
                     .filter(s -> Objects.equals(s.getInstallmentNo(), req.getInstallmentNo()))
-                    .toList();
+                    .collect(Collectors.toList()); // <-- mutable
             if (targets.isEmpty()) {
                 throw new IllegalArgumentException("해당 회차는 상환 대상이 아닙니다.");
             }
+
         } else if (req.getScheduleId() != null) {
             targets = scheduleRepo.findRepayTargets(loanNo).stream()
                     .filter(s -> Objects.equals(s.getLsNo(), req.getScheduleId()))
-                    .toList();
+                    .collect(Collectors.toList()); // <-- mutable
             if (targets.isEmpty()) {
                 throw new IllegalArgumentException("해당 스케줄은 상환 대상이 아닙니다.");
             }
+
         } else {
-            targets = scheduleRepo.findRepayTargets(loanNo);
+            // findRepayTargets 결과도 가변 리스트로 한번 감싸두는 게 안전
+            targets = new ArrayList<>(scheduleRepo.findRepayTargets(loanNo));
             if (targets.isEmpty()) {
                 throw new IllegalArgumentException("상환 대상 스케줄이 없습니다.");
             }
         }
-
         // 가장 빠른상환부터 상환!
         targets.sort(
                 java.util.Comparator
