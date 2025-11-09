@@ -21,4 +21,7 @@ public class LoanApplyDetailDTO {
     private BigDecimal approvedAmount;
     private Integer approvedTerm;
     private BigDecimal approvedRate;      // 최종 적용금리(%)
+
+    private String payoutAccountNumber; // 입금계좌 실제 번호
+    private String repayAccountNumber;  // 상환계좌 실제 번호
 }

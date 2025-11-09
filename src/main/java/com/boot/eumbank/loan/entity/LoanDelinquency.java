@@ -49,7 +49,7 @@ public class LoanDelinquency {
     private BigDecimal delAmount; // 당일 발생 연체금액(일할)
 
     @Column(name = "ld_waived_yn", length = 1)
-    private String waivedYn = "N"; // 면제여부(N/Y)
+    private String waivedYn ; // 면제여부(N/Y)
 
     @Column(name = "ld_memo", length = 200)
     private String memo;

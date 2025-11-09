@@ -15,7 +15,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")           // 권한이 admin일때만 접근 가능
 public class LoanAdminController {
-
+    /**
+     * RestAPI 컨트롤러이므로, 관리자단은 thymeleaf 사용하니까 요 클래스는 사용x
+     */
     private final LoanAdminService service;
 
     // 대출신청목록

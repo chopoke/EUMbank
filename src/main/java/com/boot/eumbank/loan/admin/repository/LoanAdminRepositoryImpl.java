@@ -31,7 +31,8 @@ public class LoanAdminRepositoryImpl implements LoanAdminRepositoryCustom{
 
     private final QLoanApplication loanApplication = QLoanApplication.loanApplication;
     private final QLoanProduct loanProduct = QLoanProduct.loanProduct;
-    private final QAccount account= QAccount.account;
+    private final QAccount payoutAcc = new QAccount("payoutAcc");
+    private final QAccount repayAcc = new QAccount("repayAcc");
 
     @Override
     public Page<LoanApplySummaryDTO> search(LoanApplySearchDTO search) {
@@ -59,7 +60,6 @@ public class LoanAdminRepositoryImpl implements LoanAdminRepositoryCustom{
                 )
                 .from(loanApplication)
                 .leftJoin(loanProduct).on(loanProduct.loanNo.eq(loanApplication.loanProductNo))
-//                .leftJoin(account).on(account.accountNo.eq((Integer) loanApplication.payoutAccountNo))
                 .where(
                         // 동적 조건
                         keywordSearch(search.getKeyword()),
@@ -100,42 +100,57 @@ public class LoanAdminRepositoryImpl implements LoanAdminRepositoryCustom{
     @Override
     public Optional<LoanApplyDetailDTO> getDetail(String laId) {
 
-        var result = queryFactory.selectFrom(loanApplication)
+        var row = queryFactory
+                .select(
+                        loanApplication,
+                        loanProduct.loanName,
+                        payoutAcc.accountNo,
+                        repayAcc.accountNo
+                )
+                .from(loanApplication)
+                .leftJoin(loanProduct).on(loanProduct.loanNo.eq(loanApplication.loanProductNo))
+                .leftJoin(payoutAcc).on(payoutAcc.aNo.eq(loanApplication.payoutAccountNo))
+                .leftJoin(repayAcc).on(repayAcc.aNo.eq(loanApplication.repayAccountNo))
                 .where(loanApplication.laId.eq(laId))
                 .fetchOne();
-        if(result == null) return Optional.empty();
 
-        // productName구하기
-        var productName = queryFactory.select(loanProduct.loanName)
-                .from(loanProduct)
-                .where(loanProduct.loanNo.eq(result.getLoanProductNo()))
-                .fetchOne();
+        if (row == null) {
+            return Optional.empty();
+        }
 
+        var app = row.get(loanApplication);
+        var productName = row.get(loanProduct.loanName);
+        var payoutAccountNumber = row.get(payoutAcc.accountNo);
+        var repayAccountNumber = row.get(repayAcc.accountNo);
+
+        // 채우기 summary
         var summary = LoanApplySummaryDTO.builder()
-                .laNo(result.getLaNo())
-                .laId(result.getLaId())
-                .cNo(result.getCustomerNo())
-                .lpdNo(result.getLoanProductNo())
+                .laNo(app.getLaNo())
+                .laId(app.getLaId())
+                .cNo(app.getCustomerNo())
+                .lpdNo(app.getLoanProductNo())
                 .productName(productName)
-                .applyStatus(result.getStatus())
-                .applyAmount(result.getAppliedAmount())
-                .desiredTerm(result.getDesiredTerm())
-                .purposeCode(result.getPurposeCode())
-                .channel(result.getChannel())
-                .submitDate(result.getSubmittedAt())
-                .payoutAccountNo(result.getPayoutAccountNo())
-                .repayAccountNo(result.getRepayAccountNo())
+                .applyStatus(app.getStatus())
+                .applyAmount(app.getAppliedAmount())
+                .desiredTerm(app.getDesiredTerm())
+                .purposeCode(app.getPurposeCode())
+                .channel(app.getChannel())
+                .submitDate(app.getSubmittedAt())
+                .payoutAccountNo(app.getPayoutAccountNo())
+                .repayAccountNo(app.getRepayAccountNo())
                 .build();
 
         var dto = LoanApplyDetailDTO.builder()
                 .summary(summary)
-                .applicationForm(result.getContextJson())       // json문자열은 프론트에서 파싱
+                .applicationForm(app.getContextJson())
                 .attachedDocs(null)
-                .reviewedAt(result.getDecidedAt())
-                .rejectReason(result.getDecisionReason())
-                .approvedAmount(result.getApprovedAmount())
-                .approvedTerm(result.getApprovedTerm())
-                .approvedRate(result.getApprovedRate())
+                .reviewedAt(app.getDecidedAt())
+                .rejectReason(app.getDecisionReason())
+                .approvedAmount(app.getApprovedAmount())
+                .approvedTerm(app.getApprovedTerm())
+                .approvedRate(app.getApprovedRate())
+                .payoutAccountNumber(payoutAccountNumber)
+                .repayAccountNumber(repayAccountNumber)
                 .build();
 
         return Optional.of(dto);

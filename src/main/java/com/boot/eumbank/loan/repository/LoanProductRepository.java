@@ -13,4 +13,7 @@ public interface LoanProductRepository extends JpaRepository<LoanProduct, Long> 
     Optional<LoanProduct> findByLoanCode(String loanCode);
     // 활성화 기준
     Page<LoanProduct> findByLoanTypeAndIsActiveTrue(String loanType, Pageable pageable);        // isActive-> Y일때
+
+    // 상품코드 중복체크
+    boolean existsByLoanCode(String loanCode);
 }

@@ -28,4 +28,5 @@ public class LoanApplySummaryDTO {
     // 표시용
     private Integer payoutAccountNo;            // 신청계좌 No
     private Integer repayAccountNo;              // 상환계좌 No
+
 }
