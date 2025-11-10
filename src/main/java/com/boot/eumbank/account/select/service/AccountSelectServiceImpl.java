@@ -175,6 +175,7 @@ public class AccountSelectServiceImpl implements AccountSelectService {
         dto.setA_rate(d.getDInterestRate());
         dto.setA_status(d.getDStatus());
         dto.setA_nickname(null);
+        dto.setA_rate(d.getDInterestRate());
         dto.setA_opened_at(d.getDJoinDate());
         dto.setA_closed_at(d.getDMaturityDate());
         dto.setA_last_tx_at(d.getDUpdatedAt());
@@ -195,6 +196,7 @@ public class AccountSelectServiceImpl implements AccountSelectService {
         dto.setA_balance(BigDecimal.valueOf(balanceSrc));
         dto.setA_rate(i.getIInterestRate());
         dto.setA_status(i.getIStatus());
+        dto.setA_rate(i.getIInterestRate());
         dto.setA_nickname(null);
         dto.setA_opened_at(i.getIJoinDate());
         dto.setA_closed_at(i.getIMaturityDate());
