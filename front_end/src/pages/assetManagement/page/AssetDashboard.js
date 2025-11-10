@@ -1,6 +1,5 @@
 // src/pages/assetManagement/page/Dashboard.js
 import { StatCard } from "../components/StatCard";
-import { PlaceholderChart } from "../components/PlaceholderChart";
 import { Link } from "react-router-dom";
 import { DonutPercentOnly, LineChartWithDatesStatic, TrendFooterStats } from "../components/StaticCharts";
 import { useEffect, useMemo, useState } from "react";
@@ -376,8 +375,6 @@ export default function AssetDashboard() {
                       : <Line data={lineData} options={lineOptions} />)
                 }
               </div>
-
-              {/* <PlaceholderChart label="라인 차트 (순자산 추이)" height="h-52" /> */}
               <TrendFooterStats
                 stats={[
                   { label: "최근 30일 증감", value: loading ? "..." : formatKrwSigned(change30) },

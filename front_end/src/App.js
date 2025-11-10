@@ -68,13 +68,6 @@ import BillsLanding from "./pages/bills/BillsLanding";
 // 쳇봇
 import FloatingChatButton from "./pages/chat/page/FloatingChatButton";
 
-// 자산관리
-import AssetAnalysis from "./pages/assetManagement/page/AssetAnalysis";
-import AssetDashboard from "./pages/assetManagement/page/AssetDashboard";
-import AssetPeerComparison from "./pages/assetManagement/page/AssetPeerComparison";
-import AssetRecommendation from "./pages/assetManagement/page/AssetRecommendation";
-import AssetReport from "./pages/assetManagement/page/AssetReport";
-
 function AppWrapper() {
   return <App />;
 }
@@ -290,59 +283,6 @@ function App() {
 
         {/* 공과금페이지 */}
         <Route path="/bills" element={<BillsLanding />} />
-
-        {/* 자산관리 */}
-        <Route path="/asset" element={<Navigate to="/asset/dashboard" replace />}/>
-
-         {/* 자산 대시보드 (자산 현황) */}
-        <Route
-          path="/asset/dashboard"
-          element={
-            <ProtectedRoute>
-              <AssetDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* 자산 분석 */}
-        <Route
-          path="/asset/analysis"
-          element={
-            <ProtectedRoute>
-              <AssetAnalysis />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* 또래 비교 */}
-        <Route
-          path="/asset/peer"
-          element={
-            <ProtectedRoute>
-              <AssetPeerComparison />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* 맞춤형 추천 */}
-        <Route
-          path="/asset/recommend"
-          element={
-            <ProtectedRoute>
-              <AssetRecommendation />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* 월간 리포트 */}
-        <Route
-          path="/asset/report"
-          element={
-            <ProtectedRoute>
-              <AssetReport />
-            </ProtectedRoute>
-          }
-        />
 
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={
