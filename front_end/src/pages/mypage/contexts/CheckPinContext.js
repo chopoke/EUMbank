@@ -42,3 +42,7 @@ export const useCheckPin = () => {
     }
     return context;
 };
+
+export const getDocument = () => {
+
+}
