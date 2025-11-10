@@ -1262,12 +1262,12 @@ public class TransferServiceImpl implements TransferService {
                     );
                     
                     eventPublisher.publishEvent(failedEvent);
-                    log.info("✅ 이체 실패 이벤트 발행 성공 - 고객번호: {}, 실패사유: {}", 
+                    log.info("이체 실패 이벤트 발행 - 고객번호: {}, 실패사유: {}", 
                             failedFromAccount.getCNo(), failureReason);
                 }
             } catch (Exception eventException) {
                 // 실패 이벤트 발행 실패는 로그만 기록 (이체 실패는 이미 처리됨)
-                log.warn("⚠️ 이체 실패 후 이벤트 발행 실패: {}", eventException.getMessage());
+                log.warn("이체 실패 후 이벤트 발행 실패: {}", eventException.getMessage());
             }
             
             // 실패 시 예외를 다시 던져서 프론트엔드에서 catch 블록으로 처리하도록 함
