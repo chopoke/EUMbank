@@ -87,6 +87,7 @@ dependencies {
     // Firebase Admin SDK: FCM 푸시 알림 전송을 위한 라이브러리 - java용 최신 안정화 버전은 9.7.0
     implementation 'com.google.firebase:firebase-admin:9.7.0'
 
+
 }
 // 부트 실행 시 JKS trustStore 적용 (최상위 블록!)
 bootRun {

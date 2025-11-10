@@ -192,7 +192,7 @@ finlife:
 jobs:
   finlife:
     sync:
-      cron: "0 */2 * * * *"    # 매일 03:00  --> 임시로 15초마다
+      cron: "0 */1 * * * *"    # 매일 03:00  --> 매일 10분마다로 변경
   timezone: "Asia/Seoul"
 
 

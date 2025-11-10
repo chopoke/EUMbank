@@ -8,9 +8,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface LoanProductRepository extends JpaRepository<LoanProduct, Integer> {
-    Optional<LoanProduct> findByLoanCode(String loanCode);
+public interface LoanProductRepository extends JpaRepository<LoanProduct, Long> {
 
-    Page<LoanProduct> findByLoanTypeAndStatus(
-            String loanType, String status, Pageable pageable);
+    Optional<LoanProduct> findByLoanCode(String loanCode);
+    // 활성화 기준
+    Page<LoanProduct> findByLoanTypeAndIsActiveTrue(String loanType, Pageable pageable);        // isActive-> Y일때
+
+    // 상품코드 중복체크
+    boolean existsByLoanCode(String loanCode);
 }
