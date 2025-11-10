@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "GAS_RATE_TBL")
 @Getter @Setter
-class GasRate {
+public class GasRate {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "gr_id") private Integer grId;
 

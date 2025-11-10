@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "UTILITY_BILL_TBL")
 @Getter @Setter
-class UtilityBill {
+public class UtilityBill {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ub_no") private Integer ubNo;
 

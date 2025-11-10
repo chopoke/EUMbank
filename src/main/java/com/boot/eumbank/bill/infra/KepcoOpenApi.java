@@ -1,6 +1,7 @@
 package com.boot.eumbank.bill.infra;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
@@ -9,7 +10,7 @@ import java.math.BigDecimal;
 @Component
 @RequiredArgsConstructor
 public class KepcoOpenApi implements KepcoAdapter {
-    private final RestTemplate rest; // @Bean 등록 필요
+    private final @Qualifier("kepcoRestTemplate") RestTemplate rt; // @Bean 등록 필요
     // TODO: application.yml에 kepco.baseUrl, kepco.apiKey 등록
     @Override
     public BigDecimal fetchAvgUnitPrice(int year, int month, String areaCd) {

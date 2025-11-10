@@ -7,6 +7,7 @@ import com.boot.eumbank.bill.entity.BillPayment;
 import com.boot.eumbank.bill.entity.ElectricAvg;
 import com.boot.eumbank.bill.infra.KepcoAdapter;
 import com.boot.eumbank.bill.repo.BillInvoiceRepo;
+import com.boot.eumbank.bill.repo.BillPaymentRepo;
 import com.boot.eumbank.bill.repo.ElectricAvgRepo;
 import com.boot.eumbank.bill.util.PdfUtil;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class BillController {
     private final BillInvoiceRepo invRepo;
     private final BillPaymentService payment;
     private final ElectricAvgRepo elecAvgRepo;
+    private final BillPaymentRepo paymentRepo;
     private final KepcoAdapter kepco; // 실제 구현 주입
 
     // 청구서 목록: 상태 필터 + 페이지(단순 offset)

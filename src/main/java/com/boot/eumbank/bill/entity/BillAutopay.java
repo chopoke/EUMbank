@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "BILL_AUTOPAY_TBL")
 @Getter @Setter
-class BillAutopay {
+public class BillAutopay {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ba_no") private Integer baNo;
 
