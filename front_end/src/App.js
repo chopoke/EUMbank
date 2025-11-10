@@ -180,9 +180,9 @@ function App() {
 
 
 
-        {/* 대출관리자 */}
+        {/* 대출관리자
         <Route path="/admin/loan/applications" element={<LoanApplicaion/>} />
-        <Route path="/admin/loan/applications/:laId" element={<LoanAdminDetailPage/>} />
+        <Route path="/admin/loan/applications/:laId" element={<LoanAdminDetailPage/>} /> */}
         
 
         {/* 계좌 개설: 각 단계 독립 경로 */}

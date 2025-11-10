@@ -17,6 +17,8 @@ import java.time.LocalDate;
 
 /**
  * 상환 스케쥴 생성
+ * 대출 승인/집행할 때 원리금균등/원금균등/만기일시에 따라 월별 납부계획(loan_schedule_tbl)설정
+ * 월이율(r) : 
  */
 @Service @Slf4j @RequiredArgsConstructor
 public class RepaymentScheduleService {

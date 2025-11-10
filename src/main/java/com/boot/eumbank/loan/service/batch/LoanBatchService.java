@@ -7,6 +7,7 @@ import com.boot.eumbank.loan.repository.LoanRepository;
 import com.boot.eumbank.loan.repository.payment.LoanScheduleRepository;
 import com.boot.eumbank.loan.service.delinquency.LoanDelinquencyService;
 import com.boot.eumbank.loan.service.payment.LoanRepaymentService;
+import com.boot.eumbank.transfer_domain.transfer.exception.InsufficientBalanceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -20,15 +21,23 @@ import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 
+
+/**
+ * loan_schedule_tbl 기반으로
+ * 자동이체 시도 -> 상환 호출 -> 재시도 -> 연체 확정 로직
+ * autoDebitForToday() : 오늘이나 납부일 지난 상환스케쥴에 대해 상환계좌에서 상환 시도
+ * retryFailedOrPartial() : 이전에 실패햇거나 부분 납부된 것들만 시도
+ * markOverdueAndAccruePenalty() : 기한이 지났는데도 완납안된거 overdue 적재, 연체이자일(일단위) 적립
+ */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class LoanBatchService {
 
-    private final LoanScheduleRepository scheduleRepo;
-    private final LoanRepository loanRepo;
-    private final LoanRepaymentService repaymentService;
-    private final LoanDelinquencyService delinquencyService;
+    private final LoanScheduleRepository scheduleRepo;          // loan_schedule_tbl 레포
+    private final LoanRepository loanRepo;                      // loan_tbl 레포
+    private final LoanRepaymentService repaymentService;        // 상환 서비스
+    private final LoanDelinquencyService delinquencyService;    // 연체 서비스
 
     private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
     private static final BigDecimal ZERO = BigDecimal.ZERO;
@@ -36,25 +45,31 @@ public class LoanBatchService {
     /**
      * 1) 당일 및 기한 경과분 자동 출금
      * - 상환계좌(repayAccount)가 지정된 대출만 대상
+     * 오늘자 자동이체 과정
      */
     //@Scheduled(cron = "0 0/5 * * * *", zone = "Asia/Seoul") // 5분마다
-    @Scheduled(cron = "0/10 * * * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0/30 * * * * *", zone = "Asia/Seoul")        // 매 30초마다 실행
     public void autoDebitForToday() {
         LocalDate today = LocalDate.now(ZONE);
 
         // due_date <= today && status in (DUE, PARTIAL, FAILED, OVERDUE) && 잔액>0
+        // 오늘보다 이전인 납기일, 즉 상환안된 스케줄들 찾아 dues에 적립
         List<LoanSchedule> dues = scheduleRepo.findAllDueForAutoDebit(today);
 
+        // Comparator로 정렬해주기
         dues.sort(Comparator
-                .comparing(LoanSchedule::getDueDate)
-                .thenComparing(LoanSchedule::getInstallmentNo));
+                .comparing(LoanSchedule::getDueDate)        // 납기일을 기준으로(오래된것부터)
+                .thenComparing(LoanSchedule::getInstallmentNo));        // 이후에 회차번호 기준
 
-        log.info("@@@@@@@@@@ 자동 상환 시작: {} items (asOf={})", dues.size(), today);
+        log.info("@@@@@@@@@@ 자동 상환 시작: {} items (asOf={}) @@@@@@@@@@", dues.size(), today);
 
+        // 루프 돌면서 검사
         for (LoanSchedule ls : dues) {
-            Loan loan = loanRepo.findById(ls.getLoanNo()).orElse(null);
+
+            Loan loan = loanRepo.findById(ls.getLoanNo()).orElse(null);     // 대출 테이블에서 찾기
+            // 대출건이 0건이라면
             if (loan == null) {
-                log.warn("@@@@@@@@@@ autoDebit skip: loan not found. lsNo={}", ls.getLsNo());
+                log.warn("@@ 자동상환 스킵: 대출건을 찾을 수 없음. lsNo={} @@", ls.getLsNo());
                 continue;
             }
 
@@ -64,20 +79,25 @@ public class LoanBatchService {
             }
             // if (!"Y".equalsIgnoreCase(loan.getAutoDebitYn())) continue;
 
+            // 해당 회차의 납부예정액 계산 (원금-이자)
             BigDecimal remaining = ls.getDueTotal()
                     .subtract(nvl(ls.getPaidPrincipal()))
                     .subtract(nvl(ls.getPaidInterest()));
 
+            // 납부액이 0이하 --> 완납이므로 스킵
             if (remaining.compareTo(ZERO) <= 0) {
                 continue;
             }
 
+            // 상환==================
             try {
-                LocalDateTime payTime = LocalDateTime.now(ZONE);
+                LocalDateTime payTime = LocalDateTime.now(ZONE);        // 상환타임 지정
+                
                 String idem = "AUTO-" + loan.getLNo()
                         + "-" + ls.getInstallmentNo()
                         + "-" + today;
-
+                
+                // 상환정보 담기
                 RepaymentRequestDTO req = RepaymentRequestDTO.builder()
                         .amount(remaining)
                         .paymentTime(payTime)
@@ -85,9 +105,10 @@ public class LoanBatchService {
                         .idempotencyKey(idem)
                         .build();
 
+                // 상환 메서드 호출
                 repaymentService.repay(loan.getLNo(), req);
 
-                log.info("@@@@@@@@@@ 자동상환 성공: loanNo={}, lsNo={}, amount={}",
+                log.info("@@ 자동상환 성공: loanNo={}, lsNo={}, amount={} @@",
                         loan.getLNo(), ls.getLsNo(), remaining);
 
             } catch (Exception e) {
@@ -95,7 +116,7 @@ public class LoanBatchService {
             }
         }
 
-        log.info("@@@@@@@@@@ 자동 상환 종료 (asOf={})", today);
+        log.info("@@@@@@@@@@ 자동 상환 종료 (asOf={}) @@@@@@@@@@", today);
     }
 
     /**
@@ -105,7 +126,7 @@ public class LoanBatchService {
      * - 연체 상태(OVERDUE) 포함해서 계속 재시도
      */
     //@Scheduled(cron = "0 2/15 * * * *", zone = "Asia/Seoul") // 매 15분, 2분부터
-    @Scheduled(cron = "3/10 * * * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "3/30 * * * * *", zone = "Asia/Seoul")        // 3초부텃 ㅣ작해서 30초마다 실행
     public void retryFailedOrPartial() {
         LocalDate today = LocalDate.now(ZONE);
         List<LoanSchedule> targets = scheduleRepo.findNeedRetry(today);
@@ -114,12 +135,12 @@ public class LoanBatchService {
                 .comparing(LoanSchedule::getDueDate)
                 .thenComparing(LoanSchedule::getInstallmentNo));
 
-        log.info("@@@@@@@@@@ 상환 재시도 시작: {} items (asOf={})", targets.size(), today);
+        log.info("@@@@@@@@@@ 상환 재시도 시작: {} items (asOf={}) @@@@@@@@@@", targets.size(), today);
 
         for (LoanSchedule ls : targets) {
             Loan loan = loanRepo.findById(ls.getLoanNo()).orElse(null);
             if (loan == null) {
-                log.warn("@@@@@@@@@@ retry skip: loan not found. lsNo={}", ls.getLsNo());
+                log.warn("@@ 상환 재시도 스킵: 대출건을 찾을 수 없음 lsNo={} @@", ls.getLsNo());
                 continue;
             }
 
@@ -136,6 +157,7 @@ public class LoanBatchService {
 
             try {
                 LocalDateTime payTime = LocalDateTime.now(ZONE);
+                // 각시도에 대한 구분이 피룡함 ( 여러건의 재시도가 일어날 수 있기 때문에!)
                 String idem = "RETRY-" + loan.getLNo()
                         + "-" + ls.getInstallmentNo()
                         + "-" + payTime.toLocalTime();
@@ -149,15 +171,16 @@ public class LoanBatchService {
 
                 repaymentService.repay(loan.getLNo(), req);
 
-                log.info("@@@@@@@@@@ 상환 재시도 성공: loanNo={}, lsNo={}, amount={}",
+                log.info("@@ 상환 재시도 성공: loanNo={}, lsNo={}, amount={}  @@",
                         loan.getLNo(), ls.getLsNo(), remaining);
 
             } catch (Exception e) {
+                // 에러 핸들러 메서드 호출
                 handleAutoDebitFailure(today, ls, loan, remaining, e);
             }
         }
 
-        log.info("@@@@@@@@@@ 상환 재시도 종료 (asOf={})", today);
+        log.info("@@@@@@@@@@ 상환 재시도 종료 (asOf={}) @@@@@@@@@@", today);
     }
 
     /**
@@ -165,14 +188,17 @@ public class LoanBatchService {
      * - due_date < today
      * - 잔액 남았으면 OVERDUE 로
      * - 간단히 upsertDailySnapshot 사용
+     * ==> 일정주기로 재시도 하면서 입금이 늦어도 어쨋든 상환되게 하기
      */
     //@Scheduled(cron = "0 10 0 * * *", zone = "Asia/Seoul") // 매일 00:10
-    @Scheduled(cron = "6/10 * * * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "6/30 * * * * *", zone = "Asia/Seoul")        // 6초부터 시작해서 30초마다 실행
     public void markOverdueAndAccruePenalty() {
+        
         LocalDate today = LocalDate.now(ZONE);
+        // 연체건들 찾아
         List<LoanSchedule> overdueTargets = scheduleRepo.findOverdueTargets(today);
 
-        log.info("@@@@@@@@@@ 연체계산시작: {} items (ref={})", overdueTargets.size(), today);
+        log.info("@@@@@@@@@@ 연체계산시작: {} items (ref={}) @@@@@@@@@@", overdueTargets.size(), today);
 
         for (LoanSchedule ls : overdueTargets) {
             try {
@@ -198,6 +224,7 @@ public class LoanBatchService {
                             .divide(new BigDecimal("100"), 10, RoundingMode.HALF_UP)
                             .divide(new BigDecimal("365"), 2, RoundingMode.HALF_UP);
 
+                    // overdue로 적재(연체)
                     delinquencyService.upsertDailySnapshot(
                             ls.getLoanNo(),
                             ls.getLsNo(),
@@ -213,11 +240,11 @@ public class LoanBatchService {
                 }
 
             } catch (Exception e) {
-                log.warn("@@@@@@@@@@ 연체 계산 실패: lsNo={}, cause={}", ls.getLsNo(), e.getMessage(), e);
+                log.warn("@@ 연체 계산 실패: lsNo={}, cause={} @@", ls.getLsNo(), e.getMessage(), e);
             }
         }
 
-        log.info("@@@@@@@@@@ 연체 계산 종료.");
+        log.info("@@@@@@@@@@ 연체 계산 종료. @@@@@@@@@@");
     }
 
     // ================== 내부 유틸 ==================
@@ -232,7 +259,7 @@ public class LoanBatchService {
                 || (e.getMessage() != null && e.getMessage().contains("잔액 부족"));
 
         if (!insufficient) {
-            log.warn("@@@@@@@@@@ 자동상환 실패(기타): loanNo={}, lsNo={}, cause={}",
+            log.warn("@@ 자동상환 실패(기타): loanNo={}, lsNo={}, cause={} @@",
                     loan.getLNo(), ls.getLsNo(), e.getMessage(), e);
             return;
         }
@@ -249,7 +276,7 @@ public class LoanBatchService {
                 .divide(new BigDecimal("100"), 10, RoundingMode.HALF_UP)
                 .divide(new BigDecimal("365"), 2, RoundingMode.HALF_UP);
 
-        log.warn("@@@@@@@@@@ DELINQ 적재: loanNo={}, lsNo={}, overdue={}, todayDel={}",
+        log.warn("@@ 연체테이블 적재: loanNo={}, lsNo={}, overdue={}, todayDel={} @@",
                 loan.getLNo(), ls.getLsNo(), safeOverdue, todayDel);
 
         delinquencyService.upsertDailySnapshot(
@@ -265,13 +292,14 @@ public class LoanBatchService {
                 "auto-debit failed"
         );
 
-        log.warn("@@@@@@@@@@ 잔액부족 - 자동상환 실패 : loanNo={}, lsNo={}, cause={}",
+        log.warn("@@ 잔액부족 - 자동상환 실패 : loanNo={}, lsNo={}, cause={} @@",
                 loan.getLNo(), ls.getLsNo(), e.getMessage());
     }
 
+    // ========= 유팅ㄹ
     private boolean isInsufficientBalance(Throwable e) {
         while (e != null) {
-            if (e instanceof com.boot.eumbank.transfer_domain.transfer.exception.InsufficientBalanceException)
+            if (e instanceof InsufficientBalanceException)
                 return true;
             if ("InsufficientBalanceException".equals(e.getClass().getSimpleName()))
                 return true;

@@ -177,7 +177,7 @@ public class FinlifeUpsert {
 
             upsertCount++;
         }
-        log.info("[SYNC:{}] page {} upsert {}건 (now/max={}/{})",
+        log.info("@@@@@@@@@@ [SYNC:{}] page {} upsert {}건 (now/max={}/{}) @@@@@@@@@@",
                 loanType, pageNo, upsertCount, nowPageNo, maxPageNo);
         return new PageResult(upsertCount, nowPageNo, maxPageNo);
     }

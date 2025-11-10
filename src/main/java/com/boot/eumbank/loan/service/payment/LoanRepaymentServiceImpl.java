@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 /**
  * 들어온 상환금을 회차별로 배분하고 대출잔액 갱신
  * 연체금 -> 이자 -> 원금 순으로 확인하고 상환
+ * 계좌출금, 스케쥴, 대출잔액, 삳환내역을 한번에 일관되게 처리
  */
 @Service
 @Slf4j
@@ -55,12 +56,18 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
         return "RP" + date + "-" + rnd;
     }
 
+    /**
+     * 상환을 도맡아하는 메서드
+     * @param loanNo  대출번호
+     * @param req     상환요청 DTO
+     * @return        상환
+     */
     @Override
     @Transactional
     public RepaymentResponseDTO repay(Long loanNo, RepaymentRequestDTO req) {
 
 
-        // (1) 동시성 락
+        // (1) 동시성 락  설정 !!! -> 동일 대출에 대해 상환이 들어와도 꼬이지 않게 유지하기 위해 DB에서부터 락
         scheduleRepo.lockLoanRow(loanNo);
 
         Loan loan = loanRepo.findById(loanNo)
@@ -75,22 +82,25 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
         LocalDateTime payTime = Optional.ofNullable(req.getPaymentTime())
                 .orElse(LocalDateTime.now());
 
-        // 멱등키 준비
+
+        // ------------------------ 2단계!
+        // 멱등키 준비 (상환요청키) LoanBatchService에서 보낸 AUTO... 나  RETRY... 키
         String lpGroupId = nextPaymentId();
         String idem = Optional.ofNullable(req.getIdempotencyKey()).orElse(lpGroupId);
 
-        // 멱등키가 이미 처리되어 있으ㅁ면 직전 결과 스냅샷 반환
+        // 멱등키가 이미 처리되어 있으ㅁ면 직전 결과를 통해 응답만 다시 구성해쥼
         if (paymentRepo.existsByLoanNoAndIdempotencyKey(loanNo, idem)) {
             return buildSnapshotFromPayments(loanNo, idem); // 아래 헬퍼 참고
         }
 
+        // --------------------------- 3단계!
         // (2) 상환 대상 스케줄 조회
         List<LoanSchedule> targets;
 
         if (req.getInstallmentNo() != null) {
-            targets = scheduleRepo.findRepayTargets(loanNo).stream()
+            targets = scheduleRepo.findRepayTargets(loanNo).stream()        // 미납, 부분납, 연체납 등 내야할거 찾기
                     .filter(s -> Objects.equals(s.getInstallmentNo(), req.getInstallmentNo()))
-                    .collect(Collectors.toList()); // <-- mutable
+                    .collect(Collectors.toList());
             if (targets.isEmpty()) {
                 throw new IllegalArgumentException("해당 회차는 상환 대상이 아닙니다.");
             }
@@ -98,7 +108,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
         } else if (req.getScheduleId() != null) {
             targets = scheduleRepo.findRepayTargets(loanNo).stream()
                     .filter(s -> Objects.equals(s.getLsNo(), req.getScheduleId()))
-                    .collect(Collectors.toList()); // <-- mutable
+                    .collect(Collectors.toList());
             if (targets.isEmpty()) {
                 throw new IllegalArgumentException("해당 스케줄은 상환 대상이 아닙니다.");
             }
@@ -117,15 +127,17 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
                         .thenComparing(LoanSchedule::getInstallmentNo)     // 같으면 회차번호 오름차순
         );
 
-        //  연체료 먼저 확인
+        // ---------------------------------- 4단계!
+        //  연체료 먼저 확인 (LoanDelinquencySercice가 쌓아준 스냅샷 합산-> (연체총액 - 납부한연체액 = 안낸 연체액) 도출
         // (2-0) 연체료 미지급액 계산 (대출 단위)
         BigDecimal accruedPenalty = nvl(delinquencyRepo.sumDelAmountByLoanUntil(loanNo, payTime));  // 적립된 연체료 합
         BigDecimal paidPenalty    = nvl(paymentRepo.sumPenaltyPaidByLoanUntil(loanNo, payTime));    // 납부된 연체료 합
         BigDecimal outstandingPenalty = accruedPenalty.subtract(paidPenalty);
         if (outstandingPenalty.signum() < 0) outstandingPenalty = ZERO;
 
+        // ----------------------------------- 5단계!
         // (2-1) 스케줄 미납 금액 계산
-        BigDecimal needSchTotal = targets.stream().map(s -> {
+        BigDecimal needSchTotal = targets.stream().map(s -> {   // 각 타겟 스케줄의 미납 이자+원금 합
             BigDecimal needInt = nvl(s.getDueInterest()).subtract(nvl(s.getPaidInterest()));
             if (needInt.signum() < 0) needInt = ZERO;
             BigDecimal needPrin = nvl(s.getDuePrincipal()).subtract(nvl(s.getPaidPrincipal()));
@@ -135,11 +147,13 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
 
         BigDecimal needTotal = outstandingPenalty.add(needSchTotal);
 
-        BigDecimal withdrawAmt = receive.min(needTotal); // 요청금액과 실제 필요액 중 작은 값
+        // 요청금액과 실제 필요액 중 작은 값 (과납방지)
+        BigDecimal withdrawAmt = receive.min(needTotal);
         if (withdrawAmt.compareTo(ZERO) <= 0) {
             throw new IllegalArgumentException("이번 회차에 납부할 금액이 없습니다.");
         }
 
+        // ----------------------------- 6단계!
         // === (2-2) 실제 출금 (계좌 잔액 차감 + transfer_history_tbl 적재) ===
         Integer repayA = loan.getRepayAccount();            // ACCOUNT_TBL.a_no 여야 함
         LocalDateTime now = payTime;
@@ -172,10 +186,14 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
         List<RepaymentResponseDTO.Item> items = new ArrayList<>();
         BigDecimal remain = withdrawAmt;
 
-        // (3-0) 연체료 먼저 충당
+        // --------------------------------------- 7단계!
+        // (3-0) 연체료 먼저 충당  연체료 -> 이자 -> 원금 순
         if (outstandingPenalty.compareTo(ZERO) > 0 && remain.compareTo(ZERO) > 0) {
+
             BigDecimal payPenalty = min(remain, outstandingPenalty);
-            remain = remain.subtract(payPenalty);
+            remain = remain.subtract(payPenalty);           // 남은금액
+            // 남은금액(remain)으로 약정이자(needInterest), 약정원금(needPrincipal)채우기
+            // 전부 채워졌으면 paid, 일부면 partial
 
             seq++;
             String lpId = lpGroupId + "-" + String.format("%02d", seq);
@@ -286,7 +304,10 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
             }
         }
 
-        // (4) 대출 잔액/상태 갱신 (원금만 차감)
+
+        // ------------------------ 8 단계!
+        // (4) 대출 잔액/상태 갱신
+        // 원금상환분만 Balance에서 차감  ==> 0되면 종료
         BigDecimal curBal = nvl(loan.getBalance());
         if (curBal.compareTo(ZERO) > 0) {
             curBal = curBal.subtract(appliedPrincipalTotal);
@@ -325,7 +346,8 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
                 .build();
     }
 
-    // 멱등키 재호출시 스냅샷 돌려줘야함    --> 같은 멱등키로 들어오면 이미 저장된 payment_tbl로 응답 재구성 리턴
+    // 멱등키 재호출시 스냅샷 돌려줘야함
+    // --> 같은 멱등키로 들어오면 이미 저장된 payment_tbl로 응답 재구성 리턴
     private RepaymentResponseDTO buildSnapshotFromPayments(Long loanNo, String idem) {
         List<LoanPayment> rows = paymentRepo.findAllByLoanNoAndIdempotencyKey(loanNo, idem);
         BigDecimal toInt = ZERO, toPrin = ZERO, toPen = ZERO, recv = ZERO;
