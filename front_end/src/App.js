@@ -67,6 +67,13 @@ import LoanAdminDetailPage from "./pages/loan/admin/LoanAdminDetailPage";
 import BillsLanding from "./pages/bills/BillsLanding";
 
 
+// 현물(Spot) 페이지들
+import SpotTradingPage from "./pages/spot/pages/SpotTradingPage";
+import SpotBalancePage from "./pages/spot/pages/SpotBalancePage";
+import SpotWalletsPage from "./pages/spot/pages/SpotWalletsPage";
+import SpotHistoryPage from "./pages/spot/pages/SpotHistoryPage";
+import SpotPriceHistoryPage from "./pages/spot/pages/SpotPriceHistoryPage";
+
 //import {chatBotRouteElements} from "./pages/chat/router/chatBotRoutes";
 
 // 쳇봇
@@ -257,8 +264,42 @@ function App() {
         {/* 공과금페이지 */}
         <Route path="/bills" element={<BillsLanding />} />
 
+
+        {/* ✅ 현물(Spot) 라우팅 */}
+        <Route path="/spot" element={
+          <ProtectedRoute>
+            <SpotTradingPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/spot/trade" element={
+          <ProtectedRoute>
+            <SpotTradingPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/spot/balance" element={
+          <ProtectedRoute>
+            <SpotBalancePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/spot/wallets" element={
+          <ProtectedRoute>
+            <SpotWalletsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/spot/history" element={
+          <ProtectedRoute>
+            <SpotHistoryPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/spot/SpotPriceHistory" element={
+          <ProtectedRoute>
+            <SpotPriceHistoryPage />
+          </ProtectedRoute>
+        } />
+
         {/* 관리자페이지 */}
         <Route path="/admin" element={<AdminPage/>} />
+
 
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={
