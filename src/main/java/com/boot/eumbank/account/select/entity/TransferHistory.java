@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Table(name = "TRANSFER_HISTORY_TBL")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners(AuditingEntityListener.class) @Setter
 public class TransferHistory {
 
     @Id

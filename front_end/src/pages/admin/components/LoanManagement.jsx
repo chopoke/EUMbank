@@ -40,7 +40,10 @@ export default function LoanManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">대출상품 관리</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">대출상품 관리</h2>
+          <a href='/admin/loan/applications'>대출신청목록</a>
+        </div>
         <button
           onClick={() => setShowAddForm(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
