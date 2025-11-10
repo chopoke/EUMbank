@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import BalanceCard from '../components/BalanceCard';
 import TransferModal from '../components/modals/TransferModal';
@@ -13,6 +13,8 @@ const SpotBalancePage = () => {
   const location = useLocation();
   const [customerBalance, setCustomerBalance] = useState(null);
   const [wallets, setWallets] = useState([]);
+  const [depositAccounts, setDepositAccounts] = useState([]);
+  const [selectedAccountNo, setSelectedAccountNo] = useState(null);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferType, setTransferType] = useState('toTrading');
 
@@ -39,17 +41,58 @@ const SpotBalancePage = () => {
     return null;
   };
 
-  const fetchCustomerBalance = async () => {
+  const fetchCustomerBalance = useCallback(async (accountNo = null) => {
     try {
       const customerNo = getCustomerNo();
       if (!customerNo) return;
       
-      const balance = await spotApi.fetchCustomerBalance(customerNo);
+      // localStorage에서 선택된 계좌 번호 가져오기
+      const storedAccountNo = accountNo || (() => {
+        const stored = localStorage.getItem(`spot_selected_account_${customerNo}`);
+        return stored ? parseInt(stored, 10) : null;
+      })();
+      
+      const balance = await spotApi.fetchCustomerBalance(customerNo, storedAccountNo);
       setCustomerBalance(balance);
     } catch (error) {
       console.error('잔고 조회 실패:', error);
     }
+  }, []);
+
+  const loadDepositAccounts = async () => {
+    try {
+      const customerNo = getCustomerNo();
+      if (!customerNo) return;
+      
+      const accounts = await spotApi.fetchDepositAccounts(customerNo);
+      setDepositAccounts(accounts);
+      
+      // 계좌 목록만 로드하고, 선택은 BalanceCard에서 처리
+      // 초기 선택된 계좌 번호만 설정 (잔고 조회는 하지 않음)
+      if (accounts.length > 0 && !selectedAccountNo) {
+        const storedAccountNo = localStorage.getItem(`spot_selected_account_${customerNo}`);
+        const accountNo = storedAccountNo ? parseInt(storedAccountNo, 10) : accounts[0].aNo;
+        
+        // 저장된 계좌가 유효한지 확인
+        const isValidAccount = accounts.some(acc => acc.aNo === accountNo);
+        if (isValidAccount) {
+          setSelectedAccountNo(accountNo);
+        } else {
+          setSelectedAccountNo(accounts[0].aNo);
+        }
+      }
+    } catch (error) {
+      console.error('입출금 계좌 목록 조회 실패:', error);
+    }
   };
+
+  const handleAccountChange = useCallback((accountNo) => {
+    // 계좌 변경 시에만 잔고 조회 (사용자가 직접 선택한 경우)
+    if (selectedAccountNo !== accountNo) {
+      setSelectedAccountNo(accountNo);
+      fetchCustomerBalance(accountNo);
+    }
+  }, [selectedAccountNo, fetchCustomerBalance]);
 
   const loadWalletsFromDB = async (customerNo) => {
     try {
@@ -167,9 +210,11 @@ const SpotBalancePage = () => {
           
           if (customerNo) {
             await Promise.all([
-              fetchCustomerBalance(),
+              loadDepositAccounts(),
               loadWalletsFromDB(customerNo)
             ]);
+            // 계좌 목록 로드 후 잔고 조회
+            await fetchCustomerBalance();
           }
         }
       } catch (error) {
@@ -224,6 +269,9 @@ const SpotBalancePage = () => {
           onTransferFromTrading={() => openTransferModal('fromTrading')}
           wallets={wallets}
           onRefreshAllBalances={refreshAllBalances}
+          depositAccounts={depositAccounts}
+          customerNo={getCustomerNo()}
+          onAccountChange={handleAccountChange}
         />
         
         {/* 이체 모달 */}
