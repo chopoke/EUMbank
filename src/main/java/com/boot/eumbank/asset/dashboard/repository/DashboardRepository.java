@@ -159,6 +159,14 @@ public class DashboardRepository {
                 .fetch();
     }
 
+    public Optional<LocalDate> getLastSnapshotDate() {
+        LocalDate last = queryFactory
+                .select(assetDailySnapshot.adsYmd.max())
+                .from(assetDailySnapshot)
+                .fetchOne();
+        return Optional.ofNullable(last);
+    }
+
     /**
      * 최근 30일 추이 리스트
      * @param cNo 고객번호
@@ -173,19 +181,6 @@ public class DashboardRepository {
                         assetDailySnapshot.adsYmd.between(from, to)
                 )
                 .orderBy(assetDailySnapshot.adsYmd.asc())
-                .fetch();
-    }
-
-    /**
-     * 최근 2일 기록 리스트
-     * @param cNo 고객번호
-     * @return List<AssetDailySnapshot>
-     */
-    public List<AssetDailySnapshot> getLastTwo(int cNo) {
-        return queryFactory.selectFrom(assetDailySnapshot)
-                .where(assetDailySnapshot.cNo.eq(cNo))
-                .orderBy(assetDailySnapshot.adsYmd.desc())
-                .limit(2)
                 .fetch();
     }
 
