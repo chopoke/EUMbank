@@ -28,7 +28,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -103,21 +105,36 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
     @Override
     @Transactional(readOnly = true)
     public DocumentListResponse getDocuments(Pageable pageable) {
+        logger.info("DocumentServiceImpl => getDocuments()");
+
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
 
-        Page<DocumentFile> documentPage = documentRepository.findBycNoOrderByCreatedAtDesc(
-                customer.getCustomerNo(), pageable);
+        // 1. 주민등록증 최신 1건 조회
+        Optional<DocumentFile> latestIdCard = documentRepository
+                .findFirstBycNoAndTypeOrderByCreatedAtDesc(customer.getCustomerNo(), FileType.주민등록증);
 
-        List<DocumentResponse> documents = documentPage.getContent().stream()
+        // 2. 주민등록증 제외한 나머지 서류 조회
+        Page<DocumentFile> documentPage = documentRepository
+                .findBycNoAndTypeNotOrderByCreatedAtDesc(
+                        customer.getCustomerNo(), FileType.주민등록증, pageable);
+
+        List<DocumentResponse> documents = new ArrayList<>();
+
+        // 3. 주민등록증 최신 1건 추가 (있으면)
+        latestIdCard.ifPresent(doc -> documents.add(convertToResponse(doc)));
+
+        // 4. 나머지 서류 추가
+        documents.addAll(documentPage.getContent().stream()
                 .map(this::convertToResponse)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
 
         return DocumentListResponse.builder()
                 .documents(documents)
                 .currentPage(documentPage.getNumber())
                 .totalPages(documentPage.getTotalPages())
-                .totalElements(documentPage.getTotalElements())
+                .totalElements(documentPage.getTotalElements() + (latestIdCard.isPresent() ? 1 : 0))
                 .size(documentPage.getSize())
                 .build();
     }

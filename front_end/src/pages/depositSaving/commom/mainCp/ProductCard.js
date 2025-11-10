@@ -49,15 +49,6 @@ const ProductCard = ({ product, onProductClick }) => {
         return amountStr.replace(numericPart, formattedNumber);
     };
 
-    const handleClick = () => {
-        // onProductClick 함수가 존재하면, product.id를 인자로 넣어 호출
-        alert("사전 계좌개설이 선행되어야 합니다.")
-
-        if (onProductClick) {
-            onProductClick(product);
-        }
-    };
-
     const featureList = product.feature && typeof product.feature === 'string'
         ? product.feature.replace(/^"|"$/g, '').split('", "')
         : [];
@@ -86,9 +77,6 @@ const ProductCard = ({ product, onProductClick }) => {
                     ))}
                 </ul>
             </div>
-            {/* <a href={product.href}> */}
-                <button className="action-button" onClick={handleClick}>{product.buttonText}</button>
-            {/* </a> */}
         </div>
     );
 };

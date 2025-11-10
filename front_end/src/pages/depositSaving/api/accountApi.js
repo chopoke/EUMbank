@@ -15,3 +15,15 @@ export async function getAccountList() {
         return [];
     }
 }
+
+// 사용자가 가입한 계좌 목록 조회
+export const checkUserSubscribedAccounts = async () => {
+    try {
+        const response = await api.get(`/api/check-exists`);
+
+        return response.data;
+    } catch (error) {
+        console.error('가입 계좌 조회 실패:', error);
+        throw error;
+    }
+};
