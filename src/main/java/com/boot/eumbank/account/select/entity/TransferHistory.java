@@ -70,7 +70,7 @@ public class TransferHistory {
                            BigDecimal amount, String memo, String otherBank,
                            String otherAccount, String transferType,
                            BigDecimal afterBalance, String transactionType,
-                           BigDecimal accountOut, BigDecimal accountIn) {
+                           BigDecimal accountOut, BigDecimal accountIn, int pId) {
         this.transferNo = transferNo;
         this.transferId = transferId;
         this.accountNo = accountNo;

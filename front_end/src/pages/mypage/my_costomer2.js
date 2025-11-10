@@ -1565,21 +1565,21 @@ function DocumentTab() {
         }
     };
 
-    /**
-     * 상태 한글 변환
-     */
-    const getStatusText = (status) => {
-        switch (status) {
-            case 'APPROVED':
-                return '승인완료';
-            case 'PENDING':
-                return '심사중';
-            case 'REJECTED':
-                return '반려';
-            default:
-                return status;
-        }
-    };
+    // /**
+    //  * 상태 한글 변환
+    //  */
+    // const getStatusText = (status) => {
+    //     switch (status) {
+    //         case 'APPROVED':
+    //             return '승인완료';
+    //         case 'PENDING':
+    //             return '심사중';
+    //         case 'REJECTED':
+    //             return '반려';
+    //         default:
+    //             return status;
+    //     }
+    // };
 
     /**
      * 날짜 포맷
@@ -1637,14 +1637,18 @@ function DocumentTab() {
                             } text-xl`}></i>
                         </div>
                         <div>
+                            {/*<h3 className="text-lg font-semibold text-gray-800">*/}
+                            {/*    {completionRate === 100 ? '서류 제출 완료' : '서류 제출 진행중'}*/}
+                            {/*</h3>*/}
+                            {/*<p className="text-gray-600">*/}
+                            {/*    {completionRate === 100*/}
+                            {/*        ? '필수 서류가 모두 제출되었습니다.'*/}
+                            {/*        : '필수 서류를 제출해주세요.'}*/}
+                            {/*</p>*/}
+
                             <h3 className="text-lg font-semibold text-gray-800">
-                                {completionRate === 100 ? '서류 제출 완료' : '서류 제출 진행중'}
+                                {'제출한 서류 갯수'}
                             </h3>
-                            <p className="text-gray-600">
-                                {completionRate === 100
-                                    ? '필수 서류가 모두 제출되었습니다.'
-                                    : '필수 서류를 제출해주세요.'}
-                            </p>
                         </div>
                     </div>
                     <div className="text-right">
@@ -1702,9 +1706,9 @@ function DocumentTab() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
-                                                <span className={`px-2 py-1 text-xs rounded-full ${getStatusStyle(doc.status)}`}>
-                                                  {getStatusText(doc.status)}
-                                                </span>
+                                                {/*<span className={`px-2 py-1 text-xs rounded-full ${getStatusStyle(doc.status)}`}>*/}
+                                                {/*  {getStatusText(doc.status)}*/}
+                                                {/*</span>*/}
                                                 <button
                                                     onClick={() => handleView(doc.dno, doc.pdfName)}
                                                     className="text-blue-600 hover:text-blue-700 text-sm p-1"
