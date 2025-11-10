@@ -58,6 +58,21 @@ public class AccountListController {
                 .orElseGet(()-> ResponseEntity.notFound().build());
 
     }
+    // 계좌 상세 : 예금
+    @GetMapping("/deposit/{dNo}")
+    public ResponseEntity<AccountDetailDTO> depoDetail(@PathVariable int dNo){
+        return accountService.depositDetail(dNo)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    // 계좌 상세  : 적금
+    @GetMapping("/installment/{iNo}")
+    public ResponseEntity<AccountDetailDTO> instDetail(@PathVariable int iNo){
+        return accountService.installmentDetail(iNo)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
     // 거래내역 목록
     @GetMapping("/{a_no}/transfers")
@@ -71,6 +86,33 @@ public class AccountListController {
             Pageable pageable
     ) {
         return transferService.transactions(a_no, type, from, to, pageable);
+    }
+    // 예금 거래내역
+    @GetMapping("/deposit/{dNo}/transfers")
+    public Page<TransactionDTO> depositTransfers(
+            @PathVariable int dNo,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(value = "to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            Pageable pageable
+    ) {
+        return transferService.depositTransactions(dNo, type, from, to, pageable);
+    }
+
+    // 적금 거래내역
+    @GetMapping("/installment/{iNo}/transfers")
+    public Page<TransactionDTO> installmentTransfers(
+            @PathVariable int iNo,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(value = "to", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            Pageable pageable
+    ) {
+        return transferService.installmentTransactions(iNo, type, from, to, pageable);
     }
 
     // 별명 변경
