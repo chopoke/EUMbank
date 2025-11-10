@@ -39,7 +39,7 @@ public class DashboardController {
         return ResponseEntity.ok(dashboardService.getNetWorthTrend(customer.getCustomerNo()));
     }
 
-    @GetMapping(value = "/top-savings", produces = "application/json")
+    @GetMapping("/top-savings")
     public ResponseEntity<TopSavingsDto> topSavings(@AuthenticationPrincipal Customer customer) {
         return ResponseEntity.ok(dashboardService.getTopSavings(customer.getCustomerNo()));
     }
