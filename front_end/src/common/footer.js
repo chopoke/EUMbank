@@ -29,9 +29,12 @@ export function Footer() {
           <div className="footer-col">
             <div className="footer-title">고객지원</div>
             <ul className="footer-list">
-              <li><a href="#faq" className="hover-underline">FAQ</a></li>
+              {/* <li><a href="#faq" className="hover-underline">FAQ</a></li>
               <li><a href="#branch" className="hover-underline">지점/ATM 찾기</a></li>
-              <li><a href="#contact" className="hover:underline">문의하기</a></li>
+              <li><a href="#contact" className="hover:underline">문의하기</a></li> */}
+              <li>고객센터 02-000-0000</li>
+              <li>평일 AM 09:30 ~ PM 06:30</li>
+              <li>휴무 : 토,일요일 및 공휴일</li>
             </ul>
           </div>
           <div className="footer-col">
