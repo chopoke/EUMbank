@@ -1,8 +1,9 @@
+// src/main/java/com/boot/eumbank/mypage/service/MypageProductService.java
 package com.boot.eumbank.mypage.service;
 
 import com.boot.eumbank.account.select.repository.TransferHistoryRepository;
 import com.boot.eumbank.customer.entity.Customer;
-import com.boot.eumbank.mypage.dto.*; // InstallmentProductDto 추가를 위해 * 사용
+import com.boot.eumbank.mypage.dto.*;
 import com.boot.eumbank.mypage.repository.MypageProductRepository;
 import com.boot.eumbank.mypage.repository.MyPageDepositRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.security.Principal;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -27,19 +30,20 @@ public class MypageProductService {
     private final MyPageDepositRepository depositRepo;
     private final TransferHistoryRepository thRepo;
 
-    /* ================= 공통 유틸 (타입 안정성 강화) ================= */
+    /* ================= 공통 유틸 ================= */
     private static Integer asInt(Object o) {
         if (o == null) return null;
         if (o instanceof Number n) return n.intValue();
-        try { return new BigDecimal(o.toString().trim()).intValue(); } catch (Exception e) { return null; }
+        try { return new BigDecimal(o.toString().trim()).intValue(); }
+        catch (Exception e) { return null; }
     }
     private static BigDecimal asBD(Object o) {
         if (o == null) return null;
         if (o instanceof BigDecimal b) return b;
         if (o instanceof Number n) return new BigDecimal(n.toString());
-        try { return new BigDecimal(o.toString().trim()); } catch (Exception e) { return null; }
+        try { return new BigDecimal(o.toString().trim()); }
+        catch (Exception e) { return null; }
     }
-    // BigDecimal을 Double로 변환하는 유틸리티 추가 (DTO 필드에 맞춤)
     private static Double asDouble(Object o) {
         BigDecimal bd = asBD(o);
         return (bd != null) ? bd.doubleValue() : null;
@@ -56,7 +60,6 @@ public class MypageProductService {
         }
         return null;
     }
-
     private Integer pickAccountNo(Map<String, Object> m) {
         Integer aNo = asInt(m.get("aNo"));
         if (aNo == null) aNo = asInt(m.get("accountNo"));
@@ -75,7 +78,6 @@ public class MypageProductService {
         if (fallback != null) return fallback;
         throw new IllegalStateException("로그인 사용자의 고객번호(c_no)를 식별할 수 없습니다.");
     }
-
     private Integer currentCustomerNo() {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -91,11 +93,11 @@ public class MypageProductService {
     /* ============== 목록 조회 ============== */
     public List<SavingItemDto> mySavings(int cNo) {
         return repo.findMySavings(cNo).stream()
-                .map(this::toSavingDtoWithHistory)
+                .map(this::toSavingDtoWithHistory)   // 평탄화된 DTO로 매핑
                 .toList();
     }
 
-    /** 예금: DTO 전용 리포지토리로 바로 반환*/
+    /** 예금: DTO 전용 리포지토리에서 평탄화된 MyDepositDTO 그대로 반환 */
     public List<MyDepositDTO> myDeposits(int cNo) {
         return depositRepo.findMyDeposits(cNo);
     }
@@ -106,44 +108,47 @@ public class MypageProductService {
                 .toList();
     }
 
-    /* ============== 적금 매핑 (수정됨) ============== */
+    /* ============== 적금 매핑 (product 제거, 평탄화) ============== */
     private SavingItemDto toSavingDtoWithHistory(Map<String, Object> m) {
-        Integer totalRounds  = asInt(m.get("i_month") != null ? m.get("i_month") : m.get("totalInstallments"));
-        Integer paidFromDb   = asInt(m.get("paidInstallments"));
-        Integer aNo          = pickAccountNo(m);
+        Integer totalRounds = asInt(m.get("totalInstallments"));
+        if (totalRounds == null) totalRounds = asInt(m.get("i_month"));
+
+        Integer paidFromDb = asInt(m.get("paidInstallments"));
+        Integer aNo = pickAccountNo(m);
 
         Integer paidFromHistory = null;
         if (aNo != null) {
-            try { paidFromHistory = (int) thRepo.countByAccountNoAndTransactionType(aNo, "SAVING_PAY"); }
-            catch (Exception e) { log.warn("[mypage] SAVING_PAY count 실패 aNo={}", aNo, e); }
+            try {
+                // 트랜잭션 타입 명은 운영 값에 맞춰 사용
+                paidFromHistory = (int) thRepo.countByAccountNoAndTransactionType(aNo, "SAVING_PAY");
+            } catch (Exception e) {
+                log.warn("[mypage] SAVING_PAY count 실패 aNo={}", aNo, e);
+            }
         }
         int finalPaid = (paidFromHistory != null) ? paidFromHistory : (paidFromDb != null ? paidFromDb : 0);
 
-        // 💡 Map 데이터를 InstallmentProductDto로 매핑 (컴파일 에러 해결)
-        InstallmentProductDto productDto = InstallmentProductDto.builder()
-                .ipName(pickStr(m, "productName", "ip_name"))
-                .ipType(pickStr(m, "ipType", "ip_type"))
-                .ipMinMonths(asInt(m.get("ipMinMonths") != null ? m.get("ipMinMonths") : m.get("ip_min_months")))
-                .ipMaxMonths(asInt(m.get("ipMaxMonths") != null ? m.get("ipMaxMonths") : m.get("ip_max_months")))
-                // Double 타입을 사용하여 금액과 금리 타입 안정성 확보
-                .ipMinMonthlyAmount(asDouble(m.get("ipMinMonthlyAmount") != null ? m.get("ipMinMonthlyAmount") : m.get("ip_min_monthly_amount")))
-                .ipMaxMonthlyAmount(asDouble(m.get("ipMaxMonthlyAmount") != null ? m.get("ipMaxMonthlyAmount") : m.get("ip_max_monthly_amount")))
-                .ipEarlyTerminationRate(asDouble(m.get("ipEarlyTerminationRate") != null ? m.get("ipEarlyTerminationRate") : m.get("ip_early_termination_rate")))
-                .ipInterestPaymentType(pickStr(m, "ipInterestPaymentType", "ip_interest_payment_type"))
-                .ipRate(asDouble(m.get("ipRate") != null ? m.get("ipRate") : m.get("ip_rate")))
-                .ipFeature(pickStr(m, "ipFeature", "ip_feature", "ip_featue"))
-                .ipButtonText(pickStr(m, "ipButtonText", "ip_button_text"))
-                .ipHref(pickStr(m, "ipHref", "ip_href"))
-                .build();
-
+        // 평탄화된 ip* 필드들로 직접 세팅
         return SavingItemDto.builder()
                 .id(pickStr(m, "id"))
-                .productName(pickStr(m, "productName"))
+                .productName(pickStr(m, "productName", "ip_name"))
                 .totalInstallments(totalRounds)
                 .paidInstallments(finalPaid)
                 .monthlyAmount(asInt(m.get("monthlyAmount")))
-                .nextDueDate(pickStr(m, "nextDueDate", "nextDue"))
-                .product(productDto) // 💡 변환된 DTO를 대입
+                .nextDueDate(pickStr(m, "nextDueDate", "nextDue", "nextPayDate"))
+
+                // ----- ip* (Installment Product Spec) -----
+                .ipName(pickStr(m, "ipName", "ip_name", "productName"))
+                .ipType(pickStr(m, "ipType", "ip_type"))
+                .ipRate(pickStr(m, "ipRate", "ip_rate"))
+                .ipMinMonths(asInt(m.get("ipMinMonths") != null ? m.get("ipMinMonths") : m.get("ip_min_months")))
+                .ipMaxMonths(asInt(m.get("ipMaxMonths") != null ? m.get("ipMaxMonths") : m.get("ip_max_months")))
+                .ipMinMonthlyAmount(asInt(m.get("ipMinMonthlyAmount") != null ? m.get("ipMinMonthlyAmount") : m.get("ip_min_monthly_amount")))
+                .ipMaxMonthlyAmount(asInt(m.get("ipMaxMonthlyAmount") != null ? m.get("ipMaxMonthlyAmount") : m.get("ip_max_monthly_amount")))
+                .ipInterestPaymentType(pickStr(m, "ipInterestPaymentType", "ip_interest_payment_type"))
+                .ipEarlyTerminationRate(pickStr(m, "ipEarlyTerminationRate", "ip_early_termination_rate"))
+                .ipFeature(pickStr(m, "ipFeature", "ip_feature", "ip_featue"))
+                .ipButtonText(pickStr(m, "ipButtonText", "ip_button_text"))
+                .ipHref(pickStr(m, "ipHref", "ip_href"))
                 .build();
     }
 
@@ -168,8 +173,6 @@ public class MypageProductService {
     }
     @Deprecated
     private DepositItemDto toDepositItemLegacy(Map<String, Object> m) {
-        // 이 레거시 메서드도 DepositProductDto를 사용하도록 변경해야 궁극적으로 타입 안정성이 확보됩니다.
-        // 현재는 Map<String, Object>를 그대로 유지합니다.
         Map<String, Object> product = new LinkedHashMap<>();
         product.put("dpName",      pickStr(m, "productName"));
         product.put("dpType",      pickStr(m, "dpType", "dp_type"));
@@ -191,7 +194,6 @@ public class MypageProductService {
                 .goalAmount(asInt(m.get("dAmount") != null ? m.get("dAmount") : m.get("d_amount")))
                 .openedAt(pickStr(m, "openedAt", "openDate", "dJoinDate", "d_join_date"))
                 .maturityAt(pickStr(m, "maturityAt", "dMaturityDate", "d_maturity_date"))
-                .product(product)
                 .build();
     }
 }

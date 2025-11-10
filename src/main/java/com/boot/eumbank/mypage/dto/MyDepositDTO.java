@@ -3,7 +3,6 @@ package com.boot.eumbank.mypage.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
-
 import java.math.BigDecimal;
 
 @JsonInclude(Include.NON_NULL)
@@ -12,24 +11,20 @@ public record MyDepositDTO(
         String  productName,
         Integer balance,
         Integer goalAmount,
-        String  openedAt,     // yyyy-MM-dd
-        String  maturityAt,   // yyyy-MM-dd
+        String  openedAt,               // yyyy-MM-dd
+        String  maturityAt,             // yyyy-MM-dd
         Integer termMonths,
-        Product product
-) {
-    @JsonInclude(Include.NON_NULL)
-    public static record Product(
-            String     dpName,
-            String     dpType,
-            BigDecimal dpRate,
-            Integer    dpMinMonths,
-            Integer    dpMaxMonths,
-            BigDecimal dpMinAmount,
-            BigDecimal dpMaxAmount,
-            String     dpInterestPaymentType,
-            BigDecimal dpEarlyTerminationRate,
-            Object     dpFeature,   // String or List<String>
-            String     dpButtonText,
-            String     dpHref
-    ) {}
-}
+
+        String     dpName,
+        String     dpType,
+        BigDecimal dpRate,
+        Integer    dpMinMonths,
+        Integer    dpMaxMonths,
+        BigDecimal dpMinAmount,
+        BigDecimal dpMaxAmount,
+        String     dpInterestPaymentType,
+        BigDecimal dpEarlyTerminationRate,
+        Object     dpFeature,           // String or List<String>
+        String     dpButtonText,
+        String     dpHref
+) {}

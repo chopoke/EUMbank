@@ -1,7 +1,9 @@
 // src/pages/mypage/DepositDashboard.js
 import React, { useMemo, useState } from "react";
 import ProductDetailsModal from "../../components/ProductDetailsModal";
+import api from "../../api/axios";
 
+const DEBUG_SAVING = true;
 /* ================= 공통 유틸 ================= */
 const clamp = (v, min = 0, max = 100) => Math.max(min, Math.min(max, v));
 const pct = (num, den) => {
@@ -54,6 +56,61 @@ const pick = (...vals) => vals.find((x) => !(x === undefined || x === null || St
 // p(상품), r(row)에서 키 배열을 순서대로 탐색
 const fromKeys = (p, r, keys) => pick(...keys.map((k) => p?.[k]), ...keys.map((k) => r?.[k]));
 
+/* ===== 상품 정규화/보강 유틸 ===== */
+const resolveSavingProduct = (row = {}) =>
+  row.product ?? row.installmentProduct ?? row.installmentProductDto ?? row.ip ?? null;
+
+const first = (objs, keys, fallback = undefined) => {
+  for (const o of objs) {
+    if (!o) continue;
+    for (const k of keys) {
+      const v = k.split(".").reduce((acc, kk) => (acc ? acc[kk] : undefined), o);
+      if (v !== undefined && v !== null && v !== "") return v;
+    }
+  }
+  return fallback;
+};
+
+const synthesizeSavingProduct = (row = {}) => {
+  const g = (ks) => fromKeys(row, row.raw ?? row, ks);
+  return {
+    ipName: g(["ipName", "ip_name", "productName", "i_name", "title"]),
+    ipType: g(["ipType", "ip_type", "type", "i_type"]),
+    ipRate: g(["ipRate", "ip_rate", "rate", "interestRate", "i_interest_rate"]),
+    ipMinMonths: g(["ipMinMonths", "ip_min_months", "minMonths"]),
+    ipMaxMonths: g(["ipMaxMonths", "ip_max_months", "maxMonths"]),
+    ipMinMonthlyAmount: g(["ipMinMonthlyAmount", "ip_min_monthly_amount", "minMonthlyAmount", "i_min_monthly_amount"]),
+    ipMaxMonthlyAmount: g(["ipMaxMonthlyAmount", "ip_max_monthly_amount", "maxMonthlyAmount", "i_max_monthly_amount"]),
+    ipInterestPaymentType: g(["ipInterestPaymentType", "ip_interest_payment_type", "interestPaymentType"]),
+    ipEarlyTerminationRate: g(["ipEarlyTerminationRate", "ip_early_termination_rate", "earlyTerminationRate"]),
+    ipFeature: g(["ipFeature", "ip_feature", "ip_featue", "feature", "features"]),
+    ipHref: g(["ipHref", "ip_href", "href"]),
+    ipButtonText: g(["ipButtonText", "ip_button_text", "buttonText"]),
+  };
+};
+
+const ensureSavingProduct = async (c) => {
+  const existing = resolveSavingProduct(c.raw ?? c);
+  if (existing) return existing;
+
+  const r = c.raw ?? c;
+  const ipNo = first([r, c], ["ipNo", "ip_no", "i_no", "productId", "ip.id", "product.ipNo"]);
+  if (!ipNo) return null;
+
+  const urls = [
+    `/api/products/installments/${ipNo}`,
+    `/api/installments/products/${ipNo}`,
+    `/api/products/ip/${ipNo}`,
+  ];
+  for (const u of urls) {
+    try {
+      const { data } = await api.get(u);
+      return resolveSavingProduct(data) ?? data ?? null;
+    } catch {}
+  }
+  return null;
+};
+
 /* ================= 도넛 ================= */
 function ProgressDonut({ value = 0, size = 72, stroke = 10 }) {
   const r = (size - stroke) / 2;
@@ -90,16 +147,16 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
   const savingCards = useMemo(
     () =>
       (savings || []).map((s) => {
-        const productData = s.product ?? s.installmentProduct ?? {};
+        const productData = resolveSavingProduct(s) || synthesizeSavingProduct(s) || {};
         const title = pick(productData.ipName, productData.ip_name, s.productName, s.i_name, "적금");
         const paid = s.paidInstallments ?? s.i_paid_installments ?? 0;
-        const total = s.totalInstallments ?? s.i_month ?? 0;
+        const total = s.totalInstallments ?? s.i_month ?? productData.ipMaxMonths ?? 0;
         return {
           kind: "SAVING",
           id: s.id ?? s.i_no,
           title,
           subtitleTop: `납입 ${paid} / ${total}회`,
-          subtitleBottom: `다음 납입 ${show(s.nextDueDate ?? s.nextDue)}`,
+          subtitleBottom: `다음 납입 ${show(s.nextDueDate ?? s.nextDue ?? s.nextPayDate)}`,
           percent: pct(paid, total),
           product: productData,
           raw: s,
@@ -112,11 +169,11 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
   const depositCards = useMemo(
     () =>
       (deposits || []).map((d) => {
-        const productData = d.product ?? d.depositProduct ?? {};
-        const title = pick(productData.dpName, productData.dp_name, d.productName, d.d_name, "예금");
+        // 루트(dp*)/레거시(d_*) 혼용 대응
+        const title = pick(d.dpName, d.dp_name, d.productName, d.d_name, "예금");
 
         let percent = 0;
-        if ((d.goalAmount ?? null) !== null || (d.d_amount ?? null) !== null) {
+        if ((d.goalAmount ?? d.d_amount) != null) {
           percent = pct(d.balance ?? d.d_principal_bal, d.goalAmount ?? d.d_amount);
         } else {
           const opened = d.openedAt ?? d.openDate ?? d.d_join_date;
@@ -130,12 +187,13 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
           title,
           subtitle: `잔액 ${fmt(d.balance ?? d.d_principal_bal, "원")} · 만기 ${show(d.maturityAt ?? d.maturity ?? d.d_maturity_date)}`,
           percent,
-          product: productData,
+          product: {},
           raw: d,
         };
       }),
     [deposits]
   );
+
 
   /* ---------- 대출 카드 ---------- */
   const loanCards = useMemo(
@@ -157,26 +215,48 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
   );
 
   /* ================= 모달: 적금 ================= */
-  const openSavingMore = (c) => {
-    const p = c.product || {};
-    const r = c.raw || {};
+  const openSavingMore = async (c0) => {
+    // 원본(row) 우선으로 합치기
+    const r = c0.raw || c0;                 // 응답 루트 (ip*가 여기에 있음)
+    const p = c0.product || {};             // 혹시 남아있을 수 있는 product 보조
 
-    const name = fromKeys(p, r, ["ipName", "ip_name", "productName", "i_name", "title"]);
-    const type = fromKeys(p, r, ["ipType", "ip_type", "type"]);
-    const rate = fromKeys(p, r, ["ipRate", "ip_rate", "rate", "interestRate", "i_interest_rate"]);
-    const minMonths = fromKeys(p, r, ["ipMinMonths", "ip_min_months", "minMonths"]);
-    const maxMonths = fromKeys(p, r, ["ipMaxMonths", "ip_max_months", "maxMonths"]);
-    const minMonthly = fromKeys(p, r, ["ipMinMonthlyAmount", "ip_min_monthly_amount", "minMonthlyAmount"]);
-    const maxMonthly = fromKeys(p, r, ["ipMaxMonthlyAmount", "ip_max_monthly_amount", "maxMonthlyAmount"]);
-    const interestPayType = fromKeys(p, r, ["ipInterestPaymentType", "ip_interest_payment_type", "interestPaymentType"]);
-    const earlyRate = fromKeys(p, r, ["ipEarlyTerminationRate", "ip_early_termination_rate", "earlyTerminationRate"]);
-    const feature = fromKeys(p, r, ["ipFeature", "ip_feature", "ip_featue", "feature", "features"]);
-    const href = fromKeys(p, r, ["ipHref", "ip_href", "href"]);
-    const buttonText = fromKeys(p, r, ["ipButtonText", "ip_button_text", "buttonText"]);
+    // 병합 객체(원본 최우선)
+    const m = { ...p, ...r };
 
-    const totalInstallments = r.totalInstallments ?? r.i_month;
-    const paidInstallments = r.paidInstallments ?? r.i_paid_installments;
-    const monthlyAmount = r.monthlyAmount;
+    // 값 뽑기 (루트 우선 + 다양한 키 후보 지원)
+    const name   = pick(m.ipName, m.ip_name, m.productName, m.i_name, c0.title, "적금");
+    const type   = pick(m.ipType, m.ip_type, m.i_type, m.type);
+    const rate   = pick(m.ipRate, m.ip_rate, m.rate, m.interestRate);
+    const minMon = pick(m.ipMinMonths, m.ip_min_months, m.minMonths);
+    const maxMon = pick(m.ipMaxMonths, m.ip_max_months, m.maxMonths);
+    const minAmt = pick(m.ipMinMonthlyAmount, m.ip_min_monthly_amount, m.minMonthlyAmount);
+    const maxAmt = pick(m.ipMaxMonthlyAmount, m.ip_max_monthly_amount, m.maxMonthlyAmount);
+    const payTyp = pick(m.ipInterestPaymentType, m.ip_interest_payment_type, m.interestPaymentType);
+    const early  = pick(m.ipEarlyTerminationRate, m.ip_early_termination_rate, m.earlyTerminationRate);
+    const feat   = pick(m.ipFeature, m.ip_feature, m.ip_featue, m.feature, m.features);
+    const href   = pick(m.ipHref, m.ip_href, m.href);
+    const btnTxt = pick(m.ipButtonText, m.ip_button_text, m.buttonText);
+
+    const totalInstallments = pick(m.totalInstallments, m.i_month, m.ipMaxMonths);
+    const paidInstallments  = pick(m.paidInstallments, m.i_paid_installments);
+    const monthlyAmount     = m.monthlyAmount;
+    const nextDue           = pick(m.nextDueDate, m.nextDue, m.nextPayDate);
+
+    // 👇 여기서 “적금 type” 디버그 로그
+      if (DEBUG_SAVING) {
+        console.groupCollapsed("[SavingModal] type 디버그");
+        console.log("결과(type):", type);
+        console.table({
+          "m.ipType": m.ipType,
+          "m.ip_type": m.ip_type,
+          "m.type": m.type,
+          "type":type,
+          "title": name,
+        });
+        console.log("row(m) 샘플:", m);
+        console.groupEnd();
+      }
+
 
     setDetail({
       title: "적금 상세정보",
@@ -193,27 +273,23 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
               value:
                 totalInstallments != null
                   ? `${totalInstallments}개월`
-                  : minMonths || maxMonths
-                  ? `${show(minMonths)} ~ ${show(maxMonths)}개월`
-                  : "-",
+                  : (minMon || maxMon) ? `${show(minMon)} ~ ${show(maxMon)}개월` : "-",
             },
             {
               label: "월 납입 한도",
               value:
-                minMonthly || maxMonthly
-                  ? `${fmt(minMonthly, "원")} ~ ${fmt(maxMonthly, "원")}`
-                  : monthlyAmount != null
-                  ? fmt(monthlyAmount, "원")
-                  : "-",
+                (minAmt || maxAmt)
+                  ? `${fmt(minAmt, "원")} ~ ${fmt(maxAmt, "원")}`
+                  : (monthlyAmount != null) ? fmt(monthlyAmount, "원") : "-",
             },
           ],
         },
         {
           heading: "납입/해지 조건",
           rows: [
-            { label: "이자 지급 방식", value: show(interestPayType) },
-            { label: "중도 해지 이율", value: showPercent(earlyRate) },
-            { label: "다음 납입일", value: show(r?.nextDueDate ?? r?.nextDue) },
+            { label: "이자 지급 방식", value: show(payTyp) },
+            { label: "중도 해지 이율", value: showPercent(early) },
+            { label: "다음 납입일", value: show(nextDue) },
             {
               label: "납입 회차",
               value:
@@ -221,39 +297,40 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
                   ? `${paidInstallments} / ${totalInstallments}회`
                   : "-",
             },
-            { label: "특징", value: show(feature) },
+            { label: "특징", value: Array.isArray(feat) ? feat.join(", ") : show(feat) },
           ],
         },
       ],
-      cta: href ? { href, text: show(buttonText) === "-" ? "상품 페이지" : show(buttonText) } : null,
+      cta: href ? { href, text: show(btnTxt) === "-" ? "상품 페이지" : show(btnTxt) } : null,
     });
     setOpen(true);
   };
 
+
   /* ================= 모달: 예금 ================= */
   const openDepositMore = (c) => {
-    const p = c.product || {};
-    const r = c.raw || {};
+    const r = c.raw || c;   // 서버 응답 루트 (dp*가 여기에 있음)
+    const p = c.product || {}; // 혹시 남아있을 수 있는 product 보조
+    const m = { ...p, ...r };  // root 우선으로 읽게 p 뒤에 r을 합침
 
-    // 가능한 모든 키에서 안전하게 값 뽑기
-    const name = fromKeys(p, r, ["dpName", "dp_name", "productName", "d_name", "title"]);
-    const type =
-      fromKeys(p, r, ["dpType", "dp_type", "type"]) ||
-      (String(name).includes("예금") ? "정기예금" : undefined); // 최소 폴백
-    const rate = pick(r?.d_interest_rate, r?.rate, fromKeys(p, r, ["dpRate", "dp_rate", "rate", "interestRate"]));
-    const minMonths = fromKeys(p, r, ["dpMinMonths", "dp_min_months", "minMonths"]);
-    const maxMonths = fromKeys(p, r, ["dpMaxMonths", "dp_max_months", "maxMonths"]);
-    const minAmount = fromKeys(p, r, ["dpMinAmount", "dp_min_amount", "minAmount"]);
-    const maxAmount = fromKeys(p, r, ["dpMaxAmount", "dp_max_amount", "maxAmount"]);
-    const interestPayType = fromKeys(p, r, ["dpInterestPaymentType", "dp_interest_payment_type", "interestPaymentType"]);
-    const earlyRate = fromKeys(p, r, ["dpEarlyTerminationRate", "dp_early_termination_rate", "earlyTerminationRate"]);
-    const feature = fromKeys(p, r, ["dpFeature", "dp_feature", "feature", "features"]);
-    const href = fromKeys(p, r, ["dpHref", "dp_href", "href"]);
-    const buttonText = fromKeys(p, r, ["dpButtonText", "dp_button_text", "buttonText"]);
+    const name = pick(m.dpName, m.dp_name, m.productName, m.d_name, "예금");
+    const type = pick(m.dpType, m.dp_type, m.type) || (String(name).includes("예금") ? "정기예금" : undefined);
+    const rate = pick(m.d_interest_rate, m.rate, m.dpRate, m.dp_rate, m.interestRate);
 
-    const termMonths = r.termMonths ?? r.d_period;
-    const opened = r.openedAt ?? r.openDate ?? r.d_join_date;
-    const maturity = r.maturityAt ?? r.maturity ?? r.d_maturity_date;
+    const minMonths = pick(m.dpMinMonths, m.dp_min_months, m.minMonths);
+    const maxMonths = pick(m.dpMaxMonths, m.dp_max_months, m.maxMonths);
+    const minAmount = pick(m.dpMinAmount, m.dp_min_amount, m.minAmount);
+    const maxAmount = pick(m.dpMaxAmount, m.dp_max_amount, m.maxAmount);
+
+    const interestPayType = pick(m.dpInterestPaymentType, m.dp_interest_payment_type, m.interestPaymentType);
+    const earlyRate = pick(m.dpEarlyTerminationRate, m.dp_early_termination_rate, m.earlyTerminationRate);
+    const feature = pick(m.dpFeature, m.dp_feature, m.feature, m.features);
+    const href = pick(m.dpHref, m.dp_href, m.href);
+    const buttonText = pick(m.dpButtonText, m.dp_button_text, m.buttonText);
+
+    const termMonths = pick(m.termMonths, m.d_period);
+    const opened = pick(m.openedAt, m.openDate, m.d_join_date);
+    const maturity = pick(m.maturityAt, m.maturity, m.d_maturity_date);
 
     setDetail({
       title: "예금 상세정보",
@@ -270,13 +347,13 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
               value:
                 termMonths != null
                   ? `${termMonths}개월`
-                  : minMonths || maxMonths
+                  : (minMonths || maxMonths)
                   ? `${show(minMonths)} ~ ${show(maxMonths)}개월`
                   : opened && maturity
                   ? `${betweenMonths(opened, maturity).total}개월`
                   : "-",
             },
-            { label: "가입 금액", value: fmt(r?.goalAmount ?? r?.d_amount, "원") },
+            { label: "가입 금액", value: fmt(m.goalAmount ?? m.d_amount, "원") },
           ],
         },
         {
@@ -285,7 +362,7 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
             { label: "이자 지급 방식", value: show(interestPayType) },
             { label: "중도 해지 이율", value: showPercent(earlyRate) },
             { label: "최소/최대 금액", value: `${fmt(minAmount, "원")} / ${fmt(maxAmount, "원")}` },
-            { label: "특징", value: show(feature) },
+            { label: "특징", value: Array.isArray(feature) ? feature.join(", ") : show(feature) },
           ],
         },
       ],
@@ -293,6 +370,7 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
     });
     setOpen(true);
   };
+
 
   /* ================= 모달: 대출 ================= */
   const openLoanMore = (c) => {

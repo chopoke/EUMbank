@@ -16,20 +16,20 @@ public class MyPageDepositRepository {
     @PersistenceContext
     private EntityManager em;
 
-    /** 예금 목록: MyDepositDTO(카멜 DTO)로 반환 */
-    @SuppressWarnings("unchecked")
+    /** 예금 목록: 평탄화된 MyDepositDTO 로 반환 */
     public List<MyDepositDTO> findMyDeposits(int customerNo) {
         String sql = """
             SELECT
                 d.d_no                                       AS id,
                 p.dp_name                                    AS productName,
-                d.d_principal_bal                            AS dPrincipalBal,
-                d.d_amount                                   AS dAmount,
+                d.d_principal_bal                            AS balance,
+                d.d_amount                                   AS goalAmount,
                 DATE_FORMAT(d.d_join_date, '%Y-%m-%d')       AS openedAt,
                 DATE_FORMAT(d.d_maturity_date, '%Y-%m-%d')   AS maturityAt,
                 TIMESTAMPDIFF(MONTH, d.d_join_date, d.d_maturity_date) AS termMonths,
 
-                -- product spec (카멜 alias 권장)
+                -- product spec (평탄화된 dp_* 필드들)
+                p.dp_name                                    AS dpName,
                 p.dp_type                                    AS dpType,
                 p.dp_rate                                    AS dpRate,
                 p.dp_min_months                              AS dpMinMonths,
@@ -47,40 +47,42 @@ public class MyPageDepositRepository {
             ORDER BY d.d_no DESC
             """;
 
+        @SuppressWarnings("unchecked")
         List<Object[]> rows = em.createNativeQuery(sql)
                 .setParameter("cno", customerNo)
                 .getResultList();
 
         List<MyDepositDTO> out = new ArrayList<>(rows.size());
         for (Object[] r : rows) {
-            // 인덱스는 SELECT 순서와 1:1 대응
+            // 인덱스는 SELECT 순서와 1:1 매칭
             String  id          = String.valueOf(((Number) r[0]).intValue());
-            String  name        = str(r[1]);
+            String  productName = str(r[1]);
             Integer balance     = toInt(r[2]);
             Integer goalAmount  = toInt(r[3]);
             String  openedAt    = str(r[4]);  // yyyy-MM-dd
             String  maturityAt  = str(r[5]);  // yyyy-MM-dd
             Integer termMonths  = toInt(r[6]);
 
-            // product (inner record) 채움
-            MyDepositDTO.Product product = new MyDepositDTO.Product(
-                    name,                // dpName
-                    str(r[7]),           // dpType
-                    toBD(r[8]),          // dpRate
-                    toInt(r[9]),         // dpMinMonths
-                    toInt(r[10]),        // dpMaxMonths
-                    toBD(r[11]),         // dpMinAmount
-                    toBD(r[12]),         // dpMaxAmount
-                    str(r[13]),          // dpInterestPaymentType
-                    toBD(r[14]),         // dpEarlyTerminationRate
-                    str(r[15]),          // dpFeature (문자열/CSV 형식 그대로)
-                    str(r[16]),          // dpButtonText
-                    str(r[17])           // dpHref
-            );
+            // 평탄화된 dp_* 필드
+            String     dpName                   = str(r[7]);
+            String     dpType                   = str(r[8]);
+            BigDecimal dpRate                   = toBD(r[9]);
+            Integer    dpMinMonths              = toInt(r[10]);
+            Integer    dpMaxMonths              = toInt(r[11]);
+            BigDecimal dpMinAmount              = toBD(r[12]);
+            BigDecimal dpMaxAmount              = toBD(r[13]);
+            String     dpInterestPaymentType    = str(r[14]);
+            BigDecimal dpEarlyTerminationRate   = toBD(r[15]);
+            String     dpFeature                = str(r[16]);
+            String     dpButtonText             = str(r[17]);
+            String     dpHref                   = str(r[18]);
 
             out.add(new MyDepositDTO(
-                    id, name, balance, goalAmount,
-                    openedAt, maturityAt, termMonths, product
+                    id, productName, balance, goalAmount,
+                    openedAt, maturityAt, termMonths,
+                    dpName, dpType, dpRate, dpMinMonths, dpMaxMonths,
+                    dpMinAmount, dpMaxAmount, dpInterestPaymentType,
+                    dpEarlyTerminationRate, dpFeature, dpButtonText, dpHref
             ));
         }
         return out;
