@@ -216,4 +216,9 @@ firebase:
 
   project-id: eumbank-86fbd # firebase에서 생성된 프로젝트명
 
-
+# ===================================================================
+# 공과금 API
+# ===================================================================
+kepco:
+  baseUrl: https://bigdata.kepco.co.kr/openapi/v1/powerUsage/contractType.do
+  apiKey: ${KEPCO_API_KEY:REPLACE_ME}
