@@ -7,6 +7,6 @@ public interface DepositService {
 
     public String depositSubscription(DepositSubscriptionRequestDto requestDto, MultipartFile signedPdfFile);
 
-    public void depositSave(DepositSubscriptionRequestDto requestDto);
+    public void depositSave(DepositSubscriptionRequestDto requestDto, String signedPdfFilePath);
 
 }

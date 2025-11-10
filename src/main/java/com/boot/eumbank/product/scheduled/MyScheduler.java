@@ -135,7 +135,7 @@ public class MyScheduler {
                         TransferHistory history = TransferHistory.builder()
                                 // transferNo는 자동 생성되므로 제외
                                 .transferId(generateTransferId())  // 고유 ID
-                                .accountNo(Integer.valueOf(deposit.getAAccountNo().replace("-", "")))  // a_no (계좌 PK)
+                                .accountNo(deposit.getDNo())  // a_no (계좌 PK)
                                 .amount(BigDecimal.valueOf(deposit.getDExpectedMaturityAmount()))  // 거래 금액
                                 .memo("예금 자동이체 최종 만기")  // 메모
                                 .otherBank("EUM_BANK")  // 상대방 은행
@@ -267,7 +267,7 @@ public class MyScheduler {
                     TransferHistory history = TransferHistory.builder()
                             // transferNo는 자동 생성되므로 제외
                             .transferId(generateTransferId())  // 고유 ID
-                            .accountNo(accountEntity.getANo())  // a_no (계좌 PK)
+                            .accountNo(deposit.getDNo())  // a_no (계좌 PK)
                             .amount(BigDecimal.valueOf(depositEntity.getDPrincipalBal()))  // 거래 금액
                             .memo("예금 자동이체 - " + depositEntity.getDId())  // 메모
                             .otherBank("EUM_BANK")  // 상대방 은행
@@ -437,7 +437,7 @@ public class MyScheduler {
                         TransferHistory history = TransferHistory.builder()
                                 // transferNo는 자동 생성되므로 제외
                                 .transferId(generateTransferId())  // 고유 ID
-                                .accountNo(saving.getANo())// a_no (계좌 PK)
+                                .accountNo(saving.getINo())// a_no (계좌 PK)
                                 .amount(BigDecimal.valueOf(saving.getIExpectedMaturityAmount()))  // 거래 금액
                                 .memo("적금 자동이체 최종 만기")  // 메모
                                 .otherBank("EUM_BANK")  // 상대방 은행
@@ -533,7 +533,7 @@ public class MyScheduler {
 
                     TransferHistory history = TransferHistory.builder()
                             .transferId(generateTransferId())  // 고유 ID
-                            .accountNo(accountEntity.getANo())  // a_no (계좌 PK)
+                            .accountNo(saving.getINo())  // a_no (계좌 PK)
                             .amount(BigDecimal.valueOf(saving.getIPrincipalBal()))  // 거래 금액
                             .memo("적금 자동이체 - " + saving.getIId() + " (" +
                                     (saving.getICountPeriod() + 1) + "/" + saving.getIMonth() + "회차)")

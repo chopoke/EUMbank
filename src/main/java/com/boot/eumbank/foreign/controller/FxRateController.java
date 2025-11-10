@@ -102,7 +102,7 @@ public class FxRateController {
     }
 
     // ---------- 관리용: 과거 데이터 백필 ----------
-    @PostMapping("/admin/backfill")
+    @PostMapping("/templates/admin/backfill")
     public Map<String, Object> backfillPost(
             @RequestParam String from,   // 예: 2025-09-01
             @RequestParam String to      // 예: 2025-10-16
@@ -119,7 +119,7 @@ public class FxRateController {
     }
 
     /** (선택) 개발 편의용: 브라우저/PowerShell에서 바로 호출 가능 */
-    @GetMapping("/admin/backfill")
+    @GetMapping("/templates/admin/backfill")
     public Map<String, Object> backfillGet(
             @RequestParam String from,
             @RequestParam String to

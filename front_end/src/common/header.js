@@ -79,6 +79,8 @@ export function Header({ isLoggedIn, user, onLogout }) {
           {/* hidden lg:flex items-center gap-6 text-sm text-gray-700 */}
           <nav className="main-nav-links">
             <Link to="/accounts" className="nav-link">개인</Link>
+            <Link to="/products" className="nav-link">상품</Link>
+            <Link to="/asset" className="nav-link nav-link-active">자산관리</Link>
             <div className="nav-link group relative">상품
               <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-26 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-300 z-10">
                 <div className="bg-white rounded-lg shadow-xl py-2">
@@ -110,9 +112,12 @@ export function Header({ isLoggedIn, user, onLogout }) {
             {/* <span className="search-icon"><Icon path={paths.search} /></span> */}
           {/* </label> */}
           {isLoggedIn && isAdmin && (
-            <Link to="/admin">
-              <button className="login-button">관리자</button>
-            </Link>
+            <button
+              className="login-button"
+              onClick={() => window.location.href = "http://localhost:8081/admin/enter"}
+            >
+              관리자
+            </button>
           )}
           {!isLoggedIn ? (
             <>

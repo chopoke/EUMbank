@@ -39,7 +39,7 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
 
     @Override
     public String chat(ChatRequest chatRequest) {
-        // 1. DB에서 예금/적금 상품 정보 조회
+        // 1. 매번 최신 DB에서 상품 정보 조회
         String productsInfo = getProductsInfoFromDB();
 
         // 2. 시스템 프롬프트 + DB 데이터 결합
@@ -48,23 +48,35 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
         // 3. Gemini API 요청 생성
         List<GeminiContent> contents = new ArrayList<>();
 
-        // 대화 이력 추가
+        // 방법 A: 시스템 프롬프트를 별도 system role로 추가 (Gemini가 지원한다면)
+        // Gemini는 system role을 직접 지원하지 않으므로, 매 user 메시지에 포함
+
+        // 대화 히스토리 추가 (시스템 프롬프트 제외)
         if (chatRequest.getHistory() != null) {
             for (Message msg : chatRequest.getHistory()) {
-                contents.add(createContent(msg.getContent(), msg.getRole()));
+                // 히스토리에서 시스템 프롬프트 부분 제거 (원본 질문만 유지)
+                String cleanContent = msg.getContent();
+                if (msg.getContent().contains("사용자 질문:")) {
+                    cleanContent = msg.getContent().substring(
+                            msg.getContent().lastIndexOf("사용자 질문:") + 10
+                    ).trim();
+                }
+                contents.add(createContent(cleanContent, msg.getRole()));
             }
         }
 
-        // 현재 메시지에 시스템 프롬프트 포함
-        String userMessageWithContext = systemPrompt + "\n\n사용자 질문: " + chatRequest.getMessage();
-        contents.add(createContent(userMessageWithContext, "user"));
+        // 현재 메시지에 최신 시스템 프롬프트 포함
+        String currentMessageWithContext = systemPrompt + "\n\n사용자 질문: " + chatRequest.getMessage();
+        contents.add(createContent(currentMessageWithContext, "user"));
 
-        // 4. 요청 Body 생성
+        // 3. 요청 Body 생성
         GeminiRequest geminiRequest = GeminiRequest.builder()
                 .contents(contents)
                 .generationConfig(GeminiGenerationConfig.builder()
-                        .temperature(0.7)
+                        .temperature(0.3)  // ⚠️ 창의성 낮춤 (0.7 → 0.3)
                         .maxOutputTokens(2048)
+                        .topP(0.8)  // ⚠️ 더 보수적으로 (0.95 → 0.8)
+                        .topK(20)   // ⚠️ 더 제한적으로 (40 → 20)
                         .build())
                 .build();
 
@@ -77,11 +89,12 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
                     .bodyToMono(Map.class)
                     .block();
 
-            // 6. 응답 파싱
+            // 5. 응답 파싱
             return parseGeminiResponse(response);
 
         } catch (Exception e) {
             e.printStackTrace();
+            System.err.println("Gemini API Error: " + e.getMessage());
             return "죄송합니다. 일시적인 오류가 발생했습니다. eum_bank 고객센터 1544-2311로 연락 주세요.";
         }
     }
@@ -94,6 +107,8 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
 
         // 예금 상품 정보
         List<ProductDto> deposits = depositQueryRepository.findAllDepositProducts();
+
+        System.out.println("deposits: " + deposits);
         if (!deposits.isEmpty()) {
             productsInfo.append("=== 예금 상품 ===\n\n");
             productsInfo.append(deposits.stream()
@@ -183,24 +198,16 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
      */
     private String createSystemPrompt(String productsInfo) {
         return String.format("""
-            당신은 eum_bank의 고객 상담 AI 챗봇입니다.
-            
-            **응답 규칙:**
-            1. 아래 제공된 eum_bank 금융 상품 정보만 참고하여 답변합니다.
-            2. 다음 질문은 답변하지 않습니다:
-               - 다른 은행 상품 비교
-               - 개인 계좌 정보 조회
-               - 계좌 개설/해지
-               - 대출 심사 결과
-               - 비밀번호 관련
-            3. 상세 상담이 필요한 경우: "상담원 연결이 필요합니다. eum_bank 고객센터 1544-2311로 연락 주세요."
-            4. 친절하고 간결하게 답변합니다.
-            5. 제공된 상품 정보에 없는 내용은 "해당 정보는 고객센터로 문의해주세요"라고 안내합니다.
-            6. 금리나 금액 등 구체적인 수치는 정확히 전달하되, "문의"로 표시된 항목은 고객센터 안내를 권장합니다.
-            
-            **eum_bank 금융 상품 정보:**
-            %s
-            """, productsInfo);
+        당신은 eum_bank의 고객 상담 AI 챗봇입니다.
+        
+        ⚠️ **절대 규칙: 데이터베이스에 있는 정보만 사용**
+        
+        **현재 데이터베이스의 전체 상품 목록:**
+        %s
+       
+        ⚠️ 위 목록에 없는 상품명을 언급하지 마세요.
+        ⚠️ 위 목록에 있는 금리/조건만 말하세요.
+        """, productsInfo);
     }
 
     /**
@@ -234,7 +241,15 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
                         (List<Map<String, Object>>) content.get("parts");
 
                 if (parts != null && !parts.isEmpty()) {
-                    return (String) parts.get(0).get("text");
+                    String responseText = (String) parts.get(0).get("text");
+
+                    // ⚠️ 응답 검증: 의심스러운 패턴 체크
+                    if (containsSuspiciousContent(responseText)) {
+                        System.err.println("⚠️ 의심스러운 응답 감지: " + responseText);
+                        return "죄송합니다. 정확한 답변을 위해 eum_bank 고객센터 1544-2311로 문의해주세요.";
+                    }
+
+                    return responseText;
                 }
             }
 
@@ -244,5 +259,28 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
             e.printStackTrace();
             return "응답 처리 중 오류가 발생했습니다.";
         }
+    }
+
+    /**
+     * 의심스러운 내용 체크 (DB에 없는 상품명 등)
+     */
+    private boolean containsSuspiciousContent(String response) {
+        // DB에 없는 일반적인 금융 상품명들
+        String[] suspiciousKeywords = {
+                "프리미엄", "골드", "플래티넘", "VIP", "슈퍼", "스페셜",
+                "새마을금고", "신협", "농협", "우체국"  // 다른 은행
+        };
+
+        for (String keyword : suspiciousKeywords) {
+            if (response.contains(keyword)) {
+                // DB에서 해당 키워드를 포함한 상품이 실제 있는지 확인
+                String productsInfo = getProductsInfoFromDB();
+                if (!productsInfo.contains(keyword)) {
+                    return true;  // DB에 없는데 응답에 포함되어 있음
+                }
+            }
+        }
+
+        return false;
     }
 }
