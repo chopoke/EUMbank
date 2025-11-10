@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 
 
 import PriceDisplay from '../components/PriceDisplay'; // 시세표시
-import TradingPanel from '../components/TradingPanel'; //거래표시
-import WalletManager from '../components/WalletManager'; //월렛표시
-import BalanceCard from '../components/BalanceCard'; // 잔고표시
+import TradingPanel from '../components/TradingPanel'; //거래창
+import WalletManager from '../components/WalletManager'; //월렛관리
+import BalanceCard from '../components/BalanceCard'; // 잔고
 // ===== 다이얼로그/모달 컴포넌트들 =====
 import TransferModal from '../components/modals/TransferModal'; //이체
 import PasswordModal from '../components/modals/PasswordModal'; // pin 확인
