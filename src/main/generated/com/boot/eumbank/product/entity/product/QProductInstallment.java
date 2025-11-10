@@ -61,6 +61,8 @@ public class QProductInstallment extends EntityPathBase<ProductInstallment> {
 
     public final StringPath iPayDay = createString("iPayDay");
 
+    public final StringPath iPdfPath = createString("iPdfPath");
+
     public final NumberPath<Integer> ipNo = createNumber("ipNo", Integer.class);
 
     public final NumberPath<Long> iPrincipalBal = createNumber("iPrincipalBal", Long.class);

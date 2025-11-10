@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import Sidebar from './components/Sidebar';
-import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import LoanManagement from './components/LoanManagement';
 import DepositManagement from './components/depositsaving/DepositManagement';
@@ -10,7 +9,7 @@ import InquiryManagement from './components/InquiryManagement';
 import Verification from './components/Verification';
 
 export default function AdminPage() {
-  const [activeMenu, setActiveMenu] = useState('dashboard');
+  const [activeMenu, setActiveMenu] = useState('deposit');
 
   const renderContent = () => {
     switch (activeMenu) {

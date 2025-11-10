@@ -29,7 +29,7 @@ public class AccountQueryRepository {
 
         return queryFactory
                 .selectFrom(account)
-                .where(account.cNo.eq(accountNo))
+                .where(account.cNo.eq(accountNo).and(account.status.eq("ACTIVE")))
                 .fetch();
 
     }
