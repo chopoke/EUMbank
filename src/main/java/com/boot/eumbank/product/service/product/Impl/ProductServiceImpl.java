@@ -1,6 +1,8 @@
 package com.boot.eumbank.product.service.product.Impl;
 
+import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.product.dto.product.ProductDto;
+import com.boot.eumbank.product.jpa.repository.AccountQueryRepository;
 import com.boot.eumbank.product.jpa.repository.DepositQueryRepository;
 import com.boot.eumbank.product.jpa.repository.InstallQueryRepository;
 import com.boot.eumbank.product.service.product.ProductService;
@@ -21,6 +23,8 @@ public class ProductServiceImpl implements ProductService {
 
     private final InstallQueryRepository installQueryRepository;
 
+    private final AccountQueryRepository accountQueryRepository;
+
     public List<ProductDto> findAllProducts() {
         // 각 Repository 메소드를 호출하여 상품 종류별로 데이터를 조회합니다.
         List<ProductDto> depositProducts = depositQueryRepository.findAllDepositProducts();
@@ -35,5 +39,11 @@ public class ProductServiceImpl implements ProductService {
         Collections.shuffle(allProducts);
 
         return allProducts;
+    }
+
+    public List<Account> checkAccountExists(Integer customer) {
+
+        return accountQueryRepository.findAllAccount(customer);
+
     }
 }
