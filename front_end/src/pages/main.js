@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
 import mainacc from '../resources/img/acc_fin.png'
 import { goToAccountOpenPage } from "./account/utils/navigations";
+import PriceWidget from "./spot/components/PriceWidget";
 
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
@@ -156,7 +157,7 @@ const QuickActions = ({ isAdmin = false }) => {
     { id: "asset", label: "자산관리", icon: paths.chart, href: "/" },
     { id: "loan", label: "대출", icon: paths.loan, href: "/loan/products" },
     { id: "fx", label: "외화", icon: paths.fx, href: "/foreign/rate" },
-    { id: "spot", label: "현물", icon: paths.card, href: "/" },
+    { id: "spot", label: "현물", icon: paths.card, href: "/spot" },
     { id: "deposit", label: "예적금가입", icon: paths.bank, href: "/depositSavingProductList/open" },
     { id: "mypage", label: isAdmin ? "관리자페이지" : "마이페이지", icon: paths.arrowR, href: isAdmin ? "__ADMIN__" : "/mypage" },
   ];
@@ -267,6 +268,18 @@ const AccountSnapshot = ({ summary }) => {
           </div>
           {/* col-span-12 lg:col-span-4 space-y-6 */}
           <div className="snapshot-side-col">
+           {/* 현물 미니 시세 위젯 (오른쪽 사이드 카드 라인 정렬) */}
+            <div className="snapshot-card side-card">
+              <div className="card-header-icon small">
+                <div className="font-medium">현물 시세</div>
+                <Icon path={paths.chart} />
+              </div>
+              <div>
+                <PriceWidget size="small" showChart={false} className="w-full" />
+              </div>
+            </div>
+
+
             {/* rounded-2xl border bg-white p-5 shadow-sm */}
             <div className="snapshot-card side-card">
               {/* flex items-center justify-between mb-2 */}
