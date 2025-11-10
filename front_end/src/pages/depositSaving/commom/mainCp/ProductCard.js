@@ -53,6 +53,14 @@ const ProductCard = ({ product, onProductClick }) => {
         ? product.feature.replace(/^"|"$/g, '').split('", "')
         : [];
 
+    const handleClick = () => {
+
+        if (onProductClick) {
+            onProductClick(product);
+        }
+
+    };
+
     const isdeposit = product.name;
 
     const isd = isdeposit.includes('예금');
@@ -77,6 +85,9 @@ const ProductCard = ({ product, onProductClick }) => {
                     ))}
                 </ul>
             </div>
+            {/* <a href={product.href}> */}
+            <button className="action-button" onClick={handleClick}>{product.buttonText}</button>
+            {/* </a> */}
         </div>
     );
 };
