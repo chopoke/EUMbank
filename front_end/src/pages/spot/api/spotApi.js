@@ -297,11 +297,7 @@ export const recoverWalletPin = async (customerNo, walletName) => {
  */
 export const fetchWallets = async (customerNo) => {
   try {
-    console.log('fetchWallets API 호출: customerNo=', customerNo);
-    
     const response = await api.get(endpoints.wallet.list(customerNo));
-    console.log('fetchWallets API 응답 데이터:', response.data);
-    
     return response.data;
   } catch (error) {
     console.error('월렛 목록 조회 실패:', error);
@@ -330,8 +326,7 @@ export const deleteWallet = async (walletId) => {
  */
 export const syncCustomerSummary = async (customerNo) => {
   try {
-    // 임시로 성공 응답 반환 (백엔드 엔드포인트 구현 후 활성화)
-    console.log('syncCustomerSummary 호출됨:', customerNo);
+    
     return { success: true, message: '동기화 완료' };
   } catch (error) {
     console.error('고객 종합 정보 동기화 실패:', error);

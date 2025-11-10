@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -14,7 +14,7 @@ import {
  * - 기간별 시세 조회: 5개월, 1년, 3년, 5년, 전체, 커스텀 날짜 선택
  * - 차트 및 테이블 표시: Recharts로 차트, 테이블로 상세 데이터 표시
  * - 가상시뮬레이션: 선택한 기간의 시세 데이터 생성
- * - 성능 최적화: useMemo, useCallback, React.memo로 리렌더링 최적화
+ * - 성능 최적화: useCallback, React.memo로 리렌더링 최적화
  */
 const PriceHistoryModal = ({ 
   isOpen, 
@@ -110,19 +110,12 @@ const PriceHistoryModal = ({
       const startDateTime = new Date(startDate);
       const endDateTime = new Date(endDate);
       const timeDiff = endDateTime.getTime() - startDateTime.getTime();
-      const totalMinutes = Math.ceil(timeDiff / (1000 * 60));
-      
-      // 데이터 포인트 수 조절 (너무 많으면 성능 문제)
-      const maxPoints = 500;
-      const intervalMinutes = Math.max(1, Math.ceil(totalMinutes / maxPoints));
       
       // 기본 가격 설정
       const basePrice = metalCode === 'AU' ? 808000 : 12000;
       const volatilityPercent = metalCode === 'AU' ? 0.8 : 1.5; // 금 0.8%, 은 1.5%
       
-      console.log(`${metalCode} 시세 이력 시뮬레이션 시작: ${totalMinutes}분 범위`);
-      
-      // 시뮬레이션 데이터 생성 (하루 오전/오후 2번, 점 반으로 줄임)
+      // 시뮬레이션 데이터 생성 (하루 오전/오후 2번)
       const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
       const points = daysDiff * 2; // 하루에 오전/오후 2번
       let currentPrice = basePrice;
@@ -157,8 +150,6 @@ const PriceHistoryModal = ({
       }
       
       setPriceHistory(series);
-      console.log(`${metalCode} 시세 이력 시뮬레이션 완료: ${series.length}건`);
-      console.log('첫 5개 데이터 변동율:', series.slice(0, 5).map(d => d.fluctuation));
       
       // 차트 렌더링을 위한 지연
       setTimeout(() => {
@@ -172,9 +163,6 @@ const PriceHistoryModal = ({
       setLoading(false);
     }
   }, [startDate, endDate, metalCode]);
-
-  // 차트 렌더링 최적화
-  const chartData = useMemo(() => priceHistory, [priceHistory]);
   
   const tooltipFormatter = useCallback((value, name, props) => [
     new Intl.NumberFormat('ko-KR').format(value),
@@ -184,8 +172,8 @@ const PriceHistoryModal = ({
 
   const labelFormatter = useCallback((label) => `시간: ${label}`, []);
 
-  // 모달 닫기
-  const handleClose = () => {
+  // 모달 닫기 (useCallback으로 메모이제이션)
+  const handleClose = useCallback(() => {
     setPriceHistory([]);
     setError(null);
     // 스크롤 복원 (더 강력한 방법)
@@ -198,7 +186,7 @@ const PriceHistoryModal = ({
       window.scrollTo(0, parseInt(scrollY || '0') * -1);
     }
     onClose();
-  };
+  }, [onClose]);
 
   if (!isOpen) return null;
 
@@ -299,10 +287,10 @@ const PriceHistoryModal = ({
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
                   {metalName} 시세 차트
                 </h3>
-                {chartData && chartData.length > 0 && chartReady ? (
+                {priceHistory.length > 0 && chartReady ? (
                   <div className="w-full" style={{ height: '320px', minHeight: '320px', minWidth: '300px', position: 'relative' }}>
                     <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={320}>
-                    <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                    <LineChart data={priceHistory} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis 
                         dataKey="time" 

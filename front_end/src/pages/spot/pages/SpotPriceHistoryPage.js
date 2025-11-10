@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import PriceHistoryModal from '../components/modals/PriceHistoryModal';
 
@@ -29,10 +29,10 @@ const SpotPriceHistoryPage = () => {
     }
   }, [searchParams]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setShowModal(false);
     navigate('/spot');
-  };
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50">

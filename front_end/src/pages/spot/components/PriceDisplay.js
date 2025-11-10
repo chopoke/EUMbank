@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 // ===== 다이얼로그/모달 컴포넌트 =====
 import PriceHistoryModal from './modals/PriceHistoryModal';
@@ -16,7 +16,7 @@ import {
 /**
  * 시세 표시 컴포넌트
  * - 시세 조회 및 차트 표시: React + Recharts, Spring Boot + JPA+QueryDSL
- * - 성능 최적화: useMemo, useCallback, React.memo로 리렌더링 최적화
+ * - 성능 최적화: useCallback, React.memo로 리렌더링 최적화
  * - 시세 전용 테이블 분리 관리, 가상시뮬레이션으로 실시간 변동률 표시
  */
 const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
@@ -40,6 +40,11 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
   // 시세 이력 모달 상태
   const [showPriceHistoryModal, setShowPriceHistoryModal] = useState(false);
   const [selectedMetalForHistory, setSelectedMetalForHistory] = useState('AU');
+  
+  // 모달 닫기 핸들러 (useCallback으로 메모이제이션)
+  const handleClosePriceHistoryModal = useCallback(() => {
+    setShowPriceHistoryModal(false);
+  }, []);
   // =====================================
   
   // 카드 하단 변동률/변동금액 계산 (차트 데이터 기반)
@@ -522,7 +527,7 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
       {/* 시세 이력 모달 - 금/은 가격 차트 상세 조회 */}
       <PriceHistoryModal
         isOpen={showPriceHistoryModal}
-        onClose={() => setShowPriceHistoryModal(false)}
+        onClose={handleClosePriceHistoryModal}
         metalCode={selectedMetalForHistory}
         metalName={selectedMetalForHistory === 'AU' ? '금' : '은'}
       />

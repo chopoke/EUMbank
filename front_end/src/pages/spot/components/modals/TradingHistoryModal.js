@@ -15,7 +15,6 @@ const TradingHistoryModal = ({
   customerNo,
   wallets = []
 }) => {
-  console.log('TradingHistoryModal 렌더링:', { isOpen, customerNo, walletsCount: wallets?.length });
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState([]);  // 거래 목록
   const [page, setPage] = useState(0);   // 현재 페이지
@@ -66,8 +65,6 @@ const TradingHistoryModal = ({
 
       // SheetJS를 사용한 엑셀 다운로드
       downloadTradingHistoryExcel(allData, '현물거래내역');
-      
-      console.log('엑셀 다운로드 완료:', allData.length, '건');
     } catch (error) {
       console.error('엑셀 다운로드 실패:', error);
       alert('다운로드 중 오류가 발생했습니다.');
@@ -83,15 +80,6 @@ const TradingHistoryModal = ({
       return;
     }
     
-    console.log('거래내역 조회 시작:', {
-      customerNo,
-      txType,
-      metal,
-      walletId,
-      page,
-      size
-    });
-    
     setLoading(true);
     try {
       const response = await fetchTradingHistoryWithPaging(
@@ -103,30 +91,17 @@ const TradingHistoryModal = ({
         size
       );
       
-      console.log('거래내역 API 응답:', response);
-      
       // 새로운 API 응답 구조 처리
       const transactions = response?.transactions || response;
       const content = transactions?.content || [];
       const summary = response?.summary || {};
       
-      console.log('거래내역 데이터:', content);
-      console.log('거래내역 개수:', content.length);
-      console.log('총합 정보:', summary);
-      
       setRows(sortByTxNoDesc(content));
       setTotalElements(transactions?.totalElements ?? content.length);
       setTotalPages(transactions?.totalPages ?? 1);
       setSummary(summary);
-      
-      console.log('거래내역 로딩 완료:', {
-        rowsCount: content.length,
-        totalElements: response?.totalElements ?? content.length,
-        totalPages: response?.totalPages ?? 1
-      });
     } catch (e) {
       console.error('거래내역 조회 실패:', e);
-      console.error('에러 상세:', e.response?.data || e.message);
     } finally {
       setLoading(false);
     }
