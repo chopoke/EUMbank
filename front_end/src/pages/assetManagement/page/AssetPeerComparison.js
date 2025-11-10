@@ -77,7 +77,7 @@ export default function AssetPeerComparison() {
                   </li>
                   <li className="flex justify-between">
                     <span className="text-[12px] text-gray-500">연령대</span>
-                    <span className="font-medium text-gray-900">{profile.ageBandLabel}ㅐ</span>
+                    <span className="font-medium text-gray-900">{profile.ageBandLabel}대</span>
                   </li>
                   <li className="flex justify-between">
                     <span className="text-[12px] text-gray-500">월 소득</span>

@@ -16,7 +16,7 @@ const JOB_GROUPS = [
 
 const INCOME_BANDS = [
   "100만원 미만", "100~300만원", "300~500만원", "500~800만원",
-  "800~100만원", "1000만원 이상",
+  "800~1000만원", "1000만원 이상",
 ].map((label, i) => ({ value: `I${i+1}`, label }));
 
 const REGIONS = [

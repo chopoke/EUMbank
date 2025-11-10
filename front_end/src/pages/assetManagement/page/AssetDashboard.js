@@ -2,7 +2,7 @@
 import { StatCard } from "../components/StatCard";
 import { Link } from "react-router-dom";
 import { DonutPercentOnly, LineChartWithDatesStatic, TrendFooterStats } from "../components/StaticCharts";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../../api/axios";
 
 // Chart.js 도넛 설정
@@ -75,6 +75,19 @@ const formatRate = (v) =>
 const formatMonths = (m) =>
   (m == null ? "-" : `${m}개월`);
 
+function useInView(threshold = 0.3) {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) setInView(true); },
+      { threshold }
+    );
+    if (ref.current) io.observe(ref.current);
+    return () => io.disconnect();
+  }, [threshold]);
+  return [ref, inView];
+}
 
 export default function AssetDashboard() {
 
@@ -82,6 +95,7 @@ export default function AssetDashboard() {
   const [trend, setTrend] = useState(null); // AssetTrendDto
   const [topSavings, setTopSavings] = useState(null);   // TopSavingsDto
   const [loading, setLoading] = useState(true);
+  const [donutRef, donutInView] = useInView(0.2);
 
   useEffect(() => {
     const run = async () => {
