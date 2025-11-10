@@ -96,6 +96,7 @@ public class SecurityConfig {
                                 "/api/foreign/exchange/calculate",
                                 "/api/foreign/exchange",
                                 "/api/foreign/rates/**",
+                                "/api/loan/products",
                                 "/api/health",
                                 "/actuator/**",
                                 "/actuator/health",

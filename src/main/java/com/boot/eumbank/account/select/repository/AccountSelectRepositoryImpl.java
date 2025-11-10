@@ -4,6 +4,7 @@ import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.account.open.entity.account.QAccount;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -27,27 +28,27 @@ public class AccountSelectRepositoryImpl implements AccountRepositoryCustom {
     public List<Account> findAccountsByCustomer(int c_no) {
         return jpaQueryFactory
                 .selectFrom(A)
-                .where(A.cNo.eq(c_no))
+                .where(A.cNo.eq(c_no), A.status.eq("ACTIVE"))
                 .orderBy(A.aNo.desc())
                 .fetch();
     }
 
-    @Override
-    public Optional<Account> findByAccountNo(String a_account_no) {
-        Account one = jpaQueryFactory.selectFrom(A)
-                .where(A.accountNo.eq(a_account_no))
-                .fetchFirst();      // 유니크면 fetchOne 모르겠으면 fetchFirst
-        return Optional.ofNullable(one);
-    }
+//    @Override
+//    public Optional<Account> findByAccountNo(String a_account_no) {
+//        Account one = jpaQueryFactory.selectFrom(A)
+//                .where(A.accountNo.eq(a_account_no))
+//                .fetchFirst();      // 유니크면 fetchOne 모르겠으면 fetchFirst
+//        return Optional.ofNullable(one);
+//    }
 
-    @Override
-    public Optional<Account> findByAccountId(String a_id) {
-        Account one = jpaQueryFactory
-                .selectFrom(A)
-                .where(A.aId.eq(a_id))
-                .fetchOne();
-        return Optional.ofNullable(one);
-    }
+//    @Override
+//    public Optional<Account> findByAccountId(String a_id) {
+//        Account one = jpaQueryFactory
+//                .selectFrom(A)
+//                .where(A.aId.eq(a_id))
+//                .fetchOne();
+//        return Optional.ofNullable(one);
+//    }
 
     // 페이지네이션 적용 버전
     @Override
@@ -84,5 +85,11 @@ public class AccountSelectRepositoryImpl implements AccountRepositoryCustom {
         return updateCnt;
     }
 
+    @Override
+    public Optional<Account> findByIdForUpdate(Integer aNo) {
+        // PK 기준 잠금 조회  -> 없으면 null 처ㅣㄹ
+        Account acc = em.find(Account.class, aNo, LockModeType.PESSIMISTIC_WRITE);
+        return Optional.ofNullable(acc);
+    }
 
 }

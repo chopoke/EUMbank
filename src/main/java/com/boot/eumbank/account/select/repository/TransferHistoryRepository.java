@@ -37,4 +37,22 @@ public interface TransferHistoryRepository extends JpaRepository<TransferHistory
 
     //  진행률(납입 회차) 계산용
     long countByAccountNoAndTransactionType(Integer accountNo, String transactionType);
+    @Query("""
+        select t from TransferHistory t
+        where t.otherAccount = :otherAccount
+          and (:type   is null or t.transferType = :type)
+          and (:fromAt is null or t.transferAt >= :fromAt)
+          and (:toAt   is null or t.transferAt <  :toAt)
+        order by t.transferAt desc
+    """)
+    Page<TransferHistory> searchByOtherAccount(
+            @Param("otherAccount") String otherAccount,
+            @Param("type") String type,
+            @Param("fromAt") Timestamp fromAt,
+            @Param("toAt") Timestamp toAt,
+            Pageable pageable
+    );
+
+    // 상환내역 찍기
+    boolean existsByAccountNoAndTransferId(Integer accountNo, String transferId);
 }
