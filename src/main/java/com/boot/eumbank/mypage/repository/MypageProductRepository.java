@@ -98,17 +98,28 @@ public interface MypageProductRepository extends JpaRepository<ProductDeposit, I
 
     /* --------------------------- 대출  --------------------------- */
     @Query(value = """
-        SELECT
-           l.l_id                                         AS id,
-           lp.lpd_name                                    AS productName,
-           l.l_principal_amount                           AS balance,
-           l.l_interest_rate                              AS rate,
-           DATE_FORMAT(l.start_date,      '%Y-%m-%d')     AS openedAt,
-           DATE_FORMAT(l.l_maturity_date, '%Y-%m-%d')     AS maturityAt
-        FROM LOAN_TBL l
-        JOIN LOAN_PRODUCT_TBL lp ON lp.lpd_no = l.lpd_no
-        WHERE l.c_no = :cNo
-        ORDER BY l.start_date DESC
-    """, nativeQuery = true)
+    SELECT
+       l.l_id                                         AS id,
+       lp.lpd_name                                    AS productName,
+       l.l_principal_amount                           AS principal,
+       l.l_balance                                    AS balance,
+       l.l_interest_rate                              AS rate,
+       l.l_rate_type                                  AS rateType,
+       l.l_repay_method                               AS repayMethod,
+       l.l_term_month                                 AS termMonths,
+       DATE_FORMAT(l.l_start_date,      '%Y-%m-%d')   AS openedAt,
+       DATE_FORMAT(l.l_maturity_date,  '%Y-%m-%d')    AS maturityAt,
+
+       /* 모달 표시용(상품 메타) */
+       lp.lpd_type            AS lpd_type,
+       lp.lpd_bank_name       AS lpd_bank_name,
+       lp.lpd_rate_min        AS lpd_rate_min,
+       lp.lpd_rate_max        AS lpd_rate_max
+    FROM LOAN_TBL l
+    JOIN LOAN_PRODUCT_TBL lp ON lp.lpd_no = l.lpd_no
+    WHERE l.c_no = :cNo
+    ORDER BY l.l_start_date DESC
+""", nativeQuery = true)
     List<Map<String, Object>> findMyLoans(@Param("cNo") Integer cNo);
+
 }

@@ -1,11 +1,15 @@
+// src/pages/mypage/LoanDashboard.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchMyLoans } from "../../api/products"; // ← 기존 호출(이미 쓰고 있던 목록용만 사용)
+import { fetchMyLoans } from "../../api/products";
 import ProductDetailsModal from "../../components/ProductDetailsModal";
 
 const fmt = (n, u = "") => (n == null ? "-" : `${Number(n).toLocaleString()}${u}`);
+
+// 날짜 안전 헬퍼
+const toDate = (v) => (v instanceof Date ? v : v ? new Date(v) : null);
 const monthDiff = (a, b) => {
-  const d1 = typeof a === "string" ? new Date(a) : a;
-  const d2 = typeof b === "string" ? new Date(b) : b;
+  const d1 = toDate(a), d2 = toDate(b);
+  if (!d1 || !d2 || Number.isNaN(d1.getTime()) || Number.isNaN(d2.getTime())) return 0;
   const y = d2.getFullYear() - d1.getFullYear();
   const m = d2.getMonth() - d1.getMonth();
   return y * 12 + m + (d2.getDate() >= d1.getDate() ? 0 : -1);
@@ -39,21 +43,31 @@ export default function LoanDashboard() {
 
   const cards = useMemo(() => {
     return (Array.isArray(loans) ? loans : []).map((l) => {
-      const openedAt = l.start_date ?? l.startDate ?? l.openedAt;
-      const maturityAt = l.l_maturity_date ?? l.maturityAt;
-      const totalMonths = Math.max(0, monthDiff(openedAt, maturityAt));
-      const elapsed = Math.max(0, monthDiff(openedAt, new Date()));
-      const progress = totalMonths > 0 ? (elapsed / totalMonths) * 100 : 0;
+      const openedAt   = l.openedAt ?? l.l_start_date ?? l.startDate ?? null;
+      const maturityAt = l.maturityAt ?? l.l_maturity_date ?? null;
 
-      const product = l.product ?? l.loanProduct ?? l; // lpd_* 가 들어있다면 활용
+      const totalMonths = Math.max(0, monthDiff(openedAt, maturityAt));
+      const elapsed     = Math.max(0, monthDiff(openedAt, new Date()));
+      const progress    = totalMonths > 0 ? (elapsed / totalMonths) * 100 : 0;
+
+      // 백엔드에서 넘어온 상품 메타를 product로 묶어 모달에서 사용
+      const product = {
+        lpd_type: l.lpd_type,
+        lpd_bank_name: l.lpd_bank_name,
+        lpd_rate_min: l.lpd_rate_min,
+        lpd_rate_max: l.lpd_rate_max,
+      };
 
       return {
         id: l.l_no ?? l.id,
-        title: product.lpd_name ?? l.productName ?? "대출",
-        principal: l.l_principal_amount ?? l.principal ?? l.balance,
-        rate: l.l_interest_rate ?? l.rate,
+        title: l.productName ?? "대출",
+        principal: l.principal ?? l.l_principal_amount ?? l.balance, // 카드 표시는 원금
+        balance: l.balance,                                         // 필요 시 사용
+        rate: l.rate ?? l.l_interest_rate,
+        rateType: l.rateType ?? l.l_rate_type,
+        repayMethod: l.repayMethod ?? l.l_repay_method,
+        termMonths: l.termMonths ?? l.l_term_month,
         openedAt, maturityAt, totalMonths, elapsed, progress,
-        repayMethod: l.l_repay_method, rateType: l.l_rate_type,
         product,
       };
     });
@@ -61,6 +75,11 @@ export default function LoanDashboard() {
 
   const openMore = (c) => {
     const p = c.product || {};
+    const periodText =
+      c.totalMonths ? `${c.totalMonths}개월`
+      : c.termMonths ? `${c.termMonths}개월`
+      : p.lpd_rate_min || p.lpd_rate_max ? "-" : "-";
+
     setDetail({
       title: "대출 상세정보",
       subtitle: c.title,
@@ -68,20 +87,18 @@ export default function LoanDashboard() {
         {
           heading: "핵심 정보",
           rows: [
-            { label: "대출종류", value: p.lpd_type },
+            { label: "대출종류", value: p.lpd_type ?? "-" },
             { label: "약정금리", value: c.rate != null ? `${c.rate}%` : (p.lpd_rate_min || p.lpd_rate_max) ? `${p.lpd_rate_min ?? "-"} ~ ${p.lpd_rate_max ?? "-"}%` : "-" },
             { label: "원금", value: fmt(c.principal, "원") },
-            { label: "기간", value: c.totalMonths ? `${c.totalMonths}개월` : p.lpd_max_month ? `${p.lpd_max_month}개월(최대)` : "-" },
+            { label: "기간", value: periodText },
           ],
         },
         {
           heading: "상환/조건",
           rows: [
-            { label: "상환방식", value: c.repayMethod },
-            { label: "금리유형", value: c.rateType },
-            { label: "우대금리", value: p.lpd_prime_rate != null ? `${p.lpd_prime_rate}%` : "-" },
-            { label: "거치기간", value: p.lpd_grace_month != null ? `${p.lpd_grace_month}개월` : "-" },
-            { label: "은행/금융사", value: p.lpd_bank_name },
+            { label: "상환방식", value: c.repayMethod ?? "-" },
+            { label: "금리유형", value: c.rateType ?? "-" },
+            { label: "은행/금융사", value: p.lpd_bank_name ?? "-" },
           ],
         },
       ],
@@ -120,9 +137,11 @@ export default function LoanDashboard() {
                 <div className="mt-1 text-sm text-gray-500">
                   원금 <span className="font-medium text-gray-700">{fmt(c.principal,"원")}</span>
                   <span className="mx-2">·</span>
-                  금리 <span className="font-medium text-gray-700">{c.rate}%</span>
+                  금리 <span className="font-medium text-gray-700">{c.rate ?? "-"}%</span>
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">개시일 {c.openedAt ?? "-"} · 만기 {c.maturityAt ?? "-"}</div>
+                <div className="text-xs text-gray-400 mt-0.5">
+                  개시일 {c.openedAt ?? "-"} · 만기 {c.maturityAt ?? "-"}
+                </div>
               </div>
             </div>
             <button onClick={() => openMore(c)} className="rounded-xl px-3 py-2 text-xs font-semibold bg-gray-900 text-white">더보기</button>
