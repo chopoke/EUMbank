@@ -370,13 +370,13 @@ function RateFxTicker (){
         {/* font-medium text-gray-900 */}
         <h6 id="rate-fx" className="fx-ticker-title">오늘의 환율</h6>
         {/* text-sm text-blue-700 hover:underline */}
-        <a href="/foreign/rate" className="text-link">더보기</a>
+        <Link to='/foreign/rate' className="text-link">더보기</Link>
       </div>
       {/* mt-3 grid grid-cols-3 gap-4 text-sm */}
       <div className="fx-list-grid">
         {topProducts.map((r) => (
           // rounded-xl border p-3 flex items-center justify-between
-          <div key={r.pair} className="fx-rate-item">
+          <div key={r.cur} className="fx-rate-item">
             {/* text-gray-700 */}
             <span className="fx-pair">{r.cur}/KRW</span>
             {/* font-semibold */}
