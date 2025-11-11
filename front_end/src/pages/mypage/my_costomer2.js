@@ -739,11 +739,13 @@ function SecurityTab() {
         try {
             const result = await resetPassword(principlePassword, newPassword);
 
-            if (result.ok) {
+            console.log(result);
+
+            if (result.success) {
                 alert('패스워드 성공적으로 재설정되었습니다.');
-                handlePinCloseModal();
+                handlePasswordCloseModal();
             } else {
-                setError(result.message || '패스워드 재설정에 실패했습니다.');
+                setError(result.message);
             }
         } catch (error) {
             setError(error.message || '서버 연결에 실패했습니다.');
@@ -763,8 +765,8 @@ function SecurityTab() {
     // PASSWORD 모달 닫기 핸들러
     const handlePasswordCloseModal = () => {
         setShowPasswordModal(false);
-        setNewPin('');
-        setConfirmPin('');
+        setNewPassword('');
+        setConfirmPassword('');
         setError('');
     };
 
