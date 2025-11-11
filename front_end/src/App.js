@@ -60,8 +60,6 @@ import ApplyCompletePage from "./pages/loan/apply/ApplyCompletePage";
 
 // 관리자페이지
 import AdminPage from "./pages/admin/page";
-import LoanApplicaion from "./pages/loan/admin/LoanApplicaion";
-import LoanAdminDetailPage from "./pages/loan/admin/LoanAdminDetailPage";
 
 // 공과금
 import BillsLanding from "./pages/bills/BillsLanding";
@@ -165,18 +163,13 @@ function App() {
         {/* 예금계좌 이체내역 */}
         <Route path="/accounts/deposit/:d_no" element={<ProtectedRoute><DepositHistoryPage/></ProtectedRoute>} />
 
-        {/* 주택담보대출 상품 목록 */}
+        {/* 대출 상품 목록 */}
         <Route path="/loan/products" element={<LoanProductList />} />
         
         {/* 상품 상세 */}
-        <Route path="/loan/products/:code" element={<LoanProductDetail />} />
+        <Route path="/loan/products/:code" element={<ProtectedRoute><LoanProductDetail /></ProtectedRoute>} />
 
-        {/* 대출상품 한도/금리조회()
-        <Route path="/loan/:code/quote" element={
-          <ProtectedRoute>
-            <LoanQuotePage />
-          </ProtectedRoute>
-          } /> */}
+
         {/* 대출 신청 스탭 */}
         <Route path="/loan/apply/:code/agree"  element={<ProtectedRoute><ApplyAgree/></ProtectedRoute>} />
         <Route path="/loan/apply/:code/form"   element={<ProtectedRoute><ApplyFormPage/></ProtectedRoute>} />
@@ -186,10 +179,6 @@ function App() {
         <Route path="/loan/apply/:code/complete/:laId" element={<ProtectedRoute><ApplyCompletePage/></ProtectedRoute> } />
 
 
-
-        {/* 대출관리자
-        <Route path="/admin/loan/applications" element={<LoanApplicaion/>} />
-        <Route path="/admin/loan/applications/:laId" element={<LoanAdminDetailPage/>} /> */}
         
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
