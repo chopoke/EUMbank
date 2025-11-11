@@ -4,8 +4,8 @@ import java.util.List;
 
 /**
  * [예약/자동 이체 상태 변경 요청 DTO]
- * - 다중 예약 이체 주문의 상태를 일괄 변경할 때 사용
- * - 지원 상태: SCHEDULED, PAUSED, CANCELLED
+ * - 다중 예약 이체 주문을 일괄 해지할 때 사용
+ * - 지원 상태: CANCELLED
  */
 public class TransferOrderStatusUpdateRequest {
 

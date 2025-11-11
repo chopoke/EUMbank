@@ -36,7 +36,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -943,11 +942,10 @@ public class TransferServiceImpl implements TransferService {
 
     /**
      * [예약/자동 이체 상태 일괄 변경]
-     * - 지정된 주문 ID 목록의 상태를 일괄 업데이트
-     * - 지원 상태: SCHEDULED, PAUSED, CANCELLED
+     * - 지정된 주문 ID 목록을 해지(CANCELLED) 처리
      *
      * @param orderIds    상태를 변경할 예약/자동 이체 주문 ID 목록
-     * @param targetStatus 변경할 목표 상태
+     * @param targetStatus 변경할 목표 상태 (현재 CANCELLED만 지원)
      */
     @Override
     @Transactional
@@ -958,7 +956,7 @@ public class TransferServiceImpl implements TransferService {
             throw new IllegalArgumentException("상태를 변경할 예약 이체 ID가 필요합니다.");
         }
 
-        if (!Set.of("SCHEDULED", "PAUSED", "CANCELLED").contains(targetStatus)) {
+        if (!"CANCELLED".equals(targetStatus)) {
             throw new IllegalArgumentException("지원하지 않는 상태 코드입니다: " + targetStatus);
         }
 
@@ -970,35 +968,15 @@ public class TransferServiceImpl implements TransferService {
         List<TransferOrder> updatedOrders = new ArrayList<>();
 
         for (TransferOrder order : orders) {
-            String currentStatus = order.getTo_status();
-
-            if ("CANCELLED".equals(targetStatus)) {
-                if (order.isCompleted()) {
-                    throw new TransferException("TRANSFER_ERROR", "이미 완료된 예약 이체는 취소할 수 없습니다.");
-                }
-                order.cancel();
-                updatedOrders.add(order);
+            if (order.isCompleted()) {
+                throw new TransferException("TRANSFER_ERROR", "이미 완료된 예약 이체는 취소할 수 없습니다.");
+            }
+            if ("CANCELLED".equals(order.getTo_status())) {
+                log.info("이미 해지된 예약 이체 - 주문ID: {}", order.getTo_order_id());
                 continue;
             }
-
-            if ("PAUSED".equals(targetStatus)) {
-                if (!"SCHEDULED".equals(currentStatus)) {
-                    log.warn("PAUSED로 전환 불가 상태 - 주문ID: {}, 현재 상태: {}", order.getTo_order_id(), currentStatus);
-                    continue;
-                }
-                order.updateStatus("PAUSED");
-                updatedOrders.add(order);
-                continue;
-            }
-
-            if ("SCHEDULED".equals(targetStatus)) {
-                if (!"PAUSED".equals(currentStatus)) {
-                    log.warn("SCHEDULED로 전환 불가 상태 - 주문ID: {}, 현재 상태: {}", order.getTo_order_id(), currentStatus);
-                    continue;
-                }
-                order.updateStatus("SCHEDULED");
-                updatedOrders.add(order);
-            }
+            order.cancel();
+            updatedOrders.add(order);
         }
 
         if (updatedOrders.isEmpty()) {

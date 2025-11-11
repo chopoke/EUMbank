@@ -316,7 +316,7 @@ public class TransferController {
 
     /**
      * [예약/자동 이체 상태 변경 API]
-     * - 예약 이체를 일시정지/재개/취소할 때 사용
+     * - 예약/자동 이체를 해지할 때 사용 (현재 CANCELLED만 지원)
      * - PATCH /api/transfer/orders/status
      */
     @PatchMapping("/orders/status")

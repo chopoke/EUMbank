@@ -36,7 +36,6 @@ const statusFilters = [
   { key: "ALL", label: "전체" },
   { key: "SCHEDULED", label: "예정" },
   { key: "PROCESSING", label: "진행 중" },
-  { key: "PAUSED", label: "일시 정지" },
   { key: "COMPLETED", label: "완료" },
   { key: "CANCELLED", label: "취소" },
   { key: "FAILED", label: "실패" },
@@ -158,7 +157,6 @@ function buildAutoGroups(orders) {
     const last = sorted[sorted.length - 1];
     const status = deriveGroupStatus(sorted);
     const scheduledOrders = sorted.filter((order) => normalizeStatus(order.status) === "SCHEDULED");
-    const pausedOrders = sorted.filter((order) => normalizeStatus(order.status) === "PAUSED");
     const nextExecution = scheduledOrders.length > 0 ? scheduledOrders[0].startAtDate : null;
 
     return {
@@ -181,7 +179,6 @@ function buildAutoGroups(orders) {
       nextExecution,
       createdAt: first.createdAtDate,
       scheduledOrderIds: scheduledOrders.map((order) => order.orderId),
-      pausedOrderIds: pausedOrders.map((order) => order.orderId),
       actionableOrderIds: sorted
         .filter((order) => {
           const mapped = normalizeStatus(order.status);
@@ -516,50 +513,6 @@ export default function TransferManagePage() {
     }
   };
 
-  const handlePauseGroup = async (group) => {
-    if (!group.scheduledOrderIds.length) {
-      window.alert("일시정지할 수 있는 일정이 없습니다.");
-      return;
-    }
-
-    setIsActionLoading(true);
-    try {
-      await transferApi.updateTransferOrderStatus({
-        orderIds: group.scheduledOrderIds,
-        status: "PAUSED",
-      });
-      await refreshOrders();
-      window.alert("자동이체가 일시정지되었습니다.");
-    } catch (actionError) {
-      console.error(actionError);
-      window.alert(actionError.response?.data?.message || "자동이체 일시정지 중 오류가 발생했습니다.");
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
-  const handleResumeGroup = async (group) => {
-    if (!group.pausedOrderIds.length) {
-      window.alert("재개할 수 있는 일정이 없습니다.");
-      return;
-    }
-
-    setIsActionLoading(true);
-    try {
-      await transferApi.updateTransferOrderStatus({
-        orderIds: group.pausedOrderIds,
-        status: "SCHEDULED",
-      });
-      await refreshOrders();
-      window.alert("자동이체가 재개되었습니다.");
-    } catch (actionError) {
-      console.error(actionError);
-      window.alert(actionError.response?.data?.message || "자동이체 재개 중 오류가 발생했습니다.");
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
-
   const handleCancelReserve = async (item) => {
     if (!["SCHEDULED", "PROCESSING"].includes(item.status)) {
       window.alert("취소할 수 없는 상태입니다.");
@@ -793,26 +746,6 @@ export default function TransferManagePage() {
                                 >
                                   상세 보기
                                 </button>
-                                {item.status === "SCHEDULED" && (
-                                  <button
-                                    type="button"
-                                    disabled={isActionLoading}
-                                    onClick={() => handlePauseGroup(item)}
-                                    className="rounded-md border border-amber-300 bg-amber-50 px-3 py-1 text-xs text-amber-700 hover:bg-amber-100 disabled:opacity-40"
-                                  >
-                                    일시 정지
-                                  </button>
-                                )}
-                                {item.status === "PAUSED" && (
-                                  <button
-                                    type="button"
-                                    disabled={isActionLoading}
-                                    onClick={() => handleResumeGroup(item)}
-                                    className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs text-emerald-700 hover:bg-emerald-100 disabled:opacity-40"
-                                  >
-                                    재개
-                                  </button>
-                                )}
                                 {item.actionableOrderIds.length > 0 && (
                                   <button
                                     type="button"
@@ -922,38 +855,16 @@ export default function TransferManagePage() {
                         상세 보기
                       </button>
                       {item.type === "AUTO" ? (
-                        <>
-                          {item.status === "SCHEDULED" && (
-                            <button
-                              type="button"
-                              disabled={isActionLoading}
-                              onClick={() => handlePauseGroup(item)}
-                              className="flex-1 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-700 hover:bg-amber-100 disabled:opacity-40"
-                            >
-                              일시 정지
-                            </button>
-                          )}
-                          {item.status === "PAUSED" && (
-                            <button
-                              type="button"
-                              disabled={isActionLoading}
-                              onClick={() => handleResumeGroup(item)}
-                              className="flex-1 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 hover:bg-emerald-100 disabled:opacity-40"
-                            >
-                              재개
-                            </button>
-                          )}
-                          {item.actionableOrderIds.length > 0 && (
-                            <button
-                              type="button"
-                              disabled={isActionLoading}
-                              onClick={() => handleCancelGroup(item)}
-                              className="flex-1 rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700 hover:bg-rose-100 disabled:opacity-40"
-                            >
-                              해지
-                            </button>
-                          )}
-                        </>
+                        item.actionableOrderIds.length > 0 && (
+                          <button
+                            type="button"
+                            disabled={isActionLoading}
+                            onClick={() => handleCancelGroup(item)}
+                            className="flex-1 rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700 hover:bg-rose-100 disabled:opacity-40"
+                          >
+                            해지
+                          </button>
+                        )
                       ) : (
                         ["SCHEDULED", "PROCESSING"].includes(item.status) && (
                           <button
