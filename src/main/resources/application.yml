@@ -68,8 +68,6 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 
-
-
 # =================================================================
 # Thymeleaf 설정
 # =================================================================
@@ -77,7 +75,6 @@ spring:
     cache: false
     prefix: classpath:/templates/
     suffix: .html
-
   # ===================================================================
   # OAuth2 : NAVER, GOOGLE
   # ===================================================================
@@ -213,7 +210,5 @@ gemini:
 firebase:
   service-account:
     path: eumbank-86fbd-firebase-adminsdk-fbsvc-d3d743c1eb.json # firebase 마스터리 키 - json파일 필요함
-
   project-id: eumbank-86fbd # firebase에서 생성된 프로젝트명
-
 
