@@ -28,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Optional;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -815,11 +816,13 @@ public class TradingService {
     
     /**
      * 고객 잔고 조회 (계좌 + 월렛)
+     * @param customerNo 고객번호
+     * @param accountNo 선택된 계좌 번호 (null이면 자동 선택)
      */
     @Transactional(readOnly = true)
-    public Map<String, Object> getCustomerBalance(Long customerNo) {
+    public Map<String, Object> getCustomerBalance(Long customerNo, Integer accountNo) {
         try {
-            log.info("잔고 조회 시작: customerNo={}", customerNo);
+            log.info("잔고 조회 시작: customerNo={}, accountNo={}", customerNo, accountNo);
             
             Map<String, Object> result = new HashMap<>();
             
@@ -833,12 +836,27 @@ public class TradingService {
             // 계좌 잔고 (일반 계좌 - SpotAccountService 사용)
             BigDecimal accountBalance = BigDecimal.ZERO;
             try {
-                Optional<Account> accountOpt = spotAccountService.getActiveAccountByCustomerNo(customerNo.intValue());
+                Optional<Account> accountOpt;
+                if (accountNo != null) {
+                    // 선택된 계좌 번호로 조회
+                    accountOpt = spotAccountService.getAccountByAccountNo(accountNo);
+                    if (accountOpt.isPresent() && !accountOpt.get().getCNo().equals(customerNo.intValue())) {
+                        log.warn("선택된 계좌가 해당 고객의 계좌가 아닙니다: customerNo={}, accountNo={}", customerNo, accountNo);
+                        accountOpt = Optional.empty();
+                    }
+                } else {
+                    // 자동 선택 (기존 로직)
+                    accountOpt = spotAccountService.getActiveAccountByCustomerNo(customerNo.intValue());
+                }
+                
                 if (accountOpt.isPresent()) {
                     accountBalance = accountOpt.get().getBalance();
+                    // 선택된 계좌 정보도 함께 반환
+                    result.put("selectedAccountNo", accountOpt.get().getANo());
+                    result.put("selectedAccountNumber", accountOpt.get().getAccountNo());
                 }
             } catch (Exception e) {
-                log.warn("계좌 잔고 조회 실패: customerNo={}, error={}", customerNo, e.getMessage());
+                log.warn("계좌 잔고 조회 실패: customerNo={}, accountNo={}, error={}", customerNo, accountNo, e.getMessage());
                 accountBalance = BigDecimal.ZERO;
             }
             
@@ -997,6 +1015,26 @@ public class TradingService {
             Customer customer = customerRepo.findById(customerNo)
                 .orElseThrow(() -> new RuntimeException("고객을 찾을 수 없습니다."));
             log.info("고객 정보 조회 완료 - customerName: {}", customer.getCNameKr());
+            
+            // GOLD_CUSTOMER_TBL 자동 생성 (없으면 생성)
+            log.info("GOLD_CUSTOMER_TBL 확인 및 생성 시작 - customerNo: {}", customerNo);
+            Optional<GoldCustomer> existingGoldCustomer = goldCustomerRepository.findByCustomerCustomerNo(customerNo.longValue());
+            if (existingGoldCustomer.isEmpty()) {
+                log.info("GOLD_CUSTOMER_TBL에 데이터가 없어 자동 생성합니다 - customerNo: {}", customerNo);
+                GoldCustomer newGoldCustomer = GoldCustomer.builder()
+                    .customer(customer)
+                    .gcCashBalance(BigDecimal.ZERO)
+                    .gcGoldBalance(BigDecimal.ZERO)
+                    .gcSilverBalance(BigDecimal.ZERO)
+                    .gcTotalInvestment(BigDecimal.ZERO)
+                    .gcTotalProfitLoss(BigDecimal.ZERO)
+                    .gcActiveYn("Y")
+                    .build();
+                goldCustomerRepository.save(newGoldCustomer);
+                log.info("GOLD_CUSTOMER_TBL 자동 생성 완료 - customerNo: {}", customerNo);
+            } else {
+                log.info("GOLD_CUSTOMER_TBL에 기존 데이터가 있습니다 - customerNo: {}", customerNo);
+            }
             
             // 월렛명 중복 확인
             log.info("월렛명 중복 확인 시작 - customerNo: {}, walletName: {}", customerNo, walletName);

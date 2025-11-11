@@ -69,6 +69,8 @@ const SpotTradingPage = () => {
 
   // === 유틸리티 함수들 ===
 
+  const TRADE_UNIT_WEIGHT = 3.75; // 시세 기준 단위(g)
+
   /**
    * 금액으로부터 수량 계산
    * @param {number} amount 거래 금액
@@ -77,11 +79,17 @@ const SpotTradingPage = () => {
    */
   const calculateQuantityFromAmount = (amount, product) => {
     if (!amount || amount <= 0) return 0;
-    
+
     const currentPrice = product === 'gold' ? goldPrice : silverPrice;
-    const pricePerGram = tradingSide === 'buy' ? currentPrice.buyPrice : currentPrice.sellPrice;
-    
-    return amount / pricePerGram;
+    if (!currentPrice) return 0;
+
+    const pricePerUnit = tradingSide === 'buy'
+      ? (currentPrice.buyPrice ?? currentPrice.basePrice ?? 0)
+      : (currentPrice.sellPrice ?? currentPrice.basePrice ?? 0);
+
+    if (!pricePerUnit) return 0;
+
+    return (amount / pricePerUnit) * TRADE_UNIT_WEIGHT;
   };
 
   /**
@@ -94,9 +102,15 @@ const SpotTradingPage = () => {
     if (!quantity || quantity <= 0) return 0;
     
     const currentPrice = product === 'gold' ? goldPrice : silverPrice;
-    const pricePerGram = tradingSide === 'buy' ? currentPrice.buyPrice : currentPrice.sellPrice;
-    
-    return quantity * pricePerGram;
+    if (!currentPrice) return 0;
+
+    const pricePerUnit = tradingSide === 'buy'
+      ? (currentPrice.buyPrice ?? currentPrice.basePrice ?? 0)
+      : (currentPrice.sellPrice ?? currentPrice.basePrice ?? 0);
+
+    if (!pricePerUnit) return 0;
+
+    return (quantity / TRADE_UNIT_WEIGHT) * pricePerUnit;
   };
 
   /**

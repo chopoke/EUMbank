@@ -66,14 +66,31 @@ export const fetchRecentPrices = async (metalCode, hours = 24) => {
 /**
  * 고객 잔고 조회
  * @param {number} customerNo - 고객번호
+ * @param {number} accountNo - 선택된 계좌 번호 (선택사항)
  * @returns {Promise} 잔고 정보
  */
-export const fetchCustomerBalance = async (customerNo) => {
+export const fetchCustomerBalance = async (customerNo, accountNo = null) => {
   try {
-    const response = await api.get(endpoints.trading.balance(customerNo));
+    const params = accountNo ? { accountNo } : {};
+    const response = await api.get(endpoints.trading.balance(customerNo), { params });
     return response.data;
   } catch (error) {
     console.error('잔고 조회 실패:', error);
+    throw error;
+  }
+};
+
+/**
+ * 입출금 계좌 목록 조회
+ * @param {number} customerNo - 고객번호
+ * @returns {Promise} 입출금 계좌 목록
+ */
+export const fetchDepositAccounts = async (customerNo) => {
+  try {
+    const response = await api.get(`/api/trading/accounts/${customerNo}/deposit`);
+    return response.data;
+  } catch (error) {
+    console.error('입출금 계좌 목록 조회 실패:', error);
     throw error;
   }
 };
@@ -338,6 +355,7 @@ export default {
   fetchPrices,
   fetchRecentPrices,
   fetchCustomerBalance,
+  fetchDepositAccounts,
   fetchTradingHistoryWithPaging,
   buyMetal,
   sellMetal,

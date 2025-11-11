@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 
 /**
  * 현물거래 패널 컴포넌트
@@ -120,6 +120,19 @@ const TradingPanel = ({
     // 수량 기반으로 금액 계산 (프리미엄 포함)
     return calculateAmountFromQuantity(currentHoldings, selectedProduct);
   }, [getCurrentHoldings, calculateAmountFromQuantity, selectedProduct]);
+
+  /**
+   * 빠른 수량 선택 안내용 1g 기준 가격 표시
+   */
+  const UNIT_WEIGHT = 3.75;
+
+  const perUnitPriceLabel = useMemo(() => {
+    const amount = calculateAmountFromQuantity(UNIT_WEIGHT, selectedProduct);
+    const rounded = Math.round(amount || 0).toLocaleString();
+    return selectedProduct === 'gold'
+      ? `순금 ${UNIT_WEIGHT}g당 ₩${rounded}`
+      : `은 ${UNIT_WEIGHT}g당 ₩${rounded}`;
+  }, [calculateAmountFromQuantity, selectedProduct]);
 
   /**
    * 전량 매도 버튼 클릭 핸들러
@@ -461,7 +474,10 @@ const TradingPanel = ({
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">빠른 수량 선택</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">빠른 수량 선택</label>
+        <div className="text-xs text-gray-500 mb-2">
+          {perUnitPriceLabel}
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {[3.75, 18.75, 37.5, 50, 100, 1000].map((quantity) => (
             <button
