@@ -89,13 +89,14 @@ public class TransferSchedulerService {
     }
 
     /**
-     * [개별 예약 이체 주문 처리 메서드]
+     * [개별 예약 이체 주문 처리]
      * - 예약 이체의 실행 시점을 확인하고 처리
      * - 처리 순서:
      *   1) 현재 시간과 예약 시작 시간 비교
      *   2) 실행 시간이 된 경우 이체 실행
-     *   3) 성공 시 COMPLETED, 실패 시 에러 코드 저장
-     *   4) 일회성/반복성 모두 DB에서 삭제하지 않고 유지
+     *   3) 성공 시 COMPLETED, 실패 시 FAILED 상태 저장
+     *   4) 실패 시 TransferFailedEvent 이벤트 발행
+     *   5) 일회성/반복성 모두 DB에서 삭제하지 않고 유지
      * 
      * @param transferOrder 처리할 예약 이체 주문
      */
@@ -188,11 +189,13 @@ public class TransferSchedulerService {
     }
 
     /**
-     * [다음 실행 시간 계산 메서드]
-     * - 스케줄 표현식에 따른 다음 실행 시간 계산
+     * [다음 실행 시간 계산]
+     * - 반복 예약 이체의 다음 실행 시간 계산
+     * - 스케줄 표현식(DAILY, WEEKLY, MONTHLY)에 따라 계산
+     * - 기본값: 1시간 후
      * 
      * @param transferOrder 예약 이체 주문
-     * @return 다음 실행 시간
+     * @return 다음 실행 시간 (LocalDateTime)
      */
     private LocalDateTime calculateNextExecutionTime(TransferOrder transferOrder) {
         
@@ -218,10 +221,13 @@ public class TransferSchedulerService {
     }
 
     /**
-     * 예약 이체 실패 이벤트 발행
+     * [예약 이체 실패 이벤트 발행]
+     * - 예약 이체 실패 시 TransferFailedEvent 이벤트 발행
+     * - FCM 푸시 알림을 위한 이벤트
+     * - 계좌 정보 조회 후 고객 번호 추출하여 이벤트 생성
      * 
      * @param transferOrder 예약 이체 주문
-     * @param failureReason 실패 사유 코드
+     * @param failureReason 실패 사유 코드 (예: INSUFFICIENT_BALANCE, LIMIT_EXCEEDED 등)
      * @param failureMessage 실패 메시지
      */
     private void publishReserveTransferFailureEvent(TransferOrder transferOrder, 

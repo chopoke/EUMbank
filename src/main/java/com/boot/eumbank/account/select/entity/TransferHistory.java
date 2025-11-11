@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Table(name = "TRANSFER_HISTORY_TBL")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners(AuditingEntityListener.class)
+@EntityListeners(AuditingEntityListener.class) @Setter
 public class TransferHistory {
 
     @Id
@@ -70,7 +70,7 @@ public class TransferHistory {
                            BigDecimal amount, String memo, String otherBank,
                            String otherAccount, String transferType,
                            BigDecimal afterBalance, String transactionType,
-                           BigDecimal accountOut, BigDecimal accountIn) {
+                           BigDecimal accountOut, BigDecimal accountIn, int pId) {
         this.transferNo = transferNo;
         this.transferId = transferId;
         this.accountNo = accountNo;

@@ -19,6 +19,8 @@ public class LoanProductDetailDTO {
     private String bankName;     // kor_co_nm
     private String type;         // 주택담보, 신용대출, 전세자금
     private String desc;         // join_way + etc_note 요약
+    private String summary;       //  짧은 한 줄 소개
+    private String description;   //  상세 설명
     private List<String> badges; // 금리유형/상환방식
     private List<String> tags;   // ["은행명", ...]
 
@@ -36,6 +38,7 @@ public class LoanProductDetailDTO {
     private String joinWay;         // 가입방법 원문
     private String etcNote;         // 비고 원문
 
+
     // 세부 옵션 테이블 -------------------------------------
     @Data @Builder
     @NoArgsConstructor @AllArgsConstructor
@@ -47,8 +50,8 @@ public class LoanProductDetailDTO {
         private BigDecimal lendRateAvg;     // 평균금리
         private Integer termMonth;          // (있으면) 옵션별 기간
         private String  dclsMonth;          // (있으면) 옵션 공시월
-        private String  isOverdraft;        // 'Y'/'N'
         private String  note;               // 비고
+        private String summary;         // 상품설명(표기용 간단한거)
     }
 
     private List<RateOption> options;

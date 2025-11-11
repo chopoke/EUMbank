@@ -66,7 +66,7 @@ public class AccountController {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
 
-        List<AccountDTO> allAccounts = accountProductService.findAllAccounts(customer.getCustomerNo());
+        List<AccountDTO> allAccounts = accountProductService.findAllofOneAccounts(customer.getCustomerNo());
         return ResponseEntity.ok(allAccounts);
     }
 

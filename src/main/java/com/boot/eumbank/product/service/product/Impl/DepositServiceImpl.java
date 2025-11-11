@@ -92,6 +92,9 @@ public class DepositServiceImpl implements DepositService {
 
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             Customer customer = (Customer) authentication.getPrincipal();
+
+            System.out.println("test" + customer);
+
             ProductDto oneDepositProducts = depositQueryRepository.findOneDepositProducts(requestDto.getDpNo());
 
             System.out.println("=== PDF 처리 시작 === one" + requestDto);

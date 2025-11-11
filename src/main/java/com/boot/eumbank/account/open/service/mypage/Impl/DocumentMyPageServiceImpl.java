@@ -28,7 +28,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -49,7 +51,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
     @Transactional
     public void saveDocument(MultipartFile file, FileType fileType) {
         logger.info("DocumentServiceImpl => saveDocument()");
-        
+
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("업로드된 파일이 없습니다.");
         }
@@ -73,7 +75,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
 
         String savedFilename = UUID.randomUUID().toString() + extension;
         Path filePath = Paths.get(uploadDir, savedFilename);
-        
+
         try {
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
             logger.info("파일 저장 완료: {}", filePath);
@@ -103,21 +105,36 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
     @Override
     @Transactional(readOnly = true)
     public DocumentListResponse getDocuments(Pageable pageable) {
+        logger.info("DocumentServiceImpl => getDocuments()");
+
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
 
-        Page<DocumentFile> documentPage = documentRepository.findBycNoOrderByCreatedAtDesc(
-                customer.getCustomerNo(), pageable);
+        // 1. 주민등록증 최신 1건 조회
+        Optional<DocumentFile> latestIdCard = documentRepository
+                .findFirstBycNoAndTypeOrderByCreatedAtDesc(customer.getCustomerNo(), FileType.주민등록증);
 
-        List<DocumentResponse> documents = documentPage.getContent().stream()
+        // 2. 주민등록증 제외한 나머지 서류 조회
+        Page<DocumentFile> documentPage = documentRepository
+                .findBycNoAndTypeNotOrderByCreatedAtDesc(
+                        customer.getCustomerNo(), FileType.주민등록증, pageable);
+
+        List<DocumentResponse> documents = new ArrayList<>();
+
+        // 3. 주민등록증 최신 1건 추가 (있으면)
+        latestIdCard.ifPresent(doc -> documents.add(convertToResponse(doc)));
+
+        // 4. 나머지 서류 추가
+        documents.addAll(documentPage.getContent().stream()
                 .map(this::convertToResponse)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
 
         return DocumentListResponse.builder()
                 .documents(documents)
                 .currentPage(documentPage.getNumber())
                 .totalPages(documentPage.getTotalPages())
-                .totalElements(documentPage.getTotalElements())
+                .totalElements(documentPage.getTotalElements() + (latestIdCard.isPresent() ? 1 : 0))
                 .size(documentPage.getSize())
                 .build();
     }
@@ -134,7 +151,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
         // 본인 서류인지 확인
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
-        
+
         if (!document.getCNo().equals(customer.getCustomerNo())) {
             throw new SecurityException("본인의 서류만 다운로드할 수 있습니다.");
         }
@@ -142,7 +159,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
         try {
             Path filePath = Paths.get(document.getPdfPath());
             Resource resource = new UrlResource(filePath.toUri());
-            
+
             if (resource.exists() && resource.isReadable()) {
                 return resource;
             } else {
@@ -161,7 +178,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
     public void updateDocumentStatus(Integer dNo, DocumentStatus status) {
         DocumentFile document = documentRepository.findById(dNo)
                 .orElseThrow(() -> new IllegalArgumentException("서류를 찾을 수 없습니다."));
-        
+
         document.setStatus(status);
         documentRepository.save(document);
         logger.info("서류 상태 변경 완료 - dNo: {}, status: {}", dNo, status);
@@ -179,7 +196,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
         // 본인 서류인지 확인
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
-        
+
         if (!document.getCNo().equals(customer.getCustomerNo())) {
             throw new SecurityException("본인의 서류만 삭제할 수 있습니다.");
         }

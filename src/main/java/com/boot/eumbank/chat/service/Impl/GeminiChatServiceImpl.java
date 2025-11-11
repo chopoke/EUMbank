@@ -41,11 +41,9 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
     public String chat(ChatRequest chatRequest) {
         // 1. 매번 최신 DB에서 상품 정보 조회
         String productsInfo = getProductsInfoFromDB();
-
-        // 2. 시스템 프롬프트 + DB 데이터 결합
         String systemPrompt = createSystemPrompt(productsInfo);
 
-        // 3. Gemini API 요청 생성
+        // 2. Gemini API 요청 생성
         List<GeminiContent> contents = new ArrayList<>();
 
         // 방법 A: 시스템 프롬프트를 별도 system role로 추가 (Gemini가 지원한다면)
@@ -81,9 +79,12 @@ public class GeminiChatServiceImpl implements ClaudeChatService {
                 .build();
 
         try {
-            // 5. Gemini Pro API 호출 - webClient.post() 사용
+            // 4. Gemini API 호출
             Map<String, Object> response = webClient.post()
-                    .uri("/" + model + ":generateContent?key=" + apiKey)
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/" + model + ":generateContent")
+                            .queryParam("key", apiKey)
+                            .build())
                     .bodyValue(geminiRequest)
                     .retrieve()
                     .bodyToMono(Map.class)

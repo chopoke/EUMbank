@@ -46,7 +46,7 @@ public class AssetManagementData {
     @Column(name = "amd_income_max")
     private Integer amdIncomeMax;          // 상한(만원, 오픈엔드면 NULL)
 
-    @Column(name = "amd_jop_cd", length = 25, nullable = false)
+    @Column(name = "amd_job_cd", length = 25, nullable = false)
     private String amdJobCd;            // J1~J8 등 코드
 
     @Column(name = "amd_region", length = 20, nullable = false)
