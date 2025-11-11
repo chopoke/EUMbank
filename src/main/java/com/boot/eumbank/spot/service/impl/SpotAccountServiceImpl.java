@@ -49,6 +49,22 @@ public class SpotAccountServiceImpl implements SpotAccountService {
     }
     
     /**
+     * 고객번호로 활성 입출금 계좌 목록 조회
+     */
+    @Override
+    public List<Account> getActiveDepositAccountsByCustomerNo(Integer customerNo) {
+        return spotAccountQueryDSLRepository.getActiveDepositAccountsByCustomerNo(customerNo);
+    }
+    
+    /**
+     * 계좌 번호로 계좌 조회
+     */
+    @Override
+    public Optional<Account> getAccountByAccountNo(Integer accountNo) {
+        return spotAccountQueryDSLRepository.getAccountByAccountNo(accountNo);
+    }
+    
+    /**
      * 계좌 잔액 확인
      */
     @Override

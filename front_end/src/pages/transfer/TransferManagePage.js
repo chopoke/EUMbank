@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { transferApi } from "../../api/transferApi";
+import '../../resources/css/other.css';
 
 const PAGE_SIZE = 8;
 
@@ -554,8 +555,8 @@ export default function TransferManagePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-[1240px] flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
+      <header className="border-b bg-white py-8">
+        <div className="checkb mx-auto flex max-w-[1240px] flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">자동/예약 이체 관리</h1>
             <p className="mt-1 text-sm text-gray-600">
@@ -596,7 +597,8 @@ export default function TransferManagePage() {
             >
               {accounts.map((account) => (
                 <option key={account.aNo} value={account.aNo}>
-                  {account.accountName || account.accountNo} · {account.accountNo}
+                  {account.accountName || account.accountNo}
+                  {account.accountName ? ` · ${account.accountNo}` : ""}
                 </option>
               ))}
             </select>

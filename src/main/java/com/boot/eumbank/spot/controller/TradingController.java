@@ -5,6 +5,8 @@ import com.boot.eumbank.spot.dto.GoldCustomerDto;
 import com.boot.eumbank.spot.dto.GoldProductDto;
 import com.boot.eumbank.spot.model.GoldTbl;
 import com.boot.eumbank.spot.service.trading.TradingService;
+import com.boot.eumbank.spot.service.SpotAccountService;
+import com.boot.eumbank.account.open.entity.account.Account;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import org.springframework.data.web.PageableDefault;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -31,6 +34,7 @@ import java.util.Map;
 public class TradingController {
 
     private final TradingService tradingService;
+    private final SpotAccountService spotAccountService;
 
     /**
      * 금/은 매수 처리 - 골드바/실버바 선택 가능
@@ -168,10 +172,12 @@ public class TradingController {
      * 고객 잔고 조회 (계좌 + 월렛)
      */
     @GetMapping("/balance/{customerNo}")
-    public ResponseEntity<Map<String, Object>> getCustomerBalance(@PathVariable Long customerNo) {
+    public ResponseEntity<Map<String, Object>> getCustomerBalance(
+            @PathVariable Long customerNo,
+            @RequestParam(required = false) Integer accountNo) {
         try {
-            log.info("잔고 조회 요청: customerNo={}", customerNo);
-            Map<String, Object> result = tradingService.getCustomerBalance(customerNo);
+            log.info("잔고 조회 요청: customerNo={}, accountNo={}", customerNo, accountNo);
+            Map<String, Object> result = tradingService.getCustomerBalance(customerNo, accountNo);
             log.info("잔고 조회 성공: customerNo={}", customerNo);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -179,6 +185,36 @@ public class TradingController {
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("error", "잔고 조회 중 오류가 발생했습니다: " + e.getMessage());
             return ResponseEntity.status(500).body(errorResult);
+        }
+    }
+
+    /**
+     * 고객의 입출금 계좌 목록 조회
+     */
+    @GetMapping("/accounts/{customerNo}/deposit")
+    public ResponseEntity<List<Map<String, Object>>> getDepositAccounts(@PathVariable Long customerNo) {
+        try {
+            log.info("입출금 계좌 목록 조회 요청: customerNo={}", customerNo);
+            List<Account> accounts = spotAccountService.getActiveDepositAccountsByCustomerNo(customerNo.intValue());
+            
+            List<Map<String, Object>> accountList = accounts.stream()
+                    .map(account -> {
+                        Map<String, Object> accountInfo = new HashMap<>();
+                        accountInfo.put("aNo", account.getANo());
+                        accountInfo.put("accountNo", account.getAccountNo());
+                        accountInfo.put("accountType", account.getAccountType());
+                        accountInfo.put("balance", account.getBalance());
+                        accountInfo.put("nickname", account.getNickname());
+                        accountInfo.put("status", account.getStatus());
+                        return accountInfo;
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+            
+            log.info("입출금 계좌 목록 조회 성공: customerNo={}, 계좌 수={}", customerNo, accountList.size());
+            return ResponseEntity.ok(accountList);
+        } catch (Exception e) {
+            log.error("입출금 계좌 목록 조회 중 오류: customerNo={}, error={}", customerNo, e.getMessage(), e);
+            return ResponseEntity.status(500).build();
         }
     }
 

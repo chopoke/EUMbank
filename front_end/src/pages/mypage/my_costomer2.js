@@ -199,7 +199,6 @@ function OverviewTab({onTabSwitch}) {
 function ProfileTab({initialData}) {
   const [isEditing, setIsEditing] = useState(false);
   const [gender, setGender] = useState(initialData?.cgenderCd || null);
-  const [checkPin, setCheckPin] = useState('');
   const [profileData, setProfileData] = useState({
     name: '',
     enname: '',
@@ -662,7 +661,6 @@ function ProfileTab({initialData}) {
 
 // SecurityTab Component
 function SecurityTab() {
-      const { checkPin, setCheckPin } = useCheckPin();
       const [showOTPModal, setShowPinModal] = useState(false);
       const [showPasswordModal, setShowPasswordModal] = useState(false);
 
@@ -702,8 +700,8 @@ function SecurityTab() {
         try {
             const result = await resetPin(newPin);
 
-            if (result.ok) {
-                alert('PIN이 성공적으로 재설정되었습니다.');
+            if (result.success) {
+                setError(result.message);
                 handlePinCloseModal();
             } else {
                 setError(result.message || 'PIN 재설정에 실패했습니다.');
@@ -720,8 +718,6 @@ function SecurityTab() {
     // 비밀번호 재설정 API 함수
     const handleResetPassword = async () => {
 
-        alert("test");
-
         // 유효성 검사
         if(!principlePassword) {
             setError("현재 비밀번호를 입력하지 않았습니다.")
@@ -729,11 +725,6 @@ function SecurityTab() {
 
         if (!newPassword || !confirmPassword) {
             setError('비밀번호를 입력해주세요.');
-            return;
-        }
-
-        if (newPassword.length !== 6) {
-            setError('비밀번호는 6자리여야 합니다.');
             return;
         }
 
@@ -746,13 +737,15 @@ function SecurityTab() {
         setError('');
 
         try {
-            const result = await resetPassword(principlePassword, newPassword, confirmPassword);
+            const result = await resetPassword(principlePassword, newPassword);
 
-            if (result.ok) {
-                alert('PIN이 성공적으로 재설정되었습니다.');
-                handlePinCloseModal();
+            console.log(result);
+
+            if (result.success) {
+                alert('패스워드 성공적으로 재설정되었습니다.');
+                handlePasswordCloseModal();
             } else {
-                setError(result.message || '패스워드 재설정에 실패했습니다.');
+                setError(result.message);
             }
         } catch (error) {
             setError(error.message || '서버 연결에 실패했습니다.');
@@ -772,8 +765,8 @@ function SecurityTab() {
     // PASSWORD 모달 닫기 핸들러
     const handlePasswordCloseModal = () => {
         setShowPasswordModal(false);
-        setNewPin('');
-        setConfirmPin('');
+        setNewPassword('');
+        setConfirmPassword('');
         setError('');
     };
 
@@ -815,26 +808,16 @@ function SecurityTab() {
             핀번호 변경
         </h3>
         <div className="flex items-center justify-between">
-            {checkPin ? (
-                <>
-                    <div>
-                        <p className="text-gray-600 mb-1">일회용 핀 인증이 활성화되어 있습니다.</p>
-                    </div>
-                    <div className="flex space-x-2">
-                        <button
-                            onClick={() => setShowPinModal(true)}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm whitespace-nowrap"
-                        >
-                            재설정
-                        </button>
-                    </div>
-                </>
-            ) : (
-                <div>
-                <p className="text-gray-600 mb-1">일회용 핀 인증이 비활성화되어 있습니다.</p>
+            <>
+                <div className="flex space-x-2">
+                    <button
+                        onClick={() => setShowPinModal(true)}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm whitespace-nowrap"
+                    >
+                        재설정
+                    </button>
                 </div>
-
-            )}
+            </>
         </div>
       </div>
 
@@ -854,15 +837,6 @@ function SecurityTab() {
               onClick={() => setShowPasswordModal(true)}
               className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm whitespace-nowrap"
             >
-              변경
-            </button>
-          </div>
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div>
-              <p className="font-medium text-gray-800">거래 비밀번호</p>
-              <p className="text-sm text-gray-600">마지막 변경: 2024년 1월 10일</p>
-            </div>
-            <button className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm whitespace-nowrap">
               변경
             </button>
           </div>
@@ -1051,7 +1025,6 @@ function SecurityTab() {
                         setError('')
 
                     }}
-                    maxLength={6}
                     disabled={isLoading}
                 />
               </div>
@@ -1065,7 +1038,6 @@ function SecurityTab() {
                         setNewPassword(value)
                         setError('')
                     }}
-                    maxLength={6}
                     disabled={isLoading}
                 />
               </div>
@@ -1079,7 +1051,6 @@ function SecurityTab() {
                         setConfirmPassword(value)
                         setError('')
                     }}
-                    maxLength={6}
                     disabled={isLoading}
                 />
               </div>
@@ -1647,7 +1618,7 @@ function DocumentTab() {
                             {/*</p>*/}
 
                             <h3 className="text-lg font-semibold text-gray-800">
-                                {'제출한 서류 갯수'}
+                                {'모든 서류 갯수'}
                             </h3>
                         </div>
                     </div>
@@ -1664,7 +1635,7 @@ function DocumentTab() {
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                         <i className="ri-folder-line text-blue-600 mr-2"></i>
-                        제출된 서류 ({totalElements}건)
+                        확인가능 서류 ({totalElements}건)
                     </h3>
                 </div>
 

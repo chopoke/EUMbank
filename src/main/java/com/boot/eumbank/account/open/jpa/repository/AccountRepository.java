@@ -3,21 +3,30 @@ package com.boot.eumbank.account.open.jpa.repository;
 import com.boot.eumbank.account.open.dto.account.CustomerDTO;
 import com.boot.eumbank.account.open.entity.account.Account;
 import com.boot.eumbank.account.open.entity.account.QAccount;
+import com.boot.eumbank.account.open.enums.PasswordChangeResult;
+import com.boot.eumbank.account.open.enums.PinChangeResult;
 import com.boot.eumbank.account.open.util.AccountIds;
+import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.customer.entity.QCustomer;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.StringTemplate;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -31,7 +40,7 @@ public class AccountRepository {
 
     private final EntityManager em;
 
-    private final PasswordEncoder passwordEncoder;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     private final Logger logger = LoggerFactory.getLogger(AccountRepository.class);
 
@@ -187,4 +196,95 @@ public class AccountRepository {
         return customer;
     }
 
+    /**
+     * PIN 번호 변경
+     * @param pin     새로운 PIN
+     */
+    public PinChangeResult changePinNumber(String pin) {
+        logger.info("AccountRepository => changePinNumber()");
+
+        try {
+            // 1. 인증 확인
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof Customer)) {
+                logger.error("인증 정보가 없거나 잘못되었습니다.");
+                return PinChangeResult.CUSTOMER_NOT_FOUND;
+            }
+
+            Customer jwtCustomer = (Customer) authentication.getPrincipal();
+            QCustomer a = QCustomer.customer;
+            Instant now = Instant.now();
+
+            // 2. PIN 형식 검증 (6자리 숫자)
+            if (pin == null || !pin.matches("^\\d{6}$")) {
+                logger.error("잘못된 PIN 형식: {}", pin);
+                return PinChangeResult.INVALID_FORMAT;
+            }
+
+            // 3. 현재 사용자의 PIN 정보 조회
+            Customer customer = qf.selectFrom(a)
+                    .where(a.customerNo.eq(jwtCustomer.getCustomerNo()))
+                    .fetchOne();
+
+            // 4. 고객 정보 null 체크 (안전하게)
+            if (customer == null) {
+                logger.error("고객 정보를 찾을 수 없습니다. customerNo: {}", jwtCustomer.getCustomerNo());
+                return PinChangeResult.CUSTOMER_NOT_FOUND;
+            }
+
+            // 5. 새로운 PIN과 현재 PIN이 같은지 확인
+            if (pin.equals(customer.getPinNumber())) {
+                logger.warn("새로운 PIN이 현재 PIN과 동일합니다.");
+                return PinChangeResult.DUPLICATE_PIN;
+            }
+
+            // 6. PIN 변경 (UPDATE)
+            long updatedCount = qf.update(a)
+                    .set(a.pinNumber, pin)
+                    .set(a.cUpdatedAt, now)
+                    .where(a.customerNo.eq(jwtCustomer.getCustomerNo()))
+                    .execute();
+
+            if (updatedCount > 0) {
+                logger.info("PIN 변경 완료. customerNo: {}", jwtCustomer.getCustomerNo());
+                return PinChangeResult.SUCCESS;
+            } else {
+                logger.error("PIN 변경 실패. updatedCount: 0");
+                return PinChangeResult.UPDATE_FAILED;
+            }
+
+        } catch (ClassCastException e) {
+            logger.error("인증 정보 타입 변환 오류: {}", e.getMessage(), e);
+            return PinChangeResult.CUSTOMER_NOT_FOUND;
+
+        } catch (Exception e) {
+            logger.error("PIN 변경 중 예외 발생: {} - {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            return PinChangeResult.ERROR;
+        }
+    }
+
+    /**
+     * 패스워드 번호 변경
+     * @param password     새로운 PIN
+     */
+    @Transactional
+    public PasswordChangeResult changePasswordNumber(Integer CustomerNo, String password) {
+        logger.info("AccountRepository => changePasswordNumber()");
+
+        QCustomer a = QCustomer.customer;
+        Instant now = Instant.now();
+
+        // 6. PIN 변경 (UPDATE)
+        long updatedCount = qf.update(a)
+                .set(a.cPassword, passwordEncoder.encode(password))
+                .set(a.cUpdatedAt, now)
+                .where(a.customerNo.eq(CustomerNo))
+                .execute();
+
+        if(updatedCount > 0) {
+            return PasswordChangeResult.SUCCESS;
+        } else {
+            return PasswordChangeResult.UPDATE_FAILED;
+        }
+    }
 }
