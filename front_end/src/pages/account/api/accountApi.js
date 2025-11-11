@@ -75,7 +75,7 @@ export async function checkPinNumber() {
  */
 export async function resetPin(pin) {
     try {
-        const res = await api.put("/api/pin-change", { pin: pin });
+        const res = await api.put("/api/pinChange", { pin: pin });
         return res.data;
     } catch (error) {
         console.error("PIN 재설정 실패:", error.response?.data || error.message);
@@ -94,12 +94,11 @@ export async function resetPin(pin) {
  * @param newPassword
  * @param confirmPassword
  */
-export async function resetPassword(principlePassword, newPassword, confirmPassword) {
+export async function resetPassword(principlePassword, newPassword) {
     try {
         const res = await api.put("/api/password-change", {
             principlePassword: principlePassword,
-            newPassword: newPassword,
-            confirmPassword: confirmPassword
+            newPassword: newPassword
         });
         return res.data;
     } catch (error) {

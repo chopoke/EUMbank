@@ -1,19 +1,26 @@
 package com.boot.eumbank.account.open.service.account.Impl;
 
 import com.boot.eumbank.account.open.dto.account.CustomerDTO;
+import com.boot.eumbank.account.open.entity.account.Account;
+import com.boot.eumbank.account.open.enums.PasswordChangeResult;
+import com.boot.eumbank.account.open.enums.PinChangeResult;
 import com.boot.eumbank.account.open.jpa.repository.AccountRepository;
 import com.boot.eumbank.account.open.jpa.repository.custom.CustomerRepository;
 import com.boot.eumbank.account.open.service.account.AccoutService;
 import com.boot.eumbank.customer.entity.Customer;
+import com.boot.eumbank.customer.entity.QCustomer;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,9 +28,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AccountServiceImpl implements AccoutService {
 
+    private final JPAQueryFactory qf;
+
     private final CustomerRepository customerRepository;
 
     private final AccountRepository accountRepository;
+
+    private final PasswordEncoder passwordEncoder;
 
     private Logger logger = LoggerFactory.getLogger(AccoutService.class);
 
@@ -97,5 +108,61 @@ public class AccountServiceImpl implements AccoutService {
 
         return map;
     }
+
+    /**
+     * pin 번호 변경
+     * @param pin
+     * @return
+     */
+    @Override
+    @Transactional
+    public PinChangeResult changePinNumber(String pin) {
+        return accountRepository.changePinNumber(pin);
+    }
+
+    /**
+     * 비밀번호 변경
+     */
+    @Override
+    @Transactional
+    public PasswordChangeResult changePassword(String currentPassword, String newPassword) {
+
+            // 1. 인증 확인
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !(authentication.getPrincipal() instanceof Customer)) {
+                logger.error("인증 정보가 없거나 잘못되었습니다.");
+                return PasswordChangeResult.CUSTOMER_NOT_FOUND;
+            }
+
+            // 2. 고객 정보가져오기
+            Customer jwtCustomer = (Customer) authentication.getPrincipal();
+            QCustomer a = QCustomer.customer;
+            Customer customer = qf.selectFrom(a)
+                    .where(a.customerNo.eq(jwtCustomer.getCustomerNo()))
+                    .fetchOne();
+
+            // 5. 인증 : 기존 쓰던 패드워드를 알고 있는지 파악
+            if (!passwordEncoder.matches(currentPassword, customer.getCPassword())) {
+                logger.warn("현재 패스워드랑 일치하지 않습니다.");
+                return PasswordChangeResult.DUPLICATE_PASSWORD;
+            }
+
+            // 4. 고객 정보
+            if (customer == null) {
+                logger.error("고객 정보를 찾을 수 없습니다. customerNo: {}", jwtCustomer.getCustomerNo());
+                return PasswordChangeResult.CUSTOMER_NOT_FOUND;
+            }
+
+
+            // 5. 새로운 패스워드를 기존과 똑같은지?
+            if (passwordEncoder.matches(newPassword, customer.getCPassword())) {
+                logger.warn("신규 비밀번호가 기존 패스워드랑 일치합니다..");
+                return PasswordChangeResult.DUPLICATE_PASSWORD;
+            }
+
+            return accountRepository.changePasswordNumber(jwtCustomer.getCustomerNo(), newPassword);
+
+    }
+
 
 }
