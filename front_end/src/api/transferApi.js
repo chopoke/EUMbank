@@ -28,6 +28,7 @@ export const transferApi = {
   // === 예약 이체 관리 ===
   getReserveTransfers: (accountNo) => api.get(`/api/transfer/reserve/${accountNo}`),
   cancelReserveTransfer: (orderId) => api.delete(`/api/transfer/reserve/${orderId}`),
+  updateTransferOrderStatus: (payload) => api.patch('/api/transfer/orders/status', payload),
   
   // === 수취인 관련 ===
   // 예금주 조회 (POST /api/transfer/account-holder)

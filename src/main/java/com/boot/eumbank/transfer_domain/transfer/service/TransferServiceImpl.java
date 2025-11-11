@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -279,6 +280,7 @@ public class TransferServiceImpl implements TransferService {
                     .to_status("SCHEDULED")
                     .to_memo(request.getMemo())
                     .to_created_at(now)  // 명시적으로 현재 시간 전달
+                    .to_execution_type("RESERVE")
                     .build();
             log.info("3-4. TransferOrder Builder 호출 완료");
             log.info("3. 예약 이체 엔티티 생성 완료: {}", transferOrder);
@@ -304,6 +306,7 @@ public class TransferServiceImpl implements TransferService {
                     .status(savedOrder.getTo_status())
                     .memo(savedOrder.getTo_memo())
                     .createdAt(formatDateTime(savedOrder.getTo_created_at()))
+                    .executionType(savedOrder.getTo_execution_type())
                     .build();
             log.info("5. 응답 DTO 생성 완료: {}", response);
             log.info("=== TransferServiceImpl.createReserveTransfer 성공 완료 ===");
@@ -467,6 +470,7 @@ public class TransferServiceImpl implements TransferService {
                         .to_status("SCHEDULED")
                         .to_memo(request.getMemo())
                         .to_created_at(now)
+                        .to_execution_type("AUTO")
                         .build();
                 
                 // 예약 이체 저장
@@ -935,6 +939,75 @@ public class TransferServiceImpl implements TransferService {
 
         order.cancel();
         transferOrderRepository.save(order);
+    }
+
+    /**
+     * [예약/자동 이체 상태 일괄 변경]
+     * - 지정된 주문 ID 목록의 상태를 일괄 업데이트
+     * - 지원 상태: SCHEDULED, PAUSED, CANCELLED
+     *
+     * @param orderIds    상태를 변경할 예약/자동 이체 주문 ID 목록
+     * @param targetStatus 변경할 목표 상태
+     */
+    @Override
+    @Transactional
+    public void updateTransferOrderStatus(List<Integer> orderIds, String targetStatus) {
+        log.info("예약/자동 이체 상태 일괄 변경 - 주문IDs: {}, 목표 상태: {}", orderIds, targetStatus);
+
+        if (orderIds == null || orderIds.isEmpty()) {
+            throw new IllegalArgumentException("상태를 변경할 예약 이체 ID가 필요합니다.");
+        }
+
+        if (!Set.of("SCHEDULED", "PAUSED", "CANCELLED").contains(targetStatus)) {
+            throw new IllegalArgumentException("지원하지 않는 상태 코드입니다: " + targetStatus);
+        }
+
+        List<TransferOrder> orders = transferOrderRepository.findAllById(orderIds);
+        if (orders.isEmpty()) {
+            throw new AccountNotFoundException("예약 이체를 찾을 수 없습니다.");
+        }
+
+        List<TransferOrder> updatedOrders = new ArrayList<>();
+
+        for (TransferOrder order : orders) {
+            String currentStatus = order.getTo_status();
+
+            if ("CANCELLED".equals(targetStatus)) {
+                if (order.isCompleted()) {
+                    throw new TransferException("TRANSFER_ERROR", "이미 완료된 예약 이체는 취소할 수 없습니다.");
+                }
+                order.cancel();
+                updatedOrders.add(order);
+                continue;
+            }
+
+            if ("PAUSED".equals(targetStatus)) {
+                if (!"SCHEDULED".equals(currentStatus)) {
+                    log.warn("PAUSED로 전환 불가 상태 - 주문ID: {}, 현재 상태: {}", order.getTo_order_id(), currentStatus);
+                    continue;
+                }
+                order.updateStatus("PAUSED");
+                updatedOrders.add(order);
+                continue;
+            }
+
+            if ("SCHEDULED".equals(targetStatus)) {
+                if (!"PAUSED".equals(currentStatus)) {
+                    log.warn("SCHEDULED로 전환 불가 상태 - 주문ID: {}, 현재 상태: {}", order.getTo_order_id(), currentStatus);
+                    continue;
+                }
+                order.updateStatus("SCHEDULED");
+                updatedOrders.add(order);
+            }
+        }
+
+        if (updatedOrders.isEmpty()) {
+            log.info("상태가 변경된 예약 이체가 없습니다. orderIds={}, targetStatus={}", orderIds, targetStatus);
+            return;
+        }
+
+        transferOrderRepository.saveAll(updatedOrders);
+        log.info("예약/자동 이체 상태 변경 완료 - 변경된 건수: {}", updatedOrders.size());
     }
 
     /**
@@ -1676,6 +1749,7 @@ public class TransferServiceImpl implements TransferService {
                 .status(order.getTo_status())
                 .memo(order.getTo_memo())
                 .createdAt(formatDateTime(order.getTo_created_at()))
+                .executionType(order.getTo_execution_type())
                 .build();
     }
 
