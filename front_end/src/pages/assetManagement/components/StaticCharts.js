@@ -818,6 +818,7 @@ export function WeeklyDeltaBarsStatic({
   data = [+420, -180, +360, +640],
   labels = ["1주", "2주", "3주", "4주"],
 }) {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
   const W = 220; // 고정 너비 (카드 크기에 맞춤)
   const H = 120, baseY = H / 2;
   const maxAbs = Math.max(...data.map((v) => Math.abs(v))) || 1;
@@ -861,15 +862,18 @@ export function WeeklyDeltaBarsStatic({
     gap = 6;
   }
 
+  const totalBarWidth = dataCount * barW + (dataCount - 1) * gap;
+  const startX = dataCount === 1
+    ? (W - barW) / 2
+    : paddingLeft + (availableWidth - totalBarWidth) / 2;
+
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 }).format(amount);
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={svgStyle(120)} aria-label="주간 증감">
       <line x1="0" y1={baseY} x2={W} y2={baseY} stroke="#E5E7EB" strokeWidth="1" />
       {data.map((v, i) => {
-        // 1개일 때는 중앙에 배치
-        const totalBarWidth = dataCount * barW + (dataCount - 1) * gap;
-        const startX = dataCount === 1 
-          ? (W - barW) / 2 
-          : paddingLeft + (availableWidth - totalBarWidth) / 2;
         const x = startX + i * (barW + gap);
         const targetH = (Math.abs(v) / maxAbs) * (H / 2 - 10);
         const h = targetH * progress;
@@ -877,14 +881,107 @@ export function WeeklyDeltaBarsStatic({
         const color = v >= 0 ? "#2563eb" : "#9CA3AF";
         const circleRadius = barW > 18 ? 2.2 : barW > 15 ? 1.8 : 1.5; // 막대 크기에 따라 점 크기 조정
         const fontSize = barW < 18 ? 9 : 10; // 막대가 작으면 폰트도 작게
+        const overlayWidth = Math.max(barW + gap, barW + 14);
+        const overlayX = x - (overlayWidth - barW) / 2;
         return (
           <g key={i}>
             <rect x={x} y={y} width={barW} height={h} rx="2" fill={color} />
             <circle cx={x + barW / 2} cy={v >= 0 ? y : y + h} r={circleRadius} fill={color} />
             <text x={x + barW / 2} y={H - 6} textAnchor="middle" fontSize={fontSize} fill="#9CA3AF">{labels[i]}</text>
+            <rect
+              x={overlayX}
+              y={0}
+              width={overlayWidth}
+              height={H}
+              fill="transparent"
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            />
           </g>
         );
       })}
+      {hoveredIndex !== null && data[hoveredIndex] !== undefined && (() => {
+        const value = data[hoveredIndex];
+        const absValue = Math.abs(value);
+        const deltaWon = Math.round(value * 1000); // 천원 단위 -> 원
+        const formattedWon = `${value >= 0 ? "+" : "-"}${formatCurrency(Math.abs(deltaWon))}원`;
+        const pointX = startX + hoveredIndex * (barW + gap) + barW / 2;
+        const barHeight = (absValue / maxAbs) * (H / 2 - 10);
+        const pointY = value >= 0 ? baseY - barHeight * progress : baseY + barHeight * progress;
+        const tooltipWidth = 132;
+        const tooltipHeight = 70;
+        let tooltipX = pointX - tooltipWidth / 2;
+        if (tooltipX < 8) tooltipX = 8;
+        if (tooltipX + tooltipWidth > W - 8) tooltipX = W - tooltipWidth - 8;
+
+        let tooltipY;
+        if (value >= 0) {
+          tooltipY = pointY - tooltipHeight - 12;
+          if (tooltipY < 6) tooltipY = pointY + 12;
+        } else {
+          tooltipY = pointY + 12;
+          if (tooltipY + tooltipHeight > H - 6) tooltipY = pointY - tooltipHeight - 12;
+        }
+
+        const label = labels[hoveredIndex] || `${hoveredIndex + 1}주`;
+        const statusText = value >= 0 ? "증가" : "감소";
+        const statusColor = value >= 0 ? "#047857" : "#B91C1C";
+
+        return (
+          <g>
+            <line
+              x1={pointX}
+              y1={4}
+              x2={pointX}
+              y2={H - 4}
+              stroke="#9CA3AF"
+              strokeWidth="1"
+              strokeDasharray="4 4"
+              opacity="0.4"
+            />
+            <rect
+              x={tooltipX}
+              y={tooltipY}
+              width={tooltipWidth}
+              height={tooltipHeight}
+              rx="6"
+              fill="#FFFFFF"
+              stroke="#E5E7EB"
+              strokeWidth="1"
+              filter="drop-shadow(0 4px 6px rgba(0,0,0,0.1))"
+            />
+            <text
+              x={tooltipX + tooltipWidth / 2}
+              y={tooltipY + 18}
+              textAnchor="middle"
+              fontSize="12"
+              fill="#111827"
+              fontWeight="600"
+            >
+              {label}
+            </text>
+            <text
+              x={tooltipX + tooltipWidth / 2}
+              y={tooltipY + 36}
+              textAnchor="middle"
+              fontSize="11"
+              fill="#374151"
+            >
+              {formattedWon}
+            </text>
+            <text
+              x={tooltipX + tooltipWidth / 2}
+              y={tooltipY + 52}
+              textAnchor="middle"
+              fontSize="11"
+              fill={statusColor}
+              fontWeight="600"
+            >
+              {statusText}
+            </text>
+          </g>
+        );
+      })()}
     </svg>
   );
 }
