@@ -290,6 +290,7 @@ export function CompactMonthlyChart({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragStartViewStart, setDragStartViewStart] = useState(0);
+  const [dragWindowLength, setDragWindowLength] = useState(0);
   const svgRef = useRef(null);
   const H = height, W = 960;
   
@@ -338,8 +339,10 @@ export function CompactMonthlyChart({
   const niceMax = Math.ceil(domainMax / step) * step;
 
   // 좌표 변환 (visibleData 기준)
-  const stepX = visibleData.length > 0 ? innerW / visibleData.length : innerW;
+  const windowLength = Math.max(1, visibleData.length);
+  const stepX = innerW / windowLength;
   const toXMid = (i) => padLeft + i * stepX + stepX / 2;
+  const toXLeftEdge = (i) => padLeft + i * stepX;
 
   // 막대/라인 보조 값
   const barDenominator = niceMax === 0 ? 1 : niceMax;
@@ -378,30 +381,69 @@ export function CompactMonthlyChart({
     };
   });
 
+  const parseDate = (value) => {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const yearMarkers = [];
+  let lastYear = null;
+  visibleData.forEach((item, index) => {
+    const date = parseDate(item.periodStartDate);
+    if (!date) {
+      return;
+    }
+    const year = date.getFullYear();
+    const markerX = toXLeftEdge(index);
+    if (lastYear === null) {
+      yearMarkers.push({ x: markerX, year, isInitial: true });
+      lastYear = year;
+      return;
+    }
+    if (year !== lastYear) {
+      yearMarkers.push({ x: markerX, year, isInitial: false });
+      lastYear = year;
+    }
+  });
+
   // 드래그 핸들러
   const handleMouseDown = (e) => {
     if (e.button !== 0) return; // 왼쪽 버튼만
     setIsDragging(true);
     setDragStartX(e.clientX);
     setDragStartViewStart(viewStart);
+    const currentWindow = (viewEnd !== null ? viewEnd : data.length) - viewStart;
+    setDragWindowLength(Math.max(1, currentWindow));
   };
   
   const handleMouseMove = (e) => {
     if (!isDragging) return;
     
+    const windowLength = dragWindowLength || Math.max(1, (viewEnd !== null ? viewEnd : data.length) - dragStartViewStart);
+    const stepPerItem = innerW / windowLength;
+    if (stepPerItem <= 0) return;
+
     const deltaX = e.clientX - dragStartX;
-    const deltaIndex = Math.round(-deltaX / (innerW / visibleData.length));
-    const newViewStart = Math.max(0, Math.min(data.length - visibleData.length, dragStartViewStart + deltaIndex));
-    const newViewEnd = newViewStart + visibleData.length;
-    
-    if (newViewEnd <= data.length) {
-      setViewStart(newViewStart);
-      setViewEnd(newViewEnd);
+    const threshold = stepPerItem * 0.35;
+    if (Math.abs(deltaX) < threshold) {
+      return;
     }
+
+    const direction = deltaX > 0 ? -1 : 1;
+    const maxStart = Math.max(0, data.length - windowLength);
+    const proposedStart = Math.max(0, Math.min(dragStartViewStart + direction, maxStart));
+    const newViewEnd = Math.min(data.length, proposedStart + windowLength);
+
+    setViewStart(proposedStart);
+    setViewEnd(newViewEnd);
+    setDragStartX(e.clientX);
+    setDragStartViewStart(proposedStart);
   };
   
   const handleMouseUp = () => {
     setIsDragging(false);
+    setDragWindowLength(0);
   };
   
   // 마우스 휠 줌 핸들러
@@ -492,7 +534,7 @@ export function CompactMonthlyChart({
         window.removeEventListener('mouseup', handleGlobalMouseUp);
       };
     }
-  }, [isDragging, dragStartX, dragStartViewStart, visibleData.length, data.length, innerW]);
+  }, [isDragging, dragStartX, dragStartViewStart, visibleData.length, data.length, innerW, dragWindowLength, viewEnd]);
 
   return (
     <div className="relative">
@@ -580,6 +622,43 @@ export function CompactMonthlyChart({
         {/* Y축 본선 */}
         <line x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + innerH}
               stroke="#D1D5DB" strokeWidth="1.5" />
+
+        {/* 연도 구분선/레이블 */}
+        {yearMarkers.map((marker) =>
+          marker.isInitial ? (
+            <text
+              key={`year-label-${marker.year}-${marker.x}`}
+              x={marker.x + 6}
+              y={padTop + 14}
+              fontSize="11"
+              fill="#9CA3AF"
+              fontWeight="500"
+            >
+              {`${marker.year}년`}
+            </text>
+          ) : (
+            <g key={`year-line-${marker.year}-${marker.x}`}>
+              <line
+                x1={marker.x}
+                y1={padTop}
+                x2={marker.x}
+                y2={padTop + innerH}
+                stroke="#CBD5F5"
+                strokeDasharray="4 4"
+                strokeWidth="1"
+              />
+              <text
+                x={marker.x + 6}
+                y={padTop + 14}
+                fontSize="11"
+                fill="#9CA3AF"
+                fontWeight="500"
+              >
+                {`${marker.year}년`}
+              </text>
+            </g>
+          )
+        )}
 
         {/* === 순자산 영역 채우기 (라인 아래) === */}
         {showNet && visibleData.length > 0 && (

@@ -462,6 +462,7 @@ export default function AssetAnalysis() {
             <CompactMonthlyChart
               data={monthlyTrends?.map(t => ({
                 m: t.month,
+                periodStartDate: t.periodStartDate,
                 income: chartDataTypes.income ? (t.income ? Number(t.income) : 0) : 0,
                 expense: chartDataTypes.expense ? (t.expense ? Number(t.expense) : 0) : 0,
                 net: chartDataTypes.net ? (t.netWorth ? Number(t.netWorth) / 10000 : 0) : 0, // 순자산을 만원 단위로 변환
