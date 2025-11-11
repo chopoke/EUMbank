@@ -177,7 +177,7 @@ export function LineChartWithDatesStatic({
             const y = toY(value);
             return (
               <g key={`grid-${idx}`}>
-                {showGrid && (
+      {showGrid && (
                   <line
                     x1={padLeft}
                     y1={y}
@@ -269,20 +269,18 @@ export function LineChartWithDatesStatic({
 /* ------------------- 월별 복합 (누적막대 + 라인) - 주식차트 스타일 ------------------- */
 export function CompactMonthlyChart({
   data = [
-    { m: "7월",  income: 350, expense: 120, net: 230 },
-    { m: "8월",  income: 300, expense: 140, net: 160 },
-    { m: "9월",  income: 320, expense:  90, net: 230 },
-    { m: "10월", income: 330, expense: 110, net: 220 },
+    { m: "7월", income: 350, expense: 120 },
+    { m: "8월", income: 300, expense: 140 },
+    { m: "9월", income: 320, expense: 90 },
+    { m: "10월", income: 330, expense: 110 },
   ],
-  height = 360,                                 // ⬅ 세로 크기
-  colors = { income: "#10b981", expense: "#ef4444", net: "#0ea5e9" },
-  yMode = "auto",                               // "auto" | "bar" | "line"
-  yTicks = 4,                                   // 눈금 개수(0 포함 yTicks+1줄)
-  yUnitLabel = "만",                            // 눈금 단위 텍스트
-  yUnitDiv = 1,                                 // 라벨 표시에 나눌 값 (예: 억 단위로 보려면 1000)
-  showIncome = true,                            // 수익 표시 여부
-  showExpense = true,                           // 소비 표시 여부
-  showNet = true,                               // 순변동 표시 여부
+  height = 360,
+  colors = { income: "#10b981", expense: "#ef4444" },
+  yTicks = 4,
+  yUnitLabel = "만",
+  yUnitDiv = 1,
+  showIncome = true,
+  showExpense = true,
 }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [viewStart, setViewStart] = useState(0); // 보이는 범위 시작 인덱스
@@ -318,18 +316,10 @@ export function CompactMonthlyChart({
   const innerW = W - padLeft - padRight;
   const innerH = H - padTop - padBottom;
 
-  // 스케일 계산 (visibleData 기준) - 먼저 계산해야 함
-  // 수익과 소비를 별도로 계산 (수익은 양수, 소비는 음수로 처리)
-  const maxIncome = showIncome ? Math.max(...visibleData.map(d => d.income || 0)) : 0;
-  const maxExpense = showExpense ? Math.max(...visibleData.map(d => d.expense || 0)) : 0;
-  const minNetWorth = showNet ? Math.min(...visibleData.map(d => d.net || 0)) : 0;
-  const maxNetWorth = showNet ? Math.max(...visibleData.map(d => d.net || 0)) : 0;
-  
-  // Y축 범위: 수익(양수), 소비(음수로 변환), 순자산(양수만)을 모두 포함
-  // 순자산은 항상 양수이므로, 수익/소비 막대와 순자산 라인을 함께 표시하기 위해 범위 조정
-  const maxPositive = Math.max(maxIncome, maxNetWorth, 0);
-  const maxNegative = maxExpense;
-  const domainMax = Math.max(maxPositive, maxNegative) || 1;
+  // 스케일 계산 (visibleData 기준)
+  const maxIncome = showIncome ? Math.max(...visibleData.map((d) => d.income || 0)) : 0;
+  const maxExpense = showExpense ? Math.max(...visibleData.map((d) => d.expense || 0)) : 0;
+  const domainMax = Math.max(maxIncome, maxExpense, 1);
 
   // 예쁜 눈금(step) 계산
   const rawStep = domainMax / yTicks;
@@ -338,7 +328,7 @@ export function CompactMonthlyChart({
   const step = (steps.find(s => s * mag >= rawStep) || 10) * mag;
   const niceMax = Math.ceil(domainMax / step) * step;
 
-  // 좌표 변환 (visibleData 기준)
+  // 좌표 변환
   const windowLength = Math.max(1, visibleData.length);
   const stepX = innerW / windowLength;
   const toXMid = (i) => padLeft + i * stepX + stepX / 2;
@@ -354,30 +344,16 @@ export function CompactMonthlyChart({
   const minLabelSpacing = 60; // 픽셀 단위 최소 간격
   const labelInterval = Math.max(1, Math.ceil(minLabelSpacing / Math.max(stepX, 1e-6)));
 
-  // 순자산 라인용 Y 좌표 (순자산은 항상 양수이므로 전체 높이 사용)
-  // 순자산은 0부터 시작하는 것이 아니라 최소값부터 최대값까지의 범위를 사용
-  const netWorthMin = minNetWorth;
-  const netWorthMax = maxNetWorth;
-  const netWorthRange = netWorthMax - netWorthMin || 1;
-  const toYNet = (v) => {
-    // 순자산을 전체 높이에 매핑 (최소값이 아래, 최대값이 위)
-    const normalized = (v - netWorthMin) / netWorthRange;
-    return padTop + innerH - (normalized * innerH);
-  };
-
-  const animationKey = visibleData.map(d => `${d.m}:${d.income}:${d.expense}:${d.net}`).join("|");
-  const animationProgress = useAnimationProgress([animationKey, showIncome, showExpense, showNet], 900);
+  const animationKey = visibleData.map(d => `${d.m}:${d.income}:${d.expense}`).join("|");
+  const animationProgress = useAnimationProgress([animationKey, showIncome, showExpense], 900);
 
   const animatedData = visibleData.map(d => {
     const income = showIncome ? (d.income || 0) * animationProgress : 0;
     const expense = showExpense ? (d.expense || 0) * animationProgress : 0;
-    const netValue = d.net || 0;
-    const animatedNet = netWorthMin + (netValue - netWorthMin) * animationProgress;
     return {
       original: d,
       incomeAnimated: income,
       expenseAnimated: expense,
-      netAnimated: animatedNet,
     };
   });
 
@@ -475,51 +451,14 @@ export function CompactMonthlyChart({
       setViewEnd(newEnd);
     }
   };
-  
+
   // 반응형 막대 폭
   const barW = Math.max(24, Math.min(64, stepX * 0.74));
-
-  // 라인 좌표 - 순변동은 toYNet 사용 (showNet이 true일 때만, visibleData 기준)
-  const linePts = showNet
-    ? animatedData.map((d, i) => `${toXMid(i)},${toYNet(d.netAnimated)}`).join(" ")
-    : "";
-
-  // 영역 채우기용 경로 (라인 아래 영역) - 순자산은 최소값 기준선까지
-  const areaPath = () => {
-    if (!showNet || !linePts) return "";
-    const firstX = toXMid(0);
-    const lastX = toXMid(visibleData.length - 1);
-    const bottomY = padTop + innerH; // 차트 하단
-    return `M ${firstX},${bottomY} L ${linePts} L ${lastX},${bottomY} Z`;
-  };
-
-  // 순자산 라인을 구간별로 나누어 색상 구분 (상승/하락 구간, visibleData 기준)
-  const getLineSegments = () => {
-    if (!showNet || visibleData.length < 2) return [];
-    const segments = [];
-    for (let i = 0; i < visibleData.length - 1; i++) {
-      const x1 = toXMid(i);
-      const y1 = toYNet(animatedData[i].netAnimated);
-      const x2 = toXMid(i + 1);
-      const y2 = toYNet(animatedData[i + 1].netAnimated);
-      const net1 = visibleData[i].net || 0;
-      const net2 = visibleData[i + 1].net || 0;
-      const color = net2 >= net1 ? "#10b981" : "#ef4444";
-      segments.push({ x1, y1, x2, y2, color });
-    }
-    return segments;
-  };
 
   // 라벨 포맷(단위 축약)
   const fmt = (v) => {
     const n = v / yUnitDiv;              // 예: 억 단위면 1000으로 나눔(만 → 억)
     return Number.isInteger(n) ? n : (+n.toFixed(2));
-  };
-
-  // 순자산 증감 색상 결정 (주식차트 스타일) - 순자산은 항상 양수이므로 상승/하락으로만 구분
-  const getNetColor = (net, prevNet) => {
-    if (prevNet === undefined || net >= prevNet) return "#10b981"; // 상승: 초록색
-    return "#ef4444"; // 하락: 빨간색
   };
 
   // 전역 마우스 이벤트 리스너
@@ -549,7 +488,7 @@ export function CompactMonthlyChart({
       </div>
       <svg
         ref={svgRef}
-        viewBox={`0 0 ${W} ${H}`}
+      viewBox={`0 0 ${W} ${H}`}
         style={{ 
           width: "100%", 
           height: H, 
@@ -557,70 +496,44 @@ export function CompactMonthlyChart({
           cursor: isDragging ? "grabbing" : "grab",
           userSelect: "none"
         }}
-        preserveAspectRatio="xMidYMid meet"
-        aria-label="월별 변화 추이"
+      preserveAspectRatio="xMidYMid meet"
+      aria-label="월별 변화 추이"
         onMouseDown={handleMouseDown}
         onWheel={handleWheel}
       >
-        <defs>
-          {/* 그라데이션 정의 (상승/하락) */}
-          <linearGradient id="areaGradientUp" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
-          </linearGradient>
-          <linearGradient id="areaGradientDown" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.3" />
-            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.05" />
-          </linearGradient>
-        </defs>
-
         {/* === Y축 그리드/라벨 === */}
-        {showNet ? (
-          // 순자산 표시 시: 순자산 범위 기준으로 그리드 표시
-          [...Array(yTicks + 1)].map((_, idx) => {
-            const v = minNetWorth + (netWorthRange / yTicks) * idx;
-            const y = toYNet(v);
-            return (
-              <g key={`grid-${idx}`}>
-                <line x1={padLeft} y1={y} x2={W - padRight} y2={y}
-                      stroke={idx % 2 === 0 ? "#D1D5DB" : "#E5E7EB"} 
-                      strokeWidth={idx % 2 === 0 ? 1 : 0.5}
-                      strokeDasharray={idx % 2 === 0 ? "none" : "4,4"} />
-                {idx % 2 === 0 && (
-                  <text x={padLeft - 12} y={y + 4} textAnchor="end"
-                        fontSize="11" fill="#9CA3AF" 
-                        fontWeight="400">
-                    {fmt(v)}{yUnitLabel}
-                  </text>
-                )}
-              </g>
-            );
-          })
-        ) : (
-          // 수익/소비만 표시 시: 0 기준선 중심으로 그리드 표시
-          [...Array(yTicks * 2 + 1)].map((_, idx) => {
-            const v = -niceMax + (step * idx);
-            const y = v >= 0 ? toYPositive(v) : toYNegative(v);
-            const isZero = Math.abs(v) < 0.01;
-            return (
-              <g key={`grid-${idx}`}>
-                <line x1={padLeft} y1={y} x2={W - padRight} y2={y}
-                      stroke={isZero ? "#9CA3AF" : idx % 2 === 0 ? "#D1D5DB" : "#E5E7EB"} 
-                      strokeWidth={isZero ? 1.5 : idx % 2 === 0 ? 1 : 0.5}
-                      strokeDasharray={isZero ? "2,2" : idx % 2 === 0 ? "none" : "4,4"} />
-                {idx % 2 === 0 && (
-                  <text x={padLeft - 12} y={y + 4} textAnchor="end"
-                        fontSize="11" fill={isZero ? "#6B7280" : "#9CA3AF"} 
-                        fontWeight={isZero ? "600" : "400"}>
-                    {fmt(v)}{yUnitLabel}
-                  </text>
-                )}
-              </g>
-            );
-          })
-        )}
-        {/* Y축 본선 */}
-        <line x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + innerH}
+        {[...Array(yTicks * 2 + 1)].map((_, idx) => {
+          const v = -niceMax + step * idx;
+          const y = v >= 0 ? toYPositive(v) : toYNegative(v);
+          const isZero = Math.abs(v) < 0.01;
+          return (
+            <g key={`grid-${idx}`}>
+              <line
+                x1={padLeft}
+                y1={y}
+                x2={W - padRight}
+                y2={y}
+                stroke={isZero ? "#9CA3AF" : idx % 2 === 0 ? "#D1D5DB" : "#E5E7EB"}
+                strokeWidth={isZero ? 1.5 : idx % 2 === 0 ? 1 : 0.5}
+                strokeDasharray={isZero ? "2,2" : idx % 2 === 0 ? "none" : "4,4"}
+              />
+              {idx % 2 === 0 && (
+                <text
+                  x={padLeft - 12}
+                  y={y + 4}
+                  textAnchor="end"
+                  fontSize="11"
+                  fill={isZero ? "#6B7280" : "#9CA3AF"}
+                  fontWeight={isZero ? "600" : "400"}
+                >
+                  {fmt(v)}{yUnitLabel}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      {/* Y축 본선 */}
+      <line x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + innerH}
               stroke="#D1D5DB" strokeWidth="1.5" />
 
         {/* 연도 구분선/레이블 */}
@@ -660,15 +573,6 @@ export function CompactMonthlyChart({
           )
         )}
 
-        {/* === 순자산 영역 채우기 (라인 아래) === */}
-        {showNet && visibleData.length > 0 && (
-          <path
-            d={areaPath()}
-            fill="url(#areaGradientUp)"
-            opacity="0.3"
-          />
-        )}
-
         {/* === 막대 그래프 (수익/소비 별도 표시) === */}
         {animatedData.map((d, i) => {
           const { original } = d;
@@ -693,8 +597,8 @@ export function CompactMonthlyChart({
           if (showExpense && expenseVal > 0) labelParts.push(`소비 ${fmt(expenseVal)}${yUnitLabel}`);
           const labelText = labelParts.length > 0 ? labelParts.join(" · ") : "";
 
-          return (
-            <g key={`bar-${i}`}>
+        return (
+          <g key={`bar-${i}`}>
               {/* 수익 막대 (0 기준선에서 위로) */}
               {showIncome && incomeVal > 0 && (
                 <rect 
@@ -736,81 +640,30 @@ export function CompactMonthlyChart({
                 onMouseLeave={() => setHoveredIndex(null)}
                 style={{ cursor: isDragging ? "grabbing" : "pointer" }}
               />
-              {/* 월/설명 라벨 (여백 넉넉히) */}
+            {/* 월/설명 라벨 (여백 넉넉히) */}
               {i % labelInterval === 0 && (
                 <text x={toXMid(i)} y={H - 34} textAnchor="middle"
                       fontSize="12" fill="#6B7280" fontWeight={isHovered ? "600" : "400"}>
                   {original.m}
-                </text>
+            </text>
               )}
               {labelText && i % labelInterval === 0 && (
                 <text x={toXMid(i)} y={H - 14} textAnchor="middle"
-                      fontSize="11" fill="#111827">
+                  fontSize="11" fill="#111827">
                   {labelText}
-                </text>
+            </text>
               )}
-            </g>
-          );
-        })}
-
-        {/* === 순변동 라인 (주식차트 스타일) === */}
-        {showNet && (
-          <>
-            {/* 구간별로 색상이 다른 라인 */}
-            {getLineSegments().map((seg, idx) => (
-              <line
-                key={`line-seg-${idx}`}
-                x1={seg.x1}
-                y1={seg.y1}
-                x2={seg.x2}
-                y2={seg.y2}
-                stroke={seg.color}
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ))}
-            {/* 데이터 포인트 */}
-            {animatedData.map((d, i) => {
-              const prevNet = i > 0 ? visibleData[i - 1].net || 0 : undefined;
-              const netColor = getNetColor(visibleData[i].net || 0, prevNet);
-              const isHovered = hoveredIndex === i;
-              const y = toYNet(d.netAnimated);
-              
-              return (
-                <g key={`pt-${i}`}>
-                  {/* 호버 시 큰 원 */}
-                  {isHovered && (
-                    <circle 
-                      cx={toXMid(i)} 
-                      cy={y} 
-                      r="6" 
-                      fill={netColor}
-                      opacity="0.2"
-                    />
-                  )}
-                  <circle 
-                    cx={toXMid(i)} 
-                    cy={y} 
-                    r={isHovered ? "5" : "4"} 
-                    fill={netColor}
-                    stroke="white"
-                    strokeWidth="2"
-                    style={{ transition: "r 0.2s" }}
-                  />
-                </g>
-              );
-            })}
-          </>
-        )}
+          </g>
+        );
+      })}
 
         {/* === 호버 툴팁 === */}
         {hoveredIndex !== null && hoveredIndex < visibleData.length && visibleData[hoveredIndex] && (() => {
-          const tooltipWidth = 120;
-          const tooltipHeight = 70;
+          const tooltipWidth = 140;
+          const tooltipHeight = 86;
           const tooltipPadding = 8;
           const pointX = toXMid(hoveredIndex);
-          const pointY = toYNet(animatedData[hoveredIndex].netAnimated);
+          const pointY = padTop + innerH / 2;
           
           // 툴팁 위치 계산 (화면 경계 내에 있도록)
           let tooltipX = pointX - tooltipWidth / 2;
@@ -843,6 +696,12 @@ export function CompactMonthlyChart({
           const textY1 = tooltipY + 20;
           const textY2 = tooltipY + 35;
           const textY3 = tooltipY + 50;
+          const textY4 = tooltipY + 65;
+
+          const hoveredData = visibleData[hoveredIndex];
+          const incomeValue = showIncome ? hoveredData.income || 0 : 0;
+          const expenseValue = showExpense ? hoveredData.expense || 0 : 0;
+          const netValue = incomeValue - expenseValue;
           
           return (
             <g>
@@ -879,35 +738,38 @@ export function CompactMonthlyChart({
               >
                 {visibleData[hoveredIndex].m}
               </text>
-              {showNet && (
-                <text
-                  x={textX}
-                  y={textY2}
-                  textAnchor="middle"
-                  fontSize="11"
-                  fill="#6B7280"
-                >
-                  순자산: {fmt(visibleData[hoveredIndex].net)}{yUnitLabel}원
-                </text>
-              )}
-              {((showIncome && visibleData[hoveredIndex].income > 0) || (showExpense && visibleData[hoveredIndex].expense > 0)) && (
-                <text
-                  x={textX}
-                  y={textY3}
-                  textAnchor="middle"
-                  fontSize="11"
-                  fill="#6B7280"
-                >
-                  {[
-                    showIncome && visibleData[hoveredIndex].income > 0 ? `수익: ${fmt(visibleData[hoveredIndex].income)}${yUnitLabel}` : null,
-                    showExpense && visibleData[hoveredIndex].expense > 0 ? `소비: ${fmt(visibleData[hoveredIndex].expense)}${yUnitLabel}` : null
-                  ].filter(Boolean).join(" · ")}
-                </text>
-              )}
+              <text
+                x={textX}
+                y={textY2}
+                textAnchor="middle"
+                fontSize="11"
+                fill="#6B7280"
+              >
+                수익: {fmt(incomeValue)}{yUnitLabel}
+              </text>
+              <text
+                x={textX}
+                y={textY3}
+                textAnchor="middle"
+                fontSize="11"
+                fill="#6B7280"
+              >
+                소비: {fmt(expenseValue)}{yUnitLabel}
+              </text>
+              <text
+                x={textX}
+                y={textY4}
+                textAnchor="middle"
+                fontSize="11"
+                fill={netValue >= 0 ? "#047857" : "#B91C1C"}
+                fontWeight="600"
+              >
+                순변동: {fmt(netValue)}{yUnitLabel}
+              </text>
             </g>
           );
         })()}
-      </svg>
+    </svg>
 
       {/* 범례 */}
       <div className="flex items-center justify-center gap-6 mt-4 text-xs flex-wrap">
@@ -923,12 +785,6 @@ export function CompactMonthlyChart({
             <span className="text-gray-600">소비</span>
           </div>
         )}
-              {showNet && (
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: "#10b981", backgroundColor: "transparent" }}></div>
-                  <span className="text-gray-600">순자산</span>
-                </div>
-              )}
       </div>
     </div>
   );

@@ -16,9 +16,8 @@ export default function AssetAnalysis() {
   const [count, setCount] = useState(null); // null이면 기본값 사용
   const [chartPeriod, setChartPeriod] = useState("MONTHLY"); // 월별 변화 추이 기간: MINUTELY, HOURLY, DAILY, WEEKLY, MONTHLY
   const [chartDataTypes, setChartDataTypes] = useState({
-    income: true,    // 수익 (입금)
-    expense: true,   // 소비 (출금)
-    net: true,       // 순변동 (수익 - 소비)
+    income: true,
+    expense: true,
   });
   const [chartSlice, setChartSlice] = useState(12); // 최근 N개 구간 표시
 
@@ -221,7 +220,7 @@ export default function AssetAnalysis() {
             <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/report">월간 리포트</Link>
           </div>
         </div>
-
+        
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-6 flex flex-col gap-8">
 
           {/* 상단 3열 그리드 */}
@@ -311,7 +310,7 @@ export default function AssetAnalysis() {
             <div className="flex flex-col gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-base font-semibold text-gray-900">자산 증감 상태</h2>
+                <h2 className="text-base font-semibold text-gray-900">자산 증감 상태</h2>
                   <div className="flex items-center gap-2">
                     {/* 기간 선택 */}
                     <select
@@ -446,15 +445,6 @@ export default function AssetAnalysis() {
                     />
                     <span className="text-gray-700">소비</span>
                   </label>
-                  <label className="flex items-center gap-1 text-xs cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={chartDataTypes.net}
-                      onChange={(e) => setChartDataTypes({ ...chartDataTypes, net: e.target.checked })}
-                      className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-gray-700">순자산</span>
-                  </label>
                 </div>
               </div>
             </div>
@@ -465,15 +455,12 @@ export default function AssetAnalysis() {
                 periodStartDate: t.periodStartDate,
                 income: chartDataTypes.income ? (t.income ? Number(t.income) : 0) : 0,
                 expense: chartDataTypes.expense ? (t.expense ? Number(t.expense) : 0) : 0,
-                net: chartDataTypes.net ? (t.netWorth ? Number(t.netWorth) / 10000 : 0) : 0, // 순자산을 만원 단위로 변환
               })) || []}
                height={420}
-               yMode="bar"
                yUnitLabel="만"
                yTicks={4}
                showIncome={chartDataTypes.income}
                showExpense={chartDataTypes.expense}
-               showNet={chartDataTypes.net}
             />
             {/* <StackedBarMonthlyStatic /> */}
             {/* <PlaceholderChart label="누적 막대 + 라인 복합 차트" height="h-64" /> */}
