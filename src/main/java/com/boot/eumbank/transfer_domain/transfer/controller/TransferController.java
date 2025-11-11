@@ -315,6 +315,33 @@ public class TransferController {
     }
 
     /**
+     * [예약/자동 이체 상태 변경 API]
+     * - 예약/자동 이체를 해지할 때 사용 (현재 CANCELLED만 지원)
+     * - PATCH /api/transfer/orders/status
+     */
+    @PatchMapping("/orders/status")
+    public ResponseEntity<Map<String, Object>> updateTransferOrderStatus(@RequestBody TransferOrderStatusUpdateRequest request,
+                                                                         @AuthenticationPrincipal Customer customer) {
+        log.info("예약/자동 이체 상태 변경 요청 - 주문 IDs: {}, 목표 상태: {}", request.getOrderIds(), request.getStatus());
+
+        if (customer == null) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", false);
+            result.put("message", "인증이 필요합니다.");
+            return ResponseEntity.status(401).body(result);
+        }
+
+        transferService.updateTransferOrderStatus(request.getOrderIds(), request.getStatus());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", "예약 이체 상태가 변경되었습니다.");
+        result.put("timestamp", LocalDateTime.now().toString());
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * [이체 확인 API]
      * - 이체 전 최종 확인 (잔액, 한도 등)
      * - POST /api/transfer/confirm

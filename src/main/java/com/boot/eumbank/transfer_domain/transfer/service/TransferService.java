@@ -32,6 +32,9 @@ public interface TransferService {
     // 예약 이체 취소
     void cancelReserveTransfer(Integer orderId);
     
+    // 예약/자동 이체 상태 일괄 변경
+    void updateTransferOrderStatus(List<Integer> orderIds, String targetStatus);
+    
     // 이체 확인
     TransferConfirmDto confirmTransfer(TransferConfirmDto request);
     
