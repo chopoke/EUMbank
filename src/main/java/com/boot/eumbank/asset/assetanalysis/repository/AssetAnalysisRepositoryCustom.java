@@ -2,9 +2,11 @@ package com.boot.eumbank.asset.assetanalysis.repository;
 
 import com.boot.eumbank.asset.assetanalysis.dto.AssetDistributionDto;
 import com.boot.eumbank.asset.assetanalysis.dto.MonthlyTrendDto;
+import com.boot.eumbank.asset.assetanalysis.dto.NextMonthScheduledTransferDto;
 import com.boot.eumbank.asset.assetanalysis.dto.WeeklyDeltaDto;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -64,6 +66,16 @@ public interface AssetAnalysisRepositoryCustom {
      * 30일간 총 증감 및 적금/투자 납입 합계
      */
     MonthlyTrendDto getLast30DaysSummary(Integer customerNo);
+
+    /**
+     * 다음달 예정된 예약/자동 이체 목록 조회
+     *
+     * @param customerNo 고객 번호
+     * @param rangeStart 조회 시작 (포함)
+     * @param rangeEnd   조회 종료 (포함)
+     * @return 예정 이체 정보 목록
+     */
+    List<NextMonthScheduledTransferDto> findNextMonthScheduledTransfers(Integer customerNo, LocalDateTime rangeStart, LocalDateTime rangeEnd);
 }
 
 

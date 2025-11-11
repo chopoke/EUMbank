@@ -10,8 +10,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -24,6 +31,17 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
 
     private final AssetAnalysisRepositoryCustom analysisRepository;
     private final AssetGoalRepository goalRepository;
+
+    private static final Map<String, String> EXECUTION_TYPE_LABELS = Map.ofEntries(
+            Map.entry("UTILITY", "공과금 자동이체"),
+            Map.entry("SUBSCRIPTION", "정기 구독 결제"),
+            Map.entry("INSURANCE", "보험료 자동이체"),
+            Map.entry("LOAN_INTEREST", "대출 이자 상환"),
+            Map.entry("RENT", "임대료 자동이체"),
+            Map.entry("EDUCATION", "교육비 자동이체"),
+            Map.entry("COMMUNICATION", "통신비 자동이체"),
+            Map.entry("CARD", "카드대금 자동이체")
+    );
 
     @Override
     @Transactional(readOnly = true)
@@ -95,10 +113,13 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
             currentNetWorth = currentNetWorth.subtract(netChange);
         }
 
+        UpcomingSpendingSummaryDto nextMonthSpendingSummary = buildNextMonthSpendingSummary(customerNo);
+
         return AssetAnalysisResponse.builder()
                 .goal(goalDto)
                 .distribution(distributionDto)
                 .deltaSummary(deltaSummaryDto)
+                .nextMonthSpending(nextMonthSpendingSummary)
                 .monthlyTrends(monthlyTrends)
                 .build();
     }
@@ -152,6 +173,207 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
                 .expectedAchievementDate(expectedDate)
                 .achievementStatus(getAchievementStatus(achievementRate))
                 .build();
+    }
+
+    private UpcomingSpendingSummaryDto buildNextMonthSpendingSummary(Integer customerNo) {
+        LocalDate nextMonthStart = LocalDate.now().plusMonths(1).withDayOfMonth(1);
+        LocalDate nextMonthEnd = nextMonthStart.plusMonths(1).minusDays(1);
+
+        List<NextMonthScheduledTransferDto> transfers = analysisRepository.findNextMonthScheduledTransfers(
+                customerNo,
+                nextMonthStart.atStartOfDay(),
+                nextMonthEnd.atTime(LocalTime.MAX)
+        );
+
+        if (transfers.isEmpty()) {
+            return UpcomingSpendingSummaryDto.builder()
+                    .rangeStart(nextMonthStart)
+                    .rangeEnd(nextMonthEnd)
+                    .totalAmount(BigDecimal.ZERO)
+                    .totalPaymentCount(0)
+                    .items(List.of())
+                    .build();
+        }
+
+        Map<String, SpendingAggregate> aggregates = new LinkedHashMap<>();
+
+        for (NextMonthScheduledTransferDto transfer : transfers) {
+            BigDecimal amount = transfer.getAmount() != null ? transfer.getAmount() : BigDecimal.ZERO;
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            String category = resolveUpcomingSpendingCategory(transfer);
+            SpendingAggregate aggregate = aggregates.computeIfAbsent(category, key -> new SpendingAggregate());
+            aggregate.addAmount(amount);
+            aggregate.incrementCount();
+            LocalDate scheduledDate = transfer.getScheduledAt() != null
+                    ? transfer.getScheduledAt().toLocalDate()
+                    : nextMonthStart;
+            aggregate.updateFirstDate(scheduledDate);
+            aggregate.updateMemoSample(chooseMemoSample(transfer));
+        }
+
+        if (aggregates.isEmpty()) {
+            return UpcomingSpendingSummaryDto.builder()
+                    .rangeStart(nextMonthStart)
+                    .rangeEnd(nextMonthEnd)
+                    .totalAmount(BigDecimal.ZERO)
+                    .totalPaymentCount(0)
+                    .items(List.of())
+                    .build();
+        }
+
+        BigDecimal totalAmount = aggregates.values().stream()
+                .map(SpendingAggregate::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return UpcomingSpendingSummaryDto.builder()
+                    .rangeStart(nextMonthStart)
+                    .rangeEnd(nextMonthEnd)
+                    .totalAmount(BigDecimal.ZERO)
+                    .totalPaymentCount(aggregates.values().stream().mapToInt(SpendingAggregate::count).sum())
+                    .items(List.of())
+                    .build();
+        }
+
+        List<UpcomingSpendingItemDto> items = aggregates.entrySet().stream()
+                .sorted((left, right) -> right.getValue().amount().compareTo(left.getValue().amount()))
+                .map(entry -> {
+                    SpendingAggregate aggregate = entry.getValue();
+                    BigDecimal amount = aggregate.amount().setScale(0, RoundingMode.DOWN);
+                    BigDecimal percentage = aggregate.amount()
+                            .divide(totalAmount, 4, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal.valueOf(100))
+                            .setScale(1, RoundingMode.HALF_UP);
+                    return UpcomingSpendingItemDto.builder()
+                            .category(entry.getKey())
+                            .amount(amount)
+                            .percentage(percentage)
+                            .paymentCount(aggregate.count())
+                            .firstScheduledDate(aggregate.firstDate())
+                            .memoSample(aggregate.memoSample())
+                            .build();
+                })
+                .toList();
+
+        int totalCount = aggregates.values().stream().mapToInt(SpendingAggregate::count).sum();
+
+        return UpcomingSpendingSummaryDto.builder()
+                .rangeStart(nextMonthStart)
+                .rangeEnd(nextMonthEnd)
+                .totalAmount(totalAmount.setScale(0, RoundingMode.DOWN))
+                .totalPaymentCount(totalCount)
+                .items(items)
+                .build();
+    }
+
+    private String resolveUpcomingSpendingCategory(NextMonthScheduledTransferDto transfer) {
+        if (hasText(transfer.getExecutionType())) {
+            String executionType = transfer.getExecutionType().trim().toUpperCase(Locale.ROOT);
+            if (EXECUTION_TYPE_LABELS.containsKey(executionType)) {
+                return EXECUTION_TYPE_LABELS.get(executionType);
+            }
+            return humanizeLabel(executionType);
+        }
+        if (hasText(transfer.getScheduleType())) {
+            String scheduleType = transfer.getScheduleType().trim();
+            if ("RECURRING".equalsIgnoreCase(scheduleType)) {
+                return "정기 자동이체";
+            }
+            if ("ONCE".equalsIgnoreCase(scheduleType)) {
+                return "예약 이체";
+            }
+            return humanizeLabel(scheduleType);
+        }
+        return "기타 예약 이체";
+    }
+
+    private String chooseMemoSample(NextMonthScheduledTransferDto transfer) {
+        if (hasText(transfer.getMemo())) {
+            return transfer.getMemo().trim();
+        }
+        if (hasText(transfer.getExecutionType())) {
+            return humanizeLabel(transfer.getExecutionType());
+        }
+        if (hasText(transfer.getScheduleType())) {
+            return humanizeLabel(transfer.getScheduleType());
+        }
+        return null;
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    private String humanizeLabel(String raw) {
+        if (!hasText(raw)) {
+            return "기타";
+        }
+        String normalized = raw.trim().replace('_', ' ');
+        String[] parts = normalized.toLowerCase(Locale.ROOT).split("\\s+");
+        StringBuilder builder = new StringBuilder();
+        for (String part : parts) {
+            if (part.isBlank()) continue;
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(part.charAt(0)))
+                    .append(part.substring(1));
+        }
+        return builder.length() > 0 ? builder.toString() : normalized;
+    }
+
+    private static final class SpendingAggregate {
+        private BigDecimal amount = BigDecimal.ZERO;
+        private int count;
+        private LocalDate firstDate;
+        private String memoSample;
+
+        void addAmount(BigDecimal additional) {
+            if (additional == null) {
+                return;
+            }
+            amount = amount.add(additional);
+        }
+
+        void incrementCount() {
+            count++;
+        }
+
+        void updateFirstDate(LocalDate candidate) {
+            if (candidate == null) {
+                return;
+            }
+            if (firstDate == null || candidate.isBefore(firstDate)) {
+                firstDate = candidate;
+            }
+        }
+
+        void updateMemoSample(String memo) {
+            if (memo == null || memo.isBlank()) {
+                return;
+            }
+            if (memoSample == null) {
+                memoSample = memo.trim();
+            }
+        }
+
+        BigDecimal amount() {
+            return amount;
+        }
+
+        int count() {
+            return count;
+        }
+
+        LocalDate firstDate() {
+            return firstDate;
+        }
+
+        String memoSample() {
+            return memoSample;
+        }
     }
 
     /**

@@ -4,13 +4,16 @@ import com.boot.eumbank.account.open.entity.account.QAccount;
 import com.boot.eumbank.account.select.entity.QTransferHistory;
 import com.boot.eumbank.asset.assetanalysis.dto.AssetDistributionDto;
 import com.boot.eumbank.asset.assetanalysis.dto.MonthlyTrendDto;
+import com.boot.eumbank.asset.assetanalysis.dto.NextMonthScheduledTransferDto;
 import com.boot.eumbank.asset.assetanalysis.dto.PhysicalAssetSummaryDto;
 import com.boot.eumbank.asset.assetanalysis.dto.WeeklyDeltaDto;
 import com.boot.eumbank.foreign.entity.ForeignRate;
 import com.boot.eumbank.foreign.entity.QForeignRate;
 import com.boot.eumbank.loan.entity.QLoan;
 import com.boot.eumbank.spot.model.QGoldWallet;
+import com.boot.eumbank.transfer_domain.transfer.entity.QTransferOrder;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -45,10 +48,12 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
     private final QForeignRate foreignRate = QForeignRate.foreignRate;
     private final QLoan loan = QLoan.loan;
     private final QGoldWallet goldWallet = QGoldWallet.goldWallet;
+    private final QTransferOrder transferOrder = QTransferOrder.transferOrder;
 
     private static final Set<String> EXCLUDED_TRANSFER_TYPES = Set.of("FX_IN", "FX_OUT");
     private static final Set<String> INACTIVE_ACCOUNT_STATUSES = Set.of("CLOSED", "INACTIVE", "SUSPENDED", "DELETED");
     private static final Set<String> INACTIVE_LOAN_STATUSES = Set.of("CLOSED", "SETTLED", "CANCELLED");
+    private static final Set<String> ACTIVE_TRANSFER_STATUSES = Set.of("SCHEDULED", "ACTIVE");
 
     private static final BigDecimal DEFAULT_GOLD_PRICE_PER_GRAM = BigDecimal.valueOf(95_000L);
     private static final BigDecimal DEFAULT_SILVER_PRICE_PER_GRAM = BigDecimal.valueOf(1_200L);
@@ -66,7 +71,7 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
     @Override
     public BigDecimal calculateCurrentNetWorth(Integer customerNo) {
         log.debug("순자산 계산 시작: customerNo={}", customerNo);
-
+        
         BigDecimal krwBalance = fetchKrwAccountBalance(customerNo);
         BigDecimal foreignBalance = fetchForeignBalanceInKrw(customerNo);
         BigDecimal physicalAssetValue = calculatePhysicalAssetValue(customerNo);
@@ -98,8 +103,8 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
                 )
                 .fetchOne();
         return balance != null ? balance : BigDecimal.ZERO;
-    }
-
+        }
+        
     /**
      * 활성 상태의 외화 계좌 잔액을 최신 환율로 환산한 뒤 합산한다.
      *
@@ -264,7 +269,7 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
     @Override
     public AssetDistributionDto getAssetDistribution(Integer customerNo) {
         log.debug("자산 배분 계산 시작: customerNo={}", customerNo);
-
+        
         Map<AssetCategory, BigDecimal> categoryAmounts = new EnumMap<>(AssetCategory.class);
         Map<String, BigDecimal> rateCache = new HashMap<>();
 
@@ -298,7 +303,7 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
         BigDecimal totalBalance = cashBalance.add(depositBalance)
                 .add(investmentBalance)
                 .add(foreignBalance);
-
+        
         BigDecimal cashPct = calculatePercentage(cashBalance, totalBalance);
         BigDecimal depositPct = calculatePercentage(depositBalance, totalBalance);
         BigDecimal investmentPct = calculatePercentage(investmentBalance, totalBalance);
@@ -317,6 +322,36 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
                 .totalAmount(totalBalance.setScale(0, RoundingMode.DOWN))
                 .recommendation(recommendation)
                 .build();
+    }
+
+    @Override
+    public List<NextMonthScheduledTransferDto> findNextMonthScheduledTransfers(Integer customerNo, LocalDateTime rangeStart, LocalDateTime rangeEnd) {
+        if (customerNo == null || rangeStart == null || rangeEnd == null) {
+            return List.of();
+        }
+
+        return queryFactory
+                .select(
+                        Projections.constructor(
+                                NextMonthScheduledTransferDto.class,
+                                transferOrder.to_amount,
+                                transferOrder.to_start_at,
+                                transferOrder.to_schedule_type,
+                                transferOrder.to_execution_type,
+                                transferOrder.to_memo
+                        )
+                )
+                .from(transferOrder)
+                .join(account).on(transferOrder.a_no.eq(account.aNo))
+                .where(
+                        account.cNo.eq(customerNo)
+                                .and(account.status.isNull()
+                                        .or(account.status.notIn(INACTIVE_ACCOUNT_STATUSES)))
+                                .and(transferOrder.to_status.in(ACTIVE_TRANSFER_STATUSES))
+                                .and(transferOrder.to_start_at.isNotNull())
+                                .and(transferOrder.to_start_at.between(rangeStart, rangeEnd))
+                )
+                .fetch();
     }
 
     /**
