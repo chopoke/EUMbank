@@ -596,7 +596,8 @@ export default function TransferManagePage() {
             >
               {accounts.map((account) => (
                 <option key={account.aNo} value={account.aNo}>
-                  {account.accountName || account.accountNo} · {account.accountNo}
+                  {account.accountName || account.accountNo}
+                  {account.accountName ? ` · ${account.accountNo}` : ""}
                 </option>
               ))}
             </select>
