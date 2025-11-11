@@ -4,15 +4,19 @@ import com.boot.eumbank.account.open.entity.account.QAccount;
 import com.boot.eumbank.account.select.entity.QTransferHistory;
 import com.boot.eumbank.asset.assetanalysis.dto.AssetDistributionDto;
 import com.boot.eumbank.asset.assetanalysis.dto.MonthlyTrendDto;
+import com.boot.eumbank.asset.assetanalysis.dto.PhysicalAssetSummaryDto;
 import com.boot.eumbank.asset.assetanalysis.dto.WeeklyDeltaDto;
 import com.boot.eumbank.foreign.entity.ForeignRate;
 import com.boot.eumbank.foreign.entity.QForeignRate;
+import com.boot.eumbank.loan.entity.QLoan;
+import com.boot.eumbank.spot.model.QGoldWallet;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -39,9 +43,21 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
     private final QAccount account = QAccount.account;
     private final QTransferHistory transferHistory = QTransferHistory.transferHistory;
     private final QForeignRate foreignRate = QForeignRate.foreignRate;
+    private final QLoan loan = QLoan.loan;
+    private final QGoldWallet goldWallet = QGoldWallet.goldWallet;
 
     private static final Set<String> EXCLUDED_TRANSFER_TYPES = Set.of("FX_IN", "FX_OUT");
     private static final Set<String> INACTIVE_ACCOUNT_STATUSES = Set.of("CLOSED", "INACTIVE", "SUSPENDED", "DELETED");
+    private static final Set<String> INACTIVE_LOAN_STATUSES = Set.of("CLOSED", "SETTLED", "CANCELLED");
+
+    private static final BigDecimal DEFAULT_GOLD_PRICE_PER_GRAM = BigDecimal.valueOf(95_000L);
+    private static final BigDecimal DEFAULT_SILVER_PRICE_PER_GRAM = BigDecimal.valueOf(1_200L);
+
+    @Value("${spot.gold.price-per-gram:0}")
+    private BigDecimal configuredGoldPricePerGram;
+
+    @Value("${spot.silver.price-per-gram:0}")
+    private BigDecimal configuredSilverPricePerGram;
 
     /**
      * {@inheritDoc}
@@ -53,10 +69,13 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
 
         BigDecimal krwBalance = fetchKrwAccountBalance(customerNo);
         BigDecimal foreignBalance = fetchForeignBalanceInKrw(customerNo);
+        BigDecimal physicalAssetValue = calculatePhysicalAssetValue(customerNo);
+        BigDecimal outstandingLoanBalance = fetchOutstandingLoanBalance(customerNo);
 
-        BigDecimal totalNetWorth = krwBalance.add(foreignBalance).setScale(0, RoundingMode.DOWN);
-        log.debug("순자산 계산 완료: customerNo={}, KRW={}, 외화(환산)={}, total={}",
-                customerNo, krwBalance, foreignBalance, totalNetWorth);
+        BigDecimal totalAssets = krwBalance.add(foreignBalance).add(physicalAssetValue);
+        BigDecimal totalNetWorth = totalAssets.subtract(outstandingLoanBalance).setScale(0, RoundingMode.DOWN);
+        log.debug("순자산 계산 완료: customerNo={}, KRW={}, 외화(환산)={}, 현물(평가)={}, 대출잔액(환산)={}, total={}",
+                customerNo, krwBalance, foreignBalance, physicalAssetValue, outstandingLoanBalance, totalNetWorth);
         return totalNetWorth;
     }
 
@@ -111,6 +130,131 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
             total = total.add(converted);
         }
         return total;
+    }
+
+    /**
+     * 활성 현물 월렛의 평가 금액을 계산한다.
+     *
+     * @param customerNo 고객 번호
+     * @return 현물 자산의 원화 평가 금액
+     */
+    private BigDecimal calculatePhysicalAssetValue(Integer customerNo) {
+        PhysicalAssetSummaryDto summary = fetchPhysicalAssetSummary(customerNo);
+        if (summary == null) {
+            summary = PhysicalAssetSummaryDto.empty();
+        }
+
+        BigDecimal cashBalance = summary.getCashBalance() != null ? summary.getCashBalance() : BigDecimal.ZERO;
+        BigDecimal goldValue = calculatePreciousMetalValuation(summary.getGoldGram(), resolveGoldPricePerGram());
+        BigDecimal silverValue = calculatePreciousMetalValuation(summary.getSilverGram(), resolveSilverPricePerGram());
+
+        return cashBalance.add(goldValue).add(silverValue);
+    }
+
+    /**
+     * 현물 월렛 정보를 조회한다.
+     *
+     * @param customerNo 고객 번호
+     * @return 현물 요약 DTO
+     */
+    private PhysicalAssetSummaryDto fetchPhysicalAssetSummary(Integer customerNo) {
+        if (customerNo == null) {
+            return PhysicalAssetSummaryDto.empty();
+        }
+
+        var cashSum = goldWallet.gwCashBalance.sum();
+        var goldGramSum = goldWallet.gwGoldBalance.sum();
+        var silverGramSum = goldWallet.gwSilverBalance.sum();
+
+        Tuple tuple = queryFactory
+                .select(cashSum, goldGramSum, silverGramSum)
+                .from(goldWallet)
+                .where(
+                        goldWallet.customer.customerNo.eq(customerNo)
+                                .and(goldWallet.gwActiveYn.eq("Y"))
+                )
+                .fetchOne();
+
+        if (tuple == null) {
+            return PhysicalAssetSummaryDto.empty();
+        }
+
+        BigDecimal cash = tuple.get(cashSum);
+        BigDecimal goldGram = tuple.get(goldGramSum);
+        BigDecimal silverGram = tuple.get(silverGramSum);
+
+        return PhysicalAssetSummaryDto.builder()
+                .cashBalance(cash != null ? cash : BigDecimal.ZERO)
+                .goldGram(goldGram != null ? goldGram : BigDecimal.ZERO)
+                .silverGram(silverGram != null ? silverGram : BigDecimal.ZERO)
+                .build();
+    }
+
+    /**
+     * 활성 상태 대출의 잔액을 합산한다.
+     *
+     * @param customerNo 고객 번호
+     * @return 대출 잔액의 원화 환산 합계
+     */
+    private BigDecimal fetchOutstandingLoanBalance(Integer customerNo) {
+        if (customerNo == null) {
+            return BigDecimal.ZERO;
+        }
+
+        var loanBalanceSum = loan.balance.sum();
+        List<Tuple> loanSummaries = queryFactory
+                .select(loan.currency, loanBalanceSum)
+                .from(loan)
+                .where(
+                        loan.cNo.eq(customerNo)
+                                .and(loan.balance.isNotNull())
+                                .and(loan.status.isNull().or(loan.status.notIn(INACTIVE_LOAN_STATUSES)))
+                                .and(loan.balance.gt(BigDecimal.ZERO))
+                )
+                .groupBy(loan.currency)
+                .fetch();
+
+        if (loanSummaries.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal total = BigDecimal.ZERO;
+        Map<String, BigDecimal> rateCache = new HashMap<>();
+        for (Tuple tuple : loanSummaries) {
+            String currency = tuple.get(loan.currency);
+            BigDecimal balance = tuple.get(loanBalanceSum);
+            if (balance == null || balance.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            BigDecimal converted = convertToKrw(balance, currency, rateCache);
+            total = total.add(converted);
+        }
+        return total;
+    }
+
+    private BigDecimal calculatePreciousMetalValuation(BigDecimal gramAmount, BigDecimal pricePerGram) {
+        if (gramAmount == null || gramAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        if (pricePerGram == null || pricePerGram.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return gramAmount.multiply(pricePerGram);
+    }
+
+    private BigDecimal resolveGoldPricePerGram() {
+        return resolvePrice(configuredGoldPricePerGram, DEFAULT_GOLD_PRICE_PER_GRAM);
+    }
+
+    private BigDecimal resolveSilverPricePerGram() {
+        return resolvePrice(configuredSilverPricePerGram, DEFAULT_SILVER_PRICE_PER_GRAM);
+    }
+
+    private BigDecimal resolvePrice(BigDecimal configuredPrice, BigDecimal fallbackPrice) {
+        if (configuredPrice == null || configuredPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            return fallbackPrice;
+        }
+        return configuredPrice;
     }
 
     /**
