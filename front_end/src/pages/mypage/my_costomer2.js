@@ -1647,7 +1647,7 @@ function DocumentTab() {
                             {/*</p>*/}
 
                             <h3 className="text-lg font-semibold text-gray-800">
-                                {'제출한 서류 갯수'}
+                                {'모든 서류 갯수'}
                             </h3>
                         </div>
                     </div>
@@ -1664,7 +1664,7 @@ function DocumentTab() {
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                         <i className="ri-folder-line text-blue-600 mr-2"></i>
-                        제출된 서류 ({totalElements}건)
+                        확인가능 서류 ({totalElements}건)
                     </h3>
                 </div>
 
