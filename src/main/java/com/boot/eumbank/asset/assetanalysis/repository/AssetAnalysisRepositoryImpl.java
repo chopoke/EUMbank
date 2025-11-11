@@ -926,6 +926,7 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
 
             result.add(MonthlyTrendDto.builder()
                     .month(periodLabel)
+                    .periodStartDate(periodStart.toLocalDate().toString())
                     .income(incomeInMan)
                     .expense(expenseInMan)
                     .net(net)
@@ -958,6 +959,7 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
         if (accountNos.isEmpty()) {
             return MonthlyTrendDto.builder()
                     .month("30일")
+                    .periodStartDate(startDate.toLocalDate().toString())
                     .income(BigDecimal.ZERO)
                     .expense(BigDecimal.ZERO)
                     .net(BigDecimal.ZERO)
@@ -992,6 +994,7 @@ public class AssetAnalysisRepositoryImpl implements AssetAnalysisRepositoryCusto
 
         return MonthlyTrendDto.builder()
                 .month("30일")
+                .periodStartDate(startDate.toLocalDate().toString())
                 .income(incomeInMan)
                 .expense(expenseInMan)
                 .net(net)
