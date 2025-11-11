@@ -74,10 +74,6 @@ public class LoanProduct {
     @Column(name="lpd_ltv_max")
     private Integer ltvMax;                     // 최대LTV(신용은 null)
 
-    // 운영용
-    @Column(name="lpd_status", nullable=false)
-    private String status;          // 게시상태 DRAFT신청중','PUBLISHED승인','HIDDEN승인','ARCHIVED보류
-
     @Column(name="lpd_is_active", nullable=false)
     private Boolean isActive;           // 활성화여부
 

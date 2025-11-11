@@ -36,7 +36,7 @@ public class LoanConsentPdfController {
             if (laId == null || laId.isBlank()) {
                 return ResponseEntity.badRequest()
                         .contentType(MediaType.TEXT_PLAIN)
-                        .body("laId is blank".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        .body("신청번호가 비어있습니다.".getBytes(java.nio.charset.StandardCharsets.UTF_8));
             }
 
             var appOpt = appRepo.findByLaId(laId);

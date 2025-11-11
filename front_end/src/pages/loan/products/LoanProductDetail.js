@@ -512,7 +512,7 @@ const Calculator = () => {
           <div className="flex-1 space-y-4">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 text-emerald-700 px-2.5 py-1 text-xs">
-                <ShieldCheck className="h-3.5 w-3.5" /> 이음은행 보증 아님
+                <ShieldCheck className="h-3.5 w-3.5" /> 이음은행 보증
               </span>
               {product.badges?.map((b, i) => (
                 <Pill key={i}>{b}</Pill>
@@ -597,14 +597,6 @@ const Calculator = () => {
               )}
             </div>
             <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                onClick={scrollToChkbox}
-                className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-sm"
-              >
-                <CalcIcon className="h-4 w-4" />
-                한도/금리 계산하기
-              </button>
             </div>
           </aside>
         </section>
