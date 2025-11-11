@@ -88,19 +88,28 @@ export const fetchCustomerBalance = async (customerNo, accountNo = null) => {
 export const fetchDepositAccounts = async (customerNo) => {
   try {
     const response = await api.get(`/api/trading/accounts/${customerNo}/deposit`);
-    return response.data;
+    
+    // 응답이 배열인지 확인
+    if (Array.isArray(response.data)) {
+      return response.data;
+    } else if (response.data && Array.isArray(response.data.data)) {
+      return response.data.data;
+    } else {
+      return [];
+    }
   } catch (error) {
     console.error('입출금 계좌 목록 조회 실패:', error);
-    throw error;
+    // 에러 발생 시 빈 배열 반환 (500 에러 방지)
+    return [];
   }
 };
 
 /**
- * 거래내역 페이징 조회 (매수/매도 + 금/은 + 월렛 필터링)
+ * 거래내역 페이징 조회 (매수/매도 + 금/은 + 지갑 필터링)
  * @param {number} customerNo - 고객번호
  * @param {string} transactionType - 거래타입 (BUY/SELL, 선택사항)
  * @param {string} metalCode - 금속코드 (AU/AG, 선택사항)
- * @param {string} walletName - 월렛 이름 (선택사항)
+ * @param {string} walletName - 지갑 이름 (선택사항)
  * @param {number} page - 페이지 번호 (0부터 시작)
  * @param {number} size - 페이지 크기
  * @returns {Promise} 페이징된 거래내역
@@ -127,8 +136,8 @@ export const fetchTradingHistoryWithPaging = async (customerNo, transactionType 
  * @param {number} customerNo - 고객번호
  * @param {string} productId - 상품ID (AU, AG)
  * @param {number} quantity - 수량
- * @param {string} walletName - 월렛 이름 (선택사항)
- * @param {string} walletPin - 월렛 PIN (필수)
+ * @param {string} walletName - 지갑 이름 (선택사항)
+ * @param {string} walletPin - 지갑 PIN (필수)
  * @returns {Promise} 거래 결과
  */
 export const buyMetal = async (customerNo, productId, quantity, walletName = null, walletPin) => {
@@ -148,8 +157,8 @@ export const buyMetal = async (customerNo, productId, quantity, walletName = nul
  * @param {number} customerNo - 고객번호
  * @param {string} productId - 상품ID (AU, AG)
  * @param {number} quantity - 수량
- * @param {string} walletName - 월렛 이름 (선택사항)
- * @param {string} walletPin - 월렛 PIN (필수)
+ * @param {string} walletName - 지갑 이름 (선택사항)
+ * @param {string} walletPin - 지갑 PIN (필수)
  * @returns {Promise} 거래 결과
  */
 export const sellMetal = async (customerNo, productId, quantity, walletName = null, walletPin) => {
@@ -168,14 +177,18 @@ export const sellMetal = async (customerNo, productId, quantity, walletName = nu
  * 계좌에서 현물거래 통장으로 이체
  * @param {number} customerNo - 고객번호
  * @param {number} amount - 이체 금액
- * @param {string} walletName - 월렛 이름 (선택사항)
+ * @param {string} walletName - 지갑 이름 (선택사항)
+ * @param {number} accountNo - 계좌 번호 (선택사항)
  * @returns {Promise} 이체 결과
  */
-export const transferToTradingAccount = async (customerNo, amount, walletName = null) => {
+export const transferToTradingAccount = async (customerNo, amount, walletName = null, accountNo = null) => {
   try {
     const params = { customerNo, amount };
     if (walletName) {
       params.walletName = walletName;
+    }
+    if (accountNo) {
+      params.accountNo = accountNo;
     }
     
     const response = await api.post(endpoints.trading.transferIn(), null, {
@@ -192,14 +205,18 @@ export const transferToTradingAccount = async (customerNo, amount, walletName = 
  * 현물거래 통장에서 계좌로 이체
  * @param {number} customerNo - 고객번호
  * @param {number} amount - 이체 금액
- * @param {string} walletName - 월렛 이름 (선택사항)
+ * @param {string} walletName - 지갑 이름 (선택사항)
+ * @param {number} accountNo - 계좌 번호 (선택사항)
  * @returns {Promise} 이체 결과
  */
-export const transferFromTradingAccount = async (customerNo, amount, walletName = null) => {
+export const transferFromTradingAccount = async (customerNo, amount, walletName = null, accountNo = null) => {
   try {
     const params = { customerNo, amount };
     if (walletName) {
       params.walletName = walletName;
+    }
+    if (accountNo) {
+      params.accountNo = accountNo;
     }
     
     const response = await api.post(endpoints.trading.transferOut(), null, {
@@ -230,11 +247,11 @@ export const openSpotWallet = async (customerNo) => {
 };
 
 /**
- * 새로운 월렛 생성
+ * 새로운 지갑 생성
  * @param {number} customerNo - 고객번호
- * @param {string} walletName - 월렛 이름
- * @param {string} walletPin - 월렛 PIN (6자리)
- * @returns {Promise} 월렛 생성 결과
+ * @param {string} walletName - 지갑 이름
+ * @param {string} walletPin - 지갑 PIN (6자리)
+ * @returns {Promise} 지갑 생성 결과
  */
 export const createWallet = async (customerNo, walletName, walletPin) => {
   try {
@@ -245,15 +262,15 @@ export const createWallet = async (customerNo, walletName, walletPin) => {
     });
     return response.data;
   } catch (error) {
-    console.error('월렛 생성 실패:', error);
+    console.error('지갑 생성 실패:', error);
     throw error;
   }
 };
 
 /**
- * 월렛 PIN 검증
+ * 지갑 PIN 검증
  * @param {number} customerNo - 고객번호
- * @param {string} walletName - 월렛 이름
+ * @param {string} walletName - 지갑 이름
  * @param {string} pin - PIN 번호
  * @returns {Promise} PIN 검증 결과
  */
@@ -264,15 +281,15 @@ export const validateWalletPin = async (customerNo, walletName, pin) => {
     });
     return response.data;
   } catch (error) {
-    console.error('월렛 PIN 검증 실패:', error);
+    console.error('지갑 PIN 검증 실패:', error);
     throw error;
   }
 };
 
 /**
- * 월렛 PIN 업데이트
+ * 지갑 PIN 업데이트
  * @param {number} customerNo - 고객번호
- * @param {string} walletName - 월렛 이름
+ * @param {string} walletName - 지갑 이름
  * @param {string} oldPin - 기존 PIN
  * @param {string} newPin - 새 PIN
  * @returns {Promise} PIN 업데이트 결과
@@ -284,7 +301,7 @@ export const updateWalletPin = async (customerNo, walletName, oldPin, newPin) =>
     });
     return response.data;
   } catch (error) {
-    console.error('월렛 PIN 업데이트 실패:', error);
+    console.error('지갑 PIN 업데이트 실패:', error);
     throw error;
   }
 };
@@ -292,7 +309,7 @@ export const updateWalletPin = async (customerNo, walletName, oldPin, newPin) =>
 /**
  * PIN 분실 시 복구
  * @param {number} customerNo - 고객번호
- * @param {string} walletName - 월렛 이름
+ * @param {string} walletName - 지갑 이름
  * @returns {Promise} PIN 복구 결과
  */
 export const recoverWalletPin = async (customerNo, walletName) => {
@@ -308,23 +325,23 @@ export const recoverWalletPin = async (customerNo, walletName) => {
 };
 
 /**
- * 고객 월렛 목록 조회
+ * 고객 지갑 목록 조회
  * @param {number} customerNo - 고객번호
- * @returns {Promise} 월렛 목록
+ * @returns {Promise} 지갑 목록
  */
 export const fetchWallets = async (customerNo) => {
   try {
     const response = await api.get(endpoints.wallet.list(customerNo));
     return response.data;
   } catch (error) {
-    console.error('월렛 목록 조회 실패:', error);
+    console.error('지갑 목록 조회 실패:', error);
     throw error;
   }
 };
 
 /**
- * 월렛 삭제
- * @param {number} walletId - 월렛 ID
+ * 지갑 삭제
+ * @param {number} walletId - 지갑 ID
  * @returns {Promise} 삭제 결과
  */
 export const deleteWallet = async (walletId) => {
@@ -332,13 +349,13 @@ export const deleteWallet = async (walletId) => {
     const response = await api.delete(`/api/trading/wallets/${walletId}`);
     return response.data;
   } catch (error) {
-    console.error('월렛 삭제 실패:', error);
+    console.error('지갑 삭제 실패:', error);
     throw error;
   }
 };
 
 /**
- * 고객 종합 정보 동기화 (월렛 데이터 기반으로 GOLD_CUSTOMER_TBL 업데이트)
+ * 고객 종합 정보 동기화 (지갑 데이터 기반으로 GOLD_CUSTOMER_TBL 업데이트)
  * TODO: 백엔드 엔드포인트 구현 필요
  */
 export const syncCustomerSummary = async (customerNo) => {

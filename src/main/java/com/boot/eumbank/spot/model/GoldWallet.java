@@ -13,11 +13,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 이 클래스는 현물거래 월렛 정보를 나타내는 엔티티입니다.
+ * 이 클래스는 현물거래 지갑 정보를 나타내는 엔티티입니다.
  * 목적
- *  - 고객별 다중 월렛 관리 (기본월렛, 투자월렛 등)
+ *  - 고객별 다중 지갑 관리 (기본지갑, 투자지갑 등)
  * 사용
- *  - 월렛별 개별 PIN, 잔고 관리에 사용됩니다.
+ *  - 지갑별 개별 PIN, 잔고 관리에 사용됩니다.
  * 
  * DB 테이블: GOLD_WALLET_TBL
  * 자산관리 순자산 계산 시 사용 컬럼:
@@ -35,7 +35,7 @@ import java.time.LocalDateTime;
 @Builder
 public class GoldWallet {
 
-    /** 월렛 번호 (PK) */
+    /** 지갑 번호 (PK) */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "gw_no")
@@ -46,15 +46,15 @@ public class GoldWallet {
     @JoinColumn(name = "c_no", nullable = false)
     private Customer customer;
 
-    /** 월렛 이름 */
+    /** 지갑 이름 */
     @Column(name = "gw_wallet_name", nullable = false, length = 50)
     private String gwWalletName;
 
-    /** 현물계좌 통장 계좌번호 (형식: WL + 월렛번호) */
+    /** 현물계좌 통장 계좌번호 (형식: WL + 지갑번호) */
     @Column(name = "gw_account_no", length = 20, unique = true)
     private String gwAccountNo;
 
-    /** 월렛 PIN 번호 (6자리) */
+    /** 지갑 PIN 번호 (6자리) */
     @Column(name = "gw_pin", nullable = false, length = 6)
     private String gwPin;
 
