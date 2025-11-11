@@ -13,10 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.stream.Collector;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,6 +39,7 @@ public class DashboardServiceImpl implements DashboardService{
         BigDecimal foreign = dashboardRepository.sumForeign(cNo);
         BigDecimal installment = dashboardRepository.sumInstallment(cNo);
         BigDecimal deposit = dashboardRepository.sumDeposit(cNo);
+        BigDecimal gold = BigDecimal.ZERO;
 
         BigDecimal totalAssets = cash.add(foreign).add(installment).add(deposit);
         BigDecimal totalLiabilities  = BigDecimal.ZERO;       // 대출 붙이면 교체
@@ -52,8 +50,8 @@ public class DashboardServiceImpl implements DashboardService{
                 new AssetCompositionDto("입출금",    cash),
                 new AssetCompositionDto("외환",       foreign),
                 new AssetCompositionDto("적금", installment),
-                new AssetCompositionDto("예금",     deposit)
-//                new AssetCompositionDto("현물", gold)
+                new AssetCompositionDto("예금",     deposit),
+                new AssetCompositionDto("현물", gold)
         );
 
         return new AssetSummaryDto(totalAssets, totalLiabilities, netWorth, monthlyDue, composition);
@@ -79,12 +77,30 @@ public class DashboardServiceImpl implements DashboardService{
         for (Integer cNo : cNos) {
             try {
                 AssetSummaryDto s = getDashboardSummary(cNo);
+
+                Map<String, BigDecimal> comp =  s.composition().stream()
+                                                .collect(Collectors.toMap(
+                                                   AssetCompositionDto::category,
+                                                   AssetCompositionDto::amountKrw
+                                                ));
+
+                BigDecimal cash        = comp.getOrDefault("입출금", BigDecimal.ZERO);
+                BigDecimal foreign     = comp.getOrDefault("외환",   BigDecimal.ZERO);
+                BigDecimal installment = comp.getOrDefault("적금",   BigDecimal.ZERO);
+                BigDecimal deposit     = comp.getOrDefault("예금",   BigDecimal.ZERO);
+                BigDecimal gold        = comp.getOrDefault("현물",   BigDecimal.ZERO);
+
                 rows.add(AssetDailySnapshot.builder()
                         .cNo(cNo)
                         .adsYmd(ymd)                         // DATE 컬럼
                         .adsTotalAssets(s.totalAssets())
                         .adsTotalLiabilities(s.totalLiabilities())
                         .adsNetWorth(s.netWorth())
+                        .adsTotalCash(cash)
+                        .adsTotalInstallment(installment)
+                        .adsTotalDeposit(deposit)
+                        .adsTotalForeign(foreign)
+                        .adsTotalGold(gold)
                         .build());
             } catch (Exception ex) {
                 // 한 명 실패해도 나머지는 계속 적재 (운영에서 중요)

@@ -42,4 +42,18 @@ public class AssetDailySnapshot {
     @Column(name = "ads_net_worth", precision = 20, scale = 2, nullable = false)
     private BigDecimal adsNetWorth;
 
+    @Column(name = "ads_total_cash", precision = 20, scale = 2, nullable = false)
+    private BigDecimal adsTotalCash;
+
+    @Column(name = "ads_total_installment", precision = 20, scale = 2, nullable = false)
+    private BigDecimal adsTotalInstallment;
+
+    @Column(name = "ads_total_deposit", precision = 20, scale = 2, nullable = false)
+    private BigDecimal adsTotalDeposit;
+
+    @Column(name = "ads_total_foreign", precision = 20, scale = 2, nullable = false)
+    private BigDecimal adsTotalForeign;
+
+    @Column(name = "ads_total_gold", precision = 20, scale = 2, nullable = false)
+    private BigDecimal adsTotalGold;
 }

@@ -5,7 +5,7 @@ import { DonutPercentOnly, LineChartWithDatesStatic, TrendFooterStats } from "..
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../../api/axios";
 
-// Chart.js 도넛 설정
+// Chart.js
 import { Doughnut, Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -23,7 +23,6 @@ const COLOR_MAP = {
   "적금":   "#fc7fd2",
   "예금":   "#34dfa6",
   "현물":   "#ff6161",
-  "기타":   "#9ca3af",
 };
 
 const UNITS = [
@@ -40,7 +39,7 @@ function formatKrwAuto(n, digits = 1) {
       return `${(v / u.k).toFixed(digits)}${u.s}원`;
     }
   }
-  return v.toLocaleString("ko-KR") + "원";  // 원 단위
+  return v.toLocaleString("ko-KR") + "원";
 }
 function formatKrwSigned(n) {
   const sign = (n ?? 0) >= 0 ? "+" : "-";
@@ -51,14 +50,12 @@ function formatPct(n, digits = 2) {
   const sign = v >= 0 ? "+" : "-";
   return `${sign}${Math.abs(v).toFixed(digits)}%`;
 }
-
 function formatKrw(n) {
   if (n == null) return "-";
   const num = typeof n === "number" ? n : Number(n);
   if (Number.isNaN(num)) return String(n);
   return num.toLocaleString("ko-KR") + "원";
 }
-
 function hexToRgba(hex, a = 0.14) {
   const clean = hex.replace("#", "");
   const bigint = parseInt(clean, 16);
@@ -68,12 +65,8 @@ function hexToRgba(hex, a = 0.14) {
   return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
 const pct = (v) => `${Math.round(v)}%`;
-
-const formatRate = (v) =>
-  (v == null ? "-" : `${Number(v).toFixed(2)}%`);
-
-const formatMonths = (m) =>
-  (m == null ? "-" : `${m}개월`);
+const formatRate = (v) => (v == null ? "-" : `${Number(v).toFixed(2)}%`);
+const formatMonths = (m) => (m == null ? "-" : `${m}개월`);
 
 function useInView(threshold = 0.3) {
   const ref = useRef(null);
@@ -88,14 +81,30 @@ function useInView(threshold = 0.3) {
   }, [threshold]);
   return [ref, inView];
 }
+function useResizeKey(ref) {
+  const [key, setKey] = useState(0);
+  useEffect(() => {
+    if (!ref.current) return;
+    const ro = new ResizeObserver(entries => {
+      const { width, height } = entries[0].contentRect;
+      setKey(prev => (prev + Math.round(width) + Math.round(height)));
+    });
+    ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, [ref]);
+  return key;
+}
 
 export default function AssetDashboard() {
-
-  const [summary, setSummary] = useState(null);   // AssetSummaryDto
-  const [trend, setTrend] = useState(null); // AssetTrendDto
-  const [topSavings, setTopSavings] = useState(null);   // TopSavingsDto
+  const [summary, setSummary] = useState(null);
+  const [trend, setTrend] = useState(null);
+  const [topSavings, setTopSavings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [donutRef, donutInView] = useInView(0.2);
+  const [lineRef, lineInView] = useInView(0.2);
+
+  const donutResizeKey = useResizeKey(donutRef);
+  const lineResizeKey  = useResizeKey(lineRef);
 
   useEffect(() => {
     const run = async () => {
@@ -130,21 +139,18 @@ export default function AssetDashboard() {
   const minNW     = Number(trend?.min       || 0);
   const changePct = Number(trend?.changePct || 0);
 
-  const tpts   = trend?.points ?? [];                      // [{ymd, netWorth}]
-  const labels = tpts.map(p => p.ymd?.slice(5));           // 'MM-DD'
+  const tpts   = trend?.points ?? [];
+  const labels = tpts.map(p => p.ymd?.slice(5)); // 'MM-DD'
   const values = tpts.map(p => Number(p.netWorth || 0));
 
-  // 도넛 데이터(Chart.js)
+  // 도넛 데이터
   const donutData = useMemo(() => {
     const labels = composition.map(c => c.category);
     const values = composition.map(c => Number(c.amountKrw || 0));
     const colors = composition.map(c => COLOR_MAP[c.category] || "#9ca3af");
     const total  = values.reduce((a, b) => a + b, 0);
-
-    // 퍼센트(0~100) 계산
     const shares = total > 0 ? values.map(v => (v / total) * 100) : values.map(() => 0);
 
-    // 최댓값 카테고리
     let topIdx = 0;
     shares.forEach((s, i) => { if (s > shares[topIdx]) topIdx = i; });
     const top = labels[topIdx] ? {
@@ -162,12 +168,12 @@ export default function AssetDashboard() {
         datasets: [{
           label: "자산 구성",
           data: values,
-          backgroundColor: colors.map(c => `${c}CC`), // 살짝 투명
+          backgroundColor: colors.map(c => `${c}CC`),
           borderColor: colors,
           borderWidth: 1.2,
           hoverOffset: 6,
-          cutout: "62%",       // 두께
-          rotation: 0,       // 12시 시작
+          cutout: "62%",
+          rotation: 0,
         }]
       }
     };
@@ -176,12 +182,6 @@ export default function AssetDashboard() {
   const donutOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
-    animation: {
-      duration: 900,
-      easing: "easeOutQuart",
-      animateRotate: true,
-      animateScale: true,
-    },
     plugins: {
       legend: {
         position: "bottom",
@@ -206,7 +206,12 @@ export default function AssetDashboard() {
       data: values,
       borderWidth: 2.5,
       borderColor: "#87259b",
-      pointRadius: 2.8,
+      pointRadius: 3.2,
+      pointHoverRadius: 4,
+      pointHitRadius: 6,
+      pointBackgroundColor: "#87259b",
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 1,
       tension: 0.15,
       fill: true,
       backgroundColor: (ctx) => {
@@ -230,20 +235,17 @@ export default function AssetDashboard() {
     plugins: {
       legend: { display: false },
       tooltip: {
-        callbacks: {
-          label: (ctx) => ` ${formatKrwAuto(ctx.parsed.y)}`,
-        }
+        callbacks: { label: (ctx) => ` ${formatKrwAuto(ctx.parsed.y)}` }
       }
     },
     scales: {
       x: {
         ticks: {
           autoSkip: false,
-          maxRotation: 0 ,
+          maxRotation: 0,
           callback: (value, index) =>
-          (index % tickStep === 0 || index === labels.length - 1)
-            ? labels[index]       // step 간격 or 마지막만 라벨 표시
-            : "",
+            (index % tickStep === 0 || index === labels.length - 1)
+              ? labels[index] : "",
         },
         grid: { display: false },
       },
@@ -256,8 +258,7 @@ export default function AssetDashboard() {
         grid: { color: "#F3F4F6" },
       }
     }
-  }), [labels, tickStep]);
-
+  }), [labels.join(","), values.join(","), tickStep]);
 
   return (
     <main className="bg-gray-50 text-gray-900 min-h-screen">
@@ -283,29 +284,12 @@ export default function AssetDashboard() {
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-6 flex flex-col gap-8">
-
-          {/* 핵심 수치 4칸 */}
+          {/* 핵심 수치 */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              title="순자산"
-              value={loading ? "..." : formatKrw(netWorth)}
-              sub={loading ? "..." : `전일 대비 ${formatKrwSigned(dayDelta)}`}
-            />
-            <StatCard
-              title="총자산"
-              value={loading ? "..." : formatKrw(totalAssets)}
-              sub="입출금 · 예금 · 적금 · 외환 · 대출 · 현물 포함"
-            />
-            <StatCard
-              title="총부채"
-              value={loading ? "..." : formatKrw(totalLiabilities)}
-              sub="주택담보대출 1건"
-            />
-            <StatCard
-              title="이번 달 납입 예정액"
-              value={loading ? "..." : formatKrw(monthlyDue)}
-              sub="적금 · 공과금 · 대출 상환 합산"
-            />
+            <StatCard title="순자산" value={loading ? "..." : formatKrw(netWorth)} sub={loading ? "..." : `전일 대비 ${formatKrwSigned(dayDelta)}`} />
+            <StatCard title="총자산" value={loading ? "..." : formatKrw(totalAssets)} sub="입출금 · 예금 · 적금 · 외환 · 대출 · 현물 포함" />
+            <StatCard title="총부채" value={loading ? "..." : formatKrw(totalLiabilities)} sub="주택담보대출 1건" />
+            <StatCard title="이번 달 납입 예정액" value={loading ? "..." : formatKrw(monthlyDue)} sub="적금 · 공과금 · 대출 상환 합산" />
           </div>
 
           {/* 자산 비율 / 순자산 추이 */}
@@ -315,11 +299,8 @@ export default function AssetDashboard() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-base font-semibold text-gray-900">자산 구성 비율</h2>
-                  <p className="text-[12px] text-gray-500">
-                    현금성 자산, 적금, 외환 등 비중입니다.
-                  </p>
+                  <p className="text-[12px] text-gray-500">현금성 자산, 적금, 외환 등 비중입니다.</p>
                 </div>
-                {/* 동적 배지 */}
                 {(!loading && donutData.top) && (
                   <span
                     className="rounded-full text-[11px] font-medium px-2 py-0.5 border"
@@ -334,31 +315,29 @@ export default function AssetDashboard() {
                 )}
               </div>
 
-               <div className="w-full" style={{ height: 220 }}>
+              <div ref={donutRef} className="w-full" style={{ height: 220 }}>
                 {loading
                   ? <div className="h-full grid place-items-center text-sm text-gray-500">로딩 중…</div>
                   : composition.length === 0
                     ? <div className="h-full grid place-items-center text-sm text-gray-500">표시할 데이터가 없습니다</div>
-                    : <Doughnut data={donutData.chart} options={donutOptions} />
+                    : donutInView && (
+                      <Doughnut
+                        key={donutData.labels.join("|") + donutData.shares.map(v => v|0).join(",") + `|${donutResizeKey}`}
+                        data={donutData.chart}
+                        options={donutOptions}
+                      />
+                    )
                 }
               </div>
 
-              {/* 비율 */}
               {!loading && composition.length > 0 && (
                 <ul className="text-sm text-gray-700 grid grid-cols-2 gap-y-2 mt-2">
                   {donutData.labels.map((label, i) => (
                     <li key={label} className="flex items-center gap-2">
-                      {/* 색 점(도넛 색과 동일) */}
-                      <span
-                        className="inline-block w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: donutData.colors[i] }}
-                        aria-hidden
-                      />
+                      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: donutData.colors[i] }} aria-hidden />
                       <div className="flex flex-col">
                         <span className="text-gray-500 text-[12px]">{label}</span>
-                        <span className="font-medium text-gray-900">
-                          {pct(donutData.shares[i])}
-                        </span>
+                        <span className="font-medium text-gray-900">{pct(donutData.shares[i])}</span>
                       </div>
                     </li>
                   ))}
@@ -376,19 +355,23 @@ export default function AssetDashboard() {
                     당일 중 변동분은 다음날 새벽 반영됩니다.
                   </span>
                 </div>
-                {/* <button className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
-                  자세히 보기
-                </button> */}
               </div>
 
-              <div className="w-full" style={{ height: 270 }}>
+              <div ref={lineRef} className="w-full" style={{ height: 270 }}>
                 {loading
                   ? <div className="h-full grid place-items-center text-sm text-gray-500">로딩 중…</div>
-                  : (values.length === 0
+                  : values.length === 0
                       ? <div className="h-full grid place-items-center text-sm text-gray-500">표시할 데이터가 없습니다</div>
-                      : <Line data={lineData} options={lineOptions} />)
+                      : lineInView && (
+                        <Line
+                          key={labels.join("|") + values.join(",") + `|${lineResizeKey}`}
+                          data={lineData}
+                          options={lineOptions}
+                        />
+                      )
                 }
               </div>
+
               <TrendFooterStats
                 stats={[
                   { label: "최근 30일 증감", value: loading ? "..." : formatKrwSigned(change30) },
@@ -397,7 +380,6 @@ export default function AssetDashboard() {
                   { label: "변동폭",         value: loading ? "..." : formatPct(changePct) },
                 ]}
               />
-
             </div>
           </div>
 
@@ -407,45 +389,42 @@ export default function AssetDashboard() {
             <div className="flex flex-col gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
               <div>
                 <h3 className="text-base font-semibold text-gray-900">예금 · 적금</h3>
-                <div className="text-[12px] text-gray-500 -mt-1">
-                  가장 잔액이 큰 상품만 보여줍니다.
-                </div>
+                <div className="text-[12px] text-gray-500 -mt-1">가장 잔액이 큰 상품만 보여줍니다.</div>
               </div>
 
               <div className="divide-y divide-gray-200 text-sm">
-                {/* 적금 */}
               {loading ? (<div className="h-16 grid place-items-center text-sm text-gray-500">로딩 중…</div>)
                 : topSavings?.installment ? (
                     <div className="flex items-center justify-between">
                       <div>
-                       <div className="font-medium text-gray-900">{topSavings.installment.productName}</div>
-                       <div className="text-[12px] text-gray-500">
-                         {formatMonths(topSavings.installment.month)} · {formatRate(topSavings.installment.rate)}
-                       </div>
-                     </div>
-                     <div className="text-right">
+                        <div className="font-medium text-gray-900">{topSavings.installment.productName}</div>
+                        <div className="text-[12px] text-gray-500">
+                          {formatMonths(topSavings.installment.month)} · {formatRate(topSavings.installment.rate)}
+                        </div>
+                      </div>
+                      <div className="text-right">
                         <div className="font-semibold text-gray-900">{formatKrw(topSavings.installment.amount)}</div>
                         <div className="text-[12px] text-gray-500">월 납입 {formatKrw(topSavings.installment.principalBal)}</div>
                       </div>
                     </div>
                 ) : (
                   <button
-                   className="w-full inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 mt-3 text-xs font-medium text-blue-700 hover:bg-gray-50 border-blue-200 text-blue-700"
-                   onClick={() => (window.location.href = "/depositSavingProductList/open")}>
-                   적금 상품 가입하기
-                 </button>
+                    className="w-full inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 mt-3 text-xs font-medium text-blue-700 hover:bg-gray-50 border-blue-200 text-blue-700"
+                    onClick={() => (window.location.href = "/depositSavingProductList/open")}
+                  >
+                    적금 상품 가입하기
+                  </button>
                 )
               }
 
-              {/* 예금 */}
               {loading ? (<div className="h-16 grid place-items-center text-sm text-gray-500">로딩 중…</div>)
                 : topSavings?.deposit ? (
                     <div className="py-3 flex items-center justify-between">
                       <div>
-                       <div className="font-medium text-gray-900">{topSavings.deposit.productName}</div>
-                       <div className="text-[12px] text-gray-500">
-                         {formatMonths(topSavings.deposit.month)} · {formatRate(topSavings.deposit.rate)}
-                       </div>
+                        <div className="font-medium text-gray-900">{topSavings.deposit.productName}</div>
+                        <div className="text-[12px] text-gray-500">
+                          {formatMonths(topSavings.deposit.month)} · {formatRate(topSavings.deposit.rate)}
+                        </div>
                       </div>
                       <div className="text-right">
                         <div className="font-semibold text-gray-900">{formatKrw(topSavings.deposit.amount)}</div>
@@ -453,38 +432,32 @@ export default function AssetDashboard() {
                     </div>
                 ) : (
                   <button
-                   className="w-full inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 mt-7 text-xs font-medium text-blue-700 hover:bg-gray-50 border-blue-200 text-blue-700"
-                   onClick={() => (window.location.href = "/depositSavingProductList/open")}>
-                   예금 상품 가입하기
-                 </button>
+                    className="w-full inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 mt-7 text-xs font-medium text-blue-700 hover:bg-gray-50 border-blue-200 text-blue-700"
+                    onClick={() => (window.location.href = "/depositSavingProductList/open")}
+                  >
+                    예금 상품 가입하기
+                  </button>
                 )
               }
               </div>
-
             </div>
 
             {/* 대출 현황 */}
             <div className="flex flex-col gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
               <div>
                 <h3 className="text-base font-semibold text-gray-900">대출 현황</h3>
-                <div className="text-[12px] text-gray-500 -mt-1">
-                  금리와 상환 일정을 한눈에 확인하세요.
-                </div>
+                <div className="text-[12px] text-gray-500 -mt-1">금리와 상환 일정을 한눈에 확인하세요.</div>
               </div>
 
               <ul className="divide-y divide-gray-200 text-sm">
                 <li className="py-3 flex items-center justify-between">
                   <div>
                     <div className="font-medium text-gray-900">주택담보대출</div>
-                    <div className="text-[12px] text-gray-500">
-                      변동금리 3.21% · 남은 기간 17년 2개월
-                    </div>
+                    <div className="text-[12px] text-gray-500">변동금리 3.21% · 남은 기간 17년 2개월</div>
                   </div>
                   <div className="text-right">
                     <div className="font-semibold text-gray-900">44,480,000원</div>
-                    <div className="text-[12px] text-gray-500">
-                      월 상환 420,000원
-                    </div>
+                    <div className="text-[12px] text-gray-500">월 상환 420,000원</div>
                   </div>
                 </li>
               </ul>

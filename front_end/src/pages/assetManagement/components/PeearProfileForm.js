@@ -8,7 +8,7 @@ const GENDERS = [
 
 const AGE_BANDS = [
   "20대", "30대", "40대", "50대", "60대이상",
-].map((label, i) => ({ value: `A${i+1}`, label }));
+].map((label, i) => ({ value: parseInt(label, 10) , label }));
 
 const JOB_GROUPS = [
   "학생", "무직/구직", "사무/전문직", "서비스/판매직", "생산/노무", "공공/교육/보건", "프리랜서/자영업", "기타",
@@ -56,7 +56,11 @@ export default function PeerProfileForm({ onSaved }) {
     if (!valid || saving) return;
     setSaving(true);
     try {
-      const res = await api.post("/api/asset/peer/profile", form);
+      const payload = {
+        ...form,
+        ageBand: Number(form.ageBand),
+      };
+      const res = await api.post("/api/asset/peer/profile", payload);
       window.localStorage.removeItem(LS_KEY);
       onSaved?.(res.data ?? form);
     } catch (err) {
