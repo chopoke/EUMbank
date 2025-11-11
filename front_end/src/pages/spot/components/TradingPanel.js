@@ -274,7 +274,7 @@ const TradingPanel = ({
             onClick={() => setTradingSide('buy')}
             className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${
               tradingSide === 'buy'
-                ? 'bg-green-500 text-white'
+                ? 'bg-red-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -284,7 +284,7 @@ const TradingPanel = ({
             onClick={() => setTradingSide('sell')}
             className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${
               tradingSide === 'sell'
-                ? 'bg-red-500 text-white'
+                ? 'bg-blue-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -637,8 +637,8 @@ const TradingPanel = ({
         disabled={loading || (tradingSide === 'sell' && getCalculatedQuantity() > getCurrentHoldings())}
         className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-colors ${
           tradingSide === 'buy'
-            ? 'bg-green-500 hover:bg-green-600 disabled:bg-green-300'
-            : 'bg-red-500 hover:bg-red-600 disabled:bg-red-300'
+            ? 'bg-red-500 hover:bg-red-600 disabled:bg-red-300'
+            : 'bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300'
         }`}
       >
         {loading ? '처리중...' : 

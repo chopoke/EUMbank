@@ -561,7 +561,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
           </button>
           <button
             onClick={() => navigate('/spot/history')}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base"
+            className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base"
           >
             거래내역
           </button>

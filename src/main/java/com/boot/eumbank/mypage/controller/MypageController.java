@@ -1,6 +1,8 @@
 package com.boot.eumbank.mypage.controller;
 
 import com.boot.eumbank.account.open.entity.account.Account;
+import com.boot.eumbank.account.select.dto.AccountSummaryDTO;
+import com.boot.eumbank.account.select.service.AccountSelectService;
 import com.boot.eumbank.customer.entity.Customer;
 import com.boot.eumbank.foreign.service.FxRateService;
 import com.boot.eumbank.mypage.entity.MypageCustomer;
@@ -29,6 +31,9 @@ public class MypageController {
 
     @Autowired
     private  FxRateService fxservice;
+
+    @Autowired
+    private AccountSelectService accountService;
 
 
     @GetMapping("/mypage")
@@ -86,10 +91,6 @@ public class MypageController {
     public ResponseEntity<?> getproduct() {
         System.out.println("test0");
 
-
-
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        Customer customer = (Customer) authentication.getPrincipal();
         List<ProductDto> pds = productService.findAllProducts();
 
         // 상품 번호(no)를 기준으로 내림차순(가장 큰 번호가 최신) 정렬 후 상위 3개 선택
@@ -137,6 +138,16 @@ public class MypageController {
         Map<String, Object> response = new HashMap<>();
         response.put("pro3", newest3Products);
         response.put("fx3", res);
+
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        Customer customer = (Customer) authentication.getPrincipal();
+//        int test = customer.getCustomerNo();
+//
+//        List<AccountSummaryDTO> accl = accountService.list(test);
+//
+//        System.out.println(accl);
+
+
         return ResponseEntity.ok(response);
     }
 }
