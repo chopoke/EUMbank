@@ -486,7 +486,7 @@ export function CompactMonthlyChart({
           </span>
         )}
       </div>
-      <svg
+    <svg
         ref={svgRef}
       viewBox={`0 0 ${W} ${H}`}
         style={{ 
@@ -500,14 +500,14 @@ export function CompactMonthlyChart({
       aria-label="월별 변화 추이"
         onMouseDown={handleMouseDown}
         onWheel={handleWheel}
-      >
-        {/* === Y축 그리드/라벨 === */}
+    >
+      {/* === Y축 그리드/라벨 === */}
         {[...Array(yTicks * 2 + 1)].map((_, idx) => {
           const v = -niceMax + step * idx;
           const y = v >= 0 ? toYPositive(v) : toYNegative(v);
           const isZero = Math.abs(v) < 0.01;
-          return (
-            <g key={`grid-${idx}`}>
+        return (
+          <g key={`grid-${idx}`}>
               <line
                 x1={padLeft}
                 y1={y}
@@ -526,12 +526,12 @@ export function CompactMonthlyChart({
                   fill={isZero ? "#6B7280" : "#9CA3AF"}
                   fontWeight={isZero ? "600" : "400"}
                 >
-                  {fmt(v)}{yUnitLabel}
-                </text>
+              {fmt(v)}{yUnitLabel}
+            </text>
               )}
-            </g>
-          );
-        })}
+          </g>
+        );
+      })}
       {/* Y축 본선 */}
       <line x1={padLeft} y1={padTop} x2={padLeft} y2={padTop + innerH}
               stroke="#D1D5DB" strokeWidth="1.5" />
