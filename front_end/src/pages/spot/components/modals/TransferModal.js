@@ -11,7 +11,7 @@ const TransferModal = ({
   customerBalance, 
   transferToTradingAccount, 
   transferFromTradingAccount,
-  wallets = [], // 월렛 데이터를 props로 받음
+  wallets = [], // 지갑 데이터를 props로 받음
   onRefreshBalances
 }) => {
   const [amount, setAmount] = useState('');
@@ -24,10 +24,12 @@ const TransferModal = ({
   const totalWalletBalance = wallets.reduce((sum, wallet) => sum + (Number(wallet.balance) || 0), 0);
   
   // 디버깅을 위한 로그
-  console.log('TransferModal - wallets:', wallets);
-  console.log('TransferModal - totalWalletBalance:', totalWalletBalance);
+const debug = () => {};
 
-  // 월렛 목록 (props로 받은 데이터만 사용) - 모든 월렛 포함
+debug('wallets', wallets);
+debug('totalWalletBalance', totalWalletBalance);
+
+  // 지갑 목록 (props로 받은 데이터만 사용) - 모든 지갑 포함
   const availableWallets = wallets.filter(w => w && w.name);
 
   // 금액 버튼 클릭 핸들러
@@ -43,7 +45,7 @@ const TransferModal = ({
       setAmount('');
       setMessage('');
       setIsBalanceLoading(false);
-      // 기본값 선택: 잔고가 있는 월렛을 우선 선택, 없으면 첫 번째 월렛 선택
+      // 기본값 선택: 잔고가 있는 지갑을 우선 선택, 없으면 첫 번째 지갑 선택
       const walletWithBalance = availableWallets.find(w => (Number(w.balance) || 0) > 0);
       const firstWallet = availableWallets[0]?.name || '';
       setSelectedWallet(walletWithBalance?.name || firstWallet);
@@ -51,7 +53,7 @@ const TransferModal = ({
     }
   }, [isOpen]);
 
-  // 모달이 열려있을 때 주기적으로 월렛 데이터 새로고침 (로딩 상태 관리, 스크롤 위치 유지)
+  // 모달이 열려있을 때 주기적으로 지갑 데이터 새로고침 (로딩 상태 관리, 스크롤 위치 유지)
   useEffect(() => {
     if (isOpen) {
       const interval = setInterval(async () => {
@@ -86,12 +88,12 @@ const TransferModal = ({
           }
         }
         
-        // 월렛 데이터가 변경되었을 수 있으므로 다시 계산
+        // 지갑 데이터가 변경되었을 수 있으므로 다시 계산
         const walletWithBalance = availableWallets.find(w => (Number(w.balance) || 0) > 0);
         const firstWallet = availableWallets[0]?.name || '';
         const newSelectedWallet = walletWithBalance?.name || firstWallet;
         
-        // 현재 선택된 월렛이 없거나 잔고가 변경된 경우 업데이트
+        // 현재 선택된 지갑이 없거나 잔고가 변경된 경우 업데이트
         if (!selectedWallet || (selectedWallet !== newSelectedWallet && walletWithBalance)) {
           setSelectedWallet(newSelectedWallet);
         }
@@ -103,40 +105,37 @@ const TransferModal = ({
 
   // 이체 처리 함수
   const handleTransfer = async () => {
-    console.log('=== 이체 처리 시작 ===');
-    console.log('이체 타입:', transferType);
-    console.log('입력된 금액:', amount);
-    console.log('선택된 월렛:', selectedWallet);
-    
+    debug('transfer start', { transferType, amount, selectedWallet });
+
     const amountValue = Math.floor(Number((amount || '').toString().replace(/,/g, '')));
-    console.log('정리된 금액:', amountValue);
+    debug('normalized amount', amountValue);
     
     if (!amountValue || amountValue <= 0) {
-      console.log('금액 검증 실패');
+      debug('amount validation failed');
       setMessage('올바른 금액을 입력해주세요.');
       return;
     }
 
-    console.log('금액 검증 통과');
+    debug('amount validation passed');
     setLoading(true);
     setMessage('');
 
     try {
       if (transferType === 'toTrading') {
-        console.log('계좌 → 월렛지갑 이체 시작');
+        debug('transfer to trading start');
         await transferToTradingAccount(amountValue, selectedWallet);
-        console.log('계좌 → 월렛지갑 이체 완료');
+        debug('transfer to trading finished');
         setMessage(`${selectedWallet}으로 이체가 완료되었습니다.`);
       } else {
-        console.log('월렛지갑 → 계좌 이체 시작');
+        debug('transfer from trading start');
         await transferFromTradingAccount(amountValue, selectedWallet);
-        console.log('월렛지갑 → 계좌 이체 완료');
+        debug('transfer from trading finished');
         setMessage('계좌로 이체가 완료되었습니다.');
       }
 
-      console.log('=== 이체 처리 완료 ===');
+      debug('transfer completed');
 
-      // 이체 성공 후 로컬 월렛 금액 동기화 및 상세 메시지 생성
+      // 이체 성공 후 로컬 지갑 금액 동기화 및 상세 메시지 생성
       try {
         const userStr = localStorage.getItem('user') || localStorage.getItem('loginUser') || localStorage.getItem('customer');
         const u = userStr ? JSON.parse(userStr) : {};
@@ -173,7 +172,7 @@ const TransferModal = ({
       }
 
       // 이체 성공 후 즉시 잔고 새로고침 (로딩 상태 관리, 스크롤 위치 유지)
-      console.log('TransferModal: 이체 후 잔고 새로고침 시작');
+      debug('refresh balances (immediate) start');
       if (onRefreshBalances) {
         // 스크롤 위치 저장
         const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
@@ -181,7 +180,7 @@ const TransferModal = ({
         setIsBalanceLoading(true);
         try {
           await onRefreshBalances();
-          console.log('TransferModal: 잔고 새로고침 완료');
+          debug('refresh balances (immediate) done');
           
           // 스크롤 위치 복원 (더 안정적인 방법)
           setTimeout(() => {
@@ -199,7 +198,7 @@ const TransferModal = ({
 
       // 추가 안전장치: 잠시 후 다시 한 번 새로고침
       setTimeout(async () => {
-        console.log('TransferModal: 추가 잔고 새로고침 (안전장치)');
+        debug('refresh balances (delayed) start');
         if (onRefreshBalances) {
           // 스크롤 위치 저장
           const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
@@ -221,12 +220,12 @@ const TransferModal = ({
             }, 500);
           }
         }
-        console.log('TransferModal: 추가 잔고 새로고침 완료');
+        debug('refresh balances (delayed) done');
       }, 2000);
 
       // 성공 후 잠시 대기 후 모달 닫기 (잔고 업데이트를 위해 더 긴 대기)
       setTimeout(() => {
-        console.log('TransferModal: 모달 닫기');
+        debug('modal close triggered');
         onClose();
       }, 3000);
     } catch (error) {
@@ -297,7 +296,7 @@ const TransferModal = ({
             </div>
           </div>
 
-          {/* 월렛 선택 (월렛지갑 → 계좌일 때도 표시) - 월렛이 있을 때만 표시 */}
+          {/* 지갑 선택 (지갑 → 계좌일 때도 표시) - 지갑이 있을 때만 표시 */}
           {!isToTrading && availableWallets.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
@@ -312,7 +311,7 @@ const TransferModal = ({
                 </button>
               </div>
               
-              {/* 현재 선택된 월렛 */}
+              {/* 현재 선택된 지갑 */}
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="text-sm font-medium text-blue-800">{selectedWallet}</div>
                 <div className="text-xs text-blue-600">
@@ -323,7 +322,7 @@ const TransferModal = ({
                 </div>
               </div>
 
-              {/* 월렛 선택 드롭다운 */}
+              {/* 지갑 선택 드롭다운 */}
               {showWalletSelector && (
                 <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
                   <div className="space-y-2">
@@ -350,12 +349,12 @@ const TransferModal = ({
             </div>
           )}
 
-          {/* 월렛 선택 (계좌 → 월렛지갑일 때) */}
+          {/* 지갑 선택 (계좌 → 지갑일 때) */}
           {isToTrading && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <label className="text-sm font-medium text-gray-700">
-                  대상 월렛
+                  대상 지갑
                 </label>
                 <button
                   onClick={() => setShowWalletSelector(!showWalletSelector)}
@@ -365,7 +364,7 @@ const TransferModal = ({
                 </button>
               </div>
               
-              {/* 현재 선택된 월렛 */}
+              {/* 현재 선택된 지갑 */}
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="text-sm font-medium text-blue-800">{selectedWallet}</div>
                 <div className="text-xs text-blue-600">
@@ -373,7 +372,7 @@ const TransferModal = ({
                 </div>
               </div>
 
-              {/* 월렛 선택 드롭다운 */}
+              {/* 지갑 선택 드롭다운 */}
               {showWalletSelector && (
                 <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
                   <div className="space-y-2">
@@ -410,11 +409,11 @@ const TransferModal = ({
             </div>
           )}
 
-          {/* 월렛이 없을 때 안내 메시지 */}
+          {/* 지갑이 없을 때 안내 메시지 */}
           {availableWallets.length === 0 && (
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div className="text-center text-yellow-800">
-                <p className="text-sm font-medium mb-2">월렛지갑이 없습니다</p>
+                <p className="text-sm font-medium mb-2">지갑이 없습니다</p>
                 <p className="text-xs">현물계좌 관리에서 계좌를  먼저 개설해주세요.</p>
               </div>
             </div>

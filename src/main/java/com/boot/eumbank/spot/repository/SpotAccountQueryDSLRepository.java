@@ -49,14 +49,24 @@ public class SpotAccountQueryDSLRepository {
 	 * 고객의 활성 입출금 계좌 목록 조회
 	 */
 	public List<Account> getActiveDepositAccountsByCustomerNo(Integer customerNo) {
-		QAccount a = QAccount.account;
-		return queryFactory
-				.selectFrom(a)
-				.where(a.cNo.eq(customerNo)
-						.and(a.status.eq("ACTIVE"))
-						.and(a.accountType.eq("입출금")))
-				.orderBy(a.openedAt.desc())
-				.fetch();
+		try {
+			if (customerNo == null) {
+				return new java.util.ArrayList<>();
+			}
+			
+			QAccount a = QAccount.account;
+			List<Account> accounts = queryFactory
+					.selectFrom(a)
+					.where(a.cNo.eq(customerNo)
+							.and(a.status.eq("ACTIVE"))
+							.and(a.accountType.eq("입출금")))
+					.orderBy(a.openedAt.desc())
+					.fetch();
+			
+			return accounts != null ? accounts : new java.util.ArrayList<>();
+		} catch (Exception e) {
+			return new java.util.ArrayList<>();
+		}
 	}
 
 	/**

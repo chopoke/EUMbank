@@ -6,7 +6,7 @@ import TradingHistoryModal from '../components/modals/TradingHistoryModal';
 import { fetchMe } from '../../../api/authApi';
 
 /**
- * 월렛 관리 전용 페이지
+ * 지갑 관리 전용 페이지
  */
 const SpotWalletsPage = () => {
   const navigate = useNavigate();
@@ -94,7 +94,7 @@ const SpotWalletsPage = () => {
         setWallets(formattedWallets);
       }
     } catch (error) {
-      console.error('월렛 데이터 로드 실패:', error);
+      console.error('지갑 데이터 로드 실패:', error);
     }
   };
 
@@ -103,7 +103,7 @@ const SpotWalletsPage = () => {
   };
 
   const handleWalletSelect = (wallet) => {
-    console.log('월렛 선택됨:', wallet);
+    console.log('지갑 선택됨:', wallet);
   };
 
   useEffect(() => {
