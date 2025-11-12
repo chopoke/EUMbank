@@ -402,45 +402,6 @@ const Calculator = () => {
         </div>
       </div>
 
-      {/* 콤팩트 스케줄 미리보기 : 높이 제한 + 그리드형 */}
-      <div className="mt-5">
-        <h4 className="text-sm font-medium mb-2 flex items-center gap-1 text-gray-600">
-          <ScrollText className="w-4 h-4" />
-          상환스케줄 미리보기 (상위 6회차)
-          <button
-            type="button"
-            onClick={() => setSchedOpen(true)}
-            className="ml-2 inline-flex text-xs text-blue-700 hover:underline"
-          >
-            전체 보기
-          </button>
-        </h4>
-
-        {/* 테이블 대신 콤팩트 카드 리스트로 → 공간 절약 */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-56 overflow-y-auto pr-1">
-          {schedule.map((row) => (
-            <div key={row.no} className="rounded-lg border border-gray-100 p-3 bg-white">
-              <div className="text-xs text-gray-500">회차 {row.no}</div>
-              <div className="mt-1 flex justify-between text-sm">
-                <span className="text-gray-600">이자</span>
-                <span className="font-medium">{fmt(row.interest)}원</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">원금</span>
-                <span className="font-medium">{fmt(row.principal)}원</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">잔액</span>
-                <span className="font-semibold">{fmt(row.remain)}원</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-[11px] text-gray-500">
-          ※ 실제 스케줄은 실행일·상환일·수수료 등에 따라 달라질 수 있습니다.
-        </p>
-      </div>
-
       {/* 전체 스케줄 모달 */}
       {schedOpen && (
         <div className="fixed inset-0 z-50">
