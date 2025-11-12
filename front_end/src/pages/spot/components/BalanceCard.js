@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 
 /**
  * 잔고 카드 컴포넌트
@@ -28,58 +28,89 @@ const BalanceCard = ({
   };
 
   const [selectedAccountNo, setSelectedAccountNo] = useState(getStoredAccountNo());
+  const [showSelector, setShowSelector] = useState(false);
+  const selectorRef = useRef(null);
+  const selectorButtonRef = useRef(null);
 
-  // 계좌 목록이 변경되면 선택된 계좌가 유효한지 확인 (초기 로드 시에만)
   useEffect(() => {
-    if (depositAccounts.length > 0 && !selectedAccountNo) {
-      const storedAccountNo = getStoredAccountNo();
-      const isValidAccount = depositAccounts.some(acc => acc.aNo === storedAccountNo);
-      
-      if (storedAccountNo && isValidAccount) {
-        setSelectedAccountNo(storedAccountNo);
-        // 초기 로드 시에는 부모에게 알리지 않음 (이미 SpotBalancePage에서 처리)
-      } else {
-        // 저장된 계좌가 없거나 유효하지 않으면 첫 번째 계좌 선택
-        const firstAccount = depositAccounts[0];
-        setSelectedAccountNo(firstAccount.aNo);
-        if (customerNo) {
-          localStorage.setItem(`spot_selected_account_${customerNo}`, firstAccount.aNo.toString());
-        }
-        // 초기 로드 시에는 부모에게 알리지 않음 (이미 SpotBalancePage에서 처리)
+    if (showSelector && depositAccounts.length === 0) {
+      setShowSelector(false);
+    }
+  }, [showSelector, depositAccounts.length]);
+
+  useEffect(() => {
+    if (!showSelector) return;
+
+    const handleClickOutside = (event) => {
+      if (
+        selectorRef.current &&
+        !selectorRef.current.contains(event.target) &&
+        selectorButtonRef.current &&
+        !selectorButtonRef.current.contains(event.target)
+      ) {
+        setShowSelector(false);
       }
-    } else if (depositAccounts.length > 0 && selectedAccountNo) {
-      // 선택된 계좌가 유효한지 확인 (계좌 목록이 업데이트된 경우)
-      const isValidAccount = depositAccounts.some(acc => acc.aNo === selectedAccountNo);
-      if (!isValidAccount) {
-        // 유효하지 않으면 첫 번째 계좌로 변경
-        const firstAccount = depositAccounts[0];
-        setSelectedAccountNo(firstAccount.aNo);
-        if (customerNo) {
-          localStorage.setItem(`spot_selected_account_${customerNo}`, firstAccount.aNo.toString());
-        }
-        // 계좌 목록이 변경되어 유효하지 않은 경우에만 부모에게 알림
-        if (onAccountChange) {
-          onAccountChange(firstAccount.aNo);
-        }
+    };
+
+    // 약간의 지연을 두어 버튼 클릭 이벤트가 먼저 처리되도록 함
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSelector]);
+
+  // 계좌 목록이 변경되면 저장된 선택 값만 복원
+  useEffect(() => {
+    if (depositAccounts.length === 0) {
+      if (selectedAccountNo !== null) {
+        setSelectedAccountNo(null);
+      }
+      if (customerNo) {
+        localStorage.removeItem(`spot_selected_account_${customerNo}`);
+      }
+      return;
+    }
+
+    const storedAccountNo = getStoredAccountNo();
+    const hasStored = storedAccountNo && depositAccounts.some(acc => acc.aNo === storedAccountNo);
+
+    if (hasStored && storedAccountNo !== selectedAccountNo) {
+      setSelectedAccountNo(storedAccountNo);
+    } else if (!hasStored && selectedAccountNo !== null) {
+      setSelectedAccountNo(null);
+      if (customerNo) {
+        localStorage.removeItem(`spot_selected_account_${customerNo}`);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [depositAccounts.length, customerNo]);
+  }, [depositAccounts, selectedAccountNo, customerNo]);
 
   // 계좌 선택 변경 핸들러
-  const handleAccountChange = (e) => {
-    const accountNo = parseInt(e.target.value, 10);
-    setSelectedAccountNo(accountNo);
+  const handleAccountChange = (accountNo) => {
+    const parsedAccountNo = typeof accountNo === 'number'
+      ? accountNo
+      : parseInt(accountNo, 10);
+
+    if (Number.isNaN(parsedAccountNo)) {
+      return;
+    }
+
+    setSelectedAccountNo(parsedAccountNo);
     
     // localStorage에 저장
     if (customerNo) {
-      localStorage.setItem(`spot_selected_account_${customerNo}`, accountNo.toString());
+      localStorage.setItem(`spot_selected_account_${customerNo}`, parsedAccountNo.toString());
     }
     
     // 부모 컴포넌트에 변경 알림
     if (onAccountChange) {
-      onAccountChange(accountNo);
+      onAccountChange(parsedAccountNo);
     }
+
+    setShowSelector(false);
   };
 
   // 현물통장 잔고는 실제 현물통장들의 총합을 표시 (DB 데이터 기반)
@@ -95,31 +126,96 @@ const BalanceCard = ({
     return depositAccounts.find(acc => acc.aNo === selectedAccountNo);
   }, [depositAccounts, selectedAccountNo]);
 
+  const hasDepositAccounts = depositAccounts.length > 0;
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div className="relative bg-white rounded-lg shadow-md p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold text-gray-800">잔고 현황</h2>
-      </div>
-
-      {/* 입출금 계좌 선택 드롭다운 */}
-      {depositAccounts.length > 1 && (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            입출금 계좌 선택
-          </label>
-          <select
-            value={selectedAccountNo || ''}
-            onChange={handleAccountChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="flex items-center gap-2 relative">
+          <button
+            type="button"
+            ref={selectorButtonRef}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowSelector((prev) => !prev);
+            }}
+            className="px-3 py-1.5 text-sm font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
           >
-            {depositAccounts.map((account) => (
-              <option key={account.aNo} value={account.aNo}>
-                {account.nickname || account.accountNo} - ₩{Math.round(account.balance || 0).toLocaleString()}
-              </option>
-            ))}
-          </select>
+            입출금계좌 선택
+          </button>
+
+          {/* 입출금 계좌 선택 팝오버 */}
+          {showSelector && (
+            <div
+              ref={selectorRef}
+              className="absolute z-50 top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg w-72 max-w-full"
+            >
+              <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-700">입출금 계좌 선택</span>
+                <button
+                  type="button"
+                  onClick={() => setShowSelector(false)}
+                  className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                  aria-label="계좌 선택 창 닫기"
+                >
+                  ×
+                </button>
+              </div>
+              {hasDepositAccounts ? (
+                <>
+                  <ul className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                    {depositAccounts.map((account) => {
+                      const isActive = selectedAccountNo === account.aNo;
+                      return (
+                        <li key={account.aNo}>
+                          <button
+                            type="button"
+                            onClick={() => handleAccountChange(account.aNo)}
+                            className={`w-full text-left px-4 py-3 transition ${
+                              isActive ? 'bg-blue-50 text-blue-600 font-semibold' : 'hover:bg-gray-50 text-gray-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span>{account.nickname || account.accountNo}</span>
+                              {isActive && <span className="text-xs font-medium">선택됨</span>}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              잔액 ₩{Math.round(account.balance || 0).toLocaleString()}
+                            </div>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="px-4 py-3 border-t border-gray-200 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setShowSelector(false)}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium focus:outline-none"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="px-4 py-6 text-center text-gray-500">
+                  등록된 입출금 통장이 없습니다.
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowSelector(false)}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium focus:outline-none"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 계좌 잔고 */}
