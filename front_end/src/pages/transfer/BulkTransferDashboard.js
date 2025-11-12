@@ -410,7 +410,7 @@ export default function BulkTransferPage() {
       />
       <main className="mx-auto max-w-screen-xl px-6 ">
         <section className="mx-auto max-w-screen-xl  py-[32px]">
-          <div className="tranb w-[1240px] flex items-center justify-between">
+          <div className="tranb flex items-center justify-between mx-auto w-full h-[152px]">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">다건이체</h1>
               <p className="text-gray-500 ">여러 계좌에 한 번에 이체할 수 있습니다.</p>
