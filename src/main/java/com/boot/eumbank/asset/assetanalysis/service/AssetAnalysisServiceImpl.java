@@ -33,6 +33,7 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
     private final AssetGoalRepository goalRepository;
 
     private static final Map<String, String> EXECUTION_TYPE_LABELS = Map.ofEntries(
+            Map.entry("AUTO", "자동이체"),
             Map.entry("UTILITY", "공과금 자동이체"),
             Map.entry("SUBSCRIPTION", "정기 구독 결제"),
             Map.entry("INSURANCE", "보험료 자동이체"),
@@ -294,7 +295,8 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
             return transfer.getMemo().trim();
         }
         if (hasText(transfer.getExecutionType())) {
-            return humanizeLabel(transfer.getExecutionType());
+            String label = humanizeLabel(transfer.getExecutionType());
+            return label;
         }
         if (hasText(transfer.getScheduleType())) {
             return humanizeLabel(transfer.getScheduleType());

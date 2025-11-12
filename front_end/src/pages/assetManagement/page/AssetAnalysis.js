@@ -288,9 +288,9 @@ export default function AssetAnalysis() {
             {/* 다음달 예정 지출 */}
             <div className="flex flex-col gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
               <div className="flex items-start justify-between gap-3">
-                <div>
+              <div>
                   <h2 className="text-base font-semibold text-gray-900">다음달 예정 지출</h2>
-                  <p className="text-[12px] text-gray-500">
+                <p className="text-[12px] text-gray-500">
                     자동·예약 이체로 확정된 지출을 미리 확인하세요.
                     {upcomingRangeText && (
                       <span className="ml-1 text-blue-500">{upcomingRangeText}</span>
@@ -325,6 +325,8 @@ export default function AssetAnalysis() {
                     const percent = Math.max(0, Math.min(100, Number(item.percentage) || 0));
                     const amount = item.amount || 0;
                     const dateLabel = item.firstScheduledDate ? formatDateLabel(item.firstScheduledDate) : "";
+                    const memoValue =
+                      item.memoSample && item.memoSample !== item.category ? item.memoSample : null;
                     return (
                       <li
                         key={`${item.category || "unknown"}-${index}`}
@@ -341,13 +343,15 @@ export default function AssetAnalysis() {
                               style={{ width: `${percent}%` }}
                             />
                           </div>
-                          <span className="text-[11px] font-medium text-blue-600">{percent.toFixed(1)}%</span>
+                          <span className="text-[11px] font-medium text-blue-600">
+                            전체 대비 {percent.toFixed(1)}%
+                          </span>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
                           <span>{item.paymentCount || 0}건 예정</span>
                           {dateLabel && <span>{dateLabel} 예정</span>}
-                          {item.memoSample && (
-                            <span className="max-w-[60%] truncate text-gray-400">메모: {item.memoSample}</span>
+                          {memoValue && (
+                            <span className="max-w-[60%] truncate text-gray-400">메모: {memoValue}</span>
                           )}
                         </div>
                       </li>
