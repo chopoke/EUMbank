@@ -19,6 +19,7 @@ public class AssetAnalysisResponse {
     private AssetGoalDto goal;
     private AssetDistributionDto distribution;
     private AssetDeltaSummaryDto deltaSummary;
+    private UpcomingSpendingSummaryDto nextMonthSpending;
     private List<MonthlyTrendDto> monthlyTrends;
 }
 
