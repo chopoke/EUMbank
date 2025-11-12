@@ -5,6 +5,117 @@ import { Link } from "react-router-dom";
 import { CompactMonthlyChart, GoalGaugeStatic, WeeklyDeltaBarsStatic } from "../components/StaticCharts";
 import { getAssetAnalysis, setAssetGoal } from "../../../api/assetApi";
 
+const WON_FORMATTER = new Intl.NumberFormat("ko-KR");
+
+const formatSignedWon = (value = 0) => WON_FORMATTER.format(Math.round(value));
+const formatAbsoluteWon = (value = 0) => WON_FORMATTER.format(Math.round(Math.abs(value)));
+const normalizeLabelKey = (value) => (value ?? "").toString().trim();
+
+const toWonFromTenThousands = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return null;
+  }
+  return Math.round(numeric * 10000);
+};
+
+const toWonFromThousands = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return null;
+  }
+  return Math.round(numeric * 1000);
+};
+
+const isNumber = (value) => typeof value === "number" && !Number.isNaN(value);
+const isNegligibleChange = (value) => !isNumber(value) || Math.abs(value) < 1000;
+
+const getComparisonLabel = (periodType) => {
+  switch (periodType) {
+    case "DAILY":
+      return "전일";
+    case "WEEKLY":
+      return "지난주";
+    case "MONTHLY":
+      return "지난달";
+    case "HOURLY":
+      return "직전 시간";
+    case "MINUTELY":
+      return "직전 분";
+    default:
+      return "이전 기간";
+  }
+};
+
+const buildFlowNarrative = ({
+  currentIncome,
+  currentExpense,
+  currentNet,
+  previousIncome,
+  previousExpense,
+  previousNet,
+  periodType,
+}) => {
+  const referenceLabel = getComparisonLabel(periodType);
+  const hasPreviousNet = isNumber(previousNet);
+  const hasIncomeComparison = isNumber(currentIncome) && isNumber(previousIncome);
+  const hasExpenseComparison = isNumber(currentExpense) && isNumber(previousExpense);
+
+  if (!hasPreviousNet) {
+    const parts = [];
+    if (isNumber(currentIncome)) {
+      parts.push(`수익은 ${formatSignedWon(currentIncome)}원`);
+    }
+    if (isNumber(currentExpense)) {
+      parts.push(`지출은 ${formatSignedWon(currentExpense)}원`);
+    }
+    const netSentence = `순증감은 ${formatSignedWon(currentNet ?? 0)}원입니다.`;
+    const detail = parts.length ? `${parts.join(", ")}이며 ${netSentence}` : netSentence;
+    return `처음 집계된 기간입니다. ${detail} 비교 정보는 다음 기간부터 제공됩니다.`;
+  }
+
+  if (!hasIncomeComparison && !hasExpenseComparison) {
+    const netDiff = (currentNet ?? 0) - previousNet;
+    if (isNegligibleChange(netDiff)) {
+      return `${referenceLabel}와 비교해 순증감이 비슷한 수준을 유지했습니다.`;
+    }
+    const direction = netDiff > 0 ? "개선되었습니다" : "악화되었습니다";
+    return `${referenceLabel}보다 순증감이 ${formatAbsoluteWon(netDiff)}원 ${direction}.`;
+  }
+
+  const segments = [];
+  if (hasIncomeComparison) {
+    const diff = (currentIncome ?? 0) - (previousIncome ?? 0);
+    if (isNegligibleChange(diff)) {
+      segments.push("수익은 큰 변화가 없습니다.");
+    } else {
+      const direction = diff > 0 ? "늘었습니다." : "줄었습니다.";
+      segments.push(`수익이 ${formatAbsoluteWon(diff)}원 ${direction}`);
+    }
+  }
+
+  if (hasExpenseComparison) {
+    const diff = (currentExpense ?? 0) - (previousExpense ?? 0);
+    if (isNegligibleChange(diff)) {
+      segments.push("지출은 큰 변화가 없습니다.");
+    } else {
+      const direction = diff > 0 ? "늘었습니다." : "줄었습니다.";
+      segments.push(`지출이 ${formatAbsoluteWon(diff)}원 ${direction}`);
+    }
+  }
+
+  const netDiff = (currentNet ?? 0) - previousNet;
+  let netSentence;
+  if (isNegligibleChange(netDiff)) {
+    netSentence = "순증감 흐름은 비슷한 수준을 유지했습니다.";
+  } else {
+    const direction = netDiff > 0 ? "개선되었습니다." : "악화되었습니다.";
+    netSentence = `결과적으로 순증감이 ${formatAbsoluteWon(netDiff)}원 ${direction}`;
+  }
+
+  return `${referenceLabel} 대비 ${segments.join(" ")} ${netSentence}`.replace(/\s+/g, " ").trim();
+};
+
 export default function AssetAnalysis() {
   const [analysisData, setAnalysisData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -195,26 +306,61 @@ export default function AssetAnalysis() {
     ? Number(deltaSummary.totalDelta30Days)
     : 0;
 
+  const trendLookup = useMemo(() => {
+    const map = new Map();
+    (monthlyTrends || []).forEach((entry) => {
+      if (entry?.month) {
+        map.set(normalizeLabelKey(entry.month), entry);
+      }
+    });
+    return map;
+  }, [monthlyTrends]);
+
   const deltaDetailRows = useMemo(() => {
     return limitedDeltas.map((delta, index) => {
-      const rawAmount = Number(delta?.deltaAmount ?? 0);
-      const amountWon = Math.round(rawAmount * 1000);
-      const impactLabel = amountWon > 0 ? "증가" : amountWon < 0 ? "감소" : "변화 없음";
-      const impactDescription =
-        amountWon > 0
-          ? "수익이 소비보다 많아 자산이 증가했습니다."
-          : amountWon < 0
-          ? "소비가 수익을 앞서 자산이 감소했습니다."
-          : "자산이 안정적으로 유지되었습니다.";
+      const label = delta?.weekLabel ?? `기간 ${index + 1}`;
+      const labelKey = normalizeLabelKey(label);
+      const trendEntry = trendLookup.get(labelKey);
+
+      const rawAmount = toWonFromThousands(delta?.deltaAmount);
+      const amountWon = isNumber(rawAmount) ? rawAmount : 0;
+
+      const currentIncomeWon = trendEntry ? toWonFromTenThousands(trendEntry.income) : null;
+      const currentExpenseWon = trendEntry ? toWonFromTenThousands(trendEntry.expense) : null;
+      const currentTrendNetWon = trendEntry ? toWonFromTenThousands(trendEntry.net) : null;
+      const currentNetWon = isNumber(currentTrendNetWon) ? currentTrendNetWon : amountWon;
+
+      const previousDelta = index > 0 ? limitedDeltas[index - 1] : null;
+      const previousLabel = previousDelta?.weekLabel ?? `기간 ${index}`;
+      const previousTrendEntry = previousDelta ? trendLookup.get(normalizeLabelKey(previousLabel)) : null;
+      const previousIncomeWon = previousTrendEntry ? toWonFromTenThousands(previousTrendEntry.income) : null;
+      const previousExpenseWon = previousTrendEntry ? toWonFromTenThousands(previousTrendEntry.expense) : null;
+      const previousTrendNetWon = previousTrendEntry ? toWonFromTenThousands(previousTrendEntry.net) : null;
+      const previousNetFallback = previousDelta ? toWonFromThousands(previousDelta.deltaAmount) : null;
+      const previousNetWon = isNumber(previousTrendNetWon) ? previousTrendNetWon : previousNetFallback;
+
+      const impactDescription = buildFlowNarrative({
+        currentIncome: currentIncomeWon ?? null,
+        currentExpense: currentExpenseWon ?? null,
+        currentNet: currentNetWon ?? amountWon,
+        previousIncome: previousIncomeWon ?? null,
+        previousExpense: previousExpenseWon ?? null,
+        previousNet: previousNetWon,
+        periodType: period,
+      });
+
+      const impactLabel =
+        currentNetWon > 0 ? "순증감 개선" : currentNetWon < 0 ? "순증감 악화" : "변동 없음";
+
       return {
-        id: `${delta?.weekLabel ?? "기간"}-${index}`,
-        label: delta?.weekLabel ?? `기간 ${index + 1}`,
-        amountWon,
+        id: `${label}-${index}`,
+        label,
+        netWon: currentNetWon ?? amountWon,
         impactLabel,
         impactDescription,
       };
     });
-  }, [limitedDeltas]);
+  }, [limitedDeltas, trendLookup, period]);
 
   const deltaDetailSummary = useMemo(() => {
     if (!deltaDetailRows.length) {
@@ -225,11 +371,18 @@ export default function AssetAnalysis() {
         negativeCount: 0,
       };
     }
-    const total = deltaDetailRows.reduce((sum, row) => sum + row.amountWon, 0);
-    const positiveCount = deltaDetailRows.filter((row) => row.amountWon > 0).length;
-    const negativeCount = deltaDetailRows.filter((row) => row.amountWon < 0).length;
+    const total = deltaDetailRows.reduce((sum, row) => sum + (row.netWon ?? 0), 0);
+    const positiveCount = deltaDetailRows.filter((row) => (row.netWon ?? 0) > 0).length;
+    const negativeCount = deltaDetailRows.filter((row) => (row.netWon ?? 0) < 0).length;
     const average = Math.round(total / deltaDetailRows.length);
     return { total, average, positiveCount, negativeCount };
+  }, [deltaDetailRows]);
+
+  const deltaSummaryText = useMemo(() => {
+    if (!deltaDetailRows.length) {
+      return "자산 변화 데이터를 분석 중입니다.";
+    }
+    return deltaDetailRows[deltaDetailRows.length - 1].impactDescription;
   }, [deltaDetailRows]);
 
   const trimmedMonthlyTrends = useMemo(() => {
@@ -243,9 +396,6 @@ export default function AssetAnalysis() {
     }
     return source.slice(source.length - limit);
   }, [monthlyTrends, chartSlice, chartPeriod]);
-
-  const formatWon = (value = 0) =>
-    new Intl.NumberFormat("ko-KR").format(Math.round(value));
 
   const formatIsoDate = (isoString, withTime = false) => {
     if (!isoString) {
@@ -311,25 +461,46 @@ export default function AssetAnalysis() {
       "설명",
     ];
 
-    const rows = trimmedMonthlyTrends.map((trend) => {
-      const incomeWon = Math.round(Number(trend?.income ?? 0) * 10000);
-      const expenseWon = Math.round(Number(trend?.expense ?? 0) * 10000);
-      const netWon =
-        trend?.net !== undefined && trend?.net !== null
-          ? Math.round(Number(trend.net) * 10000)
-          : incomeWon - expenseWon;
+    const rows = trimmedMonthlyTrends.map((trend, index) => {
+      const incomeWonRaw = toWonFromTenThousands(trend?.income);
+      const expenseWonRaw = toWonFromTenThousands(trend?.expense);
+      const netWonRaw = toWonFromTenThousands(trend?.net);
+
+      const incomeWon = isNumber(incomeWonRaw) ? incomeWonRaw : 0;
+      const expenseWon = isNumber(expenseWonRaw) ? expenseWonRaw : 0;
+      const netWon = isNumber(netWonRaw)
+        ? netWonRaw
+        : incomeWon - expenseWon;
+
       const netWorthWon = Math.round(Number(trend?.netWorth ?? 0));
       const baseline = netWorthWon - netWon;
       const ratio =
         baseline !== 0 ? ((netWon / Math.abs(baseline)) * 100).toFixed(2) : "0.00";
       const startIso = trend?.periodStartDate ?? "";
       const endIso = resolvePeriodEndIso(startIso, chartPeriod);
-      const description =
-        netWon > 0
-          ? "수익이 소비보다 많아 순자산이 증가한 구간입니다."
-          : netWon < 0
-          ? "소비가 수익보다 많아 순자산이 감소한 구간입니다."
-          : "수익과 소비가 균형을 이뤄 순자산이 유지된 구간입니다.";
+
+      const previousTrend = index > 0 ? trimmedMonthlyTrends[index - 1] : null;
+      const prevIncomeRaw = previousTrend ? toWonFromTenThousands(previousTrend.income) : null;
+      const prevExpenseRaw = previousTrend ? toWonFromTenThousands(previousTrend.expense) : null;
+      const prevNetRaw = previousTrend ? toWonFromTenThousands(previousTrend.net) : null;
+
+      const previousIncomeWon = isNumber(prevIncomeRaw) ? prevIncomeRaw : null;
+      const previousExpenseWon = isNumber(prevExpenseRaw) ? prevExpenseRaw : null;
+      const previousNetCandidate = isNumber(prevNetRaw)
+        ? prevNetRaw
+        : isNumber(prevIncomeRaw) && isNumber(prevExpenseRaw)
+        ? (prevIncomeRaw ?? 0) - (prevExpenseRaw ?? 0)
+        : null;
+
+      const description = buildFlowNarrative({
+        currentIncome: isNumber(incomeWonRaw) ? incomeWon : null,
+        currentExpense: isNumber(expenseWonRaw) ? expenseWon : null,
+        currentNet: netWon,
+        previousIncome: previousIncomeWon,
+        previousExpense: previousExpenseWon,
+        previousNet: previousNetCandidate,
+        periodType: chartPeriod,
+      });
 
       return [
         trend?.month ?? "",
@@ -338,11 +509,11 @@ export default function AssetAnalysis() {
           endIso,
           chartPeriod === "MINUTELY" || chartPeriod === "HOURLY"
         ),
-        formatWon(incomeWon),
-        formatWon(expenseWon),
-        formatWon(netWon),
+        formatSignedWon(incomeWon),
+        formatSignedWon(expenseWon),
+        formatSignedWon(netWon),
         ratio,
-        formatWon(netWorthWon),
+        formatSignedWon(netWorthWon),
         description,
       ];
     });
@@ -619,7 +790,7 @@ export default function AssetAnalysis() {
                   {totalDelta30 >= 0 ? '+' : ''}{new Intl.NumberFormat('ko-KR').format(totalDelta30)}원 {totalDelta30 >= 0 ? '증가' : '감소'}
                 </div>
                 <div className="text-[12px] text-gray-500 mt-1">
-                  {deltaSummary?.trendDescription || "자산 변화 분석 중..."}
+                  {deltaSummaryText}
                 </div>
               </div>
 
@@ -717,7 +888,7 @@ export default function AssetAnalysis() {
               }
               height={420}
               yUnitLabel="만"
-              yTicks={4}
+               yTicks={4}
               showIncome={chartDataTypes.income}
               showExpense={chartDataTypes.expense}
             />
@@ -774,14 +945,14 @@ export default function AssetAnalysis() {
                 <div className="text-xs text-gray-500">순증감 합계</div>
                 <div className="mt-1 text-xl font-semibold text-gray-900">
                   {deltaDetailSummary.total >= 0 ? "+" : ""}
-                  {formatWon(deltaDetailSummary.total)}원
+                  {formatSignedWon(deltaDetailSummary.total)}원
                 </div>
               </div>
               <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
                 <div className="text-xs text-gray-500">기간당 평균</div>
                 <div className="mt-1 text-xl font-semibold text-gray-900">
                   {deltaDetailSummary.average >= 0 ? "+" : ""}
-                  {formatWon(deltaDetailSummary.average)}원
+                  {formatSignedWon(deltaDetailSummary.average)}원
                 </div>
               </div>
               <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
@@ -819,15 +990,15 @@ export default function AssetAnalysis() {
                       <td className="px-4 py-3 font-medium text-gray-900">{row.label}</td>
                       <td
                         className={`px-4 py-3 text-right font-semibold ${
-                          row.amountWon > 0
+                          (row.netWon ?? 0) > 0
                             ? "text-emerald-600"
-                            : row.amountWon < 0
+                            : (row.netWon ?? 0) < 0
                             ? "text-rose-600"
                             : "text-gray-600"
                         }`}
                       >
-                        {row.amountWon >= 0 ? "+" : ""}
-                        {formatWon(row.amountWon)}원
+                        {(row.netWon ?? 0) >= 0 ? "+" : ""}
+                        {formatSignedWon(row.netWon ?? 0)}원
                       </td>
                       <td className="px-4 py-3 text-gray-600">
                         <div className="font-medium text-gray-800">{row.impactLabel}</div>
@@ -847,9 +1018,7 @@ export default function AssetAnalysis() {
             </div>
 
             <div className="mt-6 rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
-              {deltaSummary?.trendDescription
-                ? deltaSummary.trendDescription
-                : "최근 기간 동안의 자산 변화가 안정적인 흐름을 보이고 있습니다."}
+              {deltaSummaryText}
             </div>
           </div>
         </div>
