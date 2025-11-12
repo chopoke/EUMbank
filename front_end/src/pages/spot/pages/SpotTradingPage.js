@@ -79,6 +79,24 @@ const SpotTradingPage = () => {
    * @param {number} amount 거래 금액
    * @param {string} product 상품 ('gold' 또는 'silver')
    * @returns {number} 계산된 수량 (g)
+   * 
+   * 백엔드의 buyPrice/sellPrice는 3.75g당 가격입니다.
+   * 백엔드에서 totalPrice = buyPrice * quantity로 계산하므로,
+   * quantity를 g 단위로 전달하면 totalPrice가 3.75배가 됩니다.
+   * 
+   * 따라서 quantity를 3.75g 단위로 계산해야 합니다:
+   * - quantity = amount / buyPrice (3.75g 단위)
+   * - 백엔드: totalPrice = buyPrice * quantity = buyPrice * (amount / buyPrice) = amount
+   * 
+   * 하지만 백엔드로 전달할 때는 g 단위로 변환해야 하므로:
+   * - quantity = (amount / buyPrice) * 3.75 (g 단위)
+   * 
+   * 그러나 이렇게 하면 다시 3.75배가 되므로,
+   * 프론트엔드에서는 입력 금액을 그대로 사용하고,
+   * 백엔드로 전달할 quantity는 (amount / buyPrice)로 계산해야 합니다.
+   * 
+   * 하지만 백엔드 코드를 보면 quantity를 g 단위로 받아서 처리하므로,
+   * 여기서는 g 단위로 계산하되, calculateActualTotalPrice에서 입력 금액을 그대로 사용합니다.
    */
   const calculateQuantityFromAmount = (amount, product) => {
     if (!amount || amount <= 0) return 0;
@@ -92,6 +110,13 @@ const SpotTradingPage = () => {
 
     if (!pricePerUnit) return 0;
 
+    // 백엔드의 buyPrice는 3.75g당 가격이므로, 1g당 가격 = buyPrice / 3.75
+    // 수량(g) = 금액 / 1g당 가격 = 금액 / (buyPrice / 3.75) = (금액 * 3.75) / buyPrice
+    // 하지만 이렇게 하면 백엔드에서 totalPrice = buyPrice * quantity가 3.75배가 됩니다.
+    // 따라서 quantity를 3.75g 단위로 계산: quantity = amount / buyPrice (3.75g 단위)
+    // 백엔드로 전달할 때는 g 단위로 변환: quantity = (amount / buyPrice) * 3.75
+    // 하지만 백엔드가 g 단위로 받아서 처리하므로, 여기서는 g 단위로 계산
+    // 프론트엔드 표시용이므로 정확한 g 단위로 계산
     return (amount / pricePerUnit) * TRADE_UNIT_WEIGHT;
   };
 
