@@ -6,6 +6,7 @@ import { goToAccountOpenPage } from "./account/utils/navigations";
 import PriceWidget from "./spot/components/PriceWidget";
 import getdata from "./mypage/getdata";
 
+
 // 데모용 아이콘 (간단한 SVG)
 const Icon = ({ path, label }) => (
   // Tailwind의 inline-flex, items-center, gap-2를 대체
@@ -196,8 +197,15 @@ const QuickActions = ({ isAdmin = false }) => {
   );
 };
 
-const AccountSnapshot = ({ summary }) => {
+const AccountSnapshot = ({ summary, isLoggedIn, user }) => {
+  //const { isLoggedIn } = useAuth();
   const total = useMemo(() => summary.accounts.reduce((a, b) => a + b.balance, 0), [summary.accounts]);
+
+  console.log('ckuser :', user);
+  if (!isLoggedIn) {
+    return <section className="account-snapshot-section">
+      <div className="content-container h-[300px] py-10"><h1 className="text-center text-2xl">로그인이 필요합니다.</h1></div></section>;
+  }
   return (
     <section className="account-snapshot-section">
       {/* mx-auto max-w-screen-xl px-6 py-10 */}
@@ -306,17 +314,16 @@ const AccountSnapshot = ({ summary }) => {
               <div className="card-subtitle">상환일 {summary.loans[0].nextDue}</div>
             </div>
             {/* rounded-2xl border bg-white p-5 shadow-sm */}
-            <div className="snapshot-card side-card">
-              {/* flex items-center justify-between mb-3 */}
+            {/* <div className="snapshot-card side-card">
               <div className="card-header-icon small">
                 <div className="font-medium">이번달 지출 인사이트</div>
                 <Icon path={paths.chart} />
               </div>
-              {/* text-sm text-gray-600 */}
+              text-sm text-gray-600
               <div className="insight-text">카테고리 Top3: 식비 · 교통 · 쇼핑</div>
-              {/* mt-2 h-16 w-full rounded bg-gray-100 */}
+              mt-2 h-16 w-full rounded bg-gray-100
               <div className="insight-chart-placeholder" aria-hidden="true" />
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -370,13 +377,13 @@ function RateFxTicker (){
         {/* font-medium text-gray-900 */}
         <h6 id="rate-fx" className="fx-ticker-title">오늘의 환율</h6>
         {/* text-sm text-blue-700 hover:underline */}
-        <a href="/foreign/rate" className="text-link">더보기</a>
+        <Link to='/foreign/rate' className="text-link">더보기</Link>
       </div>
       {/* mt-3 grid grid-cols-3 gap-4 text-sm */}
       <div className="fx-list-grid">
         {topProducts.map((r) => (
           // rounded-xl border p-3 flex items-center justify-between
-          <div key={r.pair} className="fx-rate-item">
+          <div key={r.cur} className="fx-rate-item">
             {/* text-gray-700 */}
             <span className="fx-pair">{r.cur}/KRW</span>
             {/* font-semibold */}
@@ -571,7 +578,7 @@ export default function BankHome({ user }) {
         <Hero name={user?.name || user?.id || user?.loginId} />
         <QuickActions isAdmin={isAdmin} />
 
-        <AccountSnapshot summary={summary} />
+        <AccountSnapshot summary={summary} isLoggedIn={isLoggedIn} user={user} />
         <FundSpotlight />
         <WealthHubSummary />
         <RateFxTicker fx={summary.fx} />

@@ -504,9 +504,6 @@ function AccountListPage(){
                               <Link to={getDetailHref(row)}>
                                 <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">상세내역</button>
                               </Link>
-                              <Link to={`/transfer/manage`} state={{ accountNo: row.number }}>
-                                <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">자동/예약</button>
-                              </Link>
                             </div>
                           </td>
                         </tr>
@@ -542,9 +539,6 @@ function AccountListPage(){
                       </div>
                       <div className="text-xs text-gray-600 mt-1">{row.lastActivity}</div>
                       <div className="mt-3 flex gap-2">
-                        <Link to={`/transfer/manage`} state={{ accountNo: row.number }}>
-                          <button className="flex-1 rounded-md border text-xs bg-gray-100 py-1.5 hover:bg-gray-200">자동/예약</button>
-                        </Link>
                         <Link to={`/transfer`} state={{ fromAccountNumber: row.number }}>
                           <button className="flex-1 rounded-md border text-xs bg-gray-100 py-1.5 hover:bg-gray-200">이체</button>
                         </Link>

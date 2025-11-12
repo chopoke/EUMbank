@@ -60,7 +60,7 @@ public interface GoldWalletRepository extends JpaRepository<GoldWallet, Integer>
     boolean existsByCustomerNoAndWalletName(@Param("customerNo") Long customerNo, 
                                            @Param("walletName") String walletName);
 
-    // 월렛명으로 조회
+    // 지갑명으로 조회
     @Query("SELECT gw FROM GoldWallet gw WHERE gw.customer.customerNo = :customerNo AND gw.gwWalletName = :walletName")
     Optional<GoldWallet> findByCustomerCustomerNoAndGwWalletName(@Param("customerNo") Long customerNo, @Param("walletName") String walletName);
     
