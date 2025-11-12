@@ -659,38 +659,31 @@ export function CompactMonthlyChart({
 
         {/* === 호버 툴팁 === */}
         {hoveredIndex !== null && hoveredIndex < visibleData.length && visibleData[hoveredIndex] && (() => {
-          const tooltipWidth = 140;
-          const tooltipHeight = 86;
-          const tooltipPadding = 8;
+        const tooltipWidth = 140;
+        const tooltipHeight = 86;
+        const tooltipPadding = 8;
+        const horizontalMargin = padLeft + tooltipPadding;
+        const horizontalMax = W - padRight - tooltipPadding;
           const pointX = toXMid(hoveredIndex);
-          const pointY = padTop + innerH / 2;
-          
-          // 툴팁 위치 계산 (화면 경계 내에 있도록)
-          let tooltipX = pointX - tooltipWidth / 2;
-          let tooltipY = pointY - tooltipHeight - tooltipPadding;
-          
-          // 왼쪽 경계 체크
-          if (tooltipX < padLeft) {
-            tooltipX = padLeft + tooltipPadding;
-          }
-          // 오른쪽 경계 체크
-          if (tooltipX + tooltipWidth > W - padRight) {
-            tooltipX = W - padRight - tooltipWidth - tooltipPadding;
-          }
-          
-          // 위쪽 경계 체크
-          if (tooltipY < padTop) {
-            tooltipY = pointY + tooltipPadding + 20; // 아래쪽에 표시
-          }
-          // 아래쪽 경계 체크
-          if (tooltipY + tooltipHeight > H - padBottom) {
-            tooltipY = pointY - tooltipHeight - tooltipPadding; // 위쪽에 표시
-            // 그래도 안되면 더 위로
-            if (tooltipY < padTop) {
-              tooltipY = padTop + tooltipPadding;
-            }
-          }
-          
+        const pointY = padTop + innerH / 2;
+
+        let tooltipX = pointX - tooltipWidth / 2;
+        if (tooltipX < horizontalMargin) {
+          tooltipX = horizontalMargin;
+        }
+        if (tooltipX + tooltipWidth > horizontalMax) {
+          tooltipX = horizontalMax - tooltipWidth;
+        }
+
+        let tooltipY = pointY - tooltipHeight - tooltipPadding;
+        if (tooltipY < padTop + tooltipPadding) {
+          tooltipY = pointY + tooltipPadding;
+        }
+        const bottomLimit = padTop + innerH - tooltipPadding;
+        if (tooltipY + tooltipHeight > bottomLimit) {
+          tooltipY = Math.max(padTop + tooltipPadding, bottomLimit - tooltipHeight);
+        }
+
           // 텍스트 위치 (툴팁 박스 내부)
           const textX = tooltipX + tooltipWidth / 2;
           const textY1 = tooltipY + 20;
@@ -703,8 +696,8 @@ export function CompactMonthlyChart({
           const expenseValue = showExpense ? hoveredData.expense || 0 : 0;
           const netValue = incomeValue - expenseValue;
           
-          return (
-            <g>
+        return (
+            <g pointerEvents="none">
               {/* 수직선 */}
               <line
                 x1={pointX}
