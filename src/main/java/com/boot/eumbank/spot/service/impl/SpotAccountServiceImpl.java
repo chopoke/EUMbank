@@ -49,25 +49,33 @@ public class SpotAccountServiceImpl implements SpotAccountService {
     }
     
     /**
+     * 고객번호로 활성 입출금 계좌 목록 조회
+     */
+    @Override
+    public List<Account> getActiveDepositAccountsByCustomerNo(Integer customerNo) {
+        return spotAccountQueryDSLRepository.getActiveDepositAccountsByCustomerNo(customerNo);
+    }
+    
+    /**
+     * 계좌 번호로 계좌 조회
+     */
+    @Override
+    public Optional<Account> getAccountByAccountNo(Integer accountNo) {
+        return spotAccountQueryDSLRepository.getAccountByAccountNo(accountNo);
+    }
+    
+    /**
      * 계좌 잔액 확인
      */
     @Override
     public boolean checkAccountBalance(Integer customerNo, BigDecimal requiredAmount) {
         Optional<Account> accountOpt = getActiveAccountByCustomerNo(customerNo);
         if (accountOpt.isEmpty()) {
-            log.warn("고객 {}의 활성 계좌가 없습니다.", customerNo);
             return false;
         }
         
         Account account = accountOpt.get();
-        boolean hasEnoughBalance = account.getBalance().compareTo(requiredAmount) >= 0;
-        
-        if (!hasEnoughBalance) {
-            log.warn("고객 {}의 계좌 잔액 부족. 현재: {}, 필요: {}", 
-                    customerNo, account.getBalance(), requiredAmount);
-        }
-        
-        return hasEnoughBalance;
+        return account.getBalance().compareTo(requiredAmount) >= 0;
     }
     
     /**
@@ -89,9 +97,28 @@ public class SpotAccountServiceImpl implements SpotAccountService {
             throw new RuntimeException("계좌 잔액이 부족합니다. 현재: " + account.getBalance() + ", 차감: " + amount);
         }
         
-        // QueryDSL로 잔액 업데이트
         spotAccountQueryDSLRepository.updateAccountBalance(account.getANo(), newBalance);
+    }
+    
+    /**
+     * 계좌 잔액 업데이트 (계좌 번호 지정)
+     */
+    @Override
+    @Transactional
+    public void updateAccountBalanceByAccountNo(Integer accountNo, BigDecimal amount) {
+        Optional<Account> accountOpt = getAccountByAccountNo(accountNo);
+        if (accountOpt.isEmpty()) {
+            throw new RuntimeException("계좌를 찾을 수 없습니다: accountNo=" + accountNo);
+        }
         
-        log.info("고객 {}의 계좌 잔액 업데이트: {} -> {}", customerNo, account.getBalance().subtract(amount), newBalance);
+        Account account = accountOpt.get();
+        BigDecimal newBalance = account.getBalance().add(amount);
+        
+        // 잔액이 음수가 되는 것을 방지
+        if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("계좌 잔액이 부족합니다. 현재: " + account.getBalance() + ", 차감: " + amount);
+        }
+        
+        spotAccountQueryDSLRepository.updateAccountBalance(accountNo, newBalance);
     }
 }

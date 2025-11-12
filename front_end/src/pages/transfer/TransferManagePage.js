@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { transferApi } from "../../api/transferApi";
+import '../../resources/css/other.css';
 
 const PAGE_SIZE = 8;
 
@@ -86,6 +87,24 @@ function formatDateTime(date) {
     return "-";
   }
   return `${formatDate(date)} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function formatReserveSummary(item) {
+  const base = item.scheduleAt ? formatDateTime(item.scheduleAt) : "-";
+  switch (item.status) {
+    case "COMPLETED":
+      return `${base} 실행 완료`;
+    case "PROCESSING":
+      return `${base} 실행 중`;
+    case "CANCELLED":
+      return `${base} 실행 취소`;
+    case "FAILED":
+      return `${base} 실행 실패`;
+    case "PAUSED":
+      return `${base} 실행 대기`;
+    default:
+      return `${base} 실행 예정`;
+  }
 }
 
 function deriveAutoGroupKey(order) {
@@ -554,12 +573,12 @@ export default function TransferManagePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-[1240px] flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
+      <header className="border-b bg-white py-8">
+        <div className="checkb mx-auto flex max-w-[1240px] flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900">자동/예약 이체 관리</h1>
             <p className="mt-1 text-sm text-gray-600">
-              자동이체와 예약이체를 한곳에서 조회하고, 일시정지·재개·해지를 빠르게 처리하세요.
+              자동이체와 예약이체를 한곳에서 조회하고, 상태 확인과 해지를 빠르게 처리하세요.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -710,7 +729,7 @@ export default function TransferManagePage() {
                               ? `매월 ${item.transferDay ?? "-"}일 · ${item.repeatCount}회 · 총 ₩${formatCurrency(
                                   item.totalAmount
                                 )}`
-                              : `${formatDateTime(item.scheduleAt)} 실행 예정`}
+                              : formatReserveSummary(item)}
                           </div>
                           {item.memo && (
                             <div className="mt-1 text-xs text-gray-500">메모: {item.memo}</div>
@@ -719,7 +738,9 @@ export default function TransferManagePage() {
                         <td className="px-4 py-4 text-gray-700">
                           {item.type === "AUTO"
                             ? formatDateTime(item.nextExecution)
-                            : formatDateTime(item.scheduleAt)}
+                            : ["SCHEDULED", "PROCESSING"].includes(item.status)
+                              ? formatDateTime(item.scheduleAt)
+                              : "-"}
                         </td>
                         <td className="px-4 py-4 text-right font-semibold text-gray-900">
                           ₩
@@ -822,10 +843,9 @@ export default function TransferManagePage() {
                         )}
                       </div>
                       <div>
-                        다음 실행:{" "}
                         {item.type === "AUTO"
-                          ? formatDateTime(item.nextExecution)
-                          : formatDateTime(item.scheduleAt)}
+                          ? `다음 실행: ${formatDateTime(item.nextExecution)}`
+                          : formatReserveSummary(item)}
                       </div>
                       {item.type === "AUTO" && (
                         <div>

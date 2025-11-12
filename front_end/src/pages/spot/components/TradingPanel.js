@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 
 /**
  * 현물거래 패널 컴포넌트
@@ -80,10 +80,10 @@ const TradingPanel = ({
   }, [tradingAmount, selectedProduct, calculateQuantityFromAmount]);
 
   /**
-   * 현재 보유량 조회 (선택된 월렛 기준) - 메모이제이션
+   * 현재 보유량 조회 (선택된 지갑 기준) - 메모이제이션
    */
   const getCurrentHoldings = useCallback(() => {
-    // 선택된 월렛이 있으면 해당 월렛의 보유량 반환
+    // 선택된 지갑이 있으면 해당 지갑의 보유량 반환
     if (selectedWalletForTrading && wallets && wallets.length > 0) {
       const selectedWallet = wallets.find(wallet => 
         wallet.name === selectedWalletForTrading || 
@@ -98,7 +98,7 @@ const TradingPanel = ({
       }
     }
     
-    // 선택된 월렛이 없으면 전체 고객 보유량 반환
+    // 선택된 지갑이 없으면 전체 고객 보유량 반환
     if (!customerBalance) return 0;
     const holdings = selectedProduct === 'gold' ? customerBalance.gold : customerBalance.silver;
     return Math.max(0, holdings || 0);
@@ -122,14 +122,31 @@ const TradingPanel = ({
   }, [getCurrentHoldings, calculateAmountFromQuantity, selectedProduct]);
 
   /**
+   * 빠른 수량 선택 안내용 1g 기준 가격 표시
+   */
+  const UNIT_WEIGHT = 3.75;
+
+  const perUnitPriceLabel = useMemo(() => {
+    const amount = calculateAmountFromQuantity(UNIT_WEIGHT, selectedProduct);
+    const rounded = Math.round(amount || 0).toLocaleString();
+    return selectedProduct === 'gold'
+      ? `순금 ${UNIT_WEIGHT}g당 ₩${rounded}`
+      : `은 ${UNIT_WEIGHT}g당 ₩${rounded}`;
+  }, [calculateAmountFromQuantity, selectedProduct]);
+
+  /**
    * 전량 매도 버튼 클릭 핸들러
    */
   const handleFullSell = useCallback(() => {
     if (tradingSide === 'sell' && getCurrentHoldings() > 0) {
       const currentHoldings = getCurrentHoldings();
       // 전량 매도 시 현재 보유량을 수량으로 직접 설정
+      // 보유량을 기준으로 금액을 계산하되, 약간의 여유를 두어 보유량 검증 통과하도록 함
       const fullSellAmount = calculateAmountFromQuantity(currentHoldings, selectedProduct);
-      setTradingAmount(Math.floor(fullSellAmount)); // 소수점 제거 (원화 기준)
+      // 보유량을 정확히 매도하기 위해 약간의 여유를 두어 계산
+      // 소수점 오차를 고려하여 0.1% 정도 여유를 둠
+      const adjustedAmount = Math.floor(fullSellAmount * 0.999);
+      setTradingAmount(Math.max(1000, adjustedAmount)); // 최소 1000원
     }
   }, [tradingSide, getCurrentHoldings, calculateAmountFromQuantity, selectedProduct, setTradingAmount]);
 
@@ -170,27 +187,18 @@ const TradingPanel = ({
   }, []);
 
   /**
-   * 실제 거래 금액 계산 (수량 기반, 백엔드와 동일)
-   * 백엔드는 totalPrice = currentPrice.getPBuyPrice().multiply(quantity)로 계산
-   * 반올림하지 않고 정밀한 값 유지 (최종 합계에서만 반올림)
-   * 
-   * 중요: 백엔드로 전달되는 정확한 quantity를 기준으로 계산
-   * 프론트엔드에서 quantity = tradingAmount / buyPrice로 계산하고,
-   * 백엔드는 이 quantity를 받아서 실시간 가격으로 totalPrice를 계산합니다.
-   * 
-   * 백엔드와 정확히 일치시키기 위해, 백엔드로 전달되는 quantity를 정확히 계산합니다.
+   * 실제 거래 금액 계산
+   * 사용자가 입력한 거래 금액(tradingAmount)을 그대로 사용
+   * calculateQuantityFromAmount에서 TRADE_UNIT_WEIGHT(3.75)를 곱해서 수량을 계산하므로,
+   * 다시 가격을 곱하면 입력 금액의 3.75배가 되어버립니다.
+   * 따라서 사용자가 입력한 금액을 그대로 반환합니다.
    */
   const calculateActualTotalPrice = useCallback(() => {
-    // 백엔드로 전달되는 정확한 quantity 계산 (tradingAmount / buyPrice)
-    const quantity = getCalculatedQuantity();
-    if (quantity <= 0) return 0;
-    const currentPrice = selectedProduct === 'gold' ? goldPrice : silverPrice;
-    const pricePerGram = tradingSide === 'buy' ? currentPrice.buyPrice : currentPrice.sellPrice;
-    
-    // 백엔드와 동일하게: totalPrice = buyPrice * quantity
-    // 정밀도 유지를 위해 부동소수점 연산 사용
-    return pricePerGram * quantity; // 반올림하지 않음
-  }, [getCalculatedQuantity, selectedProduct, goldPrice, silverPrice, tradingSide]);
+    // 사용자가 입력한 거래 금액을 그대로 사용
+    // 수량 계산 시 이미 TRADE_UNIT_WEIGHT가 적용되어 있으므로,
+    // 여기서 다시 가격을 곱하면 안 됩니다.
+    return tradingAmount || 0;
+  }, [tradingAmount]);
 
   /**
    * 수수료 계산 (수량 기반, 백엔드와 동일)
@@ -229,26 +237,28 @@ const TradingPanel = ({
   }, [calculateActualTotalPrice, calculateFee, calculateTax]);
 
   /**
-   * 매도 시 예상 체결가 계산 (프리미엄 없음)
+   * 매도 시 예상 체결가 계산
+   * 매수와 동일하게 사용자가 입력한 거래 금액을 그대로 사용
    */
   const calculateSellPrice = useCallback(() => {
-    const quantity = getCalculatedQuantity();
-    const currentPrice = selectedProduct === 'gold' ? goldPrice : silverPrice;
-    const basePrice = currentPrice?.sellPrice || currentPrice?.basePrice || currentPrice || 0;
-    return Math.round(basePrice * quantity);
-  }, [getCalculatedQuantity, selectedProduct, goldPrice, silverPrice]);
+    // 매도 시에도 사용자가 입력한 금액을 그대로 사용 (매수와 동일)
+    return tradingAmount || 0;
+  }, [tradingAmount]);
 
   /**
    * 매도 시 총액 계산
+   * 입력 금액에서 수수료와 세금을 차감한 수취 금액
    */
   const calculateSellTotal = useCallback(() => {
-    const sellPrice = calculateSellPrice();
+    const sellPrice = calculateSellPrice(); // 입력 금액
+    if (sellPrice <= 0) return 0;
     const quantity = getCalculatedQuantity();
     if (quantity <= 0) return 0;
     const feeRate = calculateFeeRate(quantity);
-    const fee = Math.round(sellPrice * feeRate);
-    const tax = Math.round(sellPrice * 0.1);
-    return sellPrice - fee - tax; // 매도 시 수수료와 세금 차감
+    const fee = sellPrice * feeRate; // 반올림하지 않음 (정밀도 유지)
+    const tax = sellPrice * 0.1; // 반올림하지 않음 (정밀도 유지)
+    const total = sellPrice - fee - tax; // 매도 시 수수료와 세금 차감
+    return Math.round(total); // 최종 합계만 반올림
   }, [calculateSellPrice, getCalculatedQuantity, calculateFeeRate]);
   return (
     <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
@@ -261,7 +271,7 @@ const TradingPanel = ({
             onClick={() => setTradingSide('buy')}
             className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${
               tradingSide === 'buy'
-                ? 'bg-green-500 text-white'
+                ? 'bg-red-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -271,7 +281,7 @@ const TradingPanel = ({
             onClick={() => setTradingSide('sell')}
             className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${
               tradingSide === 'sell'
-                ? 'bg-red-500 text-white'
+                ? 'bg-blue-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -376,11 +386,11 @@ const TradingPanel = ({
           </div>
         </div>
         
-        {/* 선택된 월렛 보유량 표시 */}
+        {/* 선택된 지갑 보유량 표시 */}
         {selectedWalletForTrading && (
           <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <div className="text-sm text-blue-800 font-medium mb-2">
-              선택된 월렛: {selectedWalletForTrading}
+              선택된 지갑: {selectedWalletForTrading}
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="text-center">
@@ -461,7 +471,10 @@ const TradingPanel = ({
       </div>
 
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">빠른 수량 선택</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">빠른 수량 선택</label>
+        <div className="text-xs text-gray-500 mb-2">
+          {perUnitPriceLabel}
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {[3.75, 18.75, 37.5, 50, 100, 1000].map((quantity) => (
             <button
@@ -486,10 +499,10 @@ const TradingPanel = ({
             <p className="text-lg sm:text-xl font-bold text-yellow-600">
               {Math.round(getCurrentHoldings() * 1000) / 1000}g
             </p>
-            {/* 선택된 월렛 정보 표시 */}
+            {/* 선택된 지갑 정보 표시 */}
             {selectedWalletForTrading && (
               <p className="text-xs text-blue-600 mt-1">
-                월렛: {selectedWalletForTrading}
+                지갑: {selectedWalletForTrading}
               </p>
             )}
           </div>
@@ -513,7 +526,7 @@ const TradingPanel = ({
         </div>
         <p className="text-xs text-gray-500 mt-2 text-center">
           {selectedProduct === 'gold' ? '금' : '은'} 보유량 기준
-          {selectedWalletForTrading ? ` (${selectedWalletForTrading} 월렛)` : ' (전체)'}
+          {selectedWalletForTrading ? ` (${selectedWalletForTrading} 지갑)` : ' (전체)'}
         </p>
         
         {/* 전량 매도 버튼 또는 보유량 없음 안내 */}
@@ -618,15 +631,25 @@ const TradingPanel = ({
       {/* 주문 버튼 */}
       <button
         onClick={handleSubmit}
-        disabled={loading || (tradingSide === 'sell' && getCalculatedQuantity() > getCurrentHoldings())}
+        disabled={loading || (tradingSide === 'sell' && (() => {
+          // 매도 시 보유량 검증: 계산된 수량이 보유량보다 큰지 확인
+          // 소수점 오차를 고려하여 0.001g 여유를 둠
+          const calculatedQty = getCalculatedQuantity();
+          const holdings = getCurrentHoldings();
+          return calculatedQty > holdings + 0.001;
+        })())}
         className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-colors ${
           tradingSide === 'buy'
-            ? 'bg-green-500 hover:bg-green-600 disabled:bg-green-300'
-            : 'bg-red-500 hover:bg-red-600 disabled:bg-red-300'
+            ? 'bg-red-500 hover:bg-red-600 disabled:bg-red-300'
+            : 'bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300'
         }`}
       >
         {loading ? '처리중...' : 
-         (tradingSide === 'sell' && getCalculatedQuantity() > getCurrentHoldings()) 
+         (tradingSide === 'sell' && (() => {
+           const calculatedQty = getCalculatedQuantity();
+           const holdings = getCurrentHoldings();
+           return calculatedQty > holdings + 0.001;
+         })()) 
            ? '보유량 부족' 
            : `${tradingSide === 'buy' ? '매수' : '매도'} 주문`}
       </button>

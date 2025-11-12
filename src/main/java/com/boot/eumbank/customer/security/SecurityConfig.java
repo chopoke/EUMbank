@@ -100,7 +100,8 @@ public class SecurityConfig {
                                 "/api/health",
                                 "/actuator/**",
                                 "/actuator/health",
-                                "/api/rates/**"
+                                "/api/rates/**",
+                                "/api/best3/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
