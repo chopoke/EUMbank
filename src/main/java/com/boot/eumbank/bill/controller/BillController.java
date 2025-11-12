@@ -2,32 +2,44 @@ package com.boot.eumbank.bill.controller;
 
 import com.boot.eumbank.bill.core.BillPaymentService;
 import com.boot.eumbank.bill.core.BillRateService;
+import com.boot.eumbank.bill.dto.UtilityBillDto;
 import com.boot.eumbank.bill.entity.BillInvoice;
 import com.boot.eumbank.bill.entity.BillPayment;
 import com.boot.eumbank.bill.entity.ElectricAvg;
 import com.boot.eumbank.bill.infra.KepcoAdapter;
+import com.boot.eumbank.bill.infra.KepcoProps;
 import com.boot.eumbank.bill.repo.BillInvoiceRepo;
 import com.boot.eumbank.bill.repo.BillPaymentRepo;
 import com.boot.eumbank.bill.repo.ElectricAvgRepo;
+import com.boot.eumbank.bill.repo.UtilityBillRepo;
 import com.boot.eumbank.bill.util.PdfUtil;
+import com.boot.eumbank.customer.entity.Customer;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.*;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.Year;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 @RestController
-@RequestMapping("/api/bills") @RequiredArgsConstructor
+@RequestMapping("/api/bills")
+@RequiredArgsConstructor
 public class BillController {
     private final BillRateService rate;
-    private final BillInvoiceRepo invRepo;
     private final BillPaymentService payment;
+    private final BillInvoiceRepo invRepo;
+    private final UtilityBillRepo utilityBillRepo;
     private final ElectricAvgRepo elecAvgRepo;
     private final BillPaymentRepo paymentRepo;
     private final KepcoAdapter kepco; // 실제 구현 주입
+    private final JdbcTemplate jdbc;
 
     // 청구서 목록: 상태 필터 + 페이지(단순 offset)
     @GetMapping("/{ubNo}/invoices")
@@ -52,6 +64,15 @@ public class BillController {
         );
     }
 
+    // 엔드포인트 추가
+    @GetMapping("/utility-bills")
+    public ResponseEntity<?> myBills(@AuthenticationPrincipal Customer me) {
+        if (me == null) return ResponseEntity.status(401).body(Map.of("error","UNAUTHORIZED"));
+        var rows = utilityBillRepo.findByCNo(me.getCustomerNo())
+                .stream().map(UtilityBillDto::from).toList();
+        return ResponseEntity.ok(Map.of("rows", rows));
+    }
+
     // 즉시 납부
     @PostMapping("/{ubNo}/pay-now")
     public BillPayment payNow(@PathVariable Integer ubNo, @RequestParam Integer biNo, @RequestParam Integer aNo){
@@ -70,14 +91,22 @@ public class BillController {
 
     // 전기 평균단가 조회(or 캐시)
     @GetMapping("/rates/electric/avg")
-    public List<ElectricAvg> electricAvg(@RequestParam int year, @RequestParam int month,
-                                         @RequestParam(required=false) String areaCd){
-        if (areaCd != null) {
-            var price = kepco.fetchAvgUnitPrice(year, month, areaCd); // 외부 호출
-            // 필요시 캐시 upsert 로직 추가(생략)
-            return List.of(); // 프론트는 단일 area일 때 price만 사용
+    public Map<String,Object> electricAvg(
+            @RequestParam(required=false) Integer year,
+            @RequestParam(required=false) Integer month,
+            @RequestParam(required=false) String areaCd) {
+
+        int y = (year  == null || year  < 2000) ? Year.now().getValue()         : year;
+        int m = (month == null || month < 1 || month > 12) ? LocalDate.now().getMonthValue() : month;
+
+        if (areaCd != null && !areaCd.isBlank()) {
+            var unit = kepco.fetchAvgUnitPrice(y, m, areaCd);
+            return Map.of("mode","live","rows", List.of(Map.of(
+                    "eaYear", y, "eaMonth", m, "eaAreaCd", areaCd, "eaAvgUnit", unit
+            )));
         }
-        return elecAvgRepo.findByEaYearAndEaMonth(year, month);
+        var rows = elecAvgRepo.findByEaYearAndEaMonth(y, m);
+        return Map.of("mode","cache","rows", rows);
     }
 
     @PostMapping("/rates/electric/avg/cache")
@@ -94,6 +123,34 @@ public class BillController {
         existing.ifPresent(e -> row.setEaId(e.getEaId()));
         elecAvgRepo.save(row);
         return Map.of("unit", price);
+    }
+
+    @GetMapping("/rates/water/latest")
+    public Map<String,Object> waterLatest(){
+        var row = jdbc.queryForMap("""
+        SELECT wr_base_charge AS base_charge,
+               wr_unit_price  AS unit_price,
+               wr_eff_from    AS eff_from
+        FROM WATER_RATE_TBL
+        WHERE wr_eff_from <= CURRENT_TIMESTAMP
+        ORDER BY wr_eff_from DESC, wr_id DESC
+        LIMIT 1
+    """);
+        return Map.of("rows", List.of(row));
+    }
+
+    @GetMapping("/rates/gas/latest")
+    public Map<String,Object> gasLatest(){
+        var row = jdbc.queryForMap("""
+        SELECT gr_base_charge AS base_charge,
+               gr_unit_price  AS unit_price,
+               gr_eff_from    AS eff_from
+        FROM GAS_RATE_TBL
+        WHERE gr_eff_from <= CURRENT_TIMESTAMP
+        ORDER BY gr_eff_from DESC, gr_id DESC
+        LIMIT 1
+    """);
+        return Map.of("rows", List.of(row));
     }
 
     // 영수증 텍스트 기반 PDF

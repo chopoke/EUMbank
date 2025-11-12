@@ -43,8 +43,15 @@ export default function NaverLink() {
         }
         alert("연동 중 오류가 발생했습니다. 다시 시도해주세요.");
       } catch (e) {
-        console.error(e);
-        alert("서버와의 통신 중 오류가 발생했습니다.");
+        const s = e?.response?.status;
+        const c = e?.response?.data?.code;
+        if (s === 423 || c === "ACCOUNT_STATUS_BLOCKED") {
+          alert("계정 상태로 로그인할 수 없습니다. 관리자에게 문의하세요.");
+          navigate("/login", { replace: true });
+        } else {
+          console.error(e);
+          alert("서버와의 통신 중 오류가 발생했습니다.");
+        }
       } finally {
         setPending(false);
         linking = null;

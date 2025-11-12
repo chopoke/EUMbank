@@ -32,13 +32,13 @@ public class BillPaymentServiceImpl implements BillPaymentService {
 
         // 2) 거래내역 INSERT: 출금 표시(th_account_out=amt, after_balance=서브쿼리)
         jdbc.update("""
-      INSERT INTO transfer_history_tbl
-      (a_no, th_account_in, th_account_out, th_after_balance, th_amount,
-       th_transfer_at, th_transfer_id, th_transfer_type, th_memo, th_other_account, th_other_bank, th_transaction_type)
-      SELECT ?, NULL, ?, a_balance, ?, NOW(6), ?, 'BILL_PAY',
-             ?, NULL, NULL, 'WITHDRAWAL'
-      FROM account_tbl WHERE a_no = ?
-    """,
+          INSERT INTO transfer_history_tbl
+          (a_no, th_account_in, th_account_out, th_after_balance, th_amount,
+           th_transfer_at, th_transfer_id, th_transfer_type, th_memo, th_other_account, th_other_bank, th_transaction_type)
+          SELECT ?, NULL, ?, a_balance, ?, NOW(6), ?, '출금',
+                 ?, NULL, NULL, 'WITHDRAWAL'
+          FROM account_tbl WHERE a_no = ?
+        """,
                 aNo, amt, amt, // th_amount는 절대값 보관
                 "BP-" + biNo + "-" + UUID.randomUUID().toString().substring(0,8),
                 memoFor(inv.getUbNo()), aNo
