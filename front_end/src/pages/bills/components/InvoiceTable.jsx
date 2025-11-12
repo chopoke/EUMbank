@@ -47,6 +47,33 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
     }
   };
 
+  // === 영수증 다운로드 ===
+  const downloadReceipt = async (biNo) => {
+    try {
+      const res = await api.get(`/api/bills/invoices/${biNo}/receipt`, {
+        responseType: "blob",
+      });
+
+      // 파일명 결정
+      const dispo = res.headers?.["content-disposition"] || "";
+      const m = dispo.match(/filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i);
+      const name = decodeURIComponent(m?.[1] || m?.[2] || `receipt-${biNo}.pdf`);
+
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name.endsWith(".pdf") ? name : `${name}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("영수증을 다운로드할 수 없습니다.");
+    }
+  };
+  // =====================
+
   return (
     <div className="border rounded-xl p-4 bg-white">
       <h3 className="font-semibold mb-2">청구서</h3>
@@ -59,14 +86,21 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
             <th className="text-right p-2">금액</th>
             <th className="text-center p-2">상태</th>
             <th className="text-center p-2">납부</th>
+            <th className="text-center p-2">영수증보기</th>{/* 신규 열 */}
           </tr>
         </thead>
         <tbody>
           {rows.map(r => (
             <tr key={r.biNo} className="border-b">
-              <td className="p-2">{r.biYear}-{String(r.biMonth).padStart(2, "0")}</td>
-              <td className="p-2 text-right">{Number(r.biUsage ?? 0).toLocaleString()}</td>
-              <td className="p-2 text-right">{Number(r.biAmount ?? 0).toLocaleString()}</td>
+              <td className="p-2">
+                {r.biYear}-{String(r.biMonth).padStart(2, "0")}
+              </td>
+              <td className="p-2 text-right">
+                {Number(r.biUsage ?? 0).toLocaleString()}
+              </td>
+              <td className="p-2 text-right">
+                {Number(r.biAmount ?? 0).toLocaleString()}
+              </td>
               <td className="p-2 text-center">{r.biStatus}</td>
               <td className="p-2 text-center">
                 {r.biStatus === "READY" ? (
@@ -81,10 +115,27 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
                   <span className="text-gray-400">-</span>
                 )}
               </td>
+              <td className="p-2 text-center">
+                {r.biStatus === "PAID" ? (
+                  <button
+                    className="px-3 py-1 rounded bg-emerald-600 text-white"
+                    onClick={() => downloadReceipt(r.biNo)}
+                    title="PDF 다운로드"
+                  >
+                    영수증
+                  </button>
+                ) : (
+                  <span className="text-gray-400">-</span>
+                )}
+              </td>
             </tr>
           ))}
           {rows.length === 0 && !loading && (
-            <tr><td className="p-3 text-center text-gray-500" colSpan={5}>데이터 없음</td></tr>
+            <tr>
+              <td className="p-3 text-center text-gray-500" colSpan={6}>
+                데이터 없음
+              </td>
+            </tr>
           )}
         </tbody>
       </table>
