@@ -16,9 +16,8 @@ export default function AssetAnalysis() {
   const [count, setCount] = useState(null); // null이면 기본값 사용
   const [chartPeriod, setChartPeriod] = useState("MONTHLY"); // 월별 변화 추이 기간: MINUTELY, HOURLY, DAILY, WEEKLY, MONTHLY
   const [chartDataTypes, setChartDataTypes] = useState({
-    income: true,    // 수익 (입금)
-    expense: true,   // 소비 (출금)
-    net: true,       // 순변동 (수익 - 소비)
+    income: true,
+    expense: true,
   });
   const [chartSlice, setChartSlice] = useState(12); // 최근 N개 구간 표시
 
@@ -162,9 +161,29 @@ export default function AssetAnalysis() {
 
   // 데이터 가공
   const goal = analysisData.goal;
-  const distribution = analysisData.distribution;
+  const nextMonthSpending = analysisData.nextMonthSpending;
   const deltaSummary = analysisData.deltaSummary;
   const monthlyTrends = analysisData.monthlyTrends;
+
+  const formatCurrency = (value = 0) =>
+    new Intl.NumberFormat("ko-KR").format(Math.max(0, Number(value) || 0));
+
+  const formatDateLabel = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
+  };
+
+  const upcomingItems = nextMonthSpending?.items || [];
+  const upcomingTotalAmount = nextMonthSpending?.totalAmount || 0;
+  const upcomingTotalCount = nextMonthSpending?.totalPaymentCount || 0;
+  const upcomingRangeText =
+    nextMonthSpending?.rangeStart && nextMonthSpending?.rangeEnd
+      ? `${formatDateLabel(nextMonthSpending.rangeStart)} ~ ${formatDateLabel(nextMonthSpending.rangeEnd)}`
+      : "";
+
+  const isUpcomingEmpty = !upcomingItems.length || upcomingTotalAmount <= 0;
 
   // 달성률 퍼센트 계산
   const achievementRate = goal?.achievementRate ? Number(goal.achievementRate) : 68;
@@ -221,7 +240,7 @@ export default function AssetAnalysis() {
             <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/report">월간 리포트</Link>
           </div>
         </div>
-
+        
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-6 flex flex-col gap-8">
 
           {/* 상단 3열 그리드 */}
@@ -266,52 +285,87 @@ export default function AssetAnalysis() {
               </button>
             </div>
 
-            {/* 자산 배분 분석 */}
+            {/* 다음달 예정 지출 */}
             <div className="flex flex-col gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-gray-900">자산 배분 분석</h2>
+                  <h2 className="text-base font-semibold text-gray-900">다음달 예정 지출</h2>
                 <p className="text-[12px] text-gray-500">
-                  현금, 예금, 투자 등 비중과 균형 상태입니다.
-                </p>
+                    자동·예약 이체로 확정된 지출을 미리 확인하세요.
+                    {upcomingRangeText && (
+                      <span className="ml-1 text-blue-500">{upcomingRangeText}</span>
+                    )}
+                  </p>
+                </div>
+                <Link
+                  to="/transfer/manage"
+                  className="inline-flex items-center rounded-md border border-blue-500 bg-white px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50"
+                >
+                  예약이체 관리
+                </Link>
               </div>
 
-              <ul className="text-sm text-gray-700 space-y-3">
-                <li className="flex justify-between">
-                  <span className="text-[12px] text-gray-500">현금성 자산 비중</span>
-                  <span className="font-medium text-gray-900">
-                    {distribution?.cashPercentage ? distribution.cashPercentage.toFixed(0) : 0}%
-                  </span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-[12px] text-gray-500">예금 자산 비중</span>
-                  <span className="font-medium text-gray-900">
-                    {distribution?.depositPercentage ? distribution.depositPercentage.toFixed(0) : 0}%
-                  </span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-[12px] text-gray-500">투자 자산 비중</span>
-                  <span className="font-medium text-gray-900">
-                    {distribution?.investmentPercentage ? distribution.investmentPercentage.toFixed(0) : 0}%
-                  </span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-[12px] text-gray-500">외화 비중</span>
-                  <span className="font-medium text-gray-900">
-                    {distribution?.foreignPercentage ? distribution.foreignPercentage.toFixed(0) : 0}%
-                  </span>
-                </li>
-              </ul>
-
-              <div className="rounded-md bg-yellow-50 border border-yellow-200 px-3 py-2 text-[12px] text-yellow-800 font-medium">
-                {distribution?.recommendation || "자산 분석 중..."}
+              <div className="rounded-md border border-blue-100 bg-white px-4 py-3">
+                <div className="text-[12px] text-blue-500 font-medium">다음달 확정 지출 총액</div>
+                <div className="mt-1 text-2xl font-semibold text-gray-900">
+                  {formatCurrency(upcomingTotalAmount)}원
+                </div>
+                <div className="mt-1 text-[12px] text-gray-500">
+                  예정 건수 {upcomingTotalCount || 0}건
+                </div>
               </div>
+
+              {isUpcomingEmpty ? (
+                <div className="flex h-full min-h-[120px] items-center justify-center rounded-md border border-dashed border-gray-300 bg-white text-sm text-gray-500">
+                  다음달에 예정된 자동·예약 이체가 없습니다.
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {upcomingItems.map((item, index) => {
+                    const percent = Math.max(0, Math.min(100, Number(item.percentage) || 0));
+                    const amount = item.amount || 0;
+                    const dateLabel = item.firstScheduledDate ? formatDateLabel(item.firstScheduledDate) : "";
+                    const memoValue =
+                      item.memoSample && item.memoSample !== item.category ? item.memoSample : null;
+                    return (
+                      <li
+                        key={`${item.category || "unknown"}-${index}`}
+                        className="rounded-md border border-gray-200 bg-white px-3 py-2"
+                      >
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="font-medium text-gray-900">{item.category || "기타 예약 이체"}</div>
+                          <div className="text-gray-900 font-semibold">{formatCurrency(amount)}원</div>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="relative h-2 w-full rounded-full bg-gray-100">
+                            <span
+                              className="absolute inset-y-0 left-0 rounded-full bg-blue-500 transition-all"
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                          <span className="text-[11px] font-medium text-blue-600">
+                            전체 대비 {percent.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-gray-500">
+                          <span>{item.paymentCount || 0}건 예정</span>
+                          {dateLabel && <span>{dateLabel} 예정</span>}
+                          {memoValue && (
+                            <span className="max-w-[60%] truncate text-gray-400">메모: {memoValue}</span>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
 
             {/* 자산 증감 상태 */}
             <div className="flex flex-col gap-4 rounded-md border border-gray-200 bg-gray-50 p-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-base font-semibold text-gray-900">자산 증감 상태</h2>
+                <h2 className="text-base font-semibold text-gray-900">자산 증감 상태</h2>
                   <div className="flex items-center gap-2">
                     {/* 기간 선택 */}
                     <select
@@ -384,9 +438,7 @@ export default function AssetAnalysis() {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-base font-semibold text-gray-900">자산 변화 추이</h2>
-                <p className="text-[12px] text-gray-500">
-                  기간별 수익(입금)과 소비(출금) 내역입니다. 선 그래프는 해당 기간 말 순자산을 나타냅니다.
-                </p>
+                <p className="text-[12px] text-gray-500">기간별 수익(입금)과 소비(출금) 내역입니다.</p>
               </div>
               <button className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
                 CSV 다운로드
@@ -446,15 +498,6 @@ export default function AssetAnalysis() {
                     />
                     <span className="text-gray-700">소비</span>
                   </label>
-                  <label className="flex items-center gap-1 text-xs cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={chartDataTypes.net}
-                      onChange={(e) => setChartDataTypes({ ...chartDataTypes, net: e.target.checked })}
-                      className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-gray-700">순자산</span>
-                  </label>
                 </div>
               </div>
             </div>
@@ -462,17 +505,15 @@ export default function AssetAnalysis() {
             <CompactMonthlyChart
               data={monthlyTrends?.map(t => ({
                 m: t.month,
+                periodStartDate: t.periodStartDate,
                 income: chartDataTypes.income ? (t.income ? Number(t.income) : 0) : 0,
                 expense: chartDataTypes.expense ? (t.expense ? Number(t.expense) : 0) : 0,
-                net: chartDataTypes.net ? (t.netWorth ? Number(t.netWorth) / 10000 : 0) : 0, // 순자산을 만원 단위로 변환
               })) || []}
                height={420}
-               yMode="bar"
                yUnitLabel="만"
                yTicks={4}
                showIncome={chartDataTypes.income}
                showExpense={chartDataTypes.expense}
-               showNet={chartDataTypes.net}
             />
             {/* <StackedBarMonthlyStatic /> */}
             {/* <PlaceholderChart label="누적 막대 + 라인 복합 차트" height="h-64" /> */}

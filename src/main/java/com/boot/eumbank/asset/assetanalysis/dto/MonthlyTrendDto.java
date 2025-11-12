@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class MonthlyTrendDto {
     private String month;                 // 기간 라벨 (예: "11월", "1주", "14시", "14:30")
+    private String periodStartDate;       // 기간 시작일 (ISO-8601, 예: "2025-11-01")
     private BigDecimal income;            // 수익 (입금액, 만원 단위)
     private BigDecimal expense;           // 소비 (출금액, 만원 단위)
     private BigDecimal net;               // 순변동 (수익 - 소비, 만원 단위)

@@ -200,4 +200,3 @@ export default function TransactionDetailModal({ date, transactions, loading, on
     </div>
   );
 }
-
