@@ -80,10 +80,10 @@ const TradingPanel = ({
   }, [tradingAmount, selectedProduct, calculateQuantityFromAmount]);
 
   /**
-   * 현재 보유량 조회 (선택된 월렛 기준) - 메모이제이션
+   * 현재 보유량 조회 (선택된 지갑 기준) - 메모이제이션
    */
   const getCurrentHoldings = useCallback(() => {
-    // 선택된 월렛이 있으면 해당 월렛의 보유량 반환
+    // 선택된 지갑이 있으면 해당 지갑의 보유량 반환
     if (selectedWalletForTrading && wallets && wallets.length > 0) {
       const selectedWallet = wallets.find(wallet => 
         wallet.name === selectedWalletForTrading || 
@@ -98,7 +98,7 @@ const TradingPanel = ({
       }
     }
     
-    // 선택된 월렛이 없으면 전체 고객 보유량 반환
+    // 선택된 지갑이 없으면 전체 고객 보유량 반환
     if (!customerBalance) return 0;
     const holdings = selectedProduct === 'gold' ? customerBalance.gold : customerBalance.silver;
     return Math.max(0, holdings || 0);
@@ -389,11 +389,11 @@ const TradingPanel = ({
           </div>
         </div>
         
-        {/* 선택된 월렛 보유량 표시 */}
+        {/* 선택된 지갑 보유량 표시 */}
         {selectedWalletForTrading && (
           <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <div className="text-sm text-blue-800 font-medium mb-2">
-              선택된 월렛: {selectedWalletForTrading}
+              선택된 지갑: {selectedWalletForTrading}
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="text-center">
@@ -502,10 +502,10 @@ const TradingPanel = ({
             <p className="text-lg sm:text-xl font-bold text-yellow-600">
               {Math.round(getCurrentHoldings() * 1000) / 1000}g
             </p>
-            {/* 선택된 월렛 정보 표시 */}
+            {/* 선택된 지갑 정보 표시 */}
             {selectedWalletForTrading && (
               <p className="text-xs text-blue-600 mt-1">
-                월렛: {selectedWalletForTrading}
+                지갑: {selectedWalletForTrading}
               </p>
             )}
           </div>
@@ -529,7 +529,7 @@ const TradingPanel = ({
         </div>
         <p className="text-xs text-gray-500 mt-2 text-center">
           {selectedProduct === 'gold' ? '금' : '은'} 보유량 기준
-          {selectedWalletForTrading ? ` (${selectedWalletForTrading} 월렛)` : ' (전체)'}
+          {selectedWalletForTrading ? ` (${selectedWalletForTrading} 지갑)` : ' (전체)'}
         </p>
         
         {/* 전량 매도 버튼 또는 보유량 없음 안내 */}

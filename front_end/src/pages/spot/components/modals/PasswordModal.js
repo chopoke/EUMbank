@@ -21,33 +21,33 @@ const PasswordModal = ({
   const inputRef = useRef(null);
   const [selectedWallet, setSelectedWallet] = useState('');
   
-  // 모달이 열릴 때 월렛 데이터 확인 및 기본 선택
+  // 모달이 열릴 때 지갑 데이터 확인 및 기본 선택
   useEffect(() => {
     if (isOpen) {
-      console.log('PasswordModal - 모달 열림, 월렛 데이터 확인');
+      console.log('PasswordModal - 모달 열림, 지갑 데이터 확인');
       console.log('PasswordModal - selectedWalletForTrading:', selectedWalletForTrading);
 
       if (selectedWalletForTrading && wallets && wallets.length > 0) {
-        // TradingPanel에서 선택한 월렛이 있으면 해당 월렛을 우선 선택
+        // TradingPanel에서 선택한 지갑이 있으면 해당 지갑을 우선 선택
         const preSelectedWallet = wallets.find(w => 
           w.name === selectedWalletForTrading || 
           w.gwWalletName === selectedWalletForTrading
         );
         
         if (preSelectedWallet) {
-          console.log('PasswordModal - 미리 선택된 월렛 사용:', preSelectedWallet.name);
+          console.log('PasswordModal - 미리 선택된 지갑 사용:', preSelectedWallet.name);
           setSelectedWallet(preSelectedWallet.name || '');
           return;
         }
       }
       
       if (wallets && wallets.length > 0) {
-        // 첫 번째 월렛을 기본 선택
+        // 첫 번째 지갑을 기본 선택
         const firstWallet = wallets[0];
-        console.log('PasswordModal - 첫 번째 월렛 선택:', firstWallet?.name);
+        console.log('PasswordModal - 첫 번째 지갑 선택:', firstWallet?.name);
         setSelectedWallet(firstWallet?.name || '');
       } else {
-        console.log('PasswordModal - 월렛이 없음');
+        console.log('PasswordModal - 지갑이 없음');
         setSelectedWallet('');
       }
     }
@@ -69,7 +69,7 @@ const PasswordModal = ({
       setPassword('');
       setError('');
       
-      // TradingPanel에서 선택한 월렛이 있으면 우선 사용
+      // TradingPanel에서 선택한 지갑이 있으면 우선 사용
       if (selectedWalletForTrading && wallets && wallets.length > 0) {
         const preSelectedWallet = wallets.find(w => 
           w.name === selectedWalletForTrading || 
@@ -78,12 +78,12 @@ const PasswordModal = ({
         if (preSelectedWallet) {
           setSelectedWallet(preSelectedWallet.name || '');
         } else {
-          // 선택된 월렛을 찾을 수 없으면 첫 번째 월렛 사용
+          // 선택된 지갑을 찾을 수 없으면 첫 번째 지갑 사용
           const firstWallet = wallets && wallets.length > 0 ? wallets[0].name : '';
           setSelectedWallet(firstWallet);
         }
       } else {
-        // 기본 선택 월렛(있다면 첫 번째)
+        // 기본 선택 지갑(있다면 첫 번째)
         const firstWallet = wallets && wallets.length > 0 ? wallets[0].name : '';
         setSelectedWallet(firstWallet);
       }
@@ -107,25 +107,25 @@ const PasswordModal = ({
   };
 
   const resolveWalletPin = (walletName) => {
-    console.log('=== 월렛 PIN 조회 시작 ===');
-    console.log('월렛 이름:', walletName);
-    console.log('월렛 목록:', wallets);
-    console.log('월렛 개수:', wallets?.length);
+    console.log('=== 지갑 PIN 조회 시작 ===');
+    console.log('지갑 이름:', walletName);
+    console.log('지갑 목록:', wallets);
+    console.log('지갑 개수:', wallets?.length);
     
     if (!walletName || !wallets || wallets.length === 0) {
-      console.log('월렛 이름이나 월렛 목록이 없음');
+      console.log('지갑 이름이나 지갑 목록이 없음');
       return '';
     }
     
     const w = wallets.find(x => x.name === walletName);
-    console.log('찾은 월렛:', w);
+    console.log('찾은 지갑:', w);
     
     const pin = w?.pin ? String(w.pin) : '';
     console.log('원본 PIN:', pin);
     
     const cleanPin = pin.replace(/\D/g, '').slice(0, 6);
     console.log('정리된 PIN:', cleanPin);
-    console.log('=== 월렛 PIN 조회 완료 ===');
+    console.log('=== 지갑 PIN 조회 완료 ===');
     
     return cleanPin;
   };
@@ -133,7 +133,7 @@ const PasswordModal = ({
   const handleConfirm = async () => {
     console.log('=== 비밀번호 확인 시작 ===');
     console.log('입력된 비밀번호:', password);
-    console.log('선택된 월렛:', selectedWallet);
+    console.log('선택된 지갑:', selectedWallet);
     console.log('선택된 상품:', selectedProduct);
     
     if (password.replace(/\D/g, '').length !== 6) {
@@ -143,12 +143,12 @@ const PasswordModal = ({
     }
 
     if (!isWalletCompatible(selectedWallet, selectedProduct)) {
-      console.log('월렛 호환성 검사 실패');
+      console.log('지갑 호환성 검사 실패');
       setError(selectedProduct === 'silver' ? '은 전용 지갑에서만 은 거래가 가능합니다.' : '금 전용 지갑에서만 금 거래가 가능합니다.');
       return;
     }
 
-    console.log('월렛 호환성 검사 통과');
+    console.log('지갑 호환성 검사 통과');
     setLoading(true);
     setError('');
 
@@ -156,14 +156,14 @@ const PasswordModal = ({
       const entered = (password || '').toString().replace(/\D/g, '').slice(0, 6);
       console.log('정리된 입력 비밀번호:', entered);
 
-      // 월렛 PIN 검증
+      // 지갑 PIN 검증
       const walletPin = resolveWalletPin(selectedWallet);
-      console.log('선택된 월렛:', selectedWallet);
-      console.log('월렛 PIN:', walletPin);
+      console.log('선택된 지갑:', selectedWallet);
+      console.log('지갑 PIN:', walletPin);
       console.log('입력한 PIN:', entered);
       
       if (!walletPin || walletPin.length !== 6) {
-        setError('선택한 월렛에 등록된 PIN이 없습니다. 월렛지갑 관리에서 PIN을 설정해주세요.');
+        setError('선택한 지갑에 등록된 PIN이 없습니다. 지갑 관리에서 PIN을 설정해주세요.');
         return;
       }
 
@@ -209,11 +209,11 @@ const PasswordModal = ({
 
         {/* 본문 */}
         <div className="p-6">
-          {/* 월렛 선택 */}
+          {/* 지갑 선택 */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">사용할 월렛 선택</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">사용할 지갑 선택</label>
             {(() => {
-              console.log('PasswordModal - 월렛 선택 렌더링');
+              console.log('PasswordModal - 지갑 선택 렌더링');
               console.log('PasswordModal - wallets:', wallets);
               console.log('PasswordModal - wallets 타입:', typeof wallets);
               console.log('PasswordModal - wallets 길이:', wallets?.length);
@@ -223,7 +223,7 @@ const PasswordModal = ({
                 return (
                   <div className="grid grid-cols-1 gap-2">
                     {wallets.map(w => {
-                      console.log('PasswordModal - 월렛 렌더링:', w);
+                      console.log('PasswordModal - 지갑 렌더링:', w);
                       return (
                         <label key={w.id} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer ${selectedWallet === w.name ? 'bg-purple-50 border-purple-300' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
                           <div className="flex items-center gap-2">
@@ -242,15 +242,15 @@ const PasswordModal = ({
                   </div>
                 );
               } else {
-                console.log('PasswordModal - 월렛이 없음, 메시지 표시');
+                console.log('PasswordModal - 지갑이 없음, 메시지 표시');
                 return (
                   <div className="text-center py-6">
-                    <div className="text-lg font-medium text-gray-700 mb-2">월렛이 없습니다</div>
+                    <div className="text-lg font-medium text-gray-700 mb-2">지갑이 없습니다</div>
                     <div className="text-sm text-gray-500 mb-4">
-                      거래를 위해서는 먼저 월렛을 개설해주세요.
+                      거래를 위해서는 먼저 지갑을 개설해주세요.
                     </div>
                     <div className="text-xs text-gray-400">
-                      통장 관리 페이지에서 월렛을 생성할 수 있습니다.
+                      통장 관리 페이지에서 지갑을 생성할 수 있습니다.
                     </div>
                   </div>
                 );
