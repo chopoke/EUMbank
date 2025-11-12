@@ -13,10 +13,12 @@ import java.util.Optional;
 @Repository
 public interface DocumentRepository extends JpaRepository<DocumentFile, Integer> {
 
+    // 모든 문서 조회
+    Page<DocumentFile> findBycNo(Long cNo, Pageable pageable);
 
-    // ✅ 주민등록증 최신 1건 조회
-    Optional<DocumentFile> findFirstBycNoAndTypeOrderByCreatedAtDesc(Integer customerNo, FileType type);
+    // 주민등록증 최신 1건
+    Optional<DocumentFile> findFirstBycNoAndTypeOrderByCreatedAtDesc(Long cNo, FileType type);
 
-    // ✅ 특정 타입 제외하고 조회
-    Page<DocumentFile> findBycNoAndTypeNotOrderByCreatedAtDesc(Integer customerNo, FileType type, Pageable pageable);
+    // 특정 타입 제외
+    Page<DocumentFile> findBycNoAndTypeNot(Long cNo, FileType type, Pageable pageable);
 }

@@ -1317,11 +1317,20 @@ function DocumentTab() {
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(false);
 
+    // 페이징 상태 - Spring Pageable 형식에 맞춤
+    const [pageInfo, setPageInfo] = useState({
+        currentPage: 0,
+        pageSize: 5,
+        totalPages: 0,
+        totalElements: 0,
+        sort: 'createdAt,desc' // 기본 정렬: 생성일 내림차순
+    });
+
     // 페이징 상태
     const [currentPage, setCurrentPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
-    const pageSize = 10;
+    const pageSize = 5;
 
     // 파일 타입별 아이콘 매핑
     const docTypeConfig = {
@@ -1345,30 +1354,50 @@ function DocumentTab() {
 
     // 컴포넌트 마운트 시 서류 목록 조회
     useEffect(() => {
-        fetchDocuments(currentPage);
-    }, [currentPage]);
+        fetchDocuments();
+    }, [pageInfo.currentPage, pageInfo.pageSize, pageInfo.sort]);
 
     /**
-     * 서류 목록 조회
+     * 서류 목록 조회 - Spring Pageable 형식
      */
-    const fetchDocuments = async (page) => {
+    const fetchDocuments = async () => {
         setLoading(true);
         try {
-            const response = await axios.get(`/api/documents`, {
-                params: { page, size: pageSize }
-            });
 
+            const response = await axios.get(`/api/documents`, {
+                params: {
+                    page: pageInfo.currentPage,
+                    size: pageInfo.pageSize,
+                    sort: pageInfo.sort
+                }
+            });
             const data = response.data;
-            setDocuments(data.documents);
-            setTotalPages(data.totalPages);
-            setTotalElements(data.totalElements);
-            setCurrentPage(data.currentPage);
+            const documentList = data.documents || data.content || [];
+
+            setDocuments(documentList);
+            setPageInfo(prev => ({
+                ...prev,
+                totalPages: data.totalPages || 0,
+                totalElements: data.totalElements || 0,
+                currentPage: data.currentPage !== undefined ? data.currentPage : (data.number || 0)
+            }));
+
         } catch (error) {
             console.error('서류 목록 조회 실패:', error);
             alert('서류 목록을 불러오는데 실패했습니다.');
         } finally {
             setLoading(false);
         }
+    };
+
+    /**
+     * 페이지 변경
+     */
+    const handlePageChange = (newPage) => {
+        setPageInfo(prev => ({
+            ...prev,
+            currentPage: newPage
+        }));
     };
 
     /**
@@ -1400,7 +1429,8 @@ function DocumentTab() {
             setShowUploadModal(false);
             setSelectedFile(null);
             setSelectedDocType('');
-            fetchDocuments(currentPage); // 목록 새로고침
+            // 첫 페이지로 이동하면서 새로고침
+            setPageInfo(prev => ({ ...prev, currentPage: 0 }));
         } catch (error) {
             console.error('업로드 실패:', error);
             alert(error.response?.data || '업로드에 실패했습니다.');
@@ -1478,24 +1508,6 @@ function DocumentTab() {
     };
 
     /**
-     * 서류 삭제
-     */
-    const handleDelete = async (dNo) => {
-        if (!window.confirm('정말 삭제하시겠습니까?')) {
-            return;
-        }
-
-        try {
-            await axios.delete(`/api/documents/${dNo}`);
-            alert('삭제되었습니다.');
-            fetchDocuments(currentPage);
-        } catch (error) {
-            console.error('삭제 실패:', error);
-            alert(error.response?.data || '삭제에 실패했습니다.');
-        }
-    };
-
-    /**
      * 파일 선택 핸들러
      */
     const handleFileChange = (e) => {
@@ -1510,47 +1522,6 @@ function DocumentTab() {
             setSelectedFile(file);
         }
     };
-
-    /**
-     * 업로드 모달 열기
-     */
-    const openUploadModal = (docType) => {
-        setSelectedDocType(docType);
-        setSelectedFile(null);
-        setShowUploadModal(true);
-    };
-
-    /**
-     * 상태별 스타일
-     */
-    const getStatusStyle = (status) => {
-        switch (status) {
-            case 'APPROVED':
-                return 'bg-green-100 text-green-800';
-            case 'PENDING':
-                return 'bg-orange-100 text-orange-800';
-            case 'REJECTED':
-                return 'bg-red-100 text-red-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
-
-    // /**
-    //  * 상태 한글 변환
-    //  */
-    // const getStatusText = (status) => {
-    //     switch (status) {
-    //         case 'APPROVED':
-    //             return '승인완료';
-    //         case 'PENDING':
-    //             return '심사중';
-    //         case 'REJECTED':
-    //             return '반려';
-    //         default:
-    //             return status;
-    //     }
-    // };
 
     /**
      * 날짜 포맷
@@ -1587,6 +1558,7 @@ function DocumentTab() {
 
     return (
         <div className="space-y-6">
+            {/* 헤더 */}
             <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
                     <i className="ri-file-text-line text-indigo-600"></i>
@@ -1608,37 +1580,32 @@ function DocumentTab() {
                             } text-xl`}></i>
                         </div>
                         <div>
-                            {/*<h3 className="text-lg font-semibold text-gray-800">*/}
-                            {/*    {completionRate === 100 ? '서류 제출 완료' : '서류 제출 진행중'}*/}
-                            {/*</h3>*/}
-                            {/*<p className="text-gray-600">*/}
-                            {/*    {completionRate === 100*/}
-                            {/*        ? '필수 서류가 모두 제출되었습니다.'*/}
-                            {/*        : '필수 서류를 제출해주세요.'}*/}
-                            {/*</p>*/}
-
                             <h3 className="text-lg font-semibold text-gray-800">
-                                {'제출한 서류 갯수'}
+                                제출한 서류 갯수
                             </h3>
                         </div>
                     </div>
                     <div className="text-right">
                         <div className={`text-2xl font-bold ${
                             documents.length > 1 ? 'text-green-600' : 'text-orange-600'
-                        }`}>{documents.length}개</div>
+                        }`}>{pageInfo.totalElements}개</div>
                     </div>
                 </div>
             </div>
 
             {/* 제출된 서류 목록 */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                        <i className="ri-folder-line text-blue-600 mr-2"></i>
-                        제출된 서류 ({totalElements}건)
-                    </h3>
+                {/* 헤더 및 컨트롤 */}
+                <div className="p-6 border-b border-gray-100">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                            <i className="ri-folder-line text-blue-600 mr-2"></i>
+                            제출된 서류 ({pageInfo.totalElements}건)
+                        </h3>
+                    </div>
                 </div>
 
+                {/* 로딩 상태 */}
                 {loading ? (
                     <div className="p-8 text-center text-gray-500">
                         <i className="ri-loader-4-line animate-spin text-2xl"></i>
@@ -1651,15 +1618,16 @@ function DocumentTab() {
                     </div>
                 ) : (
                     <>
+                        {/* 문서 목록 */}
                         <div className="divide-y divide-gray-100">
                             {documents.map((doc) => {
+                                if (!doc) return null;
+
                                 const config = docTypeConfig[doc.type] || {
                                     icon: 'ri-file-line',
                                     color: 'gray',
                                     displayName: doc.type
                                 };
-
-                                console.log(doc.dno);
 
                                 return (
                                     <div key={doc.dno} className="p-4 hover:bg-gray-50 transition-colors">
@@ -1677,9 +1645,6 @@ function DocumentTab() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
-                                                {/*<span className={`px-2 py-1 text-xs rounded-full ${getStatusStyle(doc.status)}`}>*/}
-                                                {/*  {getStatusText(doc.status)}*/}
-                                                {/*</span>*/}
                                                 <button
                                                     onClick={() => handleView(doc.dno, doc.pdfName)}
                                                     className="text-blue-600 hover:text-blue-700 text-sm p-1"
@@ -1701,40 +1666,93 @@ function DocumentTab() {
                             })}
                         </div>
 
-                        {/* 페이징 */}
-                        {totalPages > 1 && (
-                            <div className="p-4 border-t border-gray-100 flex items-center justify-center space-x-2">
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
-                                    disabled={currentPage === 0}
-                                    className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                                >
-                                    <i className="ri-arrow-left-s-line"></i>
-                                </button>
+                        {/* 페이징 UI - 항상 표시 */}
+                        <div className="p-4 border-t border-gray-100">
+                            <div className="flex items-center justify-between">
 
-                                {[...Array(totalPages)].map((_, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => setCurrentPage(idx)}
-                                        className={`px-3 py-1 rounded ${
-                                            currentPage === idx
-                                                ? 'bg-blue-500 text-white'
-                                                : 'border border-gray-300 hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        {idx + 1}
-                                    </button>
-                                ))}
+                                {/* 페이징 버튼 - totalPages가 1보다 클 때만 표시 */}
+                                {pageInfo.totalPages > 1 && (
+                                    <div className="flex items-center space-x-2">
+                                        {/* 첫 페이지 */}
+                                        <button
+                                            onClick={() => handlePageChange(0)}
+                                            disabled={pageInfo.currentPage === 0}
+                                            className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                                            title="첫 페이지"
+                                        >
+                                            <i className="ri-arrow-left-double-line"></i>
+                                        </button>
 
-                                <button
-                                    onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                                    disabled={currentPage === totalPages - 1}
-                                    className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                                >
-                                    <i className="ri-arrow-right-s-line"></i>
-                                </button>
+                                        {/* 이전 페이지 */}
+                                        <button
+                                            onClick={() => handlePageChange(pageInfo.currentPage - 1)}
+                                            disabled={pageInfo.currentPage === 0}
+                                            className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                                            title="이전 페이지"
+                                        >
+                                            <i className="ri-arrow-left-s-line"></i>
+                                        </button>
+
+                                        {/* 페이지 번호들 */}
+                                        {(() => {
+                                            const maxButtons = 5;
+                                            const half = Math.floor(maxButtons / 2);
+                                            let startPage = Math.max(0, pageInfo.currentPage - half);
+                                            let endPage = Math.min(pageInfo.totalPages - 1, startPage + maxButtons - 1);
+
+                                            if (endPage - startPage < maxButtons - 1) {
+                                                startPage = Math.max(0, endPage - maxButtons + 1);
+                                            }
+
+                                            const pageButtons = [];
+                                            for (let i = startPage; i <= endPage; i++) {
+                                                pageButtons.push(
+                                                    <button
+                                                        key={i}
+                                                        onClick={() => handlePageChange(i)}
+                                                        className={`px-3 py-1 rounded transition-colors ${
+                                                            pageInfo.currentPage === i
+                                                                ? 'bg-blue-500 text-white'
+                                                                : 'border border-gray-300 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {i + 1}
+                                                    </button>
+                                                );
+                                            }
+                                            return pageButtons;
+                                        })()}
+
+                                        {/* 다음 페이지 */}
+                                        <button
+                                            onClick={() => handlePageChange(pageInfo.currentPage + 1)}
+                                            disabled={pageInfo.currentPage >= pageInfo.totalPages - 1}
+                                            className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                                            title="다음 페이지"
+                                        >
+                                            <i className="ri-arrow-right-s-line"></i>
+                                        </button>
+
+                                        {/* 마지막 페이지 */}
+                                        <button
+                                            onClick={() => handlePageChange(pageInfo.totalPages - 1)}
+                                            disabled={pageInfo.currentPage >= pageInfo.totalPages - 1}
+                                            className="px-3 py-1 rounded border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                                            title="마지막 페이지"
+                                        >
+                                            <i className="ri-arrow-right-double-line"></i>
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        )}
+
+                            {/* 페이지가 1개일 때 안내 메시지 (선택사항) */}
+                            {pageInfo.totalPages === 1 && pageInfo.totalElements > 0 && (
+                                <div className="text-center mt-2">
+                                    <span className="text-xs text-gray-500">전체 {pageInfo.totalElements}건 (1페이지)</span>
+                                </div>
+                            )}
+                        </div>
                     </>
                 )}
             </div>
