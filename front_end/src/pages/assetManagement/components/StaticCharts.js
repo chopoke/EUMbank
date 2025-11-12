@@ -914,13 +914,13 @@ export function WeeklyDeltaBarsStatic({
         if (tooltipX < 8) tooltipX = 8;
         if (tooltipX + tooltipWidth > W - 8) tooltipX = W - tooltipWidth - 8;
 
-        let tooltipY;
-        if (value >= 0) {
-          tooltipY = pointY - tooltipHeight - 12;
-          if (tooltipY < 6) tooltipY = pointY + 12;
-        } else {
+        const margin = 8;
+        let tooltipY = pointY - tooltipHeight - 12;
+        if (tooltipY < margin) {
           tooltipY = pointY + 12;
-          if (tooltipY + tooltipHeight > H - 6) tooltipY = pointY - tooltipHeight - 12;
+        }
+        if (tooltipY + tooltipHeight > H - margin) {
+          tooltipY = Math.max(margin, H - tooltipHeight - margin);
         }
 
         const label = labels[hoveredIndex] || `${hoveredIndex + 1}주`;
@@ -928,7 +928,7 @@ export function WeeklyDeltaBarsStatic({
         const statusColor = value >= 0 ? "#047857" : "#B91C1C";
 
         return (
-          <g>
+          <g pointerEvents="none">
             <line
               x1={pointX}
               y1={4}
