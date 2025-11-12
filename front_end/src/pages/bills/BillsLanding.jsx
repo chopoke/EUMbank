@@ -10,6 +10,8 @@ import InvoiceTable from "./components/InvoiceTable";
 import GenericRateTable from "./components/GenericRateTable";
 import ElectricAvgSection from "./components/ElectricAvgSection";
 
+import AutopaySection from "./components/AutopaySection";
+
 export default function BillsLanding() {
   const { ubNo: ubNoParam } = useParams();
   const ubNo = ubNoParam ? Number(ubNoParam) : null;
@@ -215,6 +217,9 @@ export default function BillsLanding() {
 
                   {/* ubNo 변경 시 강제 리마운트로 이전 데이터 잔상 제거 */}
                   <InvoiceTable key={`inv-${ubNo}`} ubNo={ubNo} aNo={account ? Number(account) : null} />
+                  <div className="mt-6">
+                    <AutopaySection ubNo={ubNo} aNo={account ? Number(account) : null} accounts={accounts} />
+                  </div>
                 </div>
               )}
             </div>

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface BillAutopayRepo extends JpaRepository<BillAutopay,Integer> {
@@ -14,6 +15,8 @@ public interface BillAutopayRepo extends JpaRepository<BillAutopay,Integer> {
 
     // 동일 ub에 활성 Y가 이미 있는지
     boolean existsByUbNoAndBaActive(Integer ubNo, String active);
+
+    List<BillAutopay> findByUbNoOrderByBaNoDesc(Integer ubNo);
 
     // 기간 겹침 체크: (시작<=끝 또는 끝이 null) 단순화
     @Query("""

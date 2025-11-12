@@ -12,6 +12,6 @@ import java.time.LocalDateTime;
 public class AutopayScheduler {
     private final AutopayRunner runner;
     // 매일 03:10 실행. 프로필 dev만 사용하고 싶으면 @Profile("dev")
-    @Scheduled(cron = "0 10 3 * * *", zone = "Asia/Seoul")
+    @Scheduled(fixedDelay = 30_000, zone = "Asia/Seoul")
     public void run(){ runner.runDueAutopay(LocalDateTime.now()); }
 }

@@ -100,8 +100,15 @@ public class SecurityConfig {
                                 "/api/health",
                                 "/actuator/**",
                                 "/actuator/health",
-                                "/api/rates/**"
+                                "/api/rates/**",
+                                "/api/bills/rates/**",
+                                "/api/bills/utility-bills"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bills/*/invoices").permitAll()
+                        .requestMatchers(HttpMethod.POST,   "/api/bills/*/pay-now", "/api/bills/*/autopay").authenticated()
+                        .requestMatchers(HttpMethod.PATCH,  "/api/bills/autopay/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/bills/autopay/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/bills/payments/*/receipt").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/foreign/products/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
