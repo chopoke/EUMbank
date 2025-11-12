@@ -29,6 +29,10 @@ public class LoanApplicationRequestDTO {
     @JsonAlias({"laDesiredTerm","la_desired_term"})
     private Integer desiredTerm;
 
+    // 신청건별 구분용 키
+    @JsonAlias("batchKey")
+    private String termsBatchKey;
+
     // 한글 저장 정책 필드
     @JsonAlias({"laPurposeCode","la_purpose_code"})
     private String purposeCode;

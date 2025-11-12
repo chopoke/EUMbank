@@ -33,6 +33,7 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
     private final ObjectMapper om = new ObjectMapper();
     private final LoanConsentService loanConsentService;    // 약곤저장
 
+
     // ============================ 신청 저장
     @Override
     @Transactional
@@ -94,13 +95,15 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         appRepo.save(la);
 
         // laNo귀속
+        String batchKey = safeTrim(req.getTermsBatchKey());
         try {
-            loanConsentService.attachConsentsToApplication(
-                    cNo,
-                    la.getLaNo()
-            );
+            if (batchKey != null && !batchKey.isBlank()) {
+                loanConsentService.attachConsentsToApp(cNo, la.getLaNo(), batchKey);
+            } else {
+                log.warn("@@@@@@@ 배치키 비어있음 -> skip attach (cNo={}, laNo={}) @@@@@@@@", cNo, la.getLaNo());
+            }
         } catch (Exception e) {
-            log.warn("약관-신청 매핑 실패 laNo={}, msg={}", la.getLaNo(), e.getMessage());
+            log.warn("@@@@@@@ 약관동의 디비저장 실 패 laNo={}, batchKey={}, msg={} @@@@@@@@", la.getLaNo(), batchKey, e.getMessage());
         }
 
         return new LoanApplicationResponseDTO(
@@ -201,6 +204,9 @@ public class LoanApplicationServiceImpl implements LoanApplicationService {
         } catch (Exception ignore) {
             return String.valueOf(a.getANo()); // 최후: 내부번호 문자열로
         }
+    }
+    private static String safeTrim(String s) {
+        return (s == null) ? null : s.trim();
     }
 
 }

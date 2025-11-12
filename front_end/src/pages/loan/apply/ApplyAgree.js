@@ -12,14 +12,14 @@ const TERMS = [
     required: true,
     version: "v1.2",
     body: `[목적] 본 약관은 전자적 장치를 통한 금융거래의 이용조건 및 사고 처리 기준을 정합니다.
-[이용시간] 서비스별 고지된 시간 내 이용 가능합니다.
-[본인확인] 고객은 지정된 인증수단으로 본인확인을 수행합니다.
-[거래지시의 처리] 은행은 고객의 거래지시를 접수 순서대로 처리합니다.
-[장애/사고] 전산 장애·통신두절 등 불가피한 사유로 지연/중단될 수 있으며, 은행은 지체 없이 공지합니다.
-[오류정정] 고객은 오류 사실을 통지할 수 있으며, 은행은 지체 없이 조사·정정합니다.
-[비밀번호/인증수단 관리] 고객의 고의·중과실로 유출된 경우 손실이 고객에게 귀속될 수 있습니다.
-[기록 보존] 거래기록은 법령에 따라 보존됩니다.
-[분쟁처리] 분쟁 발생 시 관련 법령 및 분쟁조정절차에 따릅니다.`,
+      [이용시간] 서비스별 고지된 시간 내 이용 가능합니다.
+      [본인확인] 고객은 지정된 인증수단으로 본인확인을 수행합니다.
+      [거래지시의 처리] 은행은 고객의 거래지시를 접수 순서대로 처리합니다.
+      [장애/사고] 전산 장애·통신두절 등 불가피한 사유로 지연/중단될 수 있으며, 은행은 지체 없이 공지합니다.
+      [오류정정] 고객은 오류 사실을 통지할 수 있으며, 은행은 지체 없이 조사·정정합니다.
+      [비밀번호/인증수단 관리] 고객의 고의·중과실로 유출된 경우 손실이 고객에게 귀속될 수 있습니다.
+      [기록 보존] 거래기록은 법령에 따라 보존됩니다.
+      [분쟁처리] 분쟁 발생 시 관련 법령 및 분쟁조정절차에 따릅니다.`,
   },
   {
     termCode: "PI_COLLECT",
@@ -27,9 +27,9 @@ const TERMS = [
     required: true,
     version: "v1.3",
     body: `[수집·이용 목적] 대출 심사, 계약 체결·이행, 사후관리, 민원 처리.
-[수집 항목] 식별정보(성명, 연락처 등), 신용정보(평점/대출·연체 이력), 재무정보(소득·재직) 등.
-[보유·이용 기간] 목적 달성 시 또는 관련 법령상 의무 보관기간 만료 시까지.
-[동의 거부 권리] 동의 거부 가능하나, 이 경우 서비스 이용/계약 체결이 제한될 수 있습니다.`,
+      [수집 항목] 식별정보(성명, 연락처 등), 신용정보(평점/대출·연체 이력), 재무정보(소득·재직) 등.
+      [보유·이용 기간] 목적 달성 시 또는 관련 법령상 의무 보관기간 만료 시까지.
+      [동의 거부 권리] 동의 거부 가능하나, 이 경우 서비스 이용/계약 체결이 제한될 수 있습니다.`,
   },
   {
     termCode: "CREDIT_MASTER",
@@ -37,9 +37,9 @@ const TERMS = [
     required: true,
     version: "v1.0",
     body: `[적용범위] 본 약관은 은행과 고객의 모든 여신거래에 적용됩니다.
-[계약의 해지] 법령·약관에서 정한 사유 발생 시 해지될 수 있습니다.
-[담보/보증] 담보 또는 보증 제공·유지의무가 있을 수 있습니다.
-[기타] 분쟁 시 관할, 준거법 등은 관련 법령과 약관에 따릅니다.`,
+      [계약의 해지] 법령·약관에서 정한 사유 발생 시 해지될 수 있습니다.
+      [담보/보증] 담보 또는 보증 제공·유지의무가 있을 수 있습니다.
+      [기타] 분쟁 시 관할, 준거법 등은 관련 법령과 약관에 따릅니다.`,
   },
   {
     termCode: "LOAN_KEY",
@@ -47,12 +47,12 @@ const TERMS = [
     required: true,
     version: "v2.0",
     body: `[대출금리] 고정/변동 등 유형 및 산정방식은 개별 약정에 따릅니다.
-[한도·기간] 승인금액 및 기간은 심사 결과에 따라 정해집니다.
-[상환방법] 원리금균등/원금균등/만기일시 등 합의 방식으로 매월 후취 납입합니다.
-[연체이자] 약정 상환일 경과 시 연체이자가 부과될 수 있습니다(상한율/산식 고지).
-[기한의 이익 상실] 연체 등 일정 사유 발생 시 기한의 이익이 상실될 수 있습니다.
-[조기상환] 중도상환수수료가 부과될 수 있으며, 면제 조건이 있을 수 있습니다.
-[채권양도/관리] 은행은 법령 범위 내 채권을 양도·위탁 관리할 수 있습니다.`,
+      [한도·기간] 승인금액 및 기간은 심사 결과에 따라 정해집니다.
+      [상환방법] 원리금균등/원금균등/만기일시 등 합의 방식으로 매월 후취 납입합니다.
+      [연체이자] 약정 상환일 경과 시 연체이자가 부과될 수 있습니다(상한율/산식 고지).
+      [기한의 이익 상실] 연체 등 일정 사유 발생 시 기한의 이익이 상실될 수 있습니다.
+      [조기상환] 중도상환수수료가 부과될 수 있으며, 면제 조건이 있을 수 있습니다.
+      [채권양도/관리] 은행은 법령 범위 내 채권을 양도·위탁 관리할 수 있습니다.`,
   },
   {
     termCode: "LOAN_FEE",
@@ -60,8 +60,8 @@ const TERMS = [
     required: true,
     version: "v1.0",
     body: `[인지세] 대출금액 구간별 인지세가 부과되며 은행과 고객이 각 50% 부담합니다.
-[중도상환수수료] 약정 기간 내 조기상환 시 수수료가 부과될 수 있습니다(율/면제기준 고지).
-[기타 수수료] 보증료/보험료/설정비용 등 부대비용은 상품별 안내에 따릅니다.`,
+      [중도상환수수료] 약정 기간 내 조기상환 시 수수료가 부과될 수 있습니다(율/면제기준 고지).
+      [기타 수수료] 보증료/보험료/설정비용 등 부대비용은 상품별 안내에 따릅니다.`,
   },
   {
     termCode: "AUTO_DEBIT",
@@ -69,8 +69,8 @@ const TERMS = [
     required: true,
     version: "v1.0",
     body: `[출금 계좌] 고객이 지정한 상환계좌에서 이자·원리금을 자동 출금합니다.
-[출금일] 지정 납입일(휴일인 경우 다음 영업일)에 출금되며, 잔액 부족 시 연체로 처리될 수 있습니다.
-[변경·해지] 출금계좌·일자 변경은 사전 통지 및 승인 절차에 따릅니다.`,
+      [출금일] 지정 납입일(휴일인 경우 다음 영업일)에 출금되며, 잔액 부족 시 연체로 처리될 수 있습니다.
+      [변경·해지] 출금계좌·일자 변경은 사전 통지 및 승인 절차에 따릅니다.`,
   },
   {
     termCode: "MK_OPTIN",
@@ -78,10 +78,11 @@ const TERMS = [
     required: false,
     version: "v1.0",
     body: `[목적] 이벤트·혜택·신규 상품 안내(이메일/문자/앱푸시).
-[보유·이용 기간] 철회 시 또는 관련 법령상 기간 만료 시까지.
-[철회] 언제든지 수신 거부 가능(수신 거부 시 즉시 반영).`,
+      [보유·이용 기간] 철회 시 또는 관련 법령상 기간 만료 시까지.
+      [철회] 언제든지 수신 거부 가능(수신 거부 시 즉시 반영).`,
   },
 ];
+
 
 const USE_CONSENT_API = true;
 
@@ -89,13 +90,23 @@ export default function ApplyAgree() {
   const { code } = useParams();
   const nav = useNavigate();
 
+  // 신청건별 약관 동의를 묶는 키 일단 생성
+  const storageKey = `loan:termsBatchKey:${code}`;
+  const [batchKey] = React.useState(() => {
+    const exist = localStorage.getItem(storageKey);
+    if (exist && exist.trim()) return exist;
+    const k = (crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
+    localStorage.setItem(storageKey, k);
+    return k;
+  });
+
   const flow = loadFlow(code);
 
   React.useEffect(() => {
     if (flow) {
       saveFlow(code, { ...flow, step: 1, slug: "agree" });
     }
-  }, [code]); // flow는 이미 load된 값이라 의존성에서 뺌
+  }, [code]); 
 
   const product = flow?.product;
   const customerId = flow?.form?.customerId || "1";
@@ -170,7 +181,6 @@ export default function ApplyAgree() {
   const viewedOk = terms.filter((t) => t.required).every((t) => scrolledEnd[t.termCode]);
   const canNext = requiredOk && viewedOk && !saving;
 
-  // ✅ 전체 동의 토글 (버그 수정: next 상태를 먼저 계산)
   const handleToggleAll = (checked) => {
     if (!checked) {
       const next = {};
@@ -231,7 +241,7 @@ export default function ApplyAgree() {
     if (hitEnd) markRead(termCode);
   };
 
-  // 모달 열릴 때 내용 짧으면 스크롤 없이 즉시 읽음 처리
+  // 내용 짧으면 스크롤 없이 즉시 읽음 처리
   const ActiveTerm = activeModal ? terms.find((t) => t.termCode === activeModal) : null;
   React.useEffect(() => {
     if (!ActiveTerm || !activeModal) return;
@@ -254,6 +264,7 @@ export default function ApplyAgree() {
       const payload = {
         customerId: String(customerId),
         productCode: String(product?.code || product?.id || code),
+        batchKey,
         items: terms.map((t) => ({
           termCode: t.termCode,
           title: t.title,
