@@ -141,8 +141,12 @@ const TradingPanel = ({
     if (tradingSide === 'sell' && getCurrentHoldings() > 0) {
       const currentHoldings = getCurrentHoldings();
       // 전량 매도 시 현재 보유량을 수량으로 직접 설정
+      // 보유량을 기준으로 금액을 계산하되, 약간의 여유를 두어 보유량 검증 통과하도록 함
       const fullSellAmount = calculateAmountFromQuantity(currentHoldings, selectedProduct);
-      setTradingAmount(Math.floor(fullSellAmount)); // 소수점 제거 (원화 기준)
+      // 보유량을 정확히 매도하기 위해 약간의 여유를 두어 계산
+      // 소수점 오차를 고려하여 0.1% 정도 여유를 둠
+      const adjustedAmount = Math.floor(fullSellAmount * 0.999);
+      setTradingAmount(Math.max(1000, adjustedAmount)); // 최소 1000원
     }
   }, [tradingSide, getCurrentHoldings, calculateAmountFromQuantity, selectedProduct, setTradingAmount]);
 
@@ -183,27 +187,18 @@ const TradingPanel = ({
   }, []);
 
   /**
-   * 실제 거래 금액 계산 (수량 기반, 백엔드와 동일)
-   * 백엔드는 totalPrice = currentPrice.getPBuyPrice().multiply(quantity)로 계산
-   * 반올림하지 않고 정밀한 값 유지 (최종 합계에서만 반올림)
-   * 
-   * 중요: 백엔드로 전달되는 정확한 quantity를 기준으로 계산
-   * 프론트엔드에서 quantity = tradingAmount / buyPrice로 계산하고,
-   * 백엔드는 이 quantity를 받아서 실시간 가격으로 totalPrice를 계산합니다.
-   * 
-   * 백엔드와 정확히 일치시키기 위해, 백엔드로 전달되는 quantity를 정확히 계산합니다.
+   * 실제 거래 금액 계산
+   * 사용자가 입력한 거래 금액(tradingAmount)을 그대로 사용
+   * calculateQuantityFromAmount에서 TRADE_UNIT_WEIGHT(3.75)를 곱해서 수량을 계산하므로,
+   * 다시 가격을 곱하면 입력 금액의 3.75배가 되어버립니다.
+   * 따라서 사용자가 입력한 금액을 그대로 반환합니다.
    */
   const calculateActualTotalPrice = useCallback(() => {
-    // 백엔드로 전달되는 정확한 quantity 계산 (tradingAmount / buyPrice)
-    const quantity = getCalculatedQuantity();
-    if (quantity <= 0) return 0;
-    const currentPrice = selectedProduct === 'gold' ? goldPrice : silverPrice;
-    const pricePerGram = tradingSide === 'buy' ? currentPrice.buyPrice : currentPrice.sellPrice;
-    
-    // 백엔드와 동일하게: totalPrice = buyPrice * quantity
-    // 정밀도 유지를 위해 부동소수점 연산 사용
-    return pricePerGram * quantity; // 반올림하지 않음
-  }, [getCalculatedQuantity, selectedProduct, goldPrice, silverPrice, tradingSide]);
+    // 사용자가 입력한 거래 금액을 그대로 사용
+    // 수량 계산 시 이미 TRADE_UNIT_WEIGHT가 적용되어 있으므로,
+    // 여기서 다시 가격을 곱하면 안 됩니다.
+    return tradingAmount || 0;
+  }, [tradingAmount]);
 
   /**
    * 수수료 계산 (수량 기반, 백엔드와 동일)
@@ -242,26 +237,28 @@ const TradingPanel = ({
   }, [calculateActualTotalPrice, calculateFee, calculateTax]);
 
   /**
-   * 매도 시 예상 체결가 계산 (프리미엄 없음)
+   * 매도 시 예상 체결가 계산
+   * 매수와 동일하게 사용자가 입력한 거래 금액을 그대로 사용
    */
   const calculateSellPrice = useCallback(() => {
-    const quantity = getCalculatedQuantity();
-    const currentPrice = selectedProduct === 'gold' ? goldPrice : silverPrice;
-    const basePrice = currentPrice?.sellPrice || currentPrice?.basePrice || currentPrice || 0;
-    return Math.round(basePrice * quantity);
-  }, [getCalculatedQuantity, selectedProduct, goldPrice, silverPrice]);
+    // 매도 시에도 사용자가 입력한 금액을 그대로 사용 (매수와 동일)
+    return tradingAmount || 0;
+  }, [tradingAmount]);
 
   /**
    * 매도 시 총액 계산
+   * 입력 금액에서 수수료와 세금을 차감한 수취 금액
    */
   const calculateSellTotal = useCallback(() => {
-    const sellPrice = calculateSellPrice();
+    const sellPrice = calculateSellPrice(); // 입력 금액
+    if (sellPrice <= 0) return 0;
     const quantity = getCalculatedQuantity();
     if (quantity <= 0) return 0;
     const feeRate = calculateFeeRate(quantity);
-    const fee = Math.round(sellPrice * feeRate);
-    const tax = Math.round(sellPrice * 0.1);
-    return sellPrice - fee - tax; // 매도 시 수수료와 세금 차감
+    const fee = sellPrice * feeRate; // 반올림하지 않음 (정밀도 유지)
+    const tax = sellPrice * 0.1; // 반올림하지 않음 (정밀도 유지)
+    const total = sellPrice - fee - tax; // 매도 시 수수료와 세금 차감
+    return Math.round(total); // 최종 합계만 반올림
   }, [calculateSellPrice, getCalculatedQuantity, calculateFeeRate]);
   return (
     <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
@@ -634,7 +631,13 @@ const TradingPanel = ({
       {/* 주문 버튼 */}
       <button
         onClick={handleSubmit}
-        disabled={loading || (tradingSide === 'sell' && getCalculatedQuantity() > getCurrentHoldings())}
+        disabled={loading || (tradingSide === 'sell' && (() => {
+          // 매도 시 보유량 검증: 계산된 수량이 보유량보다 큰지 확인
+          // 소수점 오차를 고려하여 0.001g 여유를 둠
+          const calculatedQty = getCalculatedQuantity();
+          const holdings = getCurrentHoldings();
+          return calculatedQty > holdings + 0.001;
+        })())}
         className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-colors ${
           tradingSide === 'buy'
             ? 'bg-red-500 hover:bg-red-600 disabled:bg-red-300'
@@ -642,7 +645,11 @@ const TradingPanel = ({
         }`}
       >
         {loading ? '처리중...' : 
-         (tradingSide === 'sell' && getCalculatedQuantity() > getCurrentHoldings()) 
+         (tradingSide === 'sell' && (() => {
+           const calculatedQty = getCalculatedQuantity();
+           const holdings = getCurrentHoldings();
+           return calculatedQty > holdings + 0.001;
+         })()) 
            ? '보유량 부족' 
            : `${tradingSide === 'buy' ? '매수' : '매도'} 주문`}
       </button>
