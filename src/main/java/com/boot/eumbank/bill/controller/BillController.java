@@ -154,10 +154,20 @@ public class BillController {
     }
 
     // 영수증 텍스트 기반 PDF
-    @GetMapping(value="/payments/{bpNo}/receipt", produces="application/pdf")
-    public @ResponseBody byte[] receiptPdf(@PathVariable Integer bpNo){
-        var p = paymentRepo.findById(bpNo).orElseThrow();
-        var inv = invRepo.findById(p.getBiNo()).orElseThrow();
+    @GetMapping(value="/invoices/{biNo}/receipt", produces="application/pdf")
+    public ResponseEntity<byte[]> invoiceReceiptPdf(@PathVariable Integer biNo) {
+        var inv = invRepo.findById(biNo).orElseThrow();
+
+        // 1순위: COMPLETED 최신 결제
+        var p = paymentRepo
+                .findTopByBiNoAndBpStatusOrderByBpPaidAtDesc(biNo, "COMPLETED")
+                // 2순위: 결제 목록 중 가장 최근 1건
+                .orElseGet(() -> {
+                    var list = paymentRepo.findByBiNoOrderByBpPaidAtDesc(biNo);
+                    if (list.isEmpty()) throw new IllegalStateException("결제 기록이 없습니다.");
+                    return list.get(0);
+                });
+
         String title = "EUMBANK 공과금 납부 영수증";
         String body = """
             납부ID: %s
@@ -165,9 +175,27 @@ public class BillController {
             청구ID: %s
             금액: %, .0f 원
             납부일시: %s
+            상태: %s
             비고: 공과금 납부 완료
-        """.formatted(p.getBpId(), p.getBpReceiptNo(), inv.getBiId(),
-                p.getBpAmount().doubleValue(), p.getBpPaidAt());
-        return PdfUtil.textReceipt(title, body);
+            """.formatted(
+                p.getBpId(),
+                String.valueOf(p.getBpReceiptNo()),
+                String.valueOf(inv.getBiId()),
+                p.getBpAmount().doubleValue(),
+                String.valueOf(p.getBpPaidAt()),
+                String.valueOf(p.getBpStatus())
+        );
+
+        byte[] pdf = PdfUtil.textReceipt(title, body);
+
+        // 파일명: receipt-YYYYMM.pdf
+        String yyyymm = String.format("%04d%02d", inv.getBiYear(), inv.getBiMonth());
+        String filename = "receipt-" + yyyymm + ".pdf";
+
+        String dispo = "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + java.net.URLEncoder.encode(filename, java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, dispo)
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 }

@@ -1,5 +1,9 @@
+// src/pages/bills/components/AutopaySection.jsx
 import { useEffect, useMemo, useState } from "react";
 import api from "../../../api/axios";
+
+/** 계좌 마스킹: ***-***-1234 형태 */
+const maskAccount = (n) => String(n || "").replace(/\d(?=(?:\D*\d){4})/g, "*");
 
 /**
  * 최소 UI 자동이체 섹션
@@ -13,19 +17,20 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
   const list = Array.isArray(accounts) ? accounts : [];
-  const accountInfo = list.find(acc => Number(acc.aNo) === Number(aNo));
+  const accountInfo = list.find((acc) => Number(acc.aNo) === Number(aNo));
+
+  // 셀 표기를 위한 라벨(이미 마스킹된 acc.label 우선)
   const labelFor = (num) => {
-    const hit = list.find(acc => Number(acc.aNo) === Number(num));
-    return hit?.label || (num ? `aNo=${num}` : "-");
+    const hit = list.find((acc) => Number(acc.aNo) === Number(num));
+    if (!hit) return num ? `aNo=${num}` : "-";
+    return hit.label || maskAccount(hit.accountNo);
   };
 
   const [form, setForm] = useState({ payDay: "", payTime: "09:00:00", memo: "" });
 
-  const dayOptions = useMemo(
-    () => Array.from({ length: 31 }, (_, i) => i + 1),
-    []
-  );
+  const dayOptions = useMemo(() => Array.from({ length: 31 }, (_, i) => i + 1), []);
 
   async function load() {
     if (!ubNo) return;
@@ -40,11 +45,16 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
     }
   }
 
-  useEffect(() => { load(); }, [ubNo]);
+  useEffect(() => {
+    load();
+  }, [ubNo]);
 
   async function onCreate(e) {
     e.preventDefault();
-    if (!aNo) { alert("결제 계좌를 먼저 선택하세요."); return; }
+    if (!aNo) {
+      alert("결제 계좌를 먼저 선택하세요.");
+      return;
+    }
     const payDay = Number(form.payDay);
     if (!Number.isInteger(payDay) || payDay < 1 || payDay > 31) {
       alert("이체일은 1~31 사이여야 합니다.");
@@ -56,7 +66,7 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
         aNo: Number(aNo),
         payDay,
         payTime: form.payTime || "09:00:00",
-        memo: form.memo?.trim() || ""
+        memo: form.memo?.trim() || "",
       });
       setForm({ payDay: "", payTime: "09:00:00", memo: "" });
       await load();
@@ -98,17 +108,19 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
   return (
     <section className="border rounded-xl shadow-sm p-5 bg-white">
       <h2 className="font-semibold mb-3">자동이체</h2>
+
       <p className="text-sm text-gray-600 mb-3">
-        {aNo
-        ? (
-            <>
+        {aNo ? (
+          <>
             현재 결제 계좌:&nbsp;
             <span className="font-medium text-gray-800">
-                {accountInfo?.name || "계좌"} ({accountInfo?.accountNo || `aNo=${aNo}`})
+              {/* 기존: ({accountInfo?.accountNo}) → 마스킹으로 교체 */}
+              {labelFor(aNo)}
             </span>
-            </>
-        )
-        : <span className="text-red-600">미선택 — 상단 ‘결제 계좌’에서 선택하세요.</span>}
+          </>
+        ) : (
+          <span className="text-red-600">미선택 — 상단 ‘결제 계좌’에서 선택하세요.</span>
+        )}
       </p>
 
       {/* 등록 폼 */}
@@ -118,11 +130,15 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
           <select
             className="w-full border rounded px-2 py-1"
             value={form.payDay}
-            onChange={(e) => setForm(f => ({ ...f, payDay: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, payDay: e.target.value }))}
             required
           >
             <option value="">선택</option>
-            {dayOptions.map(d => <option key={d} value={d}>{d}일</option>)}
+            {dayOptions.map((d) => (
+              <option key={d} value={d}>
+                {d}일
+              </option>
+            ))}
           </select>
         </div>
 
@@ -133,7 +149,7 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
             className="w-full border rounded px-2 py-1"
             placeholder="09:00:00"
             value={form.payTime}
-            onChange={(e) => setForm(f => ({ ...f, payTime: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, payTime: e.target.value }))}
           />
         </div>
 
@@ -144,7 +160,7 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
             className="w-full border rounded px-2 py-1"
             placeholder="예: 매월 전기요금"
             value={form.memo}
-            onChange={(e) => setForm(f => ({ ...f, memo: e.target.value }))}
+            onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))}
           />
         </div>
 
@@ -152,7 +168,9 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
           <button
             type="submit"
             disabled={saving || !aNo}
-            className={`w-full px-3 py-2 rounded-lg text-white ${!aNo ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"}`}
+            className={`w-full px-3 py-2 rounded-lg text-white ${
+              !aNo ? "bg-gray-300" : "bg-blue-600 hover:bg-blue-700"
+            }`}
             title={!aNo ? "결제 계좌 선택 필요" : "등록"}
           >
             {saving ? "등록중..." : "등록"}
@@ -176,16 +194,28 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td className="py-3 text-gray-500" colSpan={6}>불러오는 중…</td></tr>
+                <tr>
+                  <td className="py-3 text-gray-500" colSpan={6}>
+                    불러오는 중…
+                  </td>
+                </tr>
               ) : rows.length === 0 ? (
-                <tr><td className="py-3 text-gray-500" colSpan={6}>등록된 자동이체가 없습니다.</td></tr>
+                <tr>
+                  <td className="py-3 text-gray-500" colSpan={6}>
+                    등록된 자동이체가 없습니다.
+                  </td>
+                </tr>
               ) : (
-                rows.map(r => (
+                rows.map((r) => (
                   <tr key={r.baNo} className="border-b last:border-0">
                     <td className="py-2 pr-4">
                       <button
                         onClick={() => toggleActive(r.baNo, r.baActive)}
-                        className={`px-2 py-1 rounded ${r.baActive === "Y" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}
+                        className={`px-2 py-1 rounded ${
+                          r.baActive === "Y"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
                         title="활성/비활성 전환"
                       >
                         {r.baActive === "Y" ? "활성" : "비활성"}
@@ -197,7 +227,11 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
                         value={r.baPayDay ?? ""}
                         onChange={(e) => updateRow(r.baNo, { payDay: Number(e.target.value) })}
                       >
-                        {dayOptions.map(d => <option key={d} value={d}>{d}일</option>)}
+                        {dayOptions.map((d) => (
+                          <option key={d} value={d}>
+                            {d}일
+                          </option>
+                        ))}
                       </select>
                     </td>
                     <td className="py-2 pr-4">
@@ -222,10 +256,7 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
                       />
                     </td>
                     <td className="py-2 pr-4">
-                      <button
-                        onClick={() => removeRow(r.baNo)}
-                        className="text-red-600 hover:underline"
-                      >
+                      <button onClick={() => removeRow(r.baNo)} className="text-red-600 hover:underline">
                         삭제
                       </button>
                     </td>

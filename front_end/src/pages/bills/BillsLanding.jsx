@@ -136,7 +136,16 @@ export default function BillsLanding() {
         <div className="bg-white text-gray-800 rounded-2xl p-6 shadow-sm mb-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">공과금 납부 {USE_API ? `(ubNo: ${ubNo})` : ""}</h1>
+              <h1 className="text-2xl font-bold">
+                공과금 납부{" "}
+                {USE_API && (
+                  <>
+                    {type === "electric" && <span className="text-yellow-600">(전기)</span>}
+                    {type === "water" && <span className="text-blue-600">(수도)</span>}
+                    {type === "gas" && <span className="text-red-600">(가스)</span>}
+                  </>
+                )}
+              </h1>
               <p className="text-gray-500 mt-1 text-sm">전기·수도·가스 청구서를 조회하고 납부하세요.</p>
             </div>
             <i className="ri-bill-line text-3xl text-gray-400 hidden md:block" />
@@ -208,7 +217,7 @@ export default function BillsLanding() {
                         <option value="">선택</option>
                         {accounts.map((acc) => (
                           <option key={acc.aNo} value={String(acc.aNo)}>
-                            {acc.label}
+                            {maskAccountNo(acc.accountNo)}   {/* ← 계좌번호만 마스킹해서 표시 */}
                           </option>
                         ))}
                       </select>
@@ -262,18 +271,14 @@ function Card({ title, icon, children, iconColor = "text-gray-600" }) {
 /* utils */
 function mapAccountRow(row) {
   const aNo = row?.aNo ?? row?.a_no ?? row?.ano;
-  const accountNo = row?.accountNo ?? row?.a_account_no ?? row?.accountno;
-  const name =
-    row?.name ??
-    row?.a_nickname ??
-    row?.a_account_type ??
-    row?.a_product_code ??
-    "계좌";
+  const accountNo = String(row?.accountNo ?? row?.a_account_no ?? row?.accountno ?? "");
+  const pureNo = accountNo.replace(/^.*\(([^)]+)\).*$/, "$1");
+  const masked = pureNo.replace(/\d(?=(?:\D*\d){4})/g, "*");
   return {
     aNo: Number(aNo),
-    accountNo: String(accountNo || ""),
-    name: String(name),
-    label: `${name} ${maskAccountNo(accountNo || "")}`,
+    accountNo: pureNo,
+    name: "계좌",
+    label: masked,
   };
 }
 function maskAccountNo(n) {

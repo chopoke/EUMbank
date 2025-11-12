@@ -1,6 +1,7 @@
 // src/pages/bills/components/InvoiceTable.jsx
 import { useEffect, useState } from "react";
 import api from "../../../api/axios";
+import { ArrowDownTrayIcon, BanknotesIcon } from "@heroicons/react/24/outline";
 
 export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
   const [rows, setRows] = useState([]);
@@ -8,6 +9,7 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(null); // biNo
+  const [downloading, setDownloading] = useState(null);
 
   const load = async (off = 0) => {
     if (!ubNo) return;
@@ -17,7 +19,7 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
         params: { offset: off, size: pageSize, statuses: "READY,PAID" },
       });
       const list = Array.isArray(data?.rows) ? data.rows : [];
-      setRows(prev => (off === 0 ? list : [...prev, ...list]));
+      setRows((prev) => (off === 0 ? list : [...prev, ...list]));
       setTotal(Number(data?.total ?? list.length));
       setOffset(off);
     } finally {
@@ -26,7 +28,9 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
   };
 
   useEffect(() => {
-    setRows([]); setTotal(0); setOffset(0);
+    setRows([]);
+    setTotal(0);
+    setOffset(0);
     if (ubNo) load(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ubNo]);
@@ -34,7 +38,10 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
   const hasMore = rows.length < total;
 
   const pay = async (biNo) => {
-    if (!aNo) { alert("결제 계좌를 먼저 선택하세요."); return; }
+    if (!aNo) {
+      alert("결제 계좌를 먼저 선택하세요.");
+      return;
+    }
     setPaying(biNo);
     try {
       await api.post(`/api/bills/${ubNo}/pay-now`, null, { params: { biNo, aNo } });
@@ -49,12 +56,12 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
 
   // === 영수증 다운로드 ===
   const downloadReceipt = async (biNo) => {
+    setDownloading(biNo);
     try {
       const res = await api.get(`/api/bills/invoices/${biNo}/receipt`, {
         responseType: "blob",
       });
 
-      // 파일명 결정
       const dispo = res.headers?.["content-disposition"] || "";
       const m = dispo.match(/filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i);
       const name = decodeURIComponent(m?.[1] || m?.[2] || `receipt-${biNo}.pdf`);
@@ -70,69 +77,95 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
     } catch (e) {
       console.error(e);
       alert("영수증을 다운로드할 수 없습니다.");
+    } finally {
+      setDownloading(null);
     }
   };
   // =====================
 
   return (
-    <div className="border rounded-xl p-4 bg-white">
-      <h3 className="font-semibold mb-2">청구서</h3>
+    <div className="border rounded-2xl p-5 bg-white shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-lg text-gray-800">청구서 내역</h3>
+        <span className="text-sm text-gray-500">
+          총 {total.toLocaleString()}건
+        </span>
+      </div>
 
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b">
-            <th className="text-left p-2">년월</th>
-            <th className="text-right p-2">사용량</th>
-            <th className="text-right p-2">금액</th>
-            <th className="text-center p-2">상태</th>
-            <th className="text-center p-2">납부</th>
-            <th className="text-center p-2">영수증보기</th>{/* 신규 열 */}
+      <table className="w-full text-sm border-t border-b border-gray-200">
+        <thead className="bg-gray-50 text-gray-700">
+          <tr>
+            <th className="text-left p-2 w-20">년월</th>
+            <th className="text-right p-2 w-24">사용량</th>
+            <th className="text-right p-2 w-28">금액</th>
+            <th className="text-center p-2 w-20">상태</th>
+            <th className="text-center p-2 w-32">납부</th>
+            <th className="text-center p-2 w-36">영수증</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map(r => (
-            <tr key={r.biNo} className="border-b">
-              <td className="p-2">
+          {rows.map((r) => (
+            <tr
+              key={r.biNo}
+              className="border-t hover:bg-gray-50 transition-colors"
+            >
+              <td className="p-2 font-medium text-gray-800">
                 {r.biYear}-{String(r.biMonth).padStart(2, "0")}
               </td>
-              <td className="p-2 text-right">
+              <td className="p-2 text-right text-gray-600">
                 {Number(r.biUsage ?? 0).toLocaleString()}
               </td>
-              <td className="p-2 text-right">
-                {Number(r.biAmount ?? 0).toLocaleString()}
+              <td className="p-2 text-right text-gray-800 font-semibold">
+                {Number(r.biAmount ?? 0).toLocaleString()} 원
               </td>
-              <td className="p-2 text-center">{r.biStatus}</td>
+              <td
+                className={`p-2 text-center font-semibold ${
+                  r.biStatus === "PAID"
+                    ? "text-emerald-600"
+                    : r.biStatus === "READY"
+                    ? "text-blue-600"
+                    : "text-gray-500"
+                }`}
+              >
+                {r.biStatus}
+              </td>
               <td className="p-2 text-center">
                 {r.biStatus === "READY" ? (
                   <button
-                    className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-60"
+                    className="flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-60 mx-auto"
                     disabled={paying === r.biNo}
                     onClick={() => pay(r.biNo)}
                   >
+                    <BanknotesIcon className="w-4 h-4" />
                     {paying === r.biNo ? "처리 중..." : "바로 납부"}
                   </button>
                 ) : (
-                  <span className="text-gray-400">-</span>
+                  <span className="text-gray-400 text-xs">-</span>
                 )}
               </td>
               <td className="p-2 text-center">
                 {r.biStatus === "PAID" ? (
                   <button
-                    className="px-3 py-1 rounded bg-emerald-600 text-white"
+                    className="flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs hover:bg-emerald-700 disabled:opacity-60 mx-auto"
+                    disabled={downloading === r.biNo}
                     onClick={() => downloadReceipt(r.biNo)}
                     title="PDF 다운로드"
                   >
-                    영수증
+                    <ArrowDownTrayIcon className="w-4 h-4" />
+                    {downloading === r.biNo ? "다운로드 중..." : "영수증"}
                   </button>
                 ) : (
-                  <span className="text-gray-400">-</span>
+                  <span className="text-gray-400 text-xs">-</span>
                 )}
               </td>
             </tr>
           ))}
           {rows.length === 0 && !loading && (
             <tr>
-              <td className="p-3 text-center text-gray-500" colSpan={6}>
+              <td
+                className="p-4 text-center text-gray-500 bg-gray-50"
+                colSpan={6}
+              >
                 데이터 없음
               </td>
             </tr>
@@ -140,14 +173,14 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
         </tbody>
       </table>
 
-      <div className="mt-3 text-center">
+      <div className="mt-4 text-center">
         {hasMore && (
           <button
-            className="px-4 py-2 rounded border disabled:opacity-60"
+            className="px-5 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-60"
             onClick={() => load(offset + pageSize)}
             disabled={loading}
           >
-            {loading ? "로딩..." : `더 보기 ${pageSize}개`}
+            {loading ? "로딩 중..." : `더 보기 (${pageSize}개)`}
           </button>
         )}
       </div>
