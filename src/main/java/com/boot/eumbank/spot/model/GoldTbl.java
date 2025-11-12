@@ -66,7 +66,7 @@ public class GoldTbl {
     private LocalDateTime gPurchasedAt;
 
     @Column(name = "g_wallet_name", length = 50)
-    private String gWalletName; // 거래에 사용된 월렛 이름
+    private String gWalletName; // 거래에 사용된 지갑 이름
 
     public enum TransactionType {
         BUY, SELL

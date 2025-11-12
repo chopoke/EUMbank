@@ -42,5 +42,10 @@ public interface SpotAccountService {
      * 계좌 잔액 업데이트
      */
     void updateAccountBalance(Integer customerNo, BigDecimal amount);
+    
+    /**
+     * 계좌 잔액 업데이트 (계좌 번호 지정)
+     */
+    void updateAccountBalanceByAccountNo(Integer accountNo, BigDecimal amount);
 }
 

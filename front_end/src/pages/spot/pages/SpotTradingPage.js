@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import PriceDisplay from '../components/PriceDisplay'; // 시세표시
 import TradingPanel from '../components/TradingPanel'; //거래창
-import WalletManager from '../components/WalletManager'; //월렛관리
+import WalletManager from '../components/WalletManager'; //지갑관리
 import BalanceCard from '../components/BalanceCard'; // 잔고
 // ===== 다이얼로그/모달 컴포넌트들 =====
 import TransferModal from '../components/modals/TransferModal'; //이체
@@ -36,8 +36,11 @@ const SpotTradingPage = () => {
 
   // 고객 정보 및 잔고 상태
   const [customerBalance, setCustomerBalance] = useState(null);
+  const [depositAccounts, setDepositAccounts] = useState([]);
+  const [selectedAccountNo, setSelectedAccountNo] = useState(null);
+  const [currentCustomerNo, setCurrentCustomerNo] = useState(null);
 
-  // 월렛 관리 상태
+  // 지갑 관리 상태
   const [wallets, setWallets] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const walletManagerRef = useRef(null);
@@ -47,10 +50,10 @@ const SpotTradingPage = () => {
     setWallets(updatedWallets);
   };
 
-  // 월렛 선택 핸들러
+  // 지갑 선택 핸들러
   const handleWalletSelect = (wallet) => {
     setSelectedWalletForTrading(wallet.name || wallet.gwWalletName);
-    // 월렛 변경 시 거래 금액 초기화
+    // 지갑 변경 시 거래 금액 초기화
     setTradingAmount(0);
   };
 
@@ -64,7 +67,7 @@ const SpotTradingPage = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showTradingHistoryModal, setShowTradingHistoryModal] = useState(false);
   const [selectedWalletForTrading, setSelectedWalletForTrading] = useState(null);
-  const [selectedWalletPin, setSelectedWalletPin] = useState(null); // 거래에 사용할 월렛
+  const [selectedWalletPin, setSelectedWalletPin] = useState(null); // 거래에 사용할 지갑
   // =====================================
 
   // === 유틸리티 함수들 ===
@@ -215,9 +218,27 @@ const SpotTradingPage = () => {
 
 
   /**
+   * 입출금 계좌 목록 조회
+   */
+  const loadDepositAccounts = async () => {
+    try {
+      const customerNo = getCustomerNo();
+      if (!customerNo) {
+        return;
+      }
+      
+      const accounts = await spotApi.fetchDepositAccounts(customerNo);
+      setDepositAccounts(Array.isArray(accounts) ? accounts : []);
+    } catch (error) {
+      console.error('입출금 계좌 목록 조회 실패:', error);
+      setDepositAccounts([]);
+    }
+  };
+
+  /**
    * 고객 잔고 조회
    */
-  const fetchCustomerBalance = async () => {
+  const fetchCustomerBalance = async (accountNo = null) => {
     try {
       const customerNo = getCustomerNo();
       
@@ -226,11 +247,16 @@ const SpotTradingPage = () => {
         return;
       }
       
-      console.log('=== 고객 잔고 조회 시작 ===');
-      const balance = await spotApi.fetchCustomerBalance(customerNo);
-      console.log('고객 잔고 조회 결과:', balance);
+      // accountNo가 없으면 localStorage에서 가져오기
+      if (!accountNo) {
+        const storedAccountNo = localStorage.getItem(`spot_selected_account_${customerNo}`);
+        if (storedAccountNo) {
+          accountNo = parseInt(storedAccountNo, 10);
+        }
+      }
+      
+      const balance = await spotApi.fetchCustomerBalance(customerNo, accountNo);
       setCustomerBalance(balance);
-      console.log('=== 고객 잔고 조회 완료 ===');
     } catch (error) {
       console.error('고객 잔고 조회 실패:', error);
       handleApiError(error, '고객 잔고 조회');
@@ -238,23 +264,23 @@ const SpotTradingPage = () => {
   };
 
   /**
-   * DB에서 월렛 데이터 새로고침
+   * DB에서 지갑 데이터 새로고침
    */
   const loadWalletsFromDB = async (customerNo) => {
     try {
       const token = getAccessToken();
       if (!token) {
-        console.warn('토큰이 없어서 월렛 조회 중단');
+        console.warn('토큰이 없어서 지갑 조회 중단');
         return;
       }
       
-      console.log('=== 월렛 데이터 새로고침 시작 ===');
-      // spotApi를 사용하여 월렛 조회 (기본 URL: http://localhost:8081)
+      console.log('=== 지갑 데이터 새로고침 시작 ===');
+      // spotApi를 사용하여 지갑 조회 (기본 URL: http://localhost:8081)
       const responseData = await spotApi.fetchWallets(customerNo);
-      console.log('월렛 조회 응답:', responseData);
+      console.log('지갑 조회 응답:', responseData);
       
         
-        // 응답 데이터에서 월렛 배열 추출
+        // 응답 데이터에서 지갑 배열 추출
         let dbWallets = [];
         if (Array.isArray(responseData)) {
           dbWallets = responseData;
@@ -272,8 +298,8 @@ const SpotTradingPage = () => {
           }
         }
         
-        console.log('추출된 월렛 데이터:', dbWallets);
-        console.log('월렛 개수:', dbWallets.length);
+        console.log('추출된 지갑 데이터:', dbWallets);
+        console.log('지갑 개수:', dbWallets.length);
         
         if (dbWallets.length === 0) {
         
@@ -295,15 +321,15 @@ const SpotTradingPage = () => {
           updatedAt: wallet.gwUpdatedAt
         }));
         
-        console.log('포맷된 월렛 데이터:', formattedWallets);
+        console.log('포맷된 지갑 데이터:', formattedWallets);
         setWallets(formattedWallets);
-        console.log('=== 월렛 데이터 새로고침 완료 ===');
+        console.log('=== 지갑 데이터 새로고침 완료 ===');
     } catch (error) {
-      console.error('=== 월렛 데이터 새로고침 실패 ===');
+      console.error('=== 지갑 데이터 새로고침 실패 ===');
       console.error('에러:', error);
       console.error('에러 메시지:', error.message);
      
-      // console.log('오류 발생 - 기존 월렛 데이터 유지');
+      // console.log('오류 발생 - 기존 지갑 데이터 유지');
     }
   };
 
@@ -341,12 +367,12 @@ const SpotTradingPage = () => {
         return;
       }
 
-      // 월렛 선택 확인 - 파라미터 또는 상태에서 가져오기
+      // 지갑 선택 확인 - 파라미터 또는 상태에서 가져오기
       const finalWalletName = walletName || selectedWalletForTrading;
       const finalPin = pin || selectedWalletPin;
       
       if (!finalWalletName || !finalPin) {
-        setMessage('월렛을 선택하고 PIN을 입력해주세요.');
+        setMessage('지갑을 선택하고 PIN을 입력해주세요.');
         setLoading(false);
         return;
       }
@@ -385,11 +411,11 @@ const SpotTradingPage = () => {
           await fetchCustomerBalance();
           console.log('고객 잔고 새로고침 완료');
           
-          // 2단계: 월렛 데이터 새로고침
+          // 2단계: 지갑 데이터 새로고침
           const customerNo = getCustomerNo();
           if (customerNo) {
             await loadWalletsFromDB(customerNo);
-            console.log('월렛 데이터 새로고침 완료');
+            console.log('지갑 데이터 새로고침 완료');
           }
           
           // 3단계: WalletManager 새로고침
@@ -453,7 +479,7 @@ const SpotTradingPage = () => {
   };
 
   /**
-   * 거래 실행 (월렛 이름 포함)
+   * 거래 실행 (지갑 이름 포함)
    */
   const handleTradingWithWallet = async (walletName, pin) => {
     setShowPasswordModal(false);
@@ -470,12 +496,18 @@ const SpotTradingPage = () => {
       const customerNo = getCustomerNo();
       if (!customerNo) throw new Error('고객번호를 찾을 수 없습니다.');
       
-      await spotApi.transferToTradingAccount(customerNo, amount, walletName);
+      // 선택된 계좌 번호 가져오기 (localStorage에서)
+      const storedAccountNo = selectedAccountNo || (() => {
+        const stored = localStorage.getItem(`spot_selected_account_${customerNo}`);
+        return stored ? parseInt(stored, 10) : null;
+      })();
       
-      // 이체 성공 후 즉시 잔고 새로고침
-      await fetchCustomerBalance();
+      await spotApi.transferToTradingAccount(customerNo, amount, walletName, storedAccountNo);
       
-      // 월렛 새로고침
+      // 이체 성공 후 즉시 잔고 새로고침 (선택된 계좌 번호로)
+      await fetchCustomerBalance(storedAccountNo);
+      
+      // 지갑 새로고침
       await loadWalletsFromDB(customerNo);
       
       // WalletManager도 새로고침
@@ -498,10 +530,16 @@ const SpotTradingPage = () => {
       const customerNo = getCustomerNo();
       if (!customerNo) throw new Error('고객번호를 찾을 수 없습니다.');
       
-      await spotApi.transferFromTradingAccount(customerNo, amount, walletName);
+      // 선택된 계좌 번호 가져오기 (localStorage에서)
+      const storedAccountNo = selectedAccountNo || (() => {
+        const stored = localStorage.getItem(`spot_selected_account_${customerNo}`);
+        return stored ? parseInt(stored, 10) : null;
+      })();
       
-      // 이체 성공 후 즉시 잔고 새로고침
-      await fetchCustomerBalance();
+      await spotApi.transferFromTradingAccount(customerNo, amount, walletName, storedAccountNo);
+      
+      // 이체 성공 후 즉시 잔고 새로고침 (선택된 계좌 번호로)
+      await fetchCustomerBalance(storedAccountNo);
       
       await loadWalletsFromDB(customerNo);
       
@@ -528,7 +566,7 @@ const SpotTradingPage = () => {
   };
 
   /**
-   * 비밀번호 모달 열기 (월렛 데이터 새로고침 포함)
+   * 비밀번호 모달 열기 (지갑 데이터 새로고침 포함)
    */
   const openPasswordModal = async () => {
     // 거래 전 검증
@@ -549,7 +587,7 @@ const SpotTradingPage = () => {
       return;
     }
 
-    // 월렛 데이터 새로고침
+    // 지갑 데이터 새로고침
     if (customerNo) {
       await loadWalletsFromDB(customerNo);
     }
@@ -573,7 +611,7 @@ const SpotTradingPage = () => {
     /**
      * 사용자 정보 로드
      * 로그인된 사용자의 Customer 정보를 가져와 localStorage에 저장하고,
-     * customerNo를 추출하여 월렛 및 잔고 데이터를 로드합니다.
+     * customerNo를 추출하여 지갑 및 잔고 데이터를 로드합니다.
      * 
      * 참고: MeController의 /api/me 엔드포인트를 사용하여
      *       customerNo를 포함한 사용자 정보를 가져옵니다 (관리자 모드도 지원).
@@ -598,12 +636,19 @@ const SpotTradingPage = () => {
           // customerNo 추출
           const customerNo = meData.customerNo;
           // console.log('SpotTradingPage - 추출된 고객번호:', customerNo);
-          // console.log('SpotTradingPage - 사용자 정보 로드 후 월렛 데이터 로드 시작');
+          // console.log('SpotTradingPage - 사용자 정보 로드 후 지갑 데이터 로드 시작');
+          
+          // 고객번호가 변경되었을 때 이전 계좌 선택 초기화
+          if (customerNo && customerNo !== currentCustomerNo) {
+            setSelectedAccountNo(null);
+            setCurrentCustomerNo(customerNo);
+          }
           
           if (customerNo) {
             await Promise.all([
               fetchCustomerBalance(),
-              loadWalletsFromDB(customerNo)
+              loadWalletsFromDB(customerNo),
+              loadDepositAccounts()
             ]);
             // console.log('SpotTradingPage - 초기 데이터 로드 완료');
           } else {
@@ -630,17 +675,22 @@ const SpotTradingPage = () => {
     // 가격 업데이트를 위한 주기적 호출
     const priceInterval = setInterval(fetchPrices, 30000); // 30초마다
     
-    // 잔고 및 월렛 데이터 주기적 새로고침 (DB 변경사항 반영) - 스크롤 위치 유지
+    // 잔고 및 지갑 데이터 주기적 새로고침 (DB 변경사항 반영) - 스크롤 위치 유지
     const balanceInterval = setInterval(() => {
       if (isLoggedIn) {
         // 스크롤 위치 저장
         const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
         
-        fetchCustomerBalance();
-        // 월렛 데이터도 새로고침
+        // 선택된 계좌 번호로 잔고 조회
         const customerNo = getCustomerNo();
+        const storedAccountNo = customerNo ? localStorage.getItem(`spot_selected_account_${customerNo}`) : null;
+        const accountNo = storedAccountNo ? parseInt(storedAccountNo, 10) : null;
+        fetchCustomerBalance(accountNo);
+        
+        // 지갑 데이터도 새로고침
         if (customerNo) {
           loadWalletsFromDB(customerNo);
+          loadDepositAccounts();
         }
         
         // 스크롤 위치 복원 (다음 프레임에서 실행)
@@ -654,7 +704,7 @@ const SpotTradingPage = () => {
       clearInterval(priceInterval);
       clearInterval(balanceInterval);
     };
-  }, []);
+  }, [currentCustomerNo]);
 
   // === 렌더링 ===
 
@@ -724,6 +774,12 @@ const SpotTradingPage = () => {
                 onTransferToTrading={() => openTransferModal('toTrading')}
                 onTransferFromTrading={() => openTransferModal('fromTrading')}
                 wallets={wallets}
+                depositAccounts={depositAccounts}
+                customerNo={getCustomerNo()}
+                onAccountChange={(accountNo) => {
+                  setSelectedAccountNo(accountNo);
+                  fetchCustomerBalance(accountNo);
+                }}
               />
             </div>
           </>
@@ -739,10 +795,19 @@ const SpotTradingPage = () => {
           transferFromTradingAccount={transferFromTradingAccount}
           wallets={wallets}
           onRefreshBalances={async () => {
-            await fetchCustomerBalance();
             const customerNo = getCustomerNo();
+            // 선택된 계좌 번호 가져오기 (localStorage에서)
+            const storedAccountNo = selectedAccountNo || (() => {
+              const stored = customerNo ? localStorage.getItem(`spot_selected_account_${customerNo}`) : null;
+              return stored ? parseInt(stored, 10) : null;
+            })();
+            // 선택된 계좌 번호로 잔고 조회
+            await fetchCustomerBalance(storedAccountNo);
             if (customerNo) {
-              await loadWalletsFromDB(customerNo);
+              await Promise.all([
+                loadWalletsFromDB(customerNo),
+                loadDepositAccounts()
+              ]);
             }
           }}
         />

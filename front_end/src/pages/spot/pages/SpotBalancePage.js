@@ -17,6 +17,7 @@ const SpotBalancePage = () => {
   const [selectedAccountNo, setSelectedAccountNo] = useState(null);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferType, setTransferType] = useState('toTrading');
+  const [currentCustomerNo, setCurrentCustomerNo] = useState(null);
 
   const navItems = [
     { path: '/spot', label: '메인' },
@@ -62,27 +63,38 @@ const SpotBalancePage = () => {
   const loadDepositAccounts = async () => {
     try {
       const customerNo = getCustomerNo();
-      if (!customerNo) return;
+      if (!customerNo) {
+        return;
+      }
       
       const accounts = await spotApi.fetchDepositAccounts(customerNo);
-      setDepositAccounts(accounts);
+      setDepositAccounts(Array.isArray(accounts) ? accounts : []);
       
-      // 계좌 목록만 로드하고, 선택은 BalanceCard에서 처리
-      // 초기 선택된 계좌 번호만 설정 (잔고 조회는 하지 않음)
-      if (accounts.length > 0 && !selectedAccountNo) {
+      if (accounts && accounts.length > 0) {
         const storedAccountNo = localStorage.getItem(`spot_selected_account_${customerNo}`);
-        const accountNo = storedAccountNo ? parseInt(storedAccountNo, 10) : accounts[0].aNo;
-        
-        // 저장된 계좌가 유효한지 확인
-        const isValidAccount = accounts.some(acc => acc.aNo === accountNo);
-        if (isValidAccount) {
-          setSelectedAccountNo(accountNo);
-        } else {
-          setSelectedAccountNo(accounts[0].aNo);
+        if (storedAccountNo) {
+          const parsed = parseInt(storedAccountNo, 10);
+          const isValidAccount = accounts.some(acc => acc.aNo === parsed);
+          if (isValidAccount) {
+            setSelectedAccountNo(parsed);
+          } else {
+            localStorage.removeItem(`spot_selected_account_${customerNo}`);
+            setSelectedAccountNo(null);
+          }
+        } else if (selectedAccountNo && !accounts.some(acc => acc.aNo === selectedAccountNo)) {
+          setSelectedAccountNo(null);
+        }
+      } else {
+        if (selectedAccountNo) {
+          setSelectedAccountNo(null);
         }
       }
     } catch (error) {
       console.error('입출금 계좌 목록 조회 실패:', error);
+      setDepositAccounts([]);
+      if (selectedAccountNo) {
+        setSelectedAccountNo(null);
+      }
     }
   };
 
@@ -136,17 +148,26 @@ const SpotBalancePage = () => {
         setWallets(formattedWallets);
       }
     } catch (error) {
-      console.error('월렛 데이터 로드 실패:', error);
+      console.error('지갑 데이터 로드 실패:', error);
     }
   };
 
   const refreshAllBalances = async () => {
     try {
-      await fetchCustomerBalance();
       const customerNo = getCustomerNo();
       if (customerNo) {
-        await loadWalletsFromDB(customerNo);
+        await Promise.all([
+          loadDepositAccounts(),
+          loadWalletsFromDB(customerNo)
+        ]);
       }
+      // 선택된 계좌 번호 가져오기 (localStorage에서)
+      const storedAccountNo = selectedAccountNo || (() => {
+        const stored = customerNo ? localStorage.getItem(`spot_selected_account_${customerNo}`) : null;
+        return stored ? parseInt(stored, 10) : null;
+      })();
+      // 선택된 계좌 번호로 잔고 조회
+      await fetchCustomerBalance(storedAccountNo);
     } catch (error) {
       console.error('잔고현황 새로고침 실패:', error);
     }
@@ -157,12 +178,22 @@ const SpotBalancePage = () => {
       const customerNo = getCustomerNo();
       if (!customerNo) throw new Error('고객번호를 찾을 수 없습니다.');
       
-      await spotApi.transferToTradingAccount(customerNo, amount, walletName);
-      await fetchCustomerBalance();
+      // 선택된 계좌 번호 가져오기 (localStorage에서)
+      const storedAccountNo = selectedAccountNo || (() => {
+        const stored = localStorage.getItem(`spot_selected_account_${customerNo}`);
+        return stored ? parseInt(stored, 10) : null;
+      })();
+      
+      await spotApi.transferToTradingAccount(customerNo, amount, walletName, storedAccountNo);
+      
+      // 선택된 계좌 번호로 잔고 조회
+      await fetchCustomerBalance(storedAccountNo);
       await loadWalletsFromDB(customerNo);
       
       setTimeout(async () => {
         await loadWalletsFromDB(customerNo);
+        // 추가 새로고침 시에도 선택된 계좌 번호로 조회
+        await fetchCustomerBalance(storedAccountNo);
       }, 1000);
       
       console.log('=== 계좌 → 현물통장 이체 완료 ===');
@@ -177,8 +208,16 @@ const SpotBalancePage = () => {
       const customerNo = getCustomerNo();
       if (!customerNo) throw new Error('고객번호를 찾을 수 없습니다.');
       
-      await spotApi.transferFromTradingAccount(customerNo, amount, walletName);
-      await fetchCustomerBalance();
+      // 선택된 계좌 번호 가져오기 (localStorage에서)
+      const storedAccountNo = selectedAccountNo || (() => {
+        const stored = localStorage.getItem(`spot_selected_account_${customerNo}`);
+        return stored ? parseInt(stored, 10) : null;
+      })();
+      
+      await spotApi.transferFromTradingAccount(customerNo, amount, walletName, storedAccountNo);
+      
+      // 선택된 계좌 번호로 잔고 조회
+      await fetchCustomerBalance(storedAccountNo);
       await loadWalletsFromDB(customerNo);
       
       console.log('=== 현물통장 → 계좌 이체 완료 ===');
@@ -208,6 +247,12 @@ const SpotBalancePage = () => {
           
           const customerNo = meData.customerNo;
           
+          // 고객번호가 변경되었을 때 이전 계좌 선택 초기화
+          if (customerNo && customerNo !== currentCustomerNo) {
+            setSelectedAccountNo(null);
+            setCurrentCustomerNo(customerNo);
+          }
+          
           if (customerNo) {
             await Promise.all([
               loadDepositAccounts(),
@@ -229,7 +274,7 @@ const SpotBalancePage = () => {
     }, 20000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [currentCustomerNo]);
 
   return (
     <div className="min-h-screen bg-gray-50">

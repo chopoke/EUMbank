@@ -4,7 +4,7 @@ import { downloadTradingHistoryExcel } from '../../../../utils/excelUtils';
 
 /**
  * 거래내역 모달 컴포넌트
- * - 거래내역 페이징: 실제 DB 페이징 (20개씩), 필터링 지원 (거래타입, 금속코드, 월렛명)
+ * - 거래내역 페이징: 실제 DB 페이징 (20개씩), 필터링 지원 (거래타입, 금속코드, 지갑명)
  * - 엑셀 다운로드: SheetJS(xlsx) 사용, 전체 데이터 다운로드
  * - 총합 정보: 거래 총액, 수량 등 요약 정보 표시
  * - 기술 스택: React, Spring Boot + JPA + QueryDSL + Spring Data JPA
