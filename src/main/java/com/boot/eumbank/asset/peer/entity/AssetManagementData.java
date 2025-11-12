@@ -29,7 +29,7 @@ public class AssetManagementData {
     private Integer amdNo;
 
     @Column(name = "c_no", nullable = false)
-    private Integer cno;
+    private Integer cNo;
 
     @Column(name = "amd_gender", length = 1, nullable = false)
     private String amdGender;          // 'M'/'F'

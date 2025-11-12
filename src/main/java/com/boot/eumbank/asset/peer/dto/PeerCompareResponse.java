@@ -38,8 +38,8 @@ public class PeerCompareResponse {
     // 프로필 라벨(프론트 표시에 사용)
     private String genderLabel;
     private String ageBandLabel;
-    private String incomeBandLabel;
-    private String jobGroupLabel;
+    private String incomeCdLabel;
+    private String jobCdLabel;
     private String regionLabel;
 
 }

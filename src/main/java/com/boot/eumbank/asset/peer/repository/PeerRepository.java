@@ -1,6 +1,10 @@
 package com.boot.eumbank.asset.peer.repository;
 
+import com.boot.eumbank.asset.peer.dto.PeerBucketKey;
+import com.boot.eumbank.asset.peer.dto.PeerBucketSums;
+import com.boot.eumbank.asset.peer.dto.PeerTotals;
 import com.boot.eumbank.asset.peer.entity.AssetManagementData;
+import com.boot.eumbank.asset.peer.entity.AssetPeerData;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -10,12 +14,14 @@ import java.util.Optional;
 
 
 import static com.boot.eumbank.asset.peer.entity.QAssetManagementData.assetManagementData;
+import static com.boot.eumbank.asset.peer.entity.QAssetPeerData.assetPeerData;
 
 @Repository
 @RequiredArgsConstructor
 public class PeerRepository {
 
-    private JPAQueryFactory queryFactory;
+    private final JPAQueryFactory queryFactory;
+    private final AssetPeerDataRepository apdRepository;
 
     /**
      * 고객 프로필 1행 조회
@@ -25,7 +31,7 @@ public class PeerRepository {
     public Optional<AssetManagementData> findAmdByCNo(int cNo) {
         return Optional.ofNullable(
                 queryFactory.selectFrom(assetManagementData)
-                        .where(assetManagementData.cno.eq(cNo))
+                        .where(assetManagementData.cNo.eq(cNo))
                         .fetchOne()
         );
     }
@@ -54,7 +60,7 @@ public class PeerRepository {
                 .set(assetManagementData.amdIncomeMax, incomeMax)
                 .set(assetManagementData.amdJobCd, jobCd)
                 .set(assetManagementData.amdRegion, region)
-                .where(assetManagementData.cno.eq(cNo))
+                .where(assetManagementData.cNo.eq(cNo))
                 .execute();
     }
 
@@ -86,7 +92,64 @@ public class PeerRepository {
                 .set(assetManagementData.amdTotalDeposit, deposit)
                 .set(assetManagementData.amdTotalForeign, foreign)
                 .set(assetManagementData.amdTotalGold, gold)
-                .where(assetManagementData.cno.eq(cNo))
+                .where(assetManagementData.cNo.eq(cNo))
                 .execute();
+    }
+
+    /**
+     * 이전값과 차이나는 만큼 update
+     * @param k PeerBucketKey
+     * @param dn 고객수
+     * @param d PeerTotals
+     * @return long
+     */
+    public long applyDeltaToPeerBucket(PeerBucketKey k, int dn, PeerTotals d) {
+        return queryFactory.update(assetPeerData)
+                .set(assetPeerData.apdNCustomers, assetPeerData.apdNCustomers.add(dn))
+                .set(assetPeerData.apdTotalAssets, assetPeerData.apdTotalAssets.add(d.totalAssets()))
+                .set(assetPeerData.apdTotalLiabilities, assetPeerData.apdTotalLiabilities.add(d.totalLiabilities()))
+                .set(assetPeerData.apdNetWorth, assetPeerData.apdNetWorth.add(d.netWorth()))
+                .set(assetPeerData.apdTotalCash, assetPeerData.apdTotalCash.add(d.cash()))
+                .set(assetPeerData.apdTotalInstallment, assetPeerData.apdTotalInstallment.add(d.installment()))
+                .set(assetPeerData.apdTotalDeposit, assetPeerData.apdTotalDeposit.add(d.deposit()))
+                .set(assetPeerData.apdTotalForeign, assetPeerData.apdTotalForeign.add(d.foreign()))
+                .set(assetPeerData.apdTotalGold, assetPeerData.apdTotalGold.add(d.gold()))
+                .where(
+                        assetPeerData.apdGender.eq(k.gender()),
+                        assetPeerData.apdAgeBand.eq(k.age()),
+                        assetPeerData.apdIncomeCd.eq(k.income()),
+                        assetPeerData.apdJobCd.eq(k.job()),
+                        assetPeerData.apdRegion.eq(k.region())
+                )
+                .execute();
+    }
+
+    public void insertPeerBucketIfMissing(PeerBucketKey k, int nInit, PeerTotals t) {
+        AssetPeerData row = queryFactory.selectFrom(assetPeerData)
+                .where(
+                        assetPeerData.apdGender.eq(k.gender()),
+                        assetPeerData.apdAgeBand.eq(k.age()),
+                        assetPeerData.apdIncomeCd.eq(k.income()),
+                        assetPeerData.apdJobCd.eq(k.job()),
+                        assetPeerData.apdRegion.eq(k.region())
+                ).fetchOne();
+        if (row == null) {
+            apdRepository.save(AssetPeerData.builder()
+                    .apdGender(k.gender())
+                    .apdAgeBand(k.age())
+                    .apdIncomeCd(k.income())
+                    .apdJobCd(k.job())
+                    .apdRegion(k.region())
+                    .apdNCustomers(nInit)
+                    .apdTotalAssets(t.totalAssets())
+                    .apdTotalLiabilities(t.totalLiabilities())
+                    .apdNetWorth(t.netWorth())
+                    .apdTotalCash(t.cash())
+                    .apdTotalInstallment(t.installment())
+                    .apdTotalDeposit(t.deposit())
+                    .apdTotalForeign(t.foreign())
+                    .apdTotalGold(t.gold())
+                    .build());
+        }
     }
 }

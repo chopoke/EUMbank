@@ -69,7 +69,7 @@ public class DashboardServiceImpl implements DashboardService{
         List<Integer> cNos = dashboardRepository.getCNo();
 
         if(cNos.isEmpty()){
-            logger.info("활성 고객이 없습니다. 스냅샷 생략");
+            logger.info("<<< 활성 고객이 없습니다. 스냅샷 생략 >>>");
             return;
         }
 
@@ -104,13 +104,13 @@ public class DashboardServiceImpl implements DashboardService{
                         .build());
             } catch (Exception ex) {
                 // 한 명 실패해도 나머지는 계속 적재 (운영에서 중요)
-                logger.warn("스냅샷 실패 cNo={}: {}", cNo, ex.getMessage(), ex);
+                logger.warn("<<< 스냅샷 실패 cNo={}: {} >>>", cNo, ex.getMessage(), ex);
             }
         }
 
         // 3) 배치 저장 (중복키는 '하루 1건' 유니크 제약으로 걸러짐)
         assetDailySnapshotRepository.saveAll(rows);
-        logger.info("스냅샷 적재 완료: {}건", rows.size());
+        logger.info("<<< 스냅샷 적재 완료: {}건 >>>", rows.size());
 
     }
 

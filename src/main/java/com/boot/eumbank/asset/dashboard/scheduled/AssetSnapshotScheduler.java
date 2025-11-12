@@ -40,16 +40,16 @@ public class AssetSnapshotScheduler {
         // last가 없으면 오늘만, 있으면 (last+1)부터 today까지
         LocalDate start = (last == null) ? today : last.plusDays(1);
         if (start.isAfter(today)) {
-            logger.info("스냅샷 백필 없음 (마지막={}, today={})", last, today);
+            logger.info("<<< 스냅샷 백필 없음 (마지막={}, today={}) >>>", last, today);
             return;
         }
 
         for (LocalDate d = start; !d.isAfter(today); d = d.plusDays(1)) {
             try {
-                logger.info("부트스트랩 백필 실행: {}", d);
+                logger.info("<<< 부트스트랩 백필 실행: {} >>>", d);
                 dashboardService.takeDailySnapshot(d);
             } catch (Exception e) {
-                logger.warn("백필 실패 date={}: {}", d, e.getMessage(), e);
+                logger.warn("<<< 백필 실패 date={}: {} >>>", d, e.getMessage(), e);
             }
         }
     }

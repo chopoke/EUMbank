@@ -8,5 +8,5 @@ import java.util.Optional;
 
 @Repository
 public interface AssetManagementDataRepository extends JpaRepository<AssetManagementData, Integer> {
-    //Optional<AssetManagementData> findByCNo(Integer cno);
+    Optional<AssetManagementData> findByCNo(Integer cNo);
 }
