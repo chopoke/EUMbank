@@ -1,5 +1,5 @@
 // src/pages/assetManagement/page/Analysis.js
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import AssetPageHeader from "../components/AssetPageHeader";
 import { Link } from "react-router-dom";
 import { CompactMonthlyChart, GoalGaugeStatic, WeeklyDeltaBarsStatic } from "../components/StaticCharts";
@@ -20,6 +20,7 @@ export default function AssetAnalysis() {
     expense: true,
   });
   const [chartSlice, setChartSlice] = useState(12); // 최근 N개 구간 표시
+  const [isDeltaDetailOpen, setDeltaDetailOpen] = useState(false);
 
   // period별 기본값과 최대값
   const getDefaultCount = (period) => {
@@ -131,39 +132,11 @@ export default function AssetAnalysis() {
     }
   };
 
-  // 로딩 중
-  if (loading) {
-    return (
-      <main className="bg-gray-50 text-gray-900 min-h-screen">
-        <AssetPageHeader title="자산 분석" desc="데이터를 불러오는 중..." current="analysis" />
-        <section className="content-container px-6 pb-16 md:pb-20">
-          <div className="flex items-center justify-center py-20">
-            <div className="text-gray-500">데이터를 불러오는 중...</div>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  // 에러 상태
-  if (error || !analysisData) {
-    return (
-      <main className="bg-gray-50 text-gray-900 min-h-screen">
-        <AssetPageHeader title="자산 분석" desc="데이터 조회 실패" current="analysis" />
-        <section className="content-container px-6 pb-16 md:pb-20">
-          <div className="flex items-center justify-center py-20">
-            <div className="text-red-500">{error || "데이터를 불러올 수 없습니다."}</div>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
   // 데이터 가공
-  const goal = analysisData.goal;
-  const nextMonthSpending = analysisData.nextMonthSpending;
-  const deltaSummary = analysisData.deltaSummary;
-  const monthlyTrends = analysisData.monthlyTrends;
+  const goal = analysisData?.goal;
+  const nextMonthSpending = analysisData?.nextMonthSpending;
+  const deltaSummary = analysisData?.deltaSummary;
+  const monthlyTrends = analysisData?.monthlyTrends;
 
   const formatCurrency = (value = 0) =>
     new Intl.NumberFormat("ko-KR").format(Math.max(0, Number(value) || 0));
@@ -221,6 +194,231 @@ export default function AssetAnalysis() {
   const totalDelta30 = deltaSummary?.totalDelta30Days 
     ? Number(deltaSummary.totalDelta30Days)
     : 0;
+
+  const deltaDetailRows = useMemo(() => {
+    return limitedDeltas.map((delta, index) => {
+      const rawAmount = Number(delta?.deltaAmount ?? 0);
+      const amountWon = Math.round(rawAmount * 1000);
+      const impactLabel = amountWon > 0 ? "증가" : amountWon < 0 ? "감소" : "변화 없음";
+      const impactDescription =
+        amountWon > 0
+          ? "수익이 소비보다 많아 자산이 증가했습니다."
+          : amountWon < 0
+          ? "소비가 수익을 앞서 자산이 감소했습니다."
+          : "자산이 안정적으로 유지되었습니다.";
+      return {
+        id: `${delta?.weekLabel ?? "기간"}-${index}`,
+        label: delta?.weekLabel ?? `기간 ${index + 1}`,
+        amountWon,
+        impactLabel,
+        impactDescription,
+      };
+    });
+  }, [limitedDeltas]);
+
+  const deltaDetailSummary = useMemo(() => {
+    if (!deltaDetailRows.length) {
+      return {
+        total: 0,
+        average: 0,
+        positiveCount: 0,
+        negativeCount: 0,
+      };
+    }
+    const total = deltaDetailRows.reduce((sum, row) => sum + row.amountWon, 0);
+    const positiveCount = deltaDetailRows.filter((row) => row.amountWon > 0).length;
+    const negativeCount = deltaDetailRows.filter((row) => row.amountWon < 0).length;
+    const average = Math.round(total / deltaDetailRows.length);
+    return { total, average, positiveCount, negativeCount };
+  }, [deltaDetailRows]);
+
+  const trimmedMonthlyTrends = useMemo(() => {
+    const source = monthlyTrends || [];
+    const limit = chartSlice || getChartDefaultCount(chartPeriod);
+    if (!source.length) {
+      return [];
+    }
+    if (source.length <= limit) {
+      return source;
+    }
+    return source.slice(source.length - limit);
+  }, [monthlyTrends, chartSlice, chartPeriod]);
+
+  const formatWon = (value = 0) =>
+    new Intl.NumberFormat("ko-KR").format(Math.round(value));
+
+  const formatIsoDate = (isoString, withTime = false) => {
+    if (!isoString) {
+      return "-";
+    }
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) {
+      return "-";
+    }
+    if (withTime) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+        date.getDate()
+      ).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(
+        date.getMinutes()
+      ).padStart(2, "0")}`;
+    }
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+      date.getDate()
+    ).padStart(2, "0")}`;
+  };
+
+  const resolvePeriodEndIso = (isoString, periodType) => {
+    const start = new Date(isoString);
+    if (Number.isNaN(start.getTime())) {
+      return null;
+    }
+    const end = new Date(start.getTime());
+    switch (periodType) {
+      case "MINUTELY":
+        end.setMinutes(end.getMinutes() + 1);
+        break;
+      case "HOURLY":
+        end.setHours(end.getHours() + 1);
+        break;
+      case "DAILY":
+        end.setDate(end.getDate() + 1);
+        break;
+      case "WEEKLY":
+        end.setDate(end.getDate() + 7);
+        break;
+      case "MONTHLY":
+      default:
+        end.setMonth(end.getMonth() + 1);
+        break;
+    }
+    end.setMilliseconds(end.getMilliseconds() - 1);
+    return end.toISOString();
+  };
+
+  const buildCsvContent = () => {
+    if (!trimmedMonthlyTrends.length) {
+      return null;
+    }
+    const headers = [
+      "기간",
+      "시작일",
+      "종료일",
+      "수익(원)",
+      "소비(원)",
+      "순변동(원)",
+      "순증감률(%)",
+      "기간 말 순자산(원)",
+      "설명",
+    ];
+
+    const rows = trimmedMonthlyTrends.map((trend) => {
+      const incomeWon = Math.round(Number(trend?.income ?? 0) * 10000);
+      const expenseWon = Math.round(Number(trend?.expense ?? 0) * 10000);
+      const netWon =
+        trend?.net !== undefined && trend?.net !== null
+          ? Math.round(Number(trend.net) * 10000)
+          : incomeWon - expenseWon;
+      const netWorthWon = Math.round(Number(trend?.netWorth ?? 0));
+      const baseline = netWorthWon - netWon;
+      const ratio =
+        baseline !== 0 ? ((netWon / Math.abs(baseline)) * 100).toFixed(2) : "0.00";
+      const startIso = trend?.periodStartDate ?? "";
+      const endIso = resolvePeriodEndIso(startIso, chartPeriod);
+      const description =
+        netWon > 0
+          ? "수익이 소비보다 많아 순자산이 증가한 구간입니다."
+          : netWon < 0
+          ? "소비가 수익보다 많아 순자산이 감소한 구간입니다."
+          : "수익과 소비가 균형을 이뤄 순자산이 유지된 구간입니다.";
+
+      return [
+        trend?.month ?? "",
+        formatIsoDate(startIso, chartPeriod === "MINUTELY" || chartPeriod === "HOURLY"),
+        formatIsoDate(
+          endIso,
+          chartPeriod === "MINUTELY" || chartPeriod === "HOURLY"
+        ),
+        formatWon(incomeWon),
+        formatWon(expenseWon),
+        formatWon(netWon),
+        ratio,
+        formatWon(netWorthWon),
+        description,
+      ];
+    });
+
+    const escapeCsvCell = (value) => {
+      if (value === null || value === undefined) {
+        return "";
+      }
+      const stringValue = String(value);
+      if (/[",\n]/.test(stringValue)) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const csvLines = [headers, ...rows].map((line) =>
+      line.map((cell) => escapeCsvCell(cell)).join(",")
+    );
+    return "\uFEFF" + csvLines.join("\r\n");
+  };
+
+  const handleCsvDownload = () => {
+    const content = buildCsvContent();
+    if (!content) {
+      alert("다운로드할 데이터가 없습니다.");
+      return;
+    }
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().slice(0, 10);
+    link.href = URL.createObjectURL(blob);
+    link.download = `asset-trend_${chartPeriod.toLowerCase()}_${timestamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  };
+
+  if (loading) {
+    return (
+      <main className="bg-gray-50 text-gray-900 min-h-screen">
+        <AssetPageHeader title="자산 분석" desc="데이터를 불러오는 중..." current="analysis" />
+        <section className="content-container px-6 pb-16 md:pb-20">
+          <div className="flex items-center justify-center py-20">
+            <div className="text-gray-500">데이터를 불러오는 중...</div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="bg-gray-50 text-gray-900 min-h-screen">
+        <AssetPageHeader title="자산 분석" desc="데이터 조회 실패" current="analysis" />
+        <section className="content-container px-6 pb-16 md:pb-20">
+          <div className="flex items-center justify-center py-20">
+            <div className="text-red-500">{error || "데이터를 불러올 수 없습니다."}</div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (!analysisData) {
+    return (
+      <main className="bg-gray-50 text-gray-900 min-h-screen">
+        <AssetPageHeader title="자산 분석" desc="데이터가 없습니다." current="analysis" />
+        <section className="content-container px-6 pb-16 md:pb-20">
+          <div className="flex items-center justify-center py-20">
+            <div className="text-gray-500">표시할 자산 분석 데이터가 없습니다.</div>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="bg-gray-50 text-gray-900 min-h-screen">
@@ -426,7 +624,10 @@ export default function AssetAnalysis() {
               </div>
 
               <div>
-                <button className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                <button
+                  onClick={() => setDeltaDetailOpen(true)}
+                  className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                >
                   상세 내역 보기
                 </button>
               </div>
@@ -440,7 +641,10 @@ export default function AssetAnalysis() {
                 <h2 className="text-base font-semibold text-gray-900">자산 변화 추이</h2>
                 <p className="text-[12px] text-gray-500">기간별 수익(입금)과 소비(출금) 내역입니다.</p>
               </div>
-              <button className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+              <button
+                onClick={handleCsvDownload}
+                className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
                 CSV 다운로드
               </button>
             </div>
@@ -503,17 +707,19 @@ export default function AssetAnalysis() {
             </div>
 
             <CompactMonthlyChart
-              data={monthlyTrends?.map(t => ({
-                m: t.month,
-                periodStartDate: t.periodStartDate,
-                income: chartDataTypes.income ? (t.income ? Number(t.income) : 0) : 0,
-                expense: chartDataTypes.expense ? (t.expense ? Number(t.expense) : 0) : 0,
-              })) || []}
-               height={420}
-               yUnitLabel="만"
-               yTicks={4}
-               showIncome={chartDataTypes.income}
-               showExpense={chartDataTypes.expense}
+              data={
+                trimmedMonthlyTrends.map((t) => ({
+                  m: t.month,
+                  periodStartDate: t.periodStartDate,
+                  income: chartDataTypes.income ? (t.income ? Number(t.income) : 0) : 0,
+                  expense: chartDataTypes.expense ? (t.expense ? Number(t.expense) : 0) : 0,
+                })) || []
+              }
+              height={420}
+              yUnitLabel="만"
+              yTicks={4}
+              showIncome={chartDataTypes.income}
+              showExpense={chartDataTypes.expense}
             />
             {/* <StackedBarMonthlyStatic /> */}
             {/* <PlaceholderChart label="누적 막대 + 라인 복합 차트" height="h-64" /> */}
@@ -542,6 +748,112 @@ export default function AssetAnalysis() {
 
         </div>
       </section>
+
+      {/* 자산 증감 상세 모달 */}
+      {isDeltaDetailOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
+          <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">자산 증감 상세 내역</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  선택된 기간 동안 자산 변화의 흐름을 정리했습니다. 각 기간별 순증감과 코멘트를
+                  확인하세요.
+                </p>
+              </div>
+              <button
+                onClick={() => setDeltaDetailOpen(false)}
+                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-4">
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                <div className="text-xs text-gray-500">순증감 합계</div>
+                <div className="mt-1 text-xl font-semibold text-gray-900">
+                  {deltaDetailSummary.total >= 0 ? "+" : ""}
+                  {formatWon(deltaDetailSummary.total)}원
+                </div>
+              </div>
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                <div className="text-xs text-gray-500">기간당 평균</div>
+                <div className="mt-1 text-xl font-semibold text-gray-900">
+                  {deltaDetailSummary.average >= 0 ? "+" : ""}
+                  {formatWon(deltaDetailSummary.average)}원
+                </div>
+              </div>
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                <div className="text-xs text-gray-500">증가 구간</div>
+                <div className="mt-1 text-xl font-semibold text-emerald-600">
+                  {deltaDetailSummary.positiveCount}건
+                </div>
+              </div>
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                <div className="text-xs text-gray-500">감소 구간</div>
+                <div className="mt-1 text-xl font-semibold text-rose-600">
+                  {deltaDetailSummary.negativeCount}건
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left">
+                      기간
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right">
+                      순증감 (원)
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left">
+                      해설
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {deltaDetailRows.map((row) => (
+                    <tr key={row.id}>
+                      <td className="px-4 py-3 font-medium text-gray-900">{row.label}</td>
+                      <td
+                        className={`px-4 py-3 text-right font-semibold ${
+                          row.amountWon > 0
+                            ? "text-emerald-600"
+                            : row.amountWon < 0
+                            ? "text-rose-600"
+                            : "text-gray-600"
+                        }`}
+                      >
+                        {row.amountWon >= 0 ? "+" : ""}
+                        {formatWon(row.amountWon)}원
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        <div className="font-medium text-gray-800">{row.impactLabel}</div>
+                        <div className="mt-1 text-xs text-gray-500">{row.impactDescription}</div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!deltaDetailRows.length && (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500">
+                        표시할 자산 증감 데이터가 없습니다.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-6 rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
+              {deltaSummary?.trendDescription
+                ? deltaSummary.trendDescription
+                : "최근 기간 동안의 자산 변화가 안정적인 흐름을 보이고 있습니다."}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 목표 설정 모달 */}
       {showGoalModal && (
