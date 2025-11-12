@@ -1,45 +1,27 @@
 import React from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { fetchLoanProductDetail } from "../../../api/accounts";
-import {
-  ScrollText,
-  ShieldCheck,
-  Wallet2,
-  Building2,
-  Percent,
-  Gauge,
-  Tags,
-  ArrowLeft,
-  Calculator as CalcIcon,
-  Banknote,
-} from "lucide-react";
-import { saveFlow } from "../apply/ApplyStorage";
+import {ScrollText,ShieldCheck, Wallet2,Building2,Percent,Tags,ArrowLeft,} from "lucide-react";   // 아이콘들
+import { loadFlow, saveFlow } from "../apply/ApplyStorage";
+import {InlineCalculator as Calculator} from "../apply/components/Calculator"
 
 export default function LoanProductDetailPage() {
+  // URL 파라미터의 상품 코드
   const { code } = useParams();
+
+  // 이전 페이지에서 state로 전달된 product가 있으면 초깃값으로 사용
   const location = useLocation();
   const stateProduct = location.state?.product || null;
 
   const navigate = useNavigate();
-  const agreeRef = React.useRef(null);
-  const scrollToChkbox = () => {
-    agreeRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    window.setTimeout(() => {
-      try {
-        agreeRef.current?.focus?.();
-        agreeRef.current?.classList?.add("ring-2", "ring-blue-500", "ring-offset-2");
-        window.setTimeout(() => {
-          agreeRef.current?.classList?.remove("ring-2", "ring-blue-500", "ring-offset-2");
-        }, 1200);
-      } catch (e) {}
-    }, 350);
-  };
 
   // ---------- 상태 ----------
-  const [product, setProduct] = React.useState(stateProduct);
-  const [loading, setLoading] = React.useState(!stateProduct);
-  const [error, setError] = React.useState(null);
+  const [product, setProduct] = React.useState(stateProduct); // 상품 상세
+  const [loading, setLoading] = React.useState(!stateProduct); // 초기 로딩 여부
+  const [error, setError] = React.useState(null);              // 에러 메시지
+  const [carType, setCarType] = React.useState("NEW");        // 자동차 대출의 경우 (신차/중고차)
 
+  // 마운트/코드 변경 시 상품 상세 조회
   React.useEffect(() => {
     if (stateProduct) setProduct(stateProduct);
     setLoading(!stateProduct);
@@ -53,20 +35,23 @@ export default function LoanProductDetailPage() {
       .finally(() => setLoading(false));
   }, [code, stateProduct]);
 
-  // ---------- 파생값/헬퍼 ----------
+  // ---------- 파생값/헬퍼
   const won = (n) => Number(n || 0).toLocaleString("ko-KR");
-  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
-  // 기존 상태/계산 로직은 그대로 유지 (우대 슬라이더 UI만 제거)
-  const maxPreferential = 1.0; // %p (미표시)
-  const preferentialGuide = ["급여/자동이체 이용 시 -0.30%p", "우량등급 우대 -0.40%p", "모바일 신규 -0.30%p"]; // (미표시)
-
+  // 신용/담보 여부 판별
   const isCredit = React.useMemo(() => {
     const t = (product?.type || "").toLowerCase();
     return t.includes("신용");
   }, [product]);
   const isSecured = !isCredit;
 
+  // 자동차 대출인지 판별
+  const isAuto = React.useMemo(() => {
+    const t = String(product?.type || "");
+    return t.includes("자동차") || t.toUpperCase().includes("AUTO");
+  }, [product]);
+
+  // 기간/기본금리 리스트
   const terms = React.useMemo(() => {
     if (!product) return [];
     const base = Number(product.rateMin ?? 0);
@@ -74,33 +59,36 @@ export default function LoanProductDetailPage() {
       product.termMonths && product.termMonths.length > 0
         ? product.termMonths
         : isCredit
-        ? [12, 24, 36]
+        ? [12, 24, 36] // 신용대출은 표기용 기본 구간
         : [];
     return list.map((m) => ({ months: m, rate: base }));
   }, [product, isCredit]);
 
   // ---------- 계산기 상태 ----------
-  const [amount, setAmount] = React.useState(50_000_000);
-  const [term, setTerm] = React.useState(() => terms[0]?.months || 36);
-  const [preferential, setPreferential] = React.useState(0); // 값은 그대로 두되 UI는 숨김
-  const [agree, setAgree] = React.useState(false);
+  const amount = 50_000_000; 
+  const [term, setTerm] = React.useState(() => terms[0]?.months || 36); // 선택 기간
+  const preferential = 0;          // 우대금리 미적용
 
+  // terms 변경 시 현재 term이 목록에 없으면 첫 항목으로 보정
   React.useEffect(() => {
     if (terms.length > 0 && !terms.find((t) => t.months === term)) {
       setTerm(terms[0].months);
     }
   }, [terms, term]);
 
+  // 선택 기간의 기본금리
   const selectedTermRate = React.useMemo(() => {
     const t = terms.find((t) => t.months === term);
     return t ? t.rate : Number(product?.rateMin ?? 0);
   }, [terms, term, product]);
 
+  // 실제 적용(예시) 금리 = 기본금리 - 우대금리(현재 0)
   const effectiveRate = React.useMemo(() => {
-    const total = Math.max(0, selectedTermRate - preferential); // preferential=0 이므로 우대 미적용 상태
+    const total = Math.max(0, selectedTermRate - preferential);
     return total;
   }, [selectedTermRate, preferential]);
 
+  // 월 상환액(원리금균등)
   const monthlyPayment = React.useMemo(() => {
     const r = effectiveRate / 100 / 12;
     const n = term || 0;
@@ -111,26 +99,9 @@ export default function LoanProductDetailPage() {
     return Math.ceil(M);
   }, [amount, effectiveRate, term]);
 
-  const totalPayment = monthlyPayment * (term || 0);
-  const totalInterest = totalPayment - (amount || 0);
+  // const totalPayment = monthlyPayment * (term || 0);    // 총상환액
 
-  const fmt = (n) => Number(n || 0).toLocaleString("ko-KR");
-
-  const schedule = React.useMemo(() => {
-    const rows = [];
-    if (!amount || !term) return rows;
-    let remaining = amount;
-    const r = effectiveRate / 100 / 12;
-    for (let i = 1; i <= Math.min(term, 6); i++) {
-      const interest = r === 0 ? 0 : Math.floor(remaining * r);
-      const principal = Math.min(monthlyPayment - interest, remaining);
-      const remainAfter = Math.max(0, remaining - principal);
-      rows.push({ no: i, interest, principal, remain: remainAfter });
-      remaining = remainAfter;
-    }
-    return rows;
-  }, [amount, term, effectiveRate, monthlyPayment]);
-
+  // (상단 요약의 상품설명에 표시할 문구를 유추)
   const displaySummary = React.useMemo(() => {
     const s = (product?.summary || "").trim();
     const d = (product?.description || "").trim();
@@ -143,8 +114,12 @@ export default function LoanProductDetailPage() {
     return "-";
   }, [product]);
 
+  // 상품 상세 스펙 테이블
   const SpecTable = () => {
     const isCredit = (product?.type || "").includes("신용");
+    const isAutoLocal =
+      (product?.type || "").includes("자동차") ||
+      (product?.type || "").toUpperCase().includes("AUTO");
     const opts = product?.options || [];
     const rpayList = Array.from(new Set(opts.map((o) => o.rpayTypeNm).filter(Boolean)));
 
@@ -156,7 +131,7 @@ export default function LoanProductDetailPage() {
 
     const collateralText = isCredit
       ? "담보/보증 없음"
-      : `담보/보증 필요${product?.ltvMax != null ? ` (최대 LTV ${product.ltvMax}%)` : ""}`;
+      : `담보/보증 필요${(!isAutoLocal && product?.ltvMax != null) ? ` (최대 LTV ${product.ltvMax}%)` : ""}`;
 
     const rows = [
       ["상품특징", displaySummary],
@@ -187,274 +162,34 @@ export default function LoanProductDetailPage() {
             <col className="w-[160px]" />
             <col />
           </colgroup>
-        <tbody>
-          {rows.map(([label, value], i) => (
-            <tr key={i} className="border-t border-gray-100">
-              <th className="py-3 px-4 text-gray-600 font-medium text-left align-top bg-gray-50">{label}</th>
-              <td className="py-3 px-4 align-top">
-                <div className="pl-6 border-l border-gray-200 whitespace-pre-line break-words">{value || "-"}</div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        </table>
-      </div>
-    );
-  };
-
-  // ---------- 서브 컴포넌트 ----------
-  const Pill = ({ children }) => (
-    <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs border border-blue-100">
-      {children}
-    </span>
-  );
-
-  const RateTable = () => {
-    const opts = product?.options || [];
-
-    if (isCredit) {
-      return (
-        <div className="overflow-hidden rounded-2xl border border-gray-100">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50/60">
-              <tr className="text-left text-gray-500">
-                <th className="py-3 px-4">유형</th>
-                <th className="py-3 px-4">평균금리</th>
-                <th className="py-3 px-4">범위(최저~최고)</th>
-                <th className="py-3 px-4">공시월</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {opts.map((o, idx) => (
-                <tr key={idx} className="border-t border-gray-100">
-                  <td className="py-3 px-4">{o.lendRateTypeNm || "대출금리"}</td>
-                  <td className="py-3 px-4">{(o.lendRateAvg ?? 0).toFixed(2)}%</td>
-                  <td className="py-3 px-4">
-                    {(o.lendRateMin ?? product.rateMin ?? 0).toFixed(2)}% ~ {(o.lendRateMax ?? product.rateMax ?? 0).toFixed(2)}%
-                  </td>
-                  <td className="py-3 px-4">{o.dclsMonth || product.dclsMonth || "-"}</td>
-                </tr>
-              ))}
-              {opts.length === 0 && (
-                <tr className="border-t border-gray-100">
-                  <td className="py-3 px-4 text-gray-500" colSpan={4}>
-                    금리 옵션 정보가 없습니다.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      );
-    }
-
-    return (
-      <div className="overflow-hidden rounded-xl border border-gray-100 shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr className="text-left text-gray-500">
-              <th className="py-3 px-4">금리유형</th>
-              <th className="py-3 px-4">상환방식</th>
-              <th className="py-3 px-4">기간(개월)</th>
-              <th className="py-3 px-4">최저~최고</th>
-              <th className="py-3 px-4">평균</th>
-            </tr>
-          </thead>
           <tbody>
-            {opts.map((o, idx) => (
-              <tr key={idx} className="border border-gray-100">
-                <td className="py-3 px-4">{o.lendRateTypeNm || "-"}</td>
-                <td className="py-3 px-4">{o.rpayTypeNm || "-"}</td>
-                <td className="py-3 px-4">{o.termMonth ?? "-"}</td>
-                <td className="py-3 px-4">
-                  {(o.lendRateMin ?? product.rateMin ?? 0).toFixed(2)}% ~ {(o.lendRateMax ?? product.rateMax ?? 0).toFixed(2)}%
+            {rows.map(([label, value], i) => (
+              <tr key={i} className="border-t border-gray-100">
+                <th className="py-3 px-4 text-gray-600 font-medium text-left align-top bg-gray-50">{label}</th>
+                <td className="py-3 px-4 align-top">
+                  <div className="pl-6 border-l border-gray-200 whitespace-pre-line break-words">{value || "-"}</div>
                 </td>
-                <td className="py-3 px-4">{(o.lendRateAvg ?? 0).toFixed(2)}%</td>
               </tr>
             ))}
-            {opts.length === 0 && (
-              <tr className="border-t border-gray-100">
-                <td className="py-3 px-4 text-gray-500" colSpan={5}>
-                  금리 옵션 정보가 없습니다.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
     );
   };
 
-  // 🔁 기존 파일 안에서 Calculator 컴포넌트만 이 코드로 교체
-const Calculator = () => {
-  const [schedOpen, setSchedOpen] = React.useState(false);
-
-  // 전체 스케줄(모달용) - 기존 계산은 그대로 두고, 여기서만 풀로 계산
-  const fullSchedule = React.useMemo(() => {
-    const out = [];
-    if (!amount || !term) return out;
-    let remaining = amount;
-    const r = effectiveRate / 100 / 12;
-    for (let i = 1; i <= term; i++) {
-      const interest = r === 0 ? 0 : Math.floor(remaining * r);
-      const principal = Math.min(monthlyPayment - interest, remaining);
-      const remainAfter = Math.max(0, remaining - principal);
-      out.push({ no: i, interest, principal, remain: remainAfter });
-      remaining = remainAfter;
-    }
-    return out;
-  }, [amount, term, effectiveRate, monthlyPayment]);
-
-  return (
-    <div className="rounded-2xl border border-gray-100 p-4 lg:p-6 bg-white">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 bg-indigo-50 rounded-xl px-3 py-2">
-          <CalcIcon className="h-5 w-5 text-indigo-700" />
-          <h3 className="font-semibold text-indigo-800">대출 상환 계산기 (원리금균등)</h3>
-        </div>
-        <button
-          type="button"
-          onClick={() => setSchedOpen(true)}
-          className="hidden md:inline-flex items-center gap-1 text-sm text-blue-700 hover:underline"
-        >
-          전체 스케줄 보기
-        </button>
-      </div>
-
-      {/* 좌 입력 / 우 결과 2컬럼 */}
-      <div className="grid lg:grid-cols-2 gap-6 mt-4">
-        {/* 입력 */}
-        <div className="space-y-4">
-          <label className="block">
-            <span className="text-sm text-gray-600">대출금액 (원)</span>
-            <input
-              type="number"
-              value={amount}
-              min={1_000_000}
-              max={product?.limitMax || 1_000_000_000}
-              onChange={(e) =>
-                setAmount(
-                  clamp(parseInt(e.target.value || "0", 10), 1_000_000, product?.limitMax || 1_000_000_000)
-                )
-              }
-              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-            {product?.limitMax && (
-              <div className="mt-1 text-xs text-gray-500">최대 {won(product.limitMax)}원</div>
-            )}
-          </label>
-
-          <label className="block">
-            <span className="text-sm text-gray-600">기간</span>
-            <select
-              value={term}
-              onChange={(e) => setTerm(parseInt(e.target.value, 10))}
-              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
-            >
-              {terms.map((t) => (
-                <option key={t.months} value={t.months}>
-                  {t.months}개월 (기본 {t.rate.toFixed(2)}%)
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {isCredit && (
-            <p className="text-xs text-gray-500">
-              신용대출은 신용등급/소득/부채 등에 따라 금리가 결정됩니다.
-            </p>
-          )}
-
-          <label className="flex items-start gap-2 mt-2">
-            <input
-              ref={agreeRef}
-              type="checkbox"
-              checked={agree}
-              onChange={(e) => setAgree(e.target.checked)}
-              className="mt-1"
-            />
-            <span className="text-sm text-gray-600">
-              예시 계산 결과가 실제와 다를 수 있음을 이해했습니다.
-            </span>
-          </label>
-        </div>
-
-        {/* 결과 카드 2×2 */}
-        <div className="grid sm:grid-cols-2 gap-3 content-start">
-          <div className="rounded-xl bg-gray-50 p-4">
-            <div className="text-xs text-gray-500">적용금리(연)</div>
-            <div className="text-xl font-semibold mt-1">{effectiveRate.toFixed(2)}%</div>
-            <div className="mt-1 text-[11px] text-gray-500">※ 우대금리 미적용 기준</div>
-          </div>
-          <div className="rounded-xl bg-gray-50 p-4">
-            <div className="text-xs text-gray-500">월 상환액(예상)</div>
-            <div className="text-xl font-semibold mt-1 whitespace">{fmt(monthlyPayment)} 원</div>
-          </div>
-          <div className="rounded-xl bg-gray-50 p-4">
-            <div className="text-xs text-gray-500">총 상환액(예상)</div>
-            <div className="text-lg font-semibold mt-1 whitespace">{fmt(totalPayment)} 원</div>
-          </div>
-          <div className="rounded-xl bg-gray-50 p-4">
-            <div className="text-xs text-gray-500">총 이자(예상)</div>
-            <div className="text-lg font-semibold mt-1 whitespace-nowrap">{fmt(totalInterest)} 원</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 전체 스케줄 모달 */}
-      {schedOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setSchedOpen(false)} />
-          <div className="absolute inset-x-0 top-10 mx-auto w-[min(900px,92%)] rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between px-4 py-3 border-b">
-              <h3 className="font-semibold">전체 상환스케줄 (총 {term}회)</h3>
-              <button
-                onClick={() => setSchedOpen(false)}
-                className="rounded-md border px-2 py-1 text-sm hover:bg-gray-50"
-              >
-                닫기
-              </button>
-            </div>
-            <div className="p-4 max-h-[70vh] overflow-auto">
-              <table className="min-w-[680px] w-full text-sm">
-                <thead className="bg-gray-50 text-gray-600">
-                  <tr>
-                    <th className="text-left font-medium px-3 py-2">회차</th>
-                    <th className="text-right font-medium px-3 py-2">이자</th>
-                    <th className="text-right font-medium px-3 py-2">원금</th>
-                    <th className="text-right font-medium px-3 py-2">잔액</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {fullSchedule.map((r) => (
-                    <tr key={r.no} className="hover:bg-gray-50">
-                      <td className="px-3 py-2">{r.no}</td>
-                      <td className="px-3 py-2 text-right">{fmt(r.interest)} 원</td>
-                      <td className="px-3 py-2 text-right">{fmt(r.principal)} 원</td>
-                      <td className="px-3 py-2 text-right">{fmt(r.remain)} 원</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 행동영역 */}
-      
-    </div>
+  // 작은 배지용
+  const Pill = ({ children }) => (
+    <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs border border-blue-100">
+      {children}
+    </span>
   );
-};
-
 
   // ---------- 로딩/에러/스켈레톤 ----------
   if (loading) return <div className="p-8">로딩중…</div>;
   if (error) return <div className="p-8 text-red-600">에러: {error}</div>;
   if (!product) return <div className="p-8">상품 정보를 찾을 수 없습니다.</div>;
 
-  // ---------- 본문 ----------
+  // ---------- 본문 = =============================
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white text-gray-900">
       {/* 상단 바 */}
@@ -466,11 +201,13 @@ const Calculator = () => {
           <div className="text-xs text-gray-500">상품코드 [{product.id}]</div>
         </div>
       </header>
+      
 
       <main className="max-w-7xl mx-auto px-6 pt-8 pb-16 bg-white mt-2 rounded-xl shadow-sm">
         {/* Hero */}
         <section className="flex flex-col lg:flex-row gap-6 items-start">
           <div className="flex-1 space-y-4">
+            {/* 상단 배지/타이틀 */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/10 text-emerald-700 px-2.5 py-1 text-xs">
                 <ShieldCheck className="h-3.5 w-3.5" /> 이음은행 보증
@@ -479,13 +216,15 @@ const Calculator = () => {
                 <Pill key={i}>{b}</Pill>
               ))}
             </div>
+
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
               <Building2 className="h-6 w-6 text-blue-600" />
               {product.name}
             </h1>
+
             <p className="text-gray-600 max-w-2xl">{product.desc}</p>
 
-            {/* 핵심 지표 3-Up 카드 */}
+            {/* 핵심 지표 카드 */}
             <div className="grid sm:grid-cols-3 gap-3">
               <div className="rounded-xl border border-gray-100 p-4">
                 <div className="text-xs text-gray-500 flex items-center gap-1">
@@ -495,25 +234,28 @@ const Calculator = () => {
                   {(product.rateMin ?? 0).toFixed(2)}% ~ {(product.rateMax ?? 0).toFixed(2)}%
                 </div>
               </div>
+
               <div className="rounded-xl border border-gray-100 p-4">
                 <div className="text-xs text-gray-500 flex items-center gap-1">
                   <Wallet2 className="h-4 w-4 text-gray-400" /> 최대한도
                 </div>
                 <div className="text-lg font-semibold mt-1">
-                  {product?.limitMax ? <>₩ {won(product.limitMax)}</> : "-"}
+                  {product?.limitMax ? <>{won(product.limitMax)} 원</> : "-"}
                 </div>
               </div>
+
               <div className="rounded-xl border border-gray-100 p-4">
                 <div className="text-xs text-gray-500 flex items-center gap-1">
                   <Tags className="h-4 w-4 text-gray-400" /> 유형/LTV
                 </div>
                 <div className="text-lg font-semibold mt-1">
                   {product.type}
-                  {isSecured && product?.ltvMax != null ? ` · LTV ${product.ltvMax}%` : ""}
+                  {!isAuto && isSecured && product?.ltvMax != null ? ` · LTV ${product.ltvMax}%` : ""}
                 </div>
               </div>
             </div>
 
+            {/* 태그들 */}
             <div className="mt-2 flex flex-wrap gap-2">
               {product.tags?.map((t, i) => (
                 <span key={i} className="px-2 py-1 rounded-full border text-xs text-gray-700">
@@ -523,7 +265,7 @@ const Calculator = () => {
             </div>
           </div>
 
-          {/* 요약 카드 */}
+          {/* 우측 요약 카드 */}
           <aside className="w-full lg:w-[380px] rounded-2xl border border-gray-100 p-5 bg-white shadow-sm">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-600" />
@@ -550,31 +292,17 @@ const Calculator = () => {
                   <span className="font-medium">{Math.max(...terms.map((t) => t.months))}개월</span>
                 </div>
               )}
-              {isSecured && product?.ltvMax != null && (
+              {!isAuto && isSecured && product?.ltvMax != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">최대 LTV</span>
                   <span className="font-medium">{product.ltvMax}%</span>
                 </div>
               )}
             </div>
-            <div className="mt-4 flex gap-2">
-            </div>
+            <div className="mt-4 flex gap-2">{/* 우측 CTA 붙일 자리 */}</div>
           </aside>
         </section>
 
-        {/* 신청 전 유의사항 & 동의 */}
-        <label className="flex items-start gap-2 mt-4">
-          <input
-            ref={agreeRef}
-            type="checkbox"
-            checked={agree}
-            onChange={(e) => setAgree(e.target.checked)}
-            className="mt-1"
-          />
-          <span className="text-sm text-gray-800">
-            위 유의사항을 확인했으며 이에 동의합니다.
-          </span>
-        </label>
 
         {/* 액션 버튼 */}
         <div className="mt-4 flex items-center justify-end gap-2">
@@ -586,22 +314,34 @@ const Calculator = () => {
             목록으로
           </button>
 
+          {/* 항상 활성화된 ‘신청하기’ 버튼 */}
           <button
             type="button"
-            disabled={!agree}
             onClick={() => {
               if (product) {
-                saveFlow(product.id, { step: 1, slug: "agree", product });
+                // 플로우 저장: Step1(agree)부터 시작하도록 마커 남김
+                const prev = loadFlow(product.id) || {};
+                const next = {
+                  ...prev,
+                  step: 1,
+                  slug:"agree",
+                  form: {
+                    ...(prev.form || {}),
+                    carType: isAuto? carType: undefined,    // 자동차 대출이면 신차인지 아닌지 저장, 아니면 지움
+                  },
+                };
+                saveFlow(product.id, next);
               }
+              // 약관 동의 페이지로 이동 (약관에서 batchKey 생성/동의 저장 → 제출 페이지로 진행)
               navigate(`/loan/apply/${product.id}/agree`);
             }}
-            className={`px-4 py-2 rounded-xl text-white transition ${
-              agree ? "bg-blue-700 hover:bg-blue-800" : "bg-gray-300 cursor-not-allowed"
-            }`}
+            className="px-4 py-2 rounded-xl text-white transition bg-blue-700 hover:bg-blue-800"
           >
             신청하기
           </button>
         </div>
+
+        <Calculator product={product} isCredit={isCredit} isAuto={isAuto} carType={carType} onCarTypeChange={setCarType}/>
 
         {/* 상품설명 */}
         {(product.joinWay || product.erlyRpayFee || product.dlyRate || product.etcNote) && (
