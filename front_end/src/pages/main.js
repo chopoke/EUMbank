@@ -5,6 +5,7 @@ import mainacc from '../resources/img/acc_fin.png'
 import { goToAccountOpenPage } from "./account/utils/navigations";
 import PriceWidget from "./spot/components/PriceWidget";
 import getdata from "./mypage/getdata";
+import { AiOutlineGold } from "react-icons/ai";
 
 
 // 데모용 아이콘 (간단한 SVG)

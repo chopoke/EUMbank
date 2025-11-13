@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -100,41 +101,33 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
     }
 
     /**
-     * 서류 목록 조회 (페이징)
+     * 서류 목록 조회 (페이징) - 주민등록증 우선, 크기 조정
      */
     @Override
     @Transactional(readOnly = true)
     public DocumentListResponse getDocuments(Pageable pageable) {
-        logger.info("DocumentServiceImpl => getDocuments()");
-
+        logger.info("=== DocumentServiceImpl => getDocuments() ===");
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
+        Integer customerNo = customer.getCustomerNo();
 
-        // 1. 주민등록증 최신 1건 조회
-        Optional<DocumentFile> latestIdCard = documentRepository
-                .findFirstBycNoAndTypeOrderByCreatedAtDesc(customer.getCustomerNo(), FileType.주민등록증);
+        // ✅ 간단하게: 모든 문서를 일반 페이징으로 조회
+        Page<DocumentFile> documentPage = documentRepository.findBycNo(Long.valueOf(customerNo), pageable);
 
-        // 2. 주민등록증 제외한 나머지 서류 조회
-        Page<DocumentFile> documentPage = documentRepository
-                .findBycNoAndTypeNotOrderByCreatedAtDesc(
-                        customer.getCustomerNo(), FileType.주민등록증, pageable);
+        logger.info("페이지: {}, 크기: {}, 전체: {}, 조회된 문서: {}",
+                documentPage.getNumber(), documentPage.getSize(),
+                documentPage.getTotalElements(), documentPage.getContent().size());
 
-        List<DocumentResponse> documents = new ArrayList<>();
-
-        // 3. 주민등록증 최신 1건 추가 (있으면)
-        latestIdCard.ifPresent(doc -> documents.add(convertToResponse(doc)));
-
-        // 4. 나머지 서류 추가
-        documents.addAll(documentPage.getContent().stream()
+        List<DocumentResponse> documents = documentPage.getContent().stream()
                 .map(this::convertToResponse)
-                .collect(Collectors.toList()));
+                .collect(Collectors.toList());
 
         return DocumentListResponse.builder()
                 .documents(documents)
                 .currentPage(documentPage.getNumber())
                 .totalPages(documentPage.getTotalPages())
-                .totalElements(documentPage.getTotalElements() + (latestIdCard.isPresent() ? 1 : 0))
+                .totalElements(documentPage.getTotalElements())
                 .size(documentPage.getSize())
                 .build();
     }
