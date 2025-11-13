@@ -35,9 +35,7 @@ export function InlineCalculator({ product, isCredit, isAuto, carType: carTypePr
     return t ? t.rate : Number(product?.rateMin ?? 0);
   }, [terms, term, product]);
 
-  // 백엔드 룰 정렬:
-  // - 변동/고정 가산은 상세 페이지에선 모름(옵션/선택 UI가 없으므로 표시용 최소치만 사용)
-  // - 자동차 ‘중고차’면 +0.7%p 가산 (LoanQuoteServiceImpl 과 동일)
+
   const effectiveRate = React.useMemo(() => {
     let r = baseRate;
     if (isAuto && carType === "USED") r += 0.7;
