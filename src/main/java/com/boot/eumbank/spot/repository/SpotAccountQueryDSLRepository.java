@@ -45,6 +45,43 @@ public class SpotAccountQueryDSLRepository {
 		return Optional.ofNullable(result);
 	}
 
+	/**
+	 * 고객의 활성 입출금 계좌 목록 조회
+	 */
+	public List<Account> getActiveDepositAccountsByCustomerNo(Integer customerNo) {
+		try {
+			if (customerNo == null) {
+				return new java.util.ArrayList<>();
+			}
+			
+			QAccount a = QAccount.account;
+			List<Account> accounts = queryFactory
+					.selectFrom(a)
+					.where(a.cNo.eq(customerNo)
+							.and(a.status.eq("ACTIVE"))
+							.and(a.accountType.eq("입출금")))
+					.orderBy(a.openedAt.desc())
+					.fetch();
+			
+			return accounts != null ? accounts : new java.util.ArrayList<>();
+		} catch (Exception e) {
+			return new java.util.ArrayList<>();
+		}
+	}
+
+	/**
+	 * 계좌 번호로 계좌 조회
+	 */
+	public Optional<Account> getAccountByAccountNo(Integer accountNo) {
+		QAccount a = QAccount.account;
+		Account result = queryFactory
+				.selectFrom(a)
+				.where(a.aNo.eq(accountNo)
+						.and(a.status.eq("ACTIVE")))
+				.fetchOne();
+		return Optional.ofNullable(result);
+	}
+
 	public void updateAccountBalance(Integer accountNo, BigDecimal newBalance) {
 		QAccount a = QAccount.account;
 		queryFactory

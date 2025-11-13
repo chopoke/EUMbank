@@ -22,7 +22,7 @@ public class GoldTblDto {
     public String metalCode; /** 금속 코드 (AU: 금, AG: 은) */
     public String productId; /** 상품 ID */
     public Integer customerNo; /** 고객 번호 */
-    public String walletName; /** 거래에 사용된 월렛 이름 */
+    public String walletName; /** 거래에 사용된 지갑 이름 */
 }
 
 

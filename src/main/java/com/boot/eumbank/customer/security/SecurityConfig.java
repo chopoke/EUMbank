@@ -102,7 +102,8 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/api/rates/**",
                                 "/api/bills/rates/**",
-                                "/api/bills/utility-bills"
+                                "/api/bills/utility-bills",
+                                "/api/best3/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bills/*/invoices").permitAll()
                         .requestMatchers(HttpMethod.POST,   "/api/bills/*/pay-now", "/api/bills/*/autopay").authenticated()

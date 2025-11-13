@@ -31,10 +31,34 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
   const [selectedRange, setSelectedRange] = useState('실시간'); // 기간 선택
   
   // 실시간 변동률 상태
-  const [realTimeGoldChange, setRealTimeGoldChange] = useState(0);
-  const [realTimeSilverChange, setRealTimeSilverChange] = useState(0);
-  const [previousGoldPrice, setPreviousGoldPrice] = useState(goldPrice);
-  const [previousSilverPrice, setPreviousSilverPrice] = useState(silverPrice);
+  const [realTimeGoldChange, setRealTimeGoldChange] = useState(() => (
+    typeof goldChange === 'number' ? goldChange : 0
+  ));
+  const [realTimeSilverChange, setRealTimeSilverChange] = useState(() => (
+    typeof silverChange === 'number' ? silverChange : 0
+  ));
+  // props로 받은 가격에서 숫자만 추출하여 초기화 (새로고침 시 곧바로 변동률 계산 가능)
+  const [previousGoldPrice, setPreviousGoldPrice] = useState(() => {
+    const price = goldPrice?.basePrice || goldPrice;
+    return (typeof price === 'number' && price > 0) ? price : null;
+  });
+  const [previousSilverPrice, setPreviousSilverPrice] = useState(() => {
+    const price = silverPrice?.basePrice || silverPrice;
+    return (typeof price === 'number' && price > 0) ? price : null;
+  });
+
+  // 초기 props 기반 변동률을 유지 (새로고침 시 서버 변동률 그대로 표시)
+  useEffect(() => {
+    if ((previousGoldPrice === null || previousGoldPrice === undefined) && typeof goldChange === 'number') {
+      setRealTimeGoldChange(goldChange);
+    }
+  }, [goldChange, previousGoldPrice]);
+
+  useEffect(() => {
+    if ((previousSilverPrice === null || previousSilverPrice === undefined) && typeof silverChange === 'number') {
+      setRealTimeSilverChange(silverChange);
+    }
+  }, [silverChange, previousSilverPrice]);
   
   // ===== 다이얼로그/모달 상태 관리 =====
   // 시세 이력 모달 상태
@@ -227,36 +251,66 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
 
   // 실시간 변동률 계산
   useEffect(() => {
-    const currentGoldPrice = goldPrice.basePrice || goldPrice;
-    const currentSilverPrice = silverPrice.basePrice || silverPrice;
+    const currentGoldPrice = goldPrice?.basePrice || goldPrice || 0;
+    const currentSilverPrice = silverPrice?.basePrice || silverPrice || 0;
     
-    if (previousGoldPrice && currentGoldPrice !== previousGoldPrice) {
-      const change = ((currentGoldPrice - previousGoldPrice) / previousGoldPrice) * 100;
-      setRealTimeGoldChange(change);
-      setPreviousGoldPrice(currentGoldPrice);
+    // 금 변동률 계산 (가격이 유효할 때만)
+    if (currentGoldPrice > 0) {
+      if (previousGoldPrice && previousGoldPrice > 0 && currentGoldPrice !== previousGoldPrice) {
+        const change = ((currentGoldPrice - previousGoldPrice) / previousGoldPrice) * 100;
+        if (!isNaN(change) && isFinite(change)) {
+          setRealTimeGoldChange(change);
+        }
+        setPreviousGoldPrice(currentGoldPrice);
+      } else if (!previousGoldPrice || previousGoldPrice === 0) {
+        // 초기 로딩 시 이전 가격 설정
+        setPreviousGoldPrice(currentGoldPrice);
+      }
     }
     
-    if (previousSilverPrice && currentSilverPrice !== previousSilverPrice) {
-      const change = ((currentSilverPrice - previousSilverPrice) / previousSilverPrice) * 100;
-      setRealTimeSilverChange(change);
-      setPreviousSilverPrice(currentSilverPrice);
+    // 은 변동률 계산 (가격이 유효할 때만)
+    if (currentSilverPrice > 0) {
+      if (previousSilverPrice && previousSilverPrice > 0 && currentSilverPrice !== previousSilverPrice) {
+        const change = ((currentSilverPrice - previousSilverPrice) / previousSilverPrice) * 100;
+        if (!isNaN(change) && isFinite(change)) {
+          setRealTimeSilverChange(change);
+        }
+        setPreviousSilverPrice(currentSilverPrice);
+      } else if (!previousSilverPrice || previousSilverPrice === 0) {
+        // 초기 로딩 시 이전 가격 설정
+        setPreviousSilverPrice(currentSilverPrice);
+      }
     }
   }, [goldPrice, silverPrice, previousGoldPrice, previousSilverPrice]);
 
-  // 실시간 변동률 시뮬레이션 (5초마다 업데이트)
+  // 실시간 변동률 시뮬레이션 (5분마다 업데이트)
   useEffect(() => {
     const interval = setInterval(() => {
-      // 금 변동률 시뮬레이션 (-0.5% ~ +0.5%)
-      const goldVariation = (Math.random() - 0.5) * 1.0;
-      setRealTimeGoldChange(prev => prev + goldVariation);
+      // 가격 데이터가 로드된 후에만 시뮬레이션 실행
+      const currentGoldPrice = goldPrice?.basePrice || goldPrice || 0;
+      const currentSilverPrice = silverPrice?.basePrice || silverPrice || 0;
       
-      // 은 변동률 시뮬레이션 (-0.3% ~ +0.3%)
-      const silverVariation = (Math.random() - 0.5) * 0.6;
-      setRealTimeSilverChange(prev => prev + silverVariation);
-    }, 5000);
+      if (currentGoldPrice > 0) {
+        // 금 변동률 시뮬레이션 (-0.1% ~ +0.1%)
+        const goldVariation = (Math.random() - 0.5) * 0.2;
+        setRealTimeGoldChange(prev => {
+          const newValue = prev + goldVariation;
+          return isNaN(newValue) || !isFinite(newValue) ? 0 : newValue;
+        });
+      }
+      
+      if (currentSilverPrice > 0) {
+        // 은 변동률 시뮬레이션 (-0.06% ~ +0.06%)
+        const silverVariation = (Math.random() - 0.5) * 0.12;
+        setRealTimeSilverChange(prev => {
+          const newValue = prev + silverVariation;
+          return isNaN(newValue) || !isFinite(newValue) ? 0 : newValue;
+        });
+      }
+    }, 300000); // 5분 = 300000ms
 
     return () => clearInterval(interval);
-  }, []);
+  }, [goldPrice, silverPrice]);
 
 
   // Recharts 기반 인터랙티브 그래프 렌더링 함수
@@ -410,11 +464,13 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
             <h3 className="text-lg sm:text-xl font-bold">금 (AU)</h3>
             <div className={`flex items-center text-sm font-bold text-green-100`}>
               <span className="mr-1 text-base sm:text-lg">↗</span>
-              <span className="text-base sm:text-lg">{Math.abs(realTimeGoldChange).toFixed(2)}%</span>
+              <span className="text-base sm:text-lg">
+                {isNaN(realTimeGoldChange) || !isFinite(realTimeGoldChange) ? '0.00' : Math.abs(realTimeGoldChange).toFixed(2)}%
+              </span>
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-bold mb-2">
-            ₩{Math.round(goldPrice.basePrice || goldPrice).toLocaleString()}
+            ₩{Math.round(goldPrice?.basePrice || goldPrice || 0).toLocaleString()}
           </div>
           <div className="text-xs sm:text-sm opacity-90 mb-4">
             (KRW/3.75g)
@@ -438,11 +494,13 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
             <h3 className="text-lg sm:text-xl font-bold">은 (AG)</h3>
             <div className={`flex items-center text-sm font-bold text-green-100`}>
               <span className="mr-1 text-base sm:text-lg">↗</span>
-              <span className="text-base sm:text-lg">{Math.abs(realTimeSilverChange).toFixed(2)}%</span>
+              <span className="text-base sm:text-lg">
+                {isNaN(realTimeSilverChange) || !isFinite(realTimeSilverChange) ? '0.00' : Math.abs(realTimeSilverChange).toFixed(2)}%
+              </span>
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-bold mb-2">
-            ₩{Math.round(silverPrice.basePrice || silverPrice).toLocaleString()}
+            ₩{Math.round(silverPrice?.basePrice || silverPrice || 0).toLocaleString()}
           </div>
           <div className="text-xs sm:text-sm opacity-90 mb-4">
             (KRW/3.75g)
@@ -472,7 +530,7 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
             </div>
             <div className="text-left sm:text-right">
               <div className="text-xs text-gray-500">내가 살 때 (VAT포함)</div>
-              <div className="text-lg sm:text-xl font-bold text-gray-900">₩{Math.round((goldPrice?.buyPrice || goldPrice || 0)).toLocaleString()}</div>
+              <div className="text-lg sm:text-xl font-bold text-gray-900">₩{Math.round(goldPrice?.buyPrice || goldPrice || 0).toLocaleString()}</div>
               {(() => {
                 const { percent } = getCardChangeInfo(selectedTab === 'domestic' ? goldDomesticChartData : goldInternationalChartData);
                 const isUp = percent >= 0;
@@ -486,7 +544,7 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
           </div>
           <div className="text-left sm:text-right">
             <div className="text-xs text-gray-500">내가 팔 때</div>
-            <div className="text-base sm:text-lg font-semibold text-gray-900">₩{Math.round((goldPrice?.sellPrice || goldPrice || 0)).toLocaleString()}</div>
+            <div className="text-base sm:text-lg font-semibold text-gray-900">₩{Math.round(goldPrice?.sellPrice || goldPrice || 0).toLocaleString()}</div>
           </div>
         </div>
 
@@ -499,7 +557,7 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
             </div>
             <div className="text-left sm:text-right">
               <div className="text-xs text-gray-500">내가 살 때 (VAT포함)</div>
-              <div className="text-lg sm:text-xl font-bold text-gray-900">₩{Math.round((silverPrice?.buyPrice || silverPrice || 0)).toLocaleString()}</div>
+              <div className="text-lg sm:text-xl font-bold text-gray-900">₩{Math.round(silverPrice?.buyPrice || silverPrice || 0).toLocaleString()}</div>
               {(() => {
                 const { percent } = getCardChangeInfo(selectedTab === 'domestic' ? silverDomesticChartData : silverInternationalChartData);
                 const isUp = percent >= 0;
@@ -513,7 +571,7 @@ const PriceDisplay = ({ goldPrice, silverPrice, goldChange, silverChange }) => {
           </div>
           <div className="text-left sm:text-right">
             <div className="text-xs text-gray-500">내가 팔 때 (자사실버바기준)</div>
-            <div className="text-base sm:text-lg font-semibold text-gray-900">₩{Math.round((silverPrice?.sellPrice || silverPrice || 0)).toLocaleString()}</div>
+            <div className="text-base sm:text-lg font-semibold text-gray-900">₩{Math.round(silverPrice?.sellPrice || silverPrice || 0).toLocaleString()}</div>
           </div>
         </div>
       </div>

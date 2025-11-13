@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { fetchWallets, createWallet, deleteWallet, updateWalletPin, recoverWalletPin } from '../api/spotApi';
 
 /**
- * 월렛지갑 관리 컴포넌트
- * - 사용자별 여러 개의 현물계좌(월렛) 관리: 현물통장 개설/삭제, PIN 관리
+ * 지갑 관리 컴포넌트
+ * - 사용자별 여러 개의 현물계좌(지갑) 관리: 현물통장 개설/삭제, PIN 관리
  * - 현물통장 개설 모달: 현물통장 이름과 PIN 입력하여 개설
  * - 기술 스택: React (forwardRef, useImperativeHandle), Spring Boot + JPA + QueryDSL
  */
@@ -39,7 +39,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
     }
   }, [isLoggedIn]);
 
-  // 컴포넌트 마운트 시 월렛 로드 (추가 안전장치)
+  // 컴포넌트 마운트 시 지갑 로드 (추가 안전장치)
   useEffect(() => {
     if (isLoggedIn && (!wallets || wallets.length === 0)) {
       setTimeout(() => {
@@ -55,7 +55,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
     }
   }, [isLoggedIn]);
 
-  // 월렛 상태 변경 로깅
+  // 지갑 상태 변경 로깅
   useEffect(() => {
     if (onWalletsChange) {
       onWalletsChange(wallets);
@@ -65,7 +65,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
   // wallets가 업데이트될 때 선택된 지갑 정보도 동기화
   useEffect(() => {
     if (selectedWallet && wallets && wallets.length > 0) {
-      // 업데이트된 wallets 배열에서 현재 선택된 월렛 찾기
+      // 업데이트된 wallets 배열에서 현재 선택된 지갑 찾기
       const updatedWallet = wallets.find(w => 
         w.id === selectedWallet.id || 
         w.name === selectedWallet.name ||
@@ -73,7 +73,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
       );
       
       if (updatedWallet) {
-        // 선택된 월렛 정보를 최신 데이터로 업데이트
+        // 선택된 지갑 정보를 최신 데이터로 업데이트
         setSelectedWallet(updatedWallet);
       }
     }
@@ -98,24 +98,17 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
 
   /**
    * 저장된 지갑 목록 로드 (DB에서 실시간 조회)
+   * @returns {Promise<Array>} 업데이트된 wallets 배열
    */
   const loadWallets = async () => {
     const customerNo = getCustomerNo();
-    console.log('현재 고객번호:', customerNo);
-    
     if (!customerNo) {
-      console.log('고객번호가 없어서 월렛을 빈 배열로 설정');
       setWallets([]);
-      return;
+      return [];
     }
 
     try {
-      // 새로운 API를 사용하여 월렛 데이터 조회
-      console.log('월렛 조회 API 호출 시작: customerNo=', customerNo);
       const response = await fetchWallets(customerNo);
-      console.log('API 응답 원본:', response);
-      console.log('API 응답 타입:', typeof response);
-      
       // 응답이 배열인지 확인하고 안전하게 처리
       let dbWallets = [];
       if (Array.isArray(response)) {
@@ -131,23 +124,18 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
           dbWallets = [];
         }
       }
-      
-      console.log('처리된 월렛 데이터:', dbWallets);
-      console.log('월렛 개수:', dbWallets.length);
-      
-      // DB에 월렛이 없으면 빈 배열로 설정하되, 기존 월렛 유지
+
+      // DB에 지갑이 없으면 빈 배열로 설정
       if (!dbWallets || dbWallets.length === 0) {
-        console.log('DB에 월렛이 없음, 기존 월렛 유지');
-        console.log('부모 컴포넌트에 빈 배열 전달하지 않음 (이체 후 월렛 사라짐 방지)');
-        // setWallets([]); // 기존 월렛을 유지하기 위해 주석 처리
-        // onWalletsChange([]); // 이체 후 월렛이 사라지는 문제 방지를 위해 주석 처리
-        return;
+        setWallets([]);
+        if (onWalletsChange) {
+          onWalletsChange([]);
+        }
+        return [];
       }
-      
+
       // DB 데이터를 프론트엔드 형식으로 변환
       const formattedWallets = dbWallets.map(wallet => {
-        console.log('월렛 변환 전:', wallet);
-        
         // 안전한 데이터 변환 (백엔드 필드명 기준)
         const formatted = {
           id: wallet.gwNo || wallet.id || 0,
@@ -163,32 +151,17 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
           createdAt: wallet.createdAt || wallet.gwCreatedAt || new Date(),
           updatedAt: wallet.updatedAt || wallet.gwUpdatedAt || new Date()
         };
-        
-        console.log('월렛 변환 후:', formatted);
-        console.log(`월렛 "${formatted.name}" PIN: ${formatted.pin}`);
-        console.log(`월렛 "${formatted.name}" 잔고: ${formatted.balance}`);
-        console.log(`월렛 "${formatted.name}" 계좌번호: ${formatted.accountNo}`);
-        
         return formatted;
       });
-      
-      console.log('변환된 월렛 목록:', formattedWallets);
-      console.log('변환된 월렛 개수:', formattedWallets.length);
-      
+
       // 상태 업데이트를 더 안전하게 처리
-      if (formattedWallets && formattedWallets.length > 0) {
-        console.log('월렛 상태 업데이트 시작');
-        setWallets(formattedWallets);
+      setWallets(formattedWallets);
+      if (onWalletsChange) {
         onWalletsChange(formattedWallets);
-        console.log('월렛 상태 업데이트 완료, 현재 wallets.length:', formattedWallets.length);
-      } else {
-        console.log('변환된 월렛이 없어서 기존 월렛 유지');
-        console.log('부모 컴포넌트에 빈 배열 전달하지 않음 (월렛 사라짐 방지)');
-        // setWallets([]); // 기존 월렛을 유지하기 위해 주석 처리
-        // onWalletsChange([]); // 월렛이 사라지는 문제 방지를 위해 주석 처리
       }
+      return formattedWallets;
     } catch (error) {
-      console.error('월렛 조회 중 오류:', error);
+      console.error('지갑 조회 중 오류:', error);
       console.error('오류 상세:', {
         message: error.message,
         status: error.status,
@@ -197,14 +170,17 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
       
       // 오류 시 빈 배열로 설정
       setWallets([]);
-      onWalletsChange([]);
+      if (onWalletsChange) {
+        onWalletsChange([]);
+      }
       
       // 사용자에게 오류 알림
-      alert(`월렛 조회 중 오류가 발생했습니다: ${error.message}`);
+      alert(`지갑 조회 중 오류가 발생했습니다: ${error.message}`);
+      return [];
     }
   };
 
-  // 로그인 상태 변경 시 월렛 로드
+  // 로그인 상태 변경 시 지갑 로드
   useEffect(() => {
     if (isLoggedIn) {
       loadWallets();
@@ -237,7 +213,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
     }
 
     const customerNo = getCustomerNo();
-    console.log('월렛 생성 시 고객번호:', customerNo);
+    console.log('지갑 생성 시 고객번호:', customerNo);
     if (!customerNo) {
       alert('로그인이 필요합니다.');
       return;
@@ -247,7 +223,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
     try {
       // 사용자가 입력한 PIN을 사용
       const requestData = { customerNo, walletName: newWalletName.trim(), walletPin: newWalletPin };
-      console.log('월렛 생성 요청 데이터:', requestData);
+      console.log('지갑 생성 요청 데이터:', requestData);
       console.log('요청 데이터 타입:', {
         customerNo: typeof customerNo,
         walletName: typeof requestData.walletName,
@@ -255,7 +231,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
       });
       
       const result = await createWallet(customerNo, newWalletName.trim(), newWalletPin);
-      console.log('월렛 생성 응답:', result);
+      console.log('지갑 생성 응답:', result);
       
       // DB 생성 성공 후 로컬 상태 업데이트
       const newWallet = {
@@ -273,16 +249,16 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
         updatedAt: result.gwUpdatedAt
       };
 
-      console.log('생성된 월렛 객체:', newWallet);
+      console.log('생성된 지갑 객체:', newWallet);
 
       const updatedWallets = [...wallets, newWallet];
-      console.log('업데이트된 월렛 목록:', updatedWallets);
+      console.log('업데이트된 지갑 목록:', updatedWallets);
       
       // 즉시 로컬 상태 업데이트
       setWallets(updatedWallets);
       if (onWalletsChange) { 
         onWalletsChange(updatedWallets);
-        console.log('부모 컴포넌트에 월렛 변경사항 전달 완료');
+        console.log('부모 컴포넌트에 지갑 변경사항 전달 완료');
       }
       
       // 성공 메시지 (간단한 메시지만 표시)
@@ -295,7 +271,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
       setShowCreateModal(false);
       
       // 즉시 DB에서 최신 데이터 다시 로드
-      console.log('월렛 생성 후 즉시 데이터 새로고침');
+      console.log('지갑 생성 후 즉시 데이터 새로고침');
       loadWallets();
       
       alert('통장이 성공적으로 개설되었습니다.');
@@ -329,7 +305,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
         errorMessage += '\n\n서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
       }
       
-      alert(`월렛지갑 개설 실패: ${errorMessage}`);
+      alert(`지갑 개설 실패: ${errorMessage}`);
     } finally {
       setIsCreatingWallet(false);
     }
@@ -339,7 +315,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
    * PIN 복구 처리
    */
   const recoverPinHandler = async (wallet) => {
-    if (!window.confirm(`"${wallet.name}" 월렛의 PIN을 복구하시겠습니까?\n\n⚠️ 주의: 기존 PIN은 무효화되고 새로운 PIN이 생성됩니다.`)) {
+    if (!window.confirm(`"${wallet.name}" 지갑의 PIN을 복구하시겠습니까?\n\n⚠️ 주의: 기존 PIN은 무효화되고 새로운 PIN이 생성됩니다.`)) {
       return;
     }
 
@@ -355,7 +331,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
       if (result.success) {
         alert(`PIN이 복구되었습니다.\n새로운 PIN: ${result.newPin}\n\n새로운 PIN을 안전한 곳에 보관해주세요.`);
         
-        // 월렛 목록 새로고침
+        // 지갑 목록 새로고침
         loadWallets();
       } else {
         alert(`PIN 복구 실패: ${result.message}`);
@@ -382,7 +358,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
    */
   const changePinHandler = async () => {
     if (!selectedWalletForPinChange) {
-      alert('월렛을 선택해주세요.');
+      alert('지갑을 선택해주세요.');
       return;
     }
 
@@ -419,7 +395,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
         setNewPin('');
         setConfirmPin('');
         
-        // 월렛 목록 새로고침
+        // 지갑 목록 새로고침
         loadWallets();
       } else {
         alert(`PIN 변경 실패: ${result.message}`);
@@ -455,21 +431,21 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
 
     setIsDeletingWallet(true);
     try {
-      // API를 통한 월렛 삭제
+      // API를 통한 지갑 삭제
       const result = await deleteWallet(walletId);
       
       if (result.success) {
-        // 삭제 성공 후 월렛 목록 다시 로드
-        await loadWallets();
+        // 삭제 성공 후 지갑 목록 다시 로드 (업데이트된 wallets 반환)
+        const updatedWallets = await loadWallets();
         
-        // 부모 컴포넌트에 변경사항 알림
-        if (onWalletsChange) {
-          onWalletsChange(wallets.filter(w => w.id !== walletId));
+        // 선택된 지갑이 삭제된 경우 선택 해제
+        if (selectedWallet && selectedWallet.id === walletId) {
+          setSelectedWallet(null);
         }
         
         alert('통장이 성공적으로 삭제되었습니다.');
       } else {
-        alert(`통장 삭제 실패: ${result.error || '알 수 없는 오류'}`);
+        alert(`통장 삭제 실패: ${result.message || result.error || '알 수 없는 오류'}`);
       }
     } catch (error) {
       console.error('통장 삭제 오류:', error);
@@ -484,51 +460,51 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
    */
   const selectWallet = (wallet) => {
     setSelectedWallet(wallet);
-    // 부모 컴포넌트에 월렛 선택 알림
+    // 부모 컴포넌트에 지갑 선택 알림
     if (onWalletSelect) {
       onWalletSelect(wallet);
     }
   };
 
   /**
-   * 거래 후 월렛 잔고 새로고침 (외부에서 호출 가능)
+   * 거래 후 지갑 잔고 새로고침 (외부에서 호출 가능)
    */
   const refreshWallets = async () => {
-    console.log('=== 외부에서 월렛 새로고침 요청 ===');
-    console.log('현재 월렛 개수:', wallets.length);
-    console.log('현재 월렛들:', wallets.map(w => ({ name: w.name, balance: w.balance })));
+    console.log('=== 외부에서 지갑 새로고침 요청 ===');
+    console.log('현재 지갑 개수:', wallets.length);
+    console.log('현재 지갑들:', wallets.map(w => ({ name: w.name, balance: w.balance })));
     
     try {
       // 여러 번 시도하여 확실한 새로고침
       for (let i = 1; i <= 3; i++) {
-        console.log(`월렛 새로고침 시도 ${i}/3`);
+        console.log(`지갑 새로고침 시도 ${i}/3`);
         await loadWallets();
         
         // 잠시 대기 후 상태 확인
         await new Promise(resolve => setTimeout(resolve, 200));
         
         if (wallets.length > 0) {
-          console.log(`월렛 새로고침 성공 (시도 ${i}/3)`);
+          console.log(`지갑 새로고침 성공 (시도 ${i}/3)`);
           // 부모 컴포넌트에 변경사항 알림
           if (onWalletsChange) {
             onWalletsChange(wallets);
-            console.log('부모 컴포넌트에 월렛 변경사항 전달');
+            console.log('부모 컴포넌트에 지갑 변경사항 전달');
           }
           break;
         } else {
-          console.log(`월렛 새로고침 실패 (시도 ${i}/3), 재시도...`);
+          console.log(`지갑 새로고침 실패 (시도 ${i}/3), 재시도...`);
         }
       }
       
-      console.log('=== 월렛 새로고침 완료 ===');
+      console.log('=== 지갑 새로고침 완료 ===');
       
       // 새로고침 후 상태 확인을 위해 잠시 대기
       setTimeout(() => {
-        console.log('새로고침 후 월렛 개수:', wallets.length);
-        console.log('새로고침 후 월렛들:', wallets.map(w => ({ name: w.name, balance: w.balance })));
+        console.log('새로고침 후 지갑 개수:', wallets.length);
+        console.log('새로고침 후 지갑들:', wallets.map(w => ({ name: w.name, balance: w.balance })));
       }, 100);
     } catch (error) {
-      console.error('=== 월렛 새로고침 실패 ===');
+      console.error('=== 지갑 새로고침 실패 ===');
       console.error('에러:', error);
     }
   };
@@ -551,7 +527,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
   return (
     <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">월렛지갑 관리</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">지갑 관리</h2>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <button
             onClick={() => setShowCreateModal(true)}
@@ -561,7 +537,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
           </button>
           <button
             onClick={() => navigate('/spot/history')}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base"
+            className="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base"
           >
             거래내역
           </button>
@@ -599,8 +575,8 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
               </svg>
             </div>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">월렛지갑이 없습니다</h3>
-          <p className="text-gray-500 mb-2">월렛지갑 관리에서 먼저 통장을 개설해주세요.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">지갑이 없습니다</h3>
+          <p className="text-gray-500 mb-2">지갑 관리에서 먼저 통장을 개설해주세요.</p>
           <p className="text-xs text-gray-400 mb-6">
           </p>
           <div className="space-x-4">
@@ -612,7 +588,7 @@ const WalletManager = forwardRef(({ isLoggedIn, customerBalance, onWalletsChange
             </button>
             <button
               onClick={() => {
-                console.log('월렛 새로고침 버튼 클릭');
+                console.log('지갑 새로고침 버튼 클릭');
                 loadWallets();
               }}
               className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"

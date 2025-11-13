@@ -1,6 +1,8 @@
 package com.boot.eumbank.account.open.controller;
 
 import com.boot.eumbank.account.open.dto.account.*;
+import com.boot.eumbank.account.open.enums.PasswordChangeResult;
+import com.boot.eumbank.account.open.enums.PinChangeResult;
 import com.boot.eumbank.account.open.jpa.repository.AccountRepository;
 import com.boot.eumbank.account.open.service.account.AccoutService;
 import com.boot.eumbank.account.open.service.account.DocumentService;
@@ -50,7 +52,7 @@ public class AccountController {
 
     private final AccountProductService accountProductService;
 
-    private final AccoutService accoutService;
+    private final AccoutService accountService;
 
     private final DocumentService documentService;
 
@@ -231,7 +233,7 @@ public class AccountController {
         logger.info("dto = " + dto);
 
         // 최종적으로 저장하는 곳
-        accoutService.registerAccount(dto, body);
+       accountService.registerAccount(dto, body);
 
         // 프런트 payload 구조 예: consent/verification/customer/product/meta
         Map<String, Object> product = (Map<String, Object>) body.get("product");
@@ -253,7 +255,7 @@ public class AccountController {
     public ResponseEntity<Map<String, Object>> checkPinNumber() {
         logger.info("checkPinNumber => checkPinNumber()");
 
-        boolean bool = accoutService.checkPinExists();
+        boolean bool = accountService.checkPinExists();
 
         logger.info("존재유무 => bool = " + bool);
 
@@ -275,7 +277,7 @@ public class AccountController {
         Map<String, Object> responseBody = new LinkedHashMap<>();
 
         try {
-            Map<String, Object> isVerified = accoutService.verifyPin(pinDto.getPinNumber());
+            Map<String, Object> isVerified = accountService.verifyPin(pinDto.getPinNumber());
 
             if (isVerified.get("pinBooleanCheck").equals(true)) {
                 // ✅ 검증 성공: HTTP 200 OK
@@ -300,33 +302,69 @@ public class AccountController {
     }
 
     /**
-     * 핀 변경
-     * @param payload
-     * @return
+     * PIN 번호 변경
      */
-    @PutMapping("/pin-change")
-    public ResponseEntity<Map<String, Object>> verifyChangePin(@RequestBody Map<String, String> payload) {
+    @PutMapping("/pinChange")
+    public ResponseEntity<ChangeResponse> changePin(@RequestBody Map<String, String> payload) {
 
-        logger.info("verifyChangePin => pinNumber = {}", payload.get("pin"));
+        logger.error("AccountController => changePin()");
 
-        return null;
+        // Service 호출
+        PinChangeResult result = accountService.changePinNumber(payload.get("pin"));
+
+        // Response 생성
+        ChangeResponse response = ChangeResponse.of(result);
+
+        // HTTP Status 결정
+        HttpStatus status = getHttpStatus(result);
+
+        return ResponseEntity.status(status).body(response);
     }
-
 
     /**
      * 비밀번호 변경
-     * @param payload
-     * @return
      */
     @PutMapping("/password-change")
-    public ResponseEntity<Map<String, Object>> verifyChangePassword(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<ChangeResponse> changePassword(@RequestBody Map<String, String> payload) {
 
-        logger.info("verifyChangePin => pinNumber = {}", payload.get("principlePassword"));
-        logger.info("verifyChangePin => pinNumber = {}", payload.get("newPassword"));
-        logger.info("verifyChangePin => pinNumber = {}", payload.get("confirmPassword"));
+        logger.info("AccountController -> changePassword()");
 
-        return null;
+        logger.info("verifyChangePin => principlePassword = {}", payload.get("principlePassword"));
+        logger.info("verifyChangePin => newPassword = {}", payload.get("newPassword"));
+
+        PasswordChangeResult result = accountService.changePassword(payload.get("principlePassword"), payload.get("newPassword"));
+
+        // Response 생성
+        ChangeResponse response = ChangeResponse.of(result);
+
+        // HTTP Status 결정
+        HttpStatus status = getHttpStatus(result);
+
+        return ResponseEntity.status(status).body(response);
     }
 
+    /**
+     * PinChangeResult에 따른 HTTP Status 반환
+     */
+    private HttpStatus getHttpStatus(PinChangeResult result) {
+        return switch (result) {
+            case SUCCESS -> HttpStatus.OK;
+            case DUPLICATE_PIN, INVALID_FORMAT -> HttpStatus.BAD_REQUEST;
+            case CUSTOMER_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case UPDATE_FAILED, ERROR -> HttpStatus.INTERNAL_SERVER_ERROR;
+        };
+    }
+
+    /**
+     * PasswordChangeResult에 따른 HTTP Status 반환
+     */
+    private HttpStatus getHttpStatus(PasswordChangeResult result) {
+        return switch (result) {
+            case SUCCESS -> HttpStatus.OK;
+            case DUPLICATE_PASSWORD, INVALID_FORMAT -> HttpStatus.BAD_REQUEST;
+            case CUSTOMER_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case UPDATE_FAILED, ERROR -> HttpStatus.INTERNAL_SERVER_ERROR;
+        };
+    }
 
 }

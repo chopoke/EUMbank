@@ -65,6 +65,9 @@ public class TransferOrder {
     @Column(name = "to_created_at", nullable = false, updatable = false)
     private LocalDateTime to_created_at;
 
+    @Column(name = "to_execution_type", length = 30)
+    private String to_execution_type;
+
     // 관계 설정 - DB의 a_no와 매핑
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "a_no", insertable = false, updatable = false)
@@ -75,7 +78,8 @@ public class TransferOrder {
                         String to_dest_account_no, BigDecimal to_amount,
                         String to_schedule_type, String to_schedule_expr,
                         LocalDateTime to_start_at, LocalDateTime to_end_at,
-                        String to_status, String to_memo, LocalDateTime to_created_at) {
+                        String to_status, String to_memo, LocalDateTime to_created_at,
+                        String to_execution_type) {
         this.to_order_id = to_order_id;
         this.a_no = a_no;
         this.to_bank_code = to_bank_code;
@@ -89,7 +93,7 @@ public class TransferOrder {
         this.to_memo = to_memo;
         // to_created_at이 null이면 현재 시간으로 설정
         this.to_created_at = to_created_at != null ? to_created_at : LocalDateTime.now();
-        
+        this.to_execution_type = to_execution_type;
         // 디버깅을 위한 로그
         System.out.println("TransferOrder Builder - to_created_at 설정: " + this.to_created_at);
     }
