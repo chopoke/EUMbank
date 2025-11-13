@@ -10,6 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class DocumentListResponse {
 
     private List<DocumentResponse> documents;

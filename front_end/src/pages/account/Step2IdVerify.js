@@ -14,7 +14,7 @@ export default function Step2IdVerify() {
     const setStep2 = useAccountOpenStore(s => s.setStep2);
     const [file, setFile] = useState(null);
     const [preview, setPreview] = useState(null);
-    const [maskedPreview, setMaskedPreview] = useState(null); // ✅ 마스킹된 미리보기
+    const [maskedPreview, setMaskedPreview] = useState(null); // 마스킹된 미리보기
     const [checked, setChecked] = useState(false);
     const [loading, setLoading] = useState(false);
     const [verified, setVerified] = useState(false);
@@ -121,6 +121,8 @@ export default function Step2IdVerify() {
             };
 
             const ocr = await ocrCheck(file, message);
+
+            console.log(ocr);
 
             const { name, rrn6, address, rrn13 } = extractIdInfo(ocr);
             if (!name && !rrn6 && !address) {
