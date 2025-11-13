@@ -108,9 +108,9 @@ function DepositHistoryPage() {
           number: d.a_account_no,
           type: "예금",
           currency: cur,
-          balance: Number(d.a_balance || d.d_amount || 0),
-          openAt: parseTs(d.a_opened_at ?? d.d_join_date),
-          rate: d.d_apy ?? d.d_interest_rate,
+          balance: Number(d.a_balance || 0),
+          openAt: parseTs(d.a_opened_at),
+          rate: d.a_rate
         });
       })
       .catch(console.error);
@@ -333,10 +333,10 @@ function DepositHistoryPage() {
       <section className="border-b bg-white">
         <div className="checkb mx-auto max-w-[1240px] px-6 py-6">
           <h1 className="text-xl md:text-2xl font-semibold tracking-tight">
-            적금 계좌 상세
+            예금 계좌 상세
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            선택한 적금 계좌의 정보와 거래내역을 확인할 수 있습니다.
+            선택한 예금 계좌의 정보와 거래내역을 확인할 수 있습니다.
           </p>
         </div>
       </section>

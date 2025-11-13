@@ -13,13 +13,6 @@ import java.util.List;
  */
 public interface LoanConsentRepository extends JpaRepository<LoanConsent, Long> {
 
-    /**
-     * 고객 + 약관코드 별 최신동의
-     * @param customerNo 고객번호
-     * @param termCode
-     * @return
-     */
-    List<LoanConsent> findByCustomerNoAndTermCodeOrderByAgreedAtDesc(Integer customerNo, String termCode);
 
     /**
      * 특정 신청에 귀속 laNo
@@ -42,6 +35,16 @@ public interface LoanConsentRepository extends JpaRepository<LoanConsent, Long> 
            and c.customerNo = :customerNo
     """)
     int attachLaNoToConsents(@Param("customerNo") Integer customerNo,
-                             @Param("laNo") Long laNo);
+                             @Param("laNo") Long laNo,
+                             @Param("batchKey") String batchKey);
+
+    /**
+     *  배치키나 약관코드나 약관 버전이 있는지
+     * @param batchKey  구분용키
+     * @param termCode  약관코드
+     * @param version   약관버저
+     * @return
+     */
+    boolean existsByBatchKeyAndTermCodeAndVersion(String batchKey, String termCode, String version);
 
 }

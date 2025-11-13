@@ -45,7 +45,6 @@ export default function LoanProductsListPage(){
 
     // 모달 상태
   const [showCompare, setShowCompare] = React.useState(false);    // 바교 모달
-  const [showPrequal, setShowPrequal] = React.useState(false);    // 간편 비교
 
   // 간편조회(사전심사 모의) 입력값
   const [income, setIncome] = React.useState(40_000_000); // 연소득
@@ -162,18 +161,6 @@ export default function LoanProductsListPage(){
   const canCompare = selected.length >= 2;
   const canPrequal = selected.length >= 1;
 
-  // 사전심사(모의) 산식 (간단 샘플)
-  function computePrequalFor(p){
-    // 신용점수 높을수록 금리 우대, 한도는 연소득의 4.5배 한도 내에서 상품 최대한도까지
-    const limit = Math.min(p.limitMax, Math.round(income * 4.5 / 1_000_000) * 1_000_000);
-    // 신용 900 → 가감 0%, 350 → +2.75%p (선형)
-    const rateBump = ((CREDIT_MAX - credit) / (CREDIT_MAX - CREDIT_MIN)) * 2.75;
-    const estRate = Math.max(p.rateMin, Math.min(p.rateMax, +(p.rateMin + rateBump).toFixed(2)));
-    const maxTerm = (Array.isArray(p.termMonths) && p.termMonths.length) ? Math.max(...p.termMonths) : 0;
-    return { id:p.id, name:p.name, type:p.type, estRate, limit, maxTerm };
-  }
-  const prequalResults = React.useMemo(()=> selected.map(id=> computePrequalFor(PRODUCTS.find(p=>p.id===id))).filter(Boolean), [selected, income, credit]);
-
 
   // ---------------- 카드 ----------------
   function ProductCard({p}){
@@ -212,7 +199,6 @@ export default function LoanProductsListPage(){
           state={{ product: p }}   // 상세에 미리 전달
           className="px-3 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-sm"
         >자세히 보기</Link>
-          <button onClick={()=>{ if(!selected.includes(p.id)) toggleSelected(p.id); setShowPrequal(true); }} className="px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm">간편조회</button>
         </div>
       </div>
     );
@@ -260,56 +246,6 @@ export default function LoanProductsListPage(){
     );
   }
 
-  function PrequalModal(){
-    return (
-      <Modal open={showPrequal} onClose={()=>setShowPrequal(false)}>
-        <h3 className="text-xl font-semibold mb-3">간편 한도/금리 조회 (모의)</h3>
-        <div className="grid md:grid-cols-3 gap-4 mb-4">
-          <label className="block">
-            <span className="text-sm text-gray-600">연소득(원)</span>
-            <input type="number" value={income} min={0} onChange={e=>setIncome(clamp(parseInt(e.target.value||'0',10),0,10_000_000_000))}
-                   className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"/>
-          </label>
-          <label className="block">
-            <div className="flex items-center justify-between"><span className="text-sm text-gray-600">신용점수</span><span className="text-xs text-gray-500">{credit}</span></div>
-            <input type="range" min={CREDIT_MIN} max={CREDIT_MAX} step={1} value={credit} onChange={e=>setCredit(parseInt(e.target.value,10))} className="mt-1 w-full"/>
-          </label>
-          <label className="block">
-            <span className="text-sm text-gray-600">선택 상품 수</span>
-            <input disabled value={`${selected.length}개`} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 bg-gray-50"/>
-          </label>
-        </div>
-
-        {selected.length===0 ? (
-          <p className="text-sm text-gray-600">조회할 상품을 먼저 선택해 주세요.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[720px]">
-              <thead className="bg-gray-50/60 text-gray-600">
-                <tr>
-                  <th className="px-3 py-2 text-left">상품</th>
-                  <th className="px-3 py-2 text-left">예상금리(연)</th>
-                  <th className="px-3 py-2 text-left">예상한도</th>
-                  <th className="px-3 py-2 text-left">최장기간</th>
-                </tr>
-              </thead>
-              <tbody>
-                {prequalResults.map(r=> (
-                  <tr key={r.id} className="border-t">
-                    <td className="px-3 py-2">{r.name}</td>
-                    <td className="px-3 py-2 font-medium">{r.estRate.toFixed(2)}%</td>
-                    <td className="px-3 py-2">₩ {won(r.limit)}</td>
-                    <td className="px-3 py-2">{r.maxTerm}개월</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-2 text-xs text-gray-500">※ 실제 심사 결과는 입력하신 정보 외 추가 요건에 따라 달라질 수 있습니다.</p>
-          </div>
-        )}
-      </Modal>
-    );
-  }
 
   // ---------------- 렌더
   return (
@@ -406,8 +342,6 @@ export default function LoanProductsListPage(){
               <div className="ml-auto flex gap-2">
                 <button disabled={!canCompare} onClick={()=>setShowCompare(true)}
                         className={`px-3 py-2 rounded-xl border text-sm ${canCompare? 'border-gray-200 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed'}`}>비교 보기</button>
-                <button disabled={!canPrequal} onClick={()=>setShowPrequal(true)}
-                        className={`px-3 py-2 rounded-xl ${canPrequal? 'bg-blue-700 hover:bg-blue-800 text-white' : 'bg-gray-300 text-white cursor-not-allowed'} text-sm`}>간편조회</button>
               </div>
             </div>
           </div>
@@ -417,7 +351,6 @@ export default function LoanProductsListPage(){
 
       {/* 모달 렌더 */}
       <CompareModal />
-      <PrequalModal />
     </div>
   );
 }
