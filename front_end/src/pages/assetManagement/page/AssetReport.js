@@ -6,6 +6,7 @@ import { CategoryBarsStatic } from "../components/StaticCharts";
 import { Link } from "react-router-dom";
 import { getMonthlyReport, getDailyTransactions } from "../../../api/assetApi";
 import TransactionDetailModal from "./TransactionDetailModal";
+import AssetHubNav from "../components/AssetHubNav";
 
 /**
  * 월간 리포트 페이지
@@ -233,22 +234,16 @@ export default function AssetReport() {
 
   return (
     <main className="bg-gray-50 text-gray-900 min-h-screen">
-      <AssetPageHeader
-        title="월간 리포트"
-        desc="이번 달 수입·지출 캘린더와 지출 카테고리를 한눈에 확인하세요."
-        current="report"
-      />
+      {/* 상단 타이틀 영역 */}
+      <header className="content-container px-6 pt-8 md:pt-10 pb-4">
+        <h1 className="text-xl font-semibold text-gray-900">월간 리포트</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          이번 달 수입·지출 캘린더와 지출 카테고리를 한눈에 확인하세요.
+        </p>
+      </header>
 
       <section className="content-container max-w-7xl mx-auto px-6 pt-0 pb-16 md:pb-20">
-        <div className="rounded-md border border-blue-200 bg-blue-50 p-4 flex flex-wrap items-center gap-3">
-          <div className="text-sm font-semibold text-gray-900">자산관리 허브</div>
-          <div className="text-[12px] text-blue-700">분석 · 또래비교 · 추천을 한 곳에서</div>
-          <div className="ml-auto flex gap-2">
-            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/analysis">자산 분석</Link>
-            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/peer">또래 비교</Link>
-            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/recommend">맞춤 추천</Link>
-          </div>
-        </div>
+        <AssetHubNav />
 
         <div className={`${card} p-5 md:p-6`}>
           {/* 상단 툴바: 월 네비게이션 + 범례 + 내보내기 */}

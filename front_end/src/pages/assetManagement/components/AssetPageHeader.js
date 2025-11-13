@@ -1,6 +1,3 @@
-// src/pages/assetManagement/components/AssetPageHeader.js
-import { Link } from "react-router-dom";
-
 export default function AssetPageHeader({ title, desc, current }) {
   const sections = [
     { key: "analysis",   label: "자산 분석",     to: "/asset/analysis" },
@@ -25,14 +22,6 @@ export default function AssetPageHeader({ title, desc, current }) {
       {/* 위 라인: 뒤로가기 + 타이틀/설명 */}
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="flex flex-col gap-2">
-          <Link
-            to="/asset/dashboard"
-            className="inline-flex w-fit items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-          >
-            <span aria-hidden="true">←</span>
-            <span>자산 현황으로</span>
-          </Link>
-
           <div>
             <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
             {desc && (

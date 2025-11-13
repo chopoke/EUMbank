@@ -1,11 +1,19 @@
-// src/pages/assetManagement/page/PeerComparison.js
-import AssetPageHeader from "../components/AssetPageHeader";
-import { Link } from "react-router-dom";
 import { BarCompareStatic } from "../components/StaticCharts";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../../../api/axios";
 import PeerProfileForm from "../components/PeerProfileForm";
+import AssetHubNav from "../components/AssetHubNav";
 
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 export default function AssetPeerComparison() {
   const [profile, setProfile] = useState(null);
@@ -52,28 +60,142 @@ export default function AssetPeerComparison() {
     setNeedProfile(false);
   };
 
+  const toMillion = (v) => Math.round(Number(v ?? 0) / 1_000_000);
+
+  const compareOptions = useMemo(
+    () => ({
+      indexAxis: "y", // 가로 막대
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const label = ctx.label || "";
+              const val = ctx.parsed.x;
+              return ` ${label}: ${Number(val ?? 0).toLocaleString("ko-KR")} 백만`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { color: "#E5E7EB" },
+          ticks: {
+            maxTicksLimit: 4,
+            callback: (v) => `${v}`,
+          },
+        },
+        y: {
+          grid: { display: false },
+        },
+      },
+    }),
+    []
+  );
+
+  // 순자산 비교용 데이터
+  const netWorthData = useMemo(() => {
+    if (!compare) return null;
+    const left = toMillion(compare.myNetWorth);
+    const right = toMillion(compare.avgNetWorth);
+    return {
+      labels: ["나", "평균"],
+      datasets: [
+        {
+          label: "순자산 (백만 원 기준)",
+          data: [left, right],
+          backgroundColor: ["#3b82f6", "#9ca3af"],
+          borderRadius: 8,
+          barThickness: 18,
+        },
+      ],
+    };
+  }, [compare]);
+
+  // 자산 구성 비교용 (입출금/적금/예금/외환/현물/대출) 공통 생성 함수
+  const buildAssetCompareData = (myVal, avgVal) => {
+    const left = toMillion(myVal);
+    const right = toMillion(avgVal);
+    return {
+      labels: ["나", "평균"],
+      datasets: [
+        {
+          data: [left, right],
+          backgroundColor: ["#3b82f6", "#9ca3af"],
+          borderRadius: 8,
+          barThickness: 18,
+        },
+      ],
+    };
+  };
+
+  const cashData = useMemo(
+    () =>
+      compare
+        ? buildAssetCompareData(compare.myCash, compare.avgCash)
+        : null,
+    [compare]
+  );
+  const installmentData = useMemo(
+    () =>
+      compare
+        ? buildAssetCompareData(compare.myInstallment, compare.avgInstallment)
+        : null,
+    [compare]
+  );
+  const depositData = useMemo(
+    () =>
+      compare
+        ? buildAssetCompareData(compare.myDeposit, compare.avgDeposit)
+        : null,
+    [compare]
+  );
+  const foreignData = useMemo(
+    () =>
+      compare
+        ? buildAssetCompareData(compare.myForeign, compare.avgForeign)
+        : null,
+    [compare]
+  );
+  const goldData = useMemo(
+    () =>
+      compare
+        ? buildAssetCompareData(compare.myGold, compare.avgGold)
+        : null,
+    [compare]
+  );
+  const liabilitiesData = useMemo(
+    () =>
+      compare
+        ? buildAssetCompareData(
+            compare.myTotalLiabilities,
+            compare.avgTotalLiabilities
+          )
+        : null,
+    [compare]
+  );
+
   if (loading) {
     return <main className="content-container p-6">로딩 중…</main>;
   }
 
   return (
     <main className="bg-gray-50 text-gray-900 min-h-screen">
-      <AssetPageHeader
-        title="또래 비교"
-        desc="동일 연령대 · 소득대 · 지역 기준의 평균과 비교한 자산 및 부채 수준입니다."
-        current="peer"
-      />
+      {/* 상단 타이틀 영역 */}
+      <header className="content-container px-6 pt-8 md:pt-10 pb-4">
+        <h1 className="text-xl font-semibold text-gray-900">또래 비교</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          동일 연령대 · 소득대 · 지역 기준의 평균과 비교한 자산 및 부채 수준입니다.
+        </p>
+      </header>
 
       <section className="content-container px-6 pt-0 pb-16 md:pb-20">
-        <div className="rounded-md border border-blue-200 bg-blue-50 p-4 flex flex-wrap items-center gap-3">
-          <div className="text-sm font-semibold text-gray-900">자산관리 허브</div>
-          <div className="text-[12px] text-blue-700">분석 · 추천 · 리포트를 한 곳에서</div>
-          <div className="ml-auto flex gap-2">
-            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/analysis">자산 분석</Link>
-            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/recommend">맞춤 추천</Link>
-            <Link className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50" to="/asset/report">월간 리포트</Link>
-          </div>
-        </div>
+        <AssetHubNav />
 
         {needProfile ? (
           <PeerProfileForm onSaved={handleProfileSaved}/>
@@ -114,9 +236,11 @@ export default function AssetPeerComparison() {
                   </li>
                 </ul>
 
-                {/* <div className="mt-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-[12px] text-blue-700 font-medium">
-                  표본 수: 동일 조건 2,314명
-                </div> */}
+                {typeof compare?.nCustomers === "number" && compare.nCustomers > 0 && (
+                  <div className="mt-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-[12px] text-blue-700 font-medium">
+                    표본 수: 동일 조건 {compare.nCustomers.toLocaleString()}명
+                  </div>
+                )}
               </div>
 
               {/* 순자산 비교 */}
@@ -133,13 +257,18 @@ export default function AssetPeerComparison() {
                   </span>
                 </div>
 
-                <BarCompareStatic
+                <div className="h-28">
+                  {netWorthData && (<Bar data={netWorthData} options={compareOptions} />)}
+                </div>
+                
+                {/* <BarCompareStatic
                     metric="순자산 (백만 원 기준)"
                     leftLabel="나"
                     rightLabel="평균"
                     leftValue={Math.round(Number((compare?.myNetWorth ?? 0)) / 1_000_000)}
                     rightValue={Math.round(Number((compare?.avgNetWorth ?? 0)) / 1_000_000)}
-                  />
+                  /> */}
+
                 {/* <PlaceholderChart label="분포 차트 (박스플롯 등)" height="h-40" /> */}
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -170,7 +299,43 @@ export default function AssetPeerComparison() {
 
               {/* <PlaceholderChart label="막대 비교 (나 vs 평균)" height="h-56" /> */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <BarCompareStatic
+                <div className="rounded-md border border-gray-200 bg-white p-3">
+                  <div className="text-[12px] text-gray-500 mb-2"> 입출금 자산 비중 </div>
+                  <div className="h-24">
+                    {compare && ( <Bar data={cashData} options={compareOptions} />)}
+                  </div>
+                </div>
+                <div className="rounded-md border border-gray-200 bg-white p-3">
+                  <div className="text-[12px] text-gray-500 mb-2"> 적금 자산 비중 </div>
+                  <div className="h-24">
+                    {compare && ( <Bar data={installmentData} options={compareOptions} />)}
+                  </div>
+                </div>
+                <div className="rounded-md border border-gray-200 bg-white p-3">
+                  <div className="text-[12px] text-gray-500 mb-2"> 예금 자산 비중 </div>
+                  <div className="h-24">
+                    {compare && ( <Bar data={depositData} options={compareOptions} />)}
+                  </div>
+                </div>
+                <div className="rounded-md border border-gray-200 bg-white p-3">
+                  <div className="text-[12px] text-gray-500 mb-2"> 외환 자산 비중 </div>
+                  <div className="h-24">
+                    {compare && ( <Bar data={foreignData} options={compareOptions} />)}
+                  </div>
+                </div>
+                <div className="rounded-md border border-gray-200 bg-white p-3">
+                  <div className="text-[12px] text-gray-500 mb-2"> 현물 자산 비중 </div>
+                  <div className="h-24">
+                    {compare && ( <Bar data={goldData} options={compareOptions} />)}
+                  </div>
+                </div>
+                <div className="rounded-md border border-gray-200 bg-white p-3">
+                  <div className="text-[12px] text-gray-500 mb-2"> 대출 비중 </div>
+                  <div className="h-24">
+                    {compare && ( <Bar data={liabilitiesData} options={compareOptions} />)}
+                  </div>
+                </div>
+                {/* <BarCompareStatic
                   metric="입출금 자산 비중"
                   leftLabel="나" rightLabel="평균"
                   leftValue={Math.round(Number((compare?.myCash ?? 0)) / 1_000_000)}
@@ -201,7 +366,7 @@ export default function AssetPeerComparison() {
                   metric="대출 비중"
                   leftValue={Math.round(Number((compare?.myTotalLiabilities ?? 0)) / 1_000_000)}
                   rightValue={Math.round(Number((compare?.avgTotalLiabilities ?? 0)) / 1_000_000)}
-                />
+                /> */}
               </div>
 
             </div>
