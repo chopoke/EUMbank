@@ -187,33 +187,23 @@ export default function AssetPeerComparison() {
                   leftValue={Math.round(Number((compare?.myDeposit ?? 0)) / 1_000_000)}
                   rightValue={Math.round(Number((compare?.avgDeposit ?? 0)) / 1_000_000)}
                 />
+                <BarCompareStatic
+                  metric="외환 자산 비중"
+                  leftValue={Math.round(Number((compare?.myForeign ?? 0)) / 1_000_000)}
+                  rightValue={Math.round(Number((compare?.avgForeign ?? 0)) / 1_000_000)}
+                />
+                <BarCompareStatic
+                  metric="현물 자산 비중"
+                  leftValue={Math.round(Number((compare?.myGold ?? 0)) / 1_000_000)}
+                  rightValue={Math.round(Number((compare?.avgGold ?? 0)) / 1_000_000)}
+                />
+                <BarCompareStatic
+                  metric="대출 비중"
+                  leftValue={Math.round(Number((compare?.myTotalLiabilities ?? 0)) / 1_000_000)}
+                  rightValue={Math.round(Number((compare?.avgTotalLiabilities ?? 0)) / 1_000_000)}
+                />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="rounded-md bg-white border border-gray-200 p-4">
-                  <div className="text-[12px] text-gray-500">현금성 자산 비중</div>
-                  <div className="font-semibold text-gray-900">내 42% / 평균 35%</div>
-                  <div className="text-[12px] text-gray-500 mt-1">
-                    평균보다 현금 보유 비율이 높습니다.
-                  </div>
-                </div>
-
-                <div className="rounded-md bg-white border border-gray-200 p-4">
-                  <div className="text-[12px] text-gray-500">투자 자산 비중</div>
-                  <div className="font-semibold text-gray-900">내 18% / 평균 24%</div>
-                  <div className="text-[12px] text-gray-500 mt-1">
-                    장기 자산 증식 측면에서 투자 비중을 조금 늘릴 여지가 있습니다.
-                  </div>
-                </div>
-
-                <div className="rounded-md bg-white border border-gray-200 p-4">
-                  <div className="text-[12px] text-gray-500">부채 비율</div>
-                  <div className="font-semibold text-gray-900">내 34% / 평균 41%</div>
-                  <div className="text-[12px] text-gray-500 mt-1">
-                    부채 관리 능력은 우수한 편입니다.
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* 맞춤 안내 */}

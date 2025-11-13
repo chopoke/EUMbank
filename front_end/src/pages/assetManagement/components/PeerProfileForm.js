@@ -7,22 +7,36 @@ const GENDERS = [
 ];
 
 const AGE_BANDS = [
-  "20대", "30대", "40대", "50대이상"
-].map((label, i) => ({ value: parseInt(label, 10) , label }));
+  { value: 20, label: "20대" },
+  { value: 30, label: "30대" },
+  { value: 40, label: "40대" },
+  { value: 50, label: "50대 이상" },
+];
 
 const JOB_GROUPS = [
-  "학생", "무직/구직", "사무/전문직", "서비스/판매직", "생산/노무", "공공/교육/보건", "프리랜서/자영업", "기타",
-].map((label, i) => ({ value: `J${i+1}`, label }));
+  { value: "J1", label: "학생/무직" },
+  { value: "J2", label: "사무/전문직" },
+  { value: "J3", label: "서비스/판매직" },
+  { value: "J4", label: "생산/노무/현장" },
+  { value: "J5", label: "프리랜서/자영업/기타" },
+];
 
 const INCOME_BANDS = [
-  "100만원 미만", "100~300만원", "300~500만원", "500~800만원",
-  "800~1000만원", "1000만원 이상",
-].map((label, i) => ({ value: `I${i+1}`, label }));
+  { value: "I1", label: "100만원 미만" },
+  { value: "I2", label: "100~300만원" },
+  { value: "I3", label: "300~500만원" },
+  { value: "I4", label: "500~800만원" },
+  { value: "I5", label: "800~1000만원" },
+  { value: "I6", label: "1000만원 이상" },
+];
 
 const REGIONS = [
-  "서울", "경기", "인천", "부산", "대구", "광주", "대전", "울산",
-  "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주",
-].map((label) => ({ value: label, label }));
+  { value: "R1", label: "수도권(서울/경기/인천)" },
+  { value: "R2", label: "영남(부산/대구/경북/경남/울산)" },
+  { value: "R3", label: "호남(광주/전북/전남)" },
+  { value: "R4", label: "충청·세종(대전/충북/충남/세종)" },
+  { value: "R5", label: "강원·제주" },
+];
 
 const LS_KEY = "peerProfileDraft";
 

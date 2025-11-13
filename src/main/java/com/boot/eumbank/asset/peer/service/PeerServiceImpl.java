@@ -218,14 +218,11 @@ public class PeerServiceImpl implements PeerService{
 
     private String labelJob(String cd) {
         return switch (cd) {
-            case "J1" -> "학생";
-            case "J2" -> "무직/구직";
-            case "J3" -> "사무/전문직";
-            case "J4" -> "서비스/판매직";
-            case "J5" -> "생산/노무";
-            case "J6" -> "공공/교육/보건";
-            case "J7" -> "프리랜서/자영업";
-            case "J8" -> "기타";
+            case "J1" -> "학생/무직";
+            case "J2" -> "사무/전문직";
+            case "J3" -> "서비스/판매직";
+            case "J4" -> "생산/노무/현장";
+            case "J5" -> "프리랜서/자영업/기타";
             default -> cd;
         };
     }
