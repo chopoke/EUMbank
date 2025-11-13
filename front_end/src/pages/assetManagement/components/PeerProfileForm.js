@@ -7,7 +7,7 @@ const GENDERS = [
 ];
 
 const AGE_BANDS = [
-  "20대", "30대", "40대", "50대", "60대이상",
+  "20대", "30대", "40대", "50대이상"
 ].map((label, i) => ({ value: parseInt(label, 10) , label }));
 
 const JOB_GROUPS = [
@@ -57,8 +57,11 @@ export default function PeerProfileForm({ onSaved }) {
     setSaving(true);
     try {
       const payload = {
-        ...form,
+        gender : form.gender,
         ageBand: Number(form.ageBand),
+        incomeCd: form.incomeBand,
+        jobCd: form.jobGroup,
+        region: form.region,
       };
       const res = await api.post("/api/asset/peer/profile", payload);
       window.localStorage.removeItem(LS_KEY);

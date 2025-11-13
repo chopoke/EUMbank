@@ -18,15 +18,13 @@ public class PeerController {
 
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(@AuthenticationPrincipal Customer customer) {
-        //var p = peerService.getMyProfile(customer.getCustomerNo());
-        //if (p == null) return ResponseEntity.noContent().build();
-        return ResponseEntity.ok(null);
-        // 필요하다면 PeerCompareResponse를 돌려도 OK
+        PeerProfileDto dto = peerService.getMyProfile(customer.getCustomerNo());
+        return (dto == null) ? ResponseEntity.noContent().build() : ResponseEntity.ok(dto);
     }
 
     @PostMapping("/profile")
     public ResponseEntity<PeerCompareResponse> saveProfile(@AuthenticationPrincipal Customer customer, @RequestBody PeerProfileDto dto) {
-        //var res = peerService.saveProfileAndCompare(customer.getCustomerNo(), dto);
-        return ResponseEntity.ok(null);
+        PeerCompareResponse res = peerService.saveProfileAndCompare(customer.getCustomerNo(), dto);
+        return ResponseEntity.ok(res);
     }
 }

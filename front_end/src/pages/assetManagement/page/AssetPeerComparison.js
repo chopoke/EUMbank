@@ -4,19 +4,33 @@ import { Link } from "react-router-dom";
 import { BarCompareStatic } from "../components/StaticCharts";
 import { useEffect, useState } from "react";
 import api from "../../../api/axios";
-import PeerProfileForm from "../components/PeearProfileForm";
+import PeerProfileForm from "../components/PeerProfileForm";
 
 
 export default function AssetPeerComparison() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [needProfile, setNeedProfile] = useState(false);
+  const [compare, setCompare] = useState(null);   // PeerCompareResponse
 
   useEffect(() => {
     (async () => {
       try {
         const res = await api.get("/api/asset/peer/profile"); // 없으면 204/404로 가정
-        if (res?.data) setProfile(res.data);
+        if (res?.data) {
+          const p = res.data;
+          setNeedProfile(false);
+          
+          const cmp = await api.post("/api/asset/peer/profile", p);
+          setCompare(cmp.data);
+          setProfile({
+            genderLabel: cmp.data.genderLabel,
+            ageBandLabel: cmp.data.ageBandLabel,
+            incomeCdLabel: cmp.data.incomeCdLabel,
+            jobCdLabel: cmp.data.jobCdLabel,
+            regionLabel: cmp.data.regionLabel,
+          });
+        }
         else setNeedProfile(true);
       } catch {
         setNeedProfile(true);
@@ -26,8 +40,15 @@ export default function AssetPeerComparison() {
     })();
   }, []);
 
-  const handleProfileSaved = (saved) => {
-    setProfile(saved);
+  const handleProfileSaved = (resDataOrForm) => {
+    setCompare(resDataOrForm);
+    setProfile({
+      genderLabel: resDataOrForm.genderLabel,
+      ageBandLabel: resDataOrForm.ageBandLabel,
+      incomeCdLabel: resDataOrForm.incomeCdLabel,
+      jobCdLabel: resDataOrForm.jobCdLabel,
+      regionLabel: resDataOrForm.regionLabel,
+    });
     setNeedProfile(false);
   };
 
@@ -77,15 +98,15 @@ export default function AssetPeerComparison() {
                   </li>
                   <li className="flex justify-between">
                     <span className="text-[12px] text-gray-500">연령대</span>
-                    <span className="font-medium text-gray-900">{profile.ageBandLabel}대</span>
+                    <span className="font-medium text-gray-900">{profile.ageBandLabel}</span>
                   </li>
                   <li className="flex justify-between">
                     <span className="text-[12px] text-gray-500">월 소득</span>
-                    <span className="font-medium text-gray-900">{profile.incomeBandLabel}</span>
+                    <span className="font-medium text-gray-900">{profile.incomeCdLabel}</span>
                   </li>
                   <li className="flex justify-between">
                     <span className="text-[12px] text-gray-500">직업</span>
-                    <span className="font-medium text-gray-900">{profile.jobGroupLabel}</span>
+                    <span className="font-medium text-gray-900">{profile.jobCdLabel}</span>
                   </li>
                   <li className="flex justify-between">
                     <span className="text-[12px] text-gray-500">거주 지역</span>
@@ -116,19 +137,23 @@ export default function AssetPeerComparison() {
                     metric="순자산 (백만 원 기준)"
                     leftLabel="나"
                     rightLabel="평균"
-                    leftValue={88}   // 88%
-                    rightValue={64}  // 64%
+                    leftValue={Math.round(Number((compare?.myNetWorth ?? 0)) / 1_000_000)}
+                    rightValue={Math.round(Number((compare?.avgNetWorth ?? 0)) / 1_000_000)}
                   />
                 {/* <PlaceholderChart label="분포 차트 (박스플롯 등)" height="h-40" /> */}
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="rounded-md bg-white border border-gray-200 p-4">
                     <div className="text-[12px] text-gray-500">내 순자산</div>
-                    <div className="font-semibold text-gray-900">87,520,000원</div>
+                    <div className="font-semibold text-gray-900">
+                      {Number(compare?.myNetWorth ?? 0).toLocaleString()}원
+                    </div>
                   </div>
                   <div className="rounded-md bg-white border border-gray-200 p-4">
                     <div className="text-[12px] text-gray-500">그룹 평균</div>
-                    <div className="font-semibold text-gray-900">64,300,000원</div>
+                    <div className="font-semibold text-gray-900">
+                      {Number(compare?.avgNetWorth ?? 0).toLocaleString()}원
+                    </div>
                   </div>
                 </div>
               </div>
@@ -146,19 +171,21 @@ export default function AssetPeerComparison() {
               {/* <PlaceholderChart label="막대 비교 (나 vs 평균)" height="h-56" /> */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <BarCompareStatic
-                  metric="현금성 자산 비중"
+                  metric="입출금 자산 비중"
                   leftLabel="나" rightLabel="평균"
-                  leftValue={42} rightValue={35}
+                  leftValue={Math.round(Number((compare?.myCash ?? 0)) / 1_000_000)}
+                  rightValue={Math.round(Number((compare?.avgCash ?? 0)) / 1_000_000)}
                 />
                 <BarCompareStatic
-                  metric="투자 자산 비중"
+                  metric="적금 자산 비중"
                   leftLabel="나" rightLabel="평균"
-                  leftValue={18} rightValue={24}
+                  leftValue={Math.round(Number((compare?.myInstallment ?? 0)) / 1_000_000)}
+                  rightValue={Math.round(Number((compare?.avgInstallment ?? 0)) / 1_000_000)}
                 />
                 <BarCompareStatic
-                  metric="부채 비율"
-                  leftLabel="나" rightLabel="평균"
-                  leftValue={34} rightValue={41}
+                  metric="예금 자산 비중"
+                  leftValue={Math.round(Number((compare?.myDeposit ?? 0)) / 1_000_000)}
+                  rightValue={Math.round(Number((compare?.avgDeposit ?? 0)) / 1_000_000)}
                 />
               </div>
 

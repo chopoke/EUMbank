@@ -3,11 +3,9 @@ package com.boot.eumbank.asset.peer.service;
 import com.boot.eumbank.asset.dashboard.dto.AssetCompositionDto;
 import com.boot.eumbank.asset.dashboard.dto.AssetSummaryDto;
 import com.boot.eumbank.asset.dashboard.service.DashboardService;
-import com.boot.eumbank.asset.peer.dto.PeerBucketKey;
-import com.boot.eumbank.asset.peer.dto.PeerCompareResponse;
-import com.boot.eumbank.asset.peer.dto.PeerProfileDto;
-import com.boot.eumbank.asset.peer.dto.PeerTotals;
+import com.boot.eumbank.asset.peer.dto.*;
 import com.boot.eumbank.asset.peer.entity.AssetManagementData;
+import com.boot.eumbank.asset.peer.entity.AssetPeerData;
 import com.boot.eumbank.asset.peer.repository.AssetManagementDataRepository;
 import com.boot.eumbank.asset.peer.repository.AssetPeerDataRepository;
 import com.boot.eumbank.asset.peer.repository.PeerRepository;
@@ -18,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -67,10 +66,14 @@ public class PeerServiceImpl implements PeerService{
         BigDecimal deposit     = comp.getOrDefault("예금",   BigDecimal.ZERO);
         BigDecimal gold        = comp.getOrDefault("현물",   BigDecimal.ZERO);
 
+        BigDecimal totalAssets     = newAsset.totalAssets();
+        BigDecimal totalLiabilities= newAsset.totalLiabilities();
+        BigDecimal netWorth        = newAsset.netWorth();
+
         PeerTotals newTotals = new PeerTotals(
-                newAsset.totalAssets(),
-                newAsset.totalLiabilities(),
-                newAsset.netWorth(),
+                totalAssets,
+                totalLiabilities,
+                netWorth,
                 cash,
                 installment,
                 deposit,
@@ -78,38 +81,50 @@ public class PeerServiceImpl implements PeerService{
                 gold
         );
 
-        // 기존 amd
-        AssetManagementData oldAmd = amdRepository.findByCNo(cNo).orElse(null);
-        PeerBucketKey oldKey = null;
-        PeerTotals oldTotals = PeerTotals.zero();
+        String g = dto.getGender();
+        Integer a = dto.getAgeBand();
+        String i = dto.getIncomeCd();
+        String j = dto.getJobCd();
+        String r = dto.getRegion();
 
         Bounds bounds = incomeBounds(dto.getIncomeCd());
+
+        // 기존 amd
+        AssetManagementData oldAmd = amdRepository.findByCno(cNo).orElse(null);
+        PeerBucketKey oldKey = null;
+        PeerTotals oldTotals = PeerTotals.zero();
 
         if (oldAmd != null) {
             oldKey = new PeerBucketKey(
                     oldAmd.getAmdGender(), oldAmd.getAmdAgeBand(),
                     oldAmd.getAmdIncomeCd(), oldAmd.getAmdJobCd(), oldAmd.getAmdRegion()
             );
+            peerRepository.updateAmdProfile(cNo, g, a, i, bounds.min(), bounds.max(), j, r);
+
             oldTotals = new PeerTotals(
                     oldAmd.getAmdTotalAssets(), oldAmd.getAmdTotalLiabilities(), oldAmd.getAmdNetWorth(),
                     oldAmd.getAmdTotalCash(), oldAmd.getAmdTotalInstallment(), oldAmd.getAmdTotalDeposit(),
                     oldAmd.getAmdTotalForeign(), oldAmd.getAmdTotalGold()
             );
+            peerRepository.updateAmdTotals(
+                    cNo, totalAssets, totalLiabilities, netWorth,
+                    cash, installment, deposit, foreign, gold
+            );
         } else {
             AssetManagementData amd = AssetManagementData.builder()
-                    .cNo(cNo)
-                    .amdGender(dto.getGender())
-                    .amdAgeBand(dto.getAgeBand())
-                    .amdIncomeCd(dto.getIncomeCd())
+                    .cno(cNo)
+                    .amdGender(g)
+                    .amdAgeBand(a)
+                    .amdIncomeCd(i)
                     .amdIncomeMin(bounds.min())
                     .amdIncomeMax(bounds.max())
-                    .amdJobCd(dto.getJobCd())
-                    .amdRegion(dto.getRegion())
+                    .amdJobCd(j)
+                    .amdRegion(r)
                     .amdCreatedAt(LocalDateTime.now())
                     .amdUpdatedAt(LocalDateTime.now())
-                    .amdTotalAssets(newAsset.totalAssets())
-                    .amdTotalLiabilities(newAsset.totalLiabilities())
-                    .amdNetWorth(newAsset.netWorth())
+                    .amdTotalAssets(totalAssets)
+                    .amdTotalLiabilities(totalLiabilities)
+                    .amdNetWorth(netWorth)
                     .amdTotalCash(cash)
                     .amdTotalInstallment(installment)
                     .amdTotalDeposit(deposit)
@@ -119,10 +134,9 @@ public class PeerServiceImpl implements PeerService{
             amdRepository.save(amd);
         }
 
-        PeerBucketKey newKey = new PeerBucketKey(dto.getGender(), dto.getAgeBand(), dto.getIncomeCd(), dto.getJobCd(), dto.getRegion());
+        PeerBucketKey newKey = new PeerBucketKey(g, a, i, j, r);
 
-        AssetManagementData amd = (oldAmd == null ? new AssetManagementData() : oldAmd);
-
+        // 버킷 집계
         if (oldAmd == null) {
             // 신규: +1, +myTotals
             if (peerRepository.applyDeltaToPeerBucket(newKey, +1, newTotals) == 0) {
@@ -141,10 +155,41 @@ public class PeerServiceImpl implements PeerService{
             }
         }
 
-        return null;
+        // 평균 계산 + 라벨링
+        AssetPeerData apd = peerRepository.findPeerBucket(g, a, i, j, r).orElseThrow();
+        int n = apd.getApdNCustomers();
+
+        return PeerCompareResponse.builder()
+                .myTotalAssets(totalAssets)
+                .myTotalLiabilities(totalLiabilities)
+                .myNetWorth(netWorth)
+                .myCash(cash)
+                .myInstallment(installment)
+                .myDeposit(deposit)
+                .myForeign(foreign)
+                .myGold(gold)
+                .avgTotalAssets(div(apd.getApdTotalAssets(), n))
+                .avgTotalLiabilities(div(apd.getApdTotalLiabilities(), n))
+                .avgNetWorth(div(apd.getApdNetWorth(), n))
+                .avgCash(div(apd.getApdTotalCash(), n))
+                .avgInstallment(div(apd.getApdTotalInstallment(), n))
+                .avgDeposit(div(apd.getApdTotalDeposit(), n))
+                .avgForeign(div(apd.getApdTotalForeign(), n))
+                .avgGold(div(apd.getApdTotalGold(), n))
+                .nCustomers(n)
+                .genderLabel(labelGender(g))
+                .ageBandLabel(a + "대")
+                .incomeCdLabel(labelIncome(i))
+                .jobCdLabel(labelJob(j))
+                .regionLabel(r)
+                .build();
     }
 
-    private record Bounds(int min, Integer max) {}
+    private BigDecimal div(BigDecimal sum, int n) {
+        if (sum == null || n <= 0) return BigDecimal.ZERO;
+        return sum.divide(BigDecimal.valueOf(n), 2, RoundingMode.HALF_UP);
+    }
+
     private Bounds incomeBounds(String code) {
         return switch (code) {
             case "I1" -> new Bounds(0, 100);
@@ -154,6 +199,34 @@ public class PeerServiceImpl implements PeerService{
             case "I5" -> new Bounds(800, 1000);
             case "I6" -> new Bounds(1000, null); // 오픈엔드
             default -> new Bounds(0, null);
+        };
+    }
+
+    private String labelGender(String g) { return "F".equals(g) ? "여성" : "남성"; }
+
+    private String labelIncome(String cd) {
+        return switch (cd) {
+            case "I1" -> "100만원 미만";
+            case "I2" -> "100~300만원";
+            case "I3" -> "300~500만원";
+            case "I4" -> "500~800만원";
+            case "I5" -> "800~1000만원";
+            case "I6" -> "1000만원 이상";
+            default -> cd;
+        };
+    }
+
+    private String labelJob(String cd) {
+        return switch (cd) {
+            case "J1" -> "학생";
+            case "J2" -> "무직/구직";
+            case "J3" -> "사무/전문직";
+            case "J4" -> "서비스/판매직";
+            case "J5" -> "생산/노무";
+            case "J6" -> "공공/교육/보건";
+            case "J7" -> "프리랜서/자영업";
+            case "J8" -> "기타";
+            default -> cd;
         };
     }
 }
