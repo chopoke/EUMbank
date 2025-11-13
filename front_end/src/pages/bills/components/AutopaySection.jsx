@@ -1,12 +1,12 @@
 // src/pages/bills/components/AutopaySection.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import api from "../../../api/axios";
 
 /** 계좌 마스킹: ***-***-1234 형태 */
 const maskAccount = (n) => String(n || "").replace(/\d(?=(?:\D*\d){4})/g, "*");
 
 /**
- * 최소 UI 자동이체 섹션
+ * UI 자동이체 섹션
  * - 목록 조회:   GET    /api/bills/:ubNo/autopay
  * - 신규 등록:   POST   /api/bills/:ubNo/autopay        { aNo, payDay, payTime, memo }
  * - 상태 토글:   PATCH  /api/bills/autopay/:baNo        { active }
@@ -19,7 +19,6 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
   const [saving, setSaving] = useState(false);
 
   const list = Array.isArray(accounts) ? accounts : [];
-  const accountInfo = list.find((acc) => Number(acc.aNo) === Number(aNo));
 
   // 셀 표기를 위한 라벨(이미 마스킹된 acc.label 우선)
   const labelFor = (num) => {
@@ -30,9 +29,9 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
 
   const [form, setForm] = useState({ payDay: "", payTime: "09:00:00", memo: "" });
 
-  const dayOptions = useMemo(() => Array.from({ length: 31 }, (_, i) => i + 1), []);
+  const dayOptions = useMemo(() => Array.from({ length: 28 }, (_, i) => i + 1), []);
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!ubNo) return;
     setLoading(true);
     try {
@@ -43,11 +42,11 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [ubNo]);
 
   useEffect(() => {
     load();
-  }, [ubNo]);
+  }, [load]);
 
   async function onCreate(e) {
     e.preventDefault();
@@ -56,8 +55,8 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
       return;
     }
     const payDay = Number(form.payDay);
-    if (!Number.isInteger(payDay) || payDay < 1 || payDay > 31) {
-      alert("이체일은 1~31 사이여야 합니다.");
+    if (!Number.isInteger(payDay) || payDay < 1 || payDay > 28) {
+      alert("이체일은 1~28 사이여야 합니다.");
       return;
     }
     setSaving(true);
@@ -126,7 +125,7 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
       {/* 등록 폼 */}
       <form onSubmit={onCreate} className="grid gap-2 sm:grid-cols-5 items-end">
         <div className="sm:col-span-1">
-          <label className="block text-sm text-gray-600 mb-1">이체일(1~31)</label>
+          <label className="block text-sm text-gray-600 mb-1">이체일(1~28)</label>
           <select
             className="w-full border rounded px-2 py-1"
             value={form.payDay}
@@ -143,7 +142,7 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
         </div>
 
         <div className="sm:col-span-1">
-          <label className="block text-sm text-gray-600 mb-1">이체시각(HH:MM:SS)</label>
+          <label className="block text-sm text-gray-600 mb-1">이체시각</label>
           <input
             type="text"
             className="w-full border rounded px-2 py-1"
