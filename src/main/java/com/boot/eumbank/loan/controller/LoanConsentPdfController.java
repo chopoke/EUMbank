@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -36,14 +37,14 @@ public class LoanConsentPdfController {
             if (laId == null || laId.isBlank()) {
                 return ResponseEntity.badRequest()
                         .contentType(MediaType.TEXT_PLAIN)
-                        .body("laId is blank".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        .body("신청번호가 비어있습니다.".getBytes(StandardCharsets.UTF_8));
             }
 
             var appOpt = appRepo.findByLaId(laId);
             if (appOpt.isEmpty()) {
                 return ResponseEntity.status(404)
                         .contentType(MediaType.TEXT_PLAIN)
-                        .body(("신청을 찾을 수 없습니다: " + laId).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                        .body(("신청을 찾을 수 없습니다: " + laId).getBytes(StandardCharsets.UTF_8));
             }
             var app = appOpt.get();
 
@@ -63,11 +64,11 @@ public class LoanConsentPdfController {
             org.slf4j.LoggerFactory.getLogger(getClass()).error("[PDF] failed: laId={}", laId, e);
             return ResponseEntity.status(400)
                     .contentType(MediaType.TEXT_PLAIN)
-                    .body(("PDF 생성 실패: " + e.getMessage()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    .body(("PDF 생성 실패: " + e.getMessage()).getBytes(StandardCharsets.UTF_8));
         }
     }
 
-    // -------- context_json → 동의 항목 복원 --------
+    // -------- context_json -> 동의 항목 복원 --------
     private List<LoanConsent> readConsentsFromContextJson(String ctxJson){
         try {
             if (ctxJson == null || ctxJson.isBlank()) return List.of();

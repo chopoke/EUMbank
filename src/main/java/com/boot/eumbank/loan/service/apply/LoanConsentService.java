@@ -22,8 +22,6 @@ public interface LoanConsentService {
     List<LoanConsent> getConsentsByLaNo(Long laNo);
 
     // 신청 생성 시, 해당 고객이 바로 전에 동의했던(consent.laNo=null) 약관들을 이 신청 laNo에 귀속
-    void attachConsentsToApplication(Integer customerNo, Long laNo);
+    void attachConsentsToApp(Integer customerNo, Long laNo, String batchKey);
 
-    // 프론트에 전달해서 다운로드 지원하기
-//    List<LoanConsentViewDTO> getConsentsByLaId(String laId);
 }

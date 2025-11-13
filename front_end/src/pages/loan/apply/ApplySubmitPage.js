@@ -8,22 +8,10 @@ import Modal from "../../account/component/pinConponent/Modal";
 import { PinPadModal } from "../../account/component/pinConponent/PinPadModal";
 import api from "../../../api/axios";
 
-function pick(val, ...keys) {
-  for (const k of keys) {
-    const v = k.split(".").reduce((o, p) => (o ? o[p] : undefined), val);
-    if (v != null) return v;
-  }
-  return undefined;
-}
-function pickLaId(resp) {
-  return (
-    pick(resp, "laId", "la_id", "laNo", "la_no", "id", "applicationId") ??
-    pick(resp, "data.laId", "data.la_id", "data.laNo", "data.la_no", "data.id", "data.applicationId")
-  );
-}
+
 function normProduct(p = {}) {
   return {
-    lpdNo: Number(p.lpdNo ?? p.lpd_no ?? 0) || 0,
+    lpdNo: Number(p.lpdNo ?? p.lpd_no ?? 0) || 0,   // 혹시 몰라서 폴백방어
     code: p.productCode ?? p.code ?? p.lpd_code ?? p.lpdCode ?? p.id ?? "",
   };
 }
@@ -31,8 +19,7 @@ function normProduct(p = {}) {
 export default function ApplySubmitPage() {
   const { code } = useParams();
   const nav = useNavigate();
-  const [pinOpen, setPinOpen] = React.useState(false);    //pin검사
-
+  const [pinOpen, setPinOpen] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
   const flow = loadFlow(code);
@@ -48,101 +35,85 @@ export default function ApplySubmitPage() {
     try {
       setSubmitting(true);
 
+      // 약관 단계에서 생성/저장해둔 batchKey 가져오기
+      const storageKey = `loan:termsBatchKey:${code}`;
+      const termsBatchKey = localStorage.getItem(storageKey) || null;
+
+      // 컨텍스트 로드
       const product = flow.product || {};
       const form = flow.form || {};
       const quote = flow.quote || {};
-      const rawConsents = (flow.consents || form.consents || []).filter(Boolean);   // 동의여부
+      const rawConsents = (flow.consents || form.consents || []).filter(Boolean);
 
-      // 동의한 시간 저장
-      const consents = rawConsents.map(c => ({
-        code: String(c.code || c.id || "").toUpperCase(),  // 코드 통일
+      // 동의 항목 정규화
+      const consents = rawConsents.map((c) => ({
+        code: String(c.code || c.id || "").toUpperCase(),
         agreed: !!c.agreed,
         agreedAt: c.agreedAt || new Date().toISOString(),
       }));
 
+      //  고객번호 추출
       const me = JSON.parse(localStorage.getItem("me") || "{}");
-      const customerNo = Number(me?.cNo ?? me?.customerNo ?? form?.customerNo ?? 0) || undefined;
+      const customerNo =
+        Number(me?.cNo ?? me?.customerNo ?? form?.customerNo ?? 0) || undefined;
 
-      const P = normProduct(product); // { lpdNo, code }
+      // 상품 정규화
+      const P = normProduct(product);       // lpdNo, code
 
-      // --- V1: 신규 DTO(CreateApplicationRequestDTO) 스키마 ---
-      const desiredAmountV1 = Number( (quote?.approvedAmount ?? form.desiredAmount ?? 0) );
-      const desiredTermV1   = Number( (quote?.approvedTerm   ?? form.desiredTerm   ?? 0) );
+      // DTo에 맞게 페이로드 구성
+      const desiredAmount = Number(
+        quote?.approvedAmount ?? form.desiredAmount ?? 0
+      );
+      const desiredTerm = Number(
+        quote?.approvedTerm ?? form.desiredTerm ?? 0
+      );
 
-      const payloadV1 = {
+      const payload = {
         productCode: P.code || String(P.lpdNo || ""),
-         ...(customerNo ? { customerNo } : {}),
+        ...(customerNo ? { customerNo } : {}),
 
         payoutAccountNo: Number(form.payoutAccountNo ?? 0),
-        repayAccountNo:  Number(form.repayAccountNo  ?? 0),
+        repayAccountNo: Number(form.repayAccountNo ?? 0),
 
-        desiredAmount: desiredAmountV1,
-        desiredTerm:   desiredTermV1,
-        purposeCode:   form.purpose ?? "기타",
+        desiredAmount,
+        desiredTerm,
+        purposeCode: form.purpose ?? "기타",
 
-        // 한글 정책 유지
+        // 한글 저장 정책
         rateType: form.rateType ?? "고정금리",
         rpayType: form.rpayType ?? "원리금균등",
 
-        occupation:     form.occupation ?? "",
-        incomeAnnual:   Number(form.incomeAnnual ?? 0),
-        collateralValue: (form.collateralValue ?? null) != null ? Number(form.collateralValue) : null,
-        jeonseDeposit:   (form.jeonseDeposit   ?? null) != null ? Number(form.jeonseDeposit)   : null,
+        occupation: form.occupation ?? "",
+        incomeAnnual: Number(form.incomeAnnual ?? 0),
+        collateralValue:
+          form.collateralValue != null ? Number(form.collateralValue) : null,
+        jeonseDeposit:
+          form.jeonseDeposit != null ? Number(form.jeonseDeposit) : null,
 
         // 견적 echo
-        quoteApprovedAmount: quote?.approvedAmount != null ? Number(quote.approvedAmount) : null,
-        quoteAppliedRate:    quote?.appliedRate    != null ? Number(quote.appliedRate)    : null,
-        quoteApprovedTerm:   quote?.approvedTerm   != null ? Number(quote.approvedTerm)   : null,
-        quoteMonthlyPayment: quote?.monthlyPayment != null ? Number(quote.monthlyPayment) : null,
+        quoteApprovedAmount:
+          quote?.approvedAmount != null ? Number(quote.approvedAmount) : null,
+        quoteAppliedRate:
+          quote?.appliedRate != null ? Number(quote.appliedRate) : null,
+        quoteApprovedTerm:
+          quote?.approvedTerm != null ? Number(quote.approvedTerm) : null,
+        quoteMonthlyPayment:
+          quote?.monthlyPayment != null ? Number(quote.monthlyPayment) : null,
 
-        // 동의여부
-        consents, 
+        consents,
         extra: quote?.calcTrace ? { calcTrace: quote.calcTrace } : undefined,
+
+        // 약관신청 매핑용 그룹용 키!!!
+        termsBatchKey,
       };
 
-      // --- V2: 레거시 스키마 ---
-      const laApplAmountV2 = Number( (quote?.approvedAmount ?? form.desiredAmount ?? 0) );
-      const laDesiredTermV2 = Number( (quote?.approvedTerm  ?? form.desiredTerm   ?? 0) );
+      // 신청 생성
+      const res = await createLoanApplication(code, payload);
+      const data = res?.data ?? res;
+      const laId = data?.laId || data?.data?.laId;
+      if (!laId) throw new Error("신청 처리는 되었으나 신청번호(laId)가 응답에 없습니다.");
 
-      const payloadV2 = {
-        productCode: code,
-        ...(customerNo ? { customerNo } : {}),
-        ...(P.lpdNo ? { lpdNo: P.lpdNo } : {}),
-        laPayoutANo: Number(form.payoutAccountNo ?? 0),
-        laRepayANo:  Number(form.repayAccountNo  ?? 0),
-        laApplAmount: laApplAmountV2,
-        laDesiredTerm: laDesiredTermV2,
-        laPurposeCode: form.purpose ?? "기타",
-        laChannel: "WEB",
-        laRpayType: form.rpayType ?? "원리금균등",
-        laRateType: form.rateType ?? "고정금리",
-        laRiskScore: quote?.calcTrace?.riskScore ?? null,
-        laConsents: consents,       // DTO의 @JsonAlias ("laConsents")
-      };
-
-      // 우선 V1 → 실패 시 V2 재시도
-      let res, data, laId;
-      try {
-        res = await createLoanApplication(code, payloadV1);
-        data = res?.data ?? res;
-        laId = pickLaId(data);
-        if (!laId) throw new Error("NO_ID_IN_V1");
-      } catch (e1) {
-        try {
-          res = await createLoanApplication(code, payloadV2);
-          data = res?.data ?? res;
-          laId = pickLaId(data);
-          if (!laId) throw new Error("NO_ID_IN_V2");
-        } catch (e2) {
-          console.error("Submit failed. V1/V2 both failed.", { e1, e2, lastResponse: data });
-          throw new Error(
-            (e2?.response?.data?.message ||
-              e2?.message ||
-              "신청 처리 중 오류(응답에 신청번호가 없습니다).")
-          );
-        }
-      }
-
+      //로컬 플로우/라우팅 처리
       const next = { ...flow, step: 6, laId };
       saveFlow(code, next);
       nav(`/loan/apply/${encodeURIComponent(code)}/complete/${encodeURIComponent(laId)}`);
@@ -163,7 +134,9 @@ export default function ApplySubmitPage() {
             제출 후 관리자가 확인/승인 과정을 진행합니다. 상태는 “신청중”으로 표시됩니다.
           </div>
           <button
-            className={`px-4 py-2 rounded-xl text-white ${submitting ? "bg-gray-400" : "bg-blue-700 hover:bg-blue-800"}`}
+            className={`px-4 py-2 rounded-xl text-white ${
+              submitting ? "bg-gray-400" : "bg-blue-700 hover:bg-blue-800"
+            }`}
             disabled={submitting}
             onClick={() => setPinOpen(true)}
           >
@@ -188,13 +161,12 @@ export default function ApplySubmitPage() {
 
                 if (!data?.ok) {
                   alert("등록된 PIN과 일치하지 않습니다.");
-                  return; // 모달은 유지해서 다시 입력하게
+                  return; // 모달 유지 -> 재입력
                 }
 
-                // 2) 일치하면 모달 닫고 실제 신청 진행
+                // 2) 일치 시 실제 신청 진행
                 setPinOpen(false);
-                await onSubmit(); // 기존 신청 로직 호출
-
+                await onSubmit();
               } catch (e) {
                 console.error(e);
                 alert("PIN 확인 중 오류가 발생했습니다.");

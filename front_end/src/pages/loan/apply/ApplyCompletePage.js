@@ -143,7 +143,7 @@ async function downloadConsentsPdf(laId) {
     });
 
     // 3) 다운로드
-    doc.save(`loan-consents_${laId}.pdf`);
+    doc.save(`이음은행_대출_약관_동의서${laId}.pdf`);
   } catch (err) {
     console.error(err);
     alert("약관 동의서 PDF 생성 중 오류가 발생했습니다.");
