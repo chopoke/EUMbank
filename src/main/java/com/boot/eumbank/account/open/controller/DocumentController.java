@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -53,12 +54,23 @@ public class DocumentController {
     @GetMapping(value = "/documents")
     public ResponseEntity<DocumentListResponse> getDocuments(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {  // ✅ sort 추가
+        logger.info("DocumentController => getDocuments - page: {}, size: {}, sort: {}", page, size, sort);
 
-        logger.info("DocumentController => getDocuments");
-        
-        Pageable pageable = PageRequest.of(page, size);
+        // 정렬 파싱
+        String[] sortParams = sort.split(",");
+        Sort.Direction direction = sortParams.length > 1 &&
+                sortParams[1].equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        String sortField = sortParams[0];
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
+
         DocumentListResponse response = documentService.getDocuments(pageable);
+
+        logger.info("응답 - 문서 수: {}, 총 페이지: {}, 현재 페이지: {}",
+                response.getDocuments().size(), response.getTotalPages(), response.getCurrentPage());
+
         return ResponseEntity.ok(response);
     }
 
