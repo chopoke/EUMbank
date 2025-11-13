@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import api from "../../../api/axios";
 import { ArrowDownTrayIcon, BanknotesIcon } from "@heroicons/react/24/outline";
+import PinVerifyModal from "./PinVerifyModal";
 
 export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
   const [rows, setRows] = useState([]);
@@ -10,6 +11,11 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
   const [loading, setLoading] = useState(false);
   const [paying, setPaying] = useState(null); // biNo
   const [downloading, setDownloading] = useState(null);
+
+  // PIN 모달 상태
+  const [pinOpen, setPinOpen] = useState(false);
+  const [pinTargetBiNo, setPinTargetBiNo] = useState(null);
+  const [pinSubmitting, setPinSubmitting] = useState(false);
 
   const load = async (off = 0) => {
     if (!ubNo) return;
@@ -37,21 +43,51 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
 
   const hasMore = rows.length < total;
 
-  const pay = async (biNo) => {
+  // "바로 납부" 버튼 클릭 시: PIN 모달 열기
+  const handleClickPay = (biNo) => {
     if (!aNo) {
       alert("결제 계좌를 먼저 선택하세요.");
       return;
     }
-    setPaying(biNo);
+    setPinTargetBiNo(biNo);
+    setPinOpen(true);
+  };
+
+  // PIN 모달에서 PIN 입력 완료 시
+  const handlePinConfirm = async (pin) => {
+    if (!pinTargetBiNo) return;
+    setPinSubmitting(true);
+    setPaying(pinTargetBiNo);
     try {
-      await api.post(`/api/bills/${ubNo}/pay-now`, null, { params: { biNo, aNo } });
+      await api.post(
+        `/api/bills/${ubNo}/pay-now`,
+        null,
+        {
+          params: { biNo: pinTargetBiNo, aNo, pin }, // @RequestParam biNo, aNo, pin
+        }
+      );
       await load(0); // 목록 리프레시
+      setPinOpen(false);
+      setPinTargetBiNo(null);
     } catch (e) {
       console.error(e);
-      alert("납부에 실패했습니다.");
+      if (e.response?.status === 401) {
+        alert("PIN 번호가 올바르지 않습니다.");
+        throw e; // PinPadModal 에서 digits 리셋
+      } else {
+        alert("납부에 실패했습니다.");
+        throw e;
+      }
     } finally {
       setPaying(null);
+      setPinSubmitting(false);
     }
+  };
+
+  const handlePinClose = () => {
+    if (pinSubmitting) return;
+    setPinOpen(false);
+    setPinTargetBiNo(null);
   };
 
   // === 영수증 다운로드 ===
@@ -134,7 +170,7 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
                   <button
                     className="flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-600 text-white text-xs hover:bg-blue-700 disabled:opacity-60 mx-auto"
                     disabled={paying === r.biNo}
-                    onClick={() => pay(r.biNo)}
+                    onClick={() => handleClickPay(r.biNo)}
                   >
                     <BanknotesIcon className="w-4 h-4" />
                     {paying === r.biNo ? "처리 중..." : "바로 납부"}
@@ -184,6 +220,16 @@ export default function InvoiceTable({ ubNo, aNo, pageSize = 5 }) {
           </button>
         )}
       </div>
+
+      {/* PIN 모달 */}
+      <PinVerifyModal
+        open={pinOpen}
+        title="공과금 바로 납부"
+        description="선택한 청구서를 출금하기 위해 결제 PIN 번호를 입력해주세요."
+        loading={pinSubmitting}
+        onConfirm={handlePinConfirm}
+        onClose={handlePinClose}
+      />
     </div>
   );
 }

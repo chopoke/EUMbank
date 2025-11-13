@@ -1,5 +1,6 @@
 package com.boot.eumbank.bill.controller;
 
+import com.boot.eumbank.account.open.service.account.AccoutService;
 import com.boot.eumbank.bill.core.BillPaymentService;
 import com.boot.eumbank.bill.core.BillRateService;
 import com.boot.eumbank.bill.dto.UtilityBillDto;
@@ -40,6 +41,7 @@ public class BillController {
     private final BillPaymentRepo paymentRepo;
     private final KepcoAdapter kepco; // 실제 구현 주입
     private final JdbcTemplate jdbc;
+    private final AccoutService accountService;
 
     // 청구서 목록: 상태 필터 + 페이지(단순 offset)
     @GetMapping("/{ubNo}/invoices")
@@ -75,11 +77,24 @@ public class BillController {
 
     // 즉시 납부
     @PostMapping("/{ubNo}/pay-now")
-    public BillPayment payNow(@PathVariable Integer ubNo, @RequestParam Integer biNo, @RequestParam Integer aNo){
-        // ubNo는 보안상 검증만(해당 biNo가 ubNo 소속인지)
+    public ResponseEntity<?> payNow(
+            @PathVariable Integer ubNo,
+            @RequestParam Integer biNo,
+            @RequestParam Integer aNo,
+            @RequestParam String pin // ★ 프론트에서 PIN 받아오기
+    ){
         var inv = invRepo.findById(biNo).orElseThrow();
-        if (!Objects.equals(inv.getUbNo(), ubNo)) throw new IllegalArgumentException("mismatch");
-        return payment.payNow(biNo, aNo);
+        if (!Objects.equals(inv.getUbNo(), ubNo))
+            throw new IllegalArgumentException("mismatch");
+
+        // ★ PIN 검증
+        Map<String, Object> pinResult = accountService.verifyPin(pin);
+        if (!Boolean.TRUE.equals(pinResult.get("pinBooleanCheck"))) {
+            return ResponseEntity.status(401).body(Map.of("error","INVALID_PIN"));
+        }
+
+        // 성공 → 실제 납부
+        return ResponseEntity.ok(payment.payNow(biNo, aNo));
     }
 
     // 요금계산: 프론트가 임의 사용량을 전달

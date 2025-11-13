@@ -1,6 +1,7 @@
 // src/pages/bills/components/AutopaySection.jsx
 import { useEffect, useMemo, useState, useCallback } from "react";
 import api from "../../../api/axios";
+import PinVerifyModal from "./PinVerifyModal";
 
 /** 계좌 마스킹: ***-***-1234 형태 */
 const maskAccount = (n) => String(n || "").replace(/\d(?=(?:\D*\d){4})/g, "*");
@@ -27,9 +28,16 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
     return hit.label || maskAccount(hit.accountNo);
   };
 
-  const [form, setForm] = useState({ payDay: "", payTime: "09:00:00", memo: "" });
+  const [form, setForm] = useState({
+    payDay: "",
+    payTime: "09:00:00",
+    memo: "",
+  });
 
-  const dayOptions = useMemo(() => Array.from({ length: 28 }, (_, i) => i + 1), []);
+  const dayOptions = useMemo(
+    () => Array.from({ length: 28 }, (_, i) => i + 1),
+    []
+  );
 
   const load = useCallback(async () => {
     if (!ubNo) return;
@@ -48,7 +56,44 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
     load();
   }, [load]);
 
-  async function onCreate(e) {
+  // PIN 모달 상태
+  const [pinOpen, setPinOpen] = useState(false);
+  const [pinJob, setPinJob] = useState(null); // { label, errorMessage, handler(pin) }
+  const [pinSubmitting, setPinSubmitting] = useState(false);
+
+  const openPinFor = (job) => {
+    setPinJob(job);
+    setPinOpen(true);
+  };
+
+  const handlePinConfirm = async (pin) => {
+    if (!pinJob || !pin) return;
+    setPinSubmitting(true);
+    try {
+      await pinJob.handler(pin);
+      setPinOpen(false);
+      setPinJob(null);
+      await load();
+    } catch (e) {
+      if (e.response?.status === 401) {
+        alert("PIN 번호가 올바르지 않습니다.");
+        throw e; // PinPadModal 에서 digits 리셋
+      } else {
+        alert(pinJob.errorMessage || "작업에 실패했습니다.");
+        throw e;
+      }
+    } finally {
+      setPinSubmitting(false);
+    }
+  };
+
+  const handlePinClose = () => {
+    if (pinSubmitting) return;
+    setPinOpen(false);
+    setPinJob(null);
+  };
+
+  function onCreate(e) {
     e.preventDefault();
     if (!aNo) {
       alert("결제 계좌를 먼저 선택하세요.");
@@ -59,49 +104,69 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
       alert("이체일은 1~28 사이여야 합니다.");
       return;
     }
-    setSaving(true);
-    try {
-      await api.post(`/api/bills/${ubNo}/autopay`, {
-        aNo: Number(aNo),
-        payDay,
-        payTime: form.payTime || "09:00:00",
-        memo: form.memo?.trim() || "",
-      });
-      setForm({ payDay: "", payTime: "09:00:00", memo: "" });
-      await load();
-    } catch {
-      alert("자동이체 등록에 실패했습니다.");
-    } finally {
-      setSaving(false);
-    }
+
+    openPinFor({
+      label: "자동이체 등록",
+      errorMessage: "자동이체 등록에 실패했습니다.",
+      handler: (pin) => {
+        setSaving(true);
+        return api.post(
+          `/api/bills/${ubNo}/autopay`,
+          {
+            aNo: Number(aNo),
+            payDay,
+            payTime: form.payTime || "09:00:00",
+            memo: form.memo?.trim() || "",
+          },
+          { params: { pin } }
+        )
+          .then(() => {
+            setForm({ payDay: "", payTime: "09:00:00", memo: "" });
+          })
+          .finally(() => {
+            setSaving(false);
+          });
+      },
+    });
   }
 
-  async function toggleActive(baNo, cur) {
-    try {
-      await api.patch(`/api/bills/autopay/${baNo}`, { active: cur === "Y" ? "N" : "Y" });
-      await load();
-    } catch {
-      alert("상태 변경에 실패했습니다.");
-    }
+  function toggleActive(baNo, cur) {
+    openPinFor({
+      label: "자동이체 상태 변경",
+      errorMessage: "상태 변경에 실패했습니다.",
+      handler: (pin) =>
+        api.patch(
+          `/api/bills/autopay/${baNo}`,
+          { active: cur === "Y" ? "N" : "Y" },
+          { params: { pin } }
+        ),
+    });
   }
 
-  async function updateRow(baNo, patch) {
-    try {
-      await api.patch(`/api/bills/autopay/${baNo}`, patch);
-      await load();
-    } catch {
-      alert("수정에 실패했습니다.");
-    }
+  function updateRow(baNo, patch) {
+    openPinFor({
+      label: "자동이체 수정",
+      errorMessage: "수정에 실패했습니다.",
+      handler: (pin) =>
+        api.patch(
+          `/api/bills/autopay/${baNo}`,
+          patch,
+          { params: { pin } }
+        ),
+    });
   }
 
-  async function removeRow(baNo) {
+  function removeRow(baNo) {
     if (!window.confirm("해당 자동이체를 삭제하시겠습니까?")) return;
-    try {
-      await api.delete(`/api/bills/autopay/${baNo}`);
-      await load();
-    } catch {
-      alert("삭제에 실패했습니다.");
-    }
+
+    openPinFor({
+      label: "자동이체 삭제",
+      errorMessage: "삭제에 실패했습니다.",
+      handler: (pin) =>
+        api.delete(`/api/bills/autopay/${baNo}`, {
+          params: { pin },
+        }),
+    });
   }
 
   return (
@@ -113,23 +178,28 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
           <>
             현재 결제 계좌:&nbsp;
             <span className="font-medium text-gray-800">
-              {/* 기존: ({accountInfo?.accountNo}) → 마스킹으로 교체 */}
               {labelFor(aNo)}
             </span>
           </>
         ) : (
-          <span className="text-red-600">미선택 — 상단 ‘결제 계좌’에서 선택하세요.</span>
+          <span className="text-red-600">
+            미선택 — 상단 ‘결제 계좌’에서 선택하세요.
+          </span>
         )}
       </p>
 
       {/* 등록 폼 */}
       <form onSubmit={onCreate} className="grid gap-2 sm:grid-cols-5 items-end">
         <div className="sm:col-span-1">
-          <label className="block text-sm text-gray-600 mb-1">이체일(1~28)</label>
+          <label className="block text-sm text-gray-600 mb-1">
+            이체일(1~28)
+          </label>
           <select
             className="w-full border rounded px-2 py-1"
             value={form.payDay}
-            onChange={(e) => setForm((f) => ({ ...f, payDay: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, payDay: e.target.value }))
+            }
             required
           >
             <option value="">선택</option>
@@ -148,7 +218,9 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
             className="w-full border rounded px-2 py-1"
             placeholder="09:00:00"
             value={form.payTime}
-            onChange={(e) => setForm((f) => ({ ...f, payTime: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, payTime: e.target.value }))
+            }
           />
         </div>
 
@@ -159,7 +231,9 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
             className="w-full border rounded px-2 py-1"
             placeholder="예: 매월 전기요금"
             value={form.memo}
-            onChange={(e) => setForm((f) => ({ ...f, memo: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, memo: e.target.value }))
+            }
           />
         </div>
 
@@ -224,7 +298,11 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
                       <select
                         className="border rounded px-2 py-1"
                         value={r.baPayDay ?? ""}
-                        onChange={(e) => updateRow(r.baNo, { payDay: Number(e.target.value) })}
+                        onChange={(e) =>
+                          updateRow(r.baNo, {
+                            payDay: Number(e.target.value),
+                          })
+                        }
                       >
                         {dayOptions.map((d) => (
                           <option key={d} value={d}>
@@ -239,7 +317,8 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
                         defaultValue={r.baPayTime ?? "09:00:00"}
                         onBlur={(e) => {
                           const v = (e.target.value || "09:00:00").trim();
-                          if (v !== r.baPayTime) updateRow(r.baNo, { payTime: v });
+                          if (v !== r.baPayTime)
+                            updateRow(r.baNo, { payTime: v });
                         }}
                       />
                     </td>
@@ -250,12 +329,16 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
                         defaultValue={r.baMemo ?? ""}
                         onBlur={(e) => {
                           const v = (e.target.value || "").trim();
-                          if (v !== (r.baMemo ?? "")) updateRow(r.baNo, { memo: v });
+                          if (v !== (r.baMemo ?? ""))
+                            updateRow(r.baNo, { memo: v });
                         }}
                       />
                     </td>
                     <td className="py-2 pr-4">
-                      <button onClick={() => removeRow(r.baNo)} className="text-red-600 hover:underline">
+                      <button
+                        onClick={() => removeRow(r.baNo)}
+                        className="text-red-600 hover:underline"
+                      >
                         삭제
                       </button>
                     </td>
@@ -266,6 +349,16 @@ export default function AutopaySection({ ubNo, aNo, accounts = [] }) {
           </table>
         </div>
       </div>
+
+      {/* PIN 모달 */}
+      <PinVerifyModal
+        open={pinOpen}
+        title={pinJob?.label || "결제 PIN 번호 확인"}
+        description="자동이체 등록/변경/삭제 전에 결제 PIN 번호를 확인합니다."
+        loading={pinSubmitting}
+        onConfirm={handlePinConfirm}
+        onClose={handlePinClose}
+      />
     </section>
   );
 }
