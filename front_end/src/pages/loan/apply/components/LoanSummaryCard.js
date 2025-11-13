@@ -2,6 +2,7 @@ import React from "react";
 import { won } from "../../util/money";
 
 export default function LoanSummaryCard({
+
   annualRate, P_req, P_appr, n, r,
   monthlyReq, monthlyAppr,
   isBullet,
@@ -11,7 +12,9 @@ export default function LoanSummaryCard({
   limitMax,
   onRequote, canRequote, quoting,
   totalAtMaturityReq, totalAtMaturityAppr,
+  showLtvBadge = false,
 }) {
+
   return (
     <div className="rounded-2xl border border-gray-100 shadow-sm bg-white p-5">
       <div className="flex items-center gap-2">
@@ -78,8 +81,7 @@ export default function LoanSummaryCard({
               )}
             </div>
           ) : (
-            // isBullet일 때는 상위에서 월이자/총액을 계산해 내려줘도 되고,
-            // 여기서는 totalAtMaturityReq/Appr만 보여줘도 됨.
+            // 만기총액
             <div className="rounded-2xl border border-indigo-100 p-3 bg-indigo-50">
               <div className="grid] gap-2 text-center">
                 <div>
@@ -94,7 +96,7 @@ export default function LoanSummaryCard({
 
         {/* 배지/추적 */}
         <div className="flex flex-wrap gap-2">
-          {typeof quote?.usedLtv === "number" && (
+          {showLtvBadge && typeof quote?.usedLtv === "number" && (
             <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] bg-sky-50 text-sky-700 border border-sky-100">
               LTV 적용: {quote.usedLtv}%
             </span>

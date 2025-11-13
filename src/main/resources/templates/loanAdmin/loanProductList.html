@@ -50,17 +50,6 @@
             <option value="AUTO">자동차</option>
         </select>
 
-        <!-- 상태 필터 -->
-        <select th:field="*{status}"
-                class="border border-gray-200 px-3 py-2 rounded-lg text-sm min-w-[130px]
-                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-            <option value="">전체 상태</option>
-            <option value="DRAFT">DRAFT</option>
-            <option value="PUBLISHED">PUBLISHED</option>
-            <option value="HIDDEN">HIDDEN</option>
-            <option value="ARCHIVED">ARCHIVED</option>
-        </select>
-
         <!-- 활성여부 -->
         <select th:field="*{active}"
                 class="border border-gray-200 px-3 py-2 rounded-lg text-sm min-w-[110px]
@@ -113,19 +102,6 @@
                     th:text="${p.limitMax != null
                              ? #numbers.formatInteger(p.limitMax, 0, 'COMMA') + '원'
                              : '-'}"></td>
-
-                <!-- 상태 뱃지 -->
-                <td class="px-4 py-3">
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-semibold"
-                          th:text="${p.status}"
-                          th:classappend="${
-                                p.status == 'PUBLISHED' ? ' bg-emerald-50 text-emerald-700' :
-                                (p.status == 'DRAFT' ? ' bg-gray-50 text-gray-500' :
-                                (p.status == 'HIDDEN' ? ' bg-yellow-50 text-yellow-700' :
-                                (p.status == 'ARCHIVED' ? ' bg-slate-50 text-slate-500' :
-                                ' bg-gray-50 text-gray-500')))}">
-                    </span>
-                </td>
 
                 <!-- 활성 뱃지 -->
                 <td class="px-4 py-3">
@@ -183,7 +159,6 @@
                         size=${page.size},
                         keyword=${dto.keyword},
                         loanType=${dto.loanType},
-                        status=${dto.status},
                         active=${dto.active})}"
            class="px-3 py-1 border rounded-lg bg-white hover:bg-gray-50">
             이전
@@ -196,7 +171,6 @@
                         size=${page.size},
                         keyword=${dto.keyword},
                         loanType=${dto.loanType},
-                        status=${dto.status},
                         active=${dto.active})}"
            th:text="${i + 1}"
            th:classappend="${i} == ${page.number}
@@ -212,7 +186,6 @@
                         size=${page.size},
                         keyword=${dto.keyword},
                         loanType=${dto.loanType},
-                        status=${dto.status},
                         active=${dto.active})}"
            class="px-3 py-1 border rounded-lg bg-white hover:bg-gray-50">
             다음

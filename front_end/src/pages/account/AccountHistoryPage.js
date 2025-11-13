@@ -5,7 +5,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import '../../resources/css/other.css';
 
-// 👇 아이콘 (lucide-react)
+// 아이콘 (lucide-react)
 import {
   ShieldCheck, Wallet2, Banknote, CalendarDays, Edit3, Save, RefreshCcw,
   FileDown, FileSpreadsheet, Filter, ChevronLeft, ChevronRight, Search
@@ -93,8 +93,14 @@ function AccountHistoryPage() {
 
   // 계좌 요약/상세
   React.useEffect(() => {
+    if (!a_no) {
+      console.warn("[AccountHistoryPage] a_no 없음. 라우트 파라미터 확인 필요.");
+      return;
+    }
+
     fetchAccountDetail(Number(a_no))
       .then((res) => {
+        console.log("detail res", res.data);
         const d = res.data;
         const cur = (d.a_currency ?? d.currency ?? 'KRW').toUpperCase();
         setAccounts({

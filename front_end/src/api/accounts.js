@@ -78,7 +78,8 @@ export const uploadLoanDoc = (code, file) => {
 };
 
 
-// 대출관리자단 ============================
+//  ========================== [  대출관리자단  ] ============================
+
 export const adminListApplications = (params = {}) =>
 api.get("/api/loan/admin/applications", { params });
 

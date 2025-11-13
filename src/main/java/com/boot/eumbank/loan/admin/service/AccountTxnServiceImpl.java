@@ -20,7 +20,6 @@ import java.util.UUID;
 public class AccountTxnServiceImpl {
 
     private final AccountSelectRepository accountRepository;      // 계좌 저장
-
     private final TransferHistoryRepository historyRepository;
 
     private static final String ACC_TYPE_DDA = "입출금";

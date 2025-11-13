@@ -114,7 +114,7 @@ function InstallmentHistoryPage() {
           currency: cur,
           balance: Number(d.i_principal_bal ?? d.i_amount ?? d.a_balance ?? 0),
           openAt: parseTs(d.i_join_date ?? d.a_opened_at),
-          rate: d.i_rate ?? d.a_rate,
+          rate: d.a_rate ,
         });
       })
       .catch(console.error);

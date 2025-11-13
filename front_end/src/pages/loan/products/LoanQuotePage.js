@@ -24,6 +24,7 @@ const OCCUPATIONS = [
   { key: "UNEMPLOYED", label: "무직" },
 ];
 
+
 /** 공통 유틸 */
 const won = (n) => Number(n || 0).toLocaleString("ko-KR");
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -109,6 +110,7 @@ function ReviewModal({ open, onClose, onProceed, product, form, quote, accounts 
           <div className="rounded-xl border p-4">
             <div className="font-semibold mb-2">견적 결과</div>
             <div className="space-y-1 text-gray-700">
+              {isAuto && <div>차량 유형: {carType === "USED" ? "중고차" : "신차"}</div>}
               <div>적용 금리: {Number(quote?.appliedRate || 0).toFixed(2)}%</div>
               <div>승인(가능) 금액: ₩ {won(quote?.approvedAmount)}</div>
               <div>월 납입액(예상): ₩ {won(quote?.monthlyPayment)}</div>
@@ -199,11 +201,15 @@ export function LoanQuotePageInner({ demoProduct=null, demoCustomerId="" }) {
   const [reviewOpen, setReviewOpen] = React.useState(false);
 
   // 타입 판별
-  const loanType = (product?.type || "").toUpperCase();
-  const isCredit = loanType.includes("CREDIT") || loanType.includes("PERSONAL") || loanType.includes("신용");
-  const isJeonse = loanType.includes("JEONSE") || loanType.includes("전세");
-  const isMortgage = loanType.includes("MORTGAGE") || loanType.includes("담보");
-  const needsCollateral = isJeonse || isMortgage;
+  const loanTypeRaw = String(product?.type || "");
+  const loanType = loanTypeRaw.toUpperCase();
+  const isAuto = loanType.includes("AUTO") || loanTypeRaw.includes("자동차");
+  const isJeonse = loanType.includes("JEONSE") || loanTypeRaw.includes("전세자금");
+  const isMortgage = loanType.includes("MORTGAGE") || loanTypeRaw.includes("주택담보");
+  const needsCollateral = isMortgage || isJeonse || isAuto;
+  
+  // 신차인지 중고차인지(자동차담보대출경우에만)
+  const [carType, setCarType] = React.useState("NEW");
 
   // 옵션 추출
   const opts = React.useMemo(() => Array.isArray(product?.options) ? product.options : [], [product]);
@@ -298,15 +304,18 @@ export function LoanQuotePageInner({ demoProduct=null, demoCustomerId="" }) {
         incomeAnnual,
         desiredAmount: reqAmount,
         desiredTerm,
-        rateType,
-        rpayType,
-        collateralValue: isMortgage ? collateralValue : undefined,
+        rateType: toKoRateType(rateType),   // 고정금리/변동금리
+        rpayType: normalizeRpayKo(rpayType),    // 원리금균등/만기일시/원금균등
+        collateralValue: isMortgage || isAuto ? collateralValue : undefined,
         jeonseDeposit: isJeonse ? jeonseDeposit : undefined,
+        extra: isAuto ? { carType, vehiclePrice: collateralValue } : undefined,
       };
 
-      // const res = await fetchLoanQuote(code, req);
-      // const data = res.data ?? res;
-      // setQuote(data);
+      const res = await fetchLoanQuote(code, req);
+      const data = res.data ?? res;
+      setQuote(data);
+
+
     } catch (e) {
       console.error(e);
       alert(e.message || "한도/금리 조회 실패");
@@ -346,6 +355,7 @@ export function LoanQuotePageInner({ demoProduct=null, demoCustomerId="" }) {
         payoutAccountNo,
         repayAccountNo,
         customerId: stateCustomer || "1",
+        carType,
       },
       step: 1, // 현재 완료된 최종 스텝
     };
@@ -484,7 +494,7 @@ export function LoanQuotePageInner({ demoProduct=null, demoCustomerId="" }) {
 
             {isMortgage && (
               <label className="block text-sm">
-                <span className="text-gray-600">담보가치(원)</span>
+                <span className="text-gray-600">{isAuto ? "차량가격(담보가치)" : "담보가치(원)"}</span>
                 <input
                   type="number"
                   value={collateralValue}
@@ -496,7 +506,7 @@ export function LoanQuotePageInner({ demoProduct=null, demoCustomerId="" }) {
                 )}
               </label>
             )}
-
+            {/* 전세자금대출 */}
             {isJeonse && (
               <label className="block text-sm">
                 <span className="text-gray-600">임차보증금(원)</span>
@@ -511,6 +521,52 @@ export function LoanQuotePageInner({ demoProduct=null, demoCustomerId="" }) {
                 )}
               </label>
             )}
+
+            {/* 자동차담보대출 */}
+            {isAuto && (
+            <>
+              <label className="block text-sm">
+                <span className="text-gray-600">차량가격(담보가치)</span>
+                <input
+                  type="number"
+                  value={collateralValue}
+                  onChange={(e) => setCollateralValue(clamp(Number(e.target.value || 0), 0, 10_000_000_000))}
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2"
+                />
+              </label>
+
+              <div className="block text-sm">
+                <span className="text-gray-600">차량 유형</span>
+                <div className="mt-2 inline-flex rounded-xl border border-gray-200 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setCarType("NEW")}
+                    className={
+                      "px-4 py-2 text-sm transition " +
+                      (carType === "NEW" ? "bg-gray-900 text-white" : "bg-white text-gray-700 hover:bg-gray-50")
+                    }
+                  >
+                    신차
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCarType("USED")}
+                    className={
+                      "px-4 py-2 text-sm transition border-l border-gray-200 " +
+                      (carType === "USED" ? "bg-gray-900 text-white" : "bg-white text-gray-700 hover:bg-gray-50")
+                    }
+                  >
+                    중고차
+                  </button>
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  {carType === "USED"
+                    ? "중고차 선택 시 기준 금리에 0.7%p 가산됩니다."
+                    : "신차 선택 시 상품 기본 금리가 적용됩니다."}
+                </div>
+              </div>
+            </>
+          )}
           </div>
         )}
       </section>
@@ -603,7 +659,7 @@ export function LoanQuotePageInner({ demoProduct=null, demoCustomerId="" }) {
         form={{
           occupation, incomeAnnual, desiredAmount, desiredTerm,
           rateType, rpayType, purpose, collateralValue, jeonseDeposit,
-          payoutAccountNo, repayAccountNo
+          payoutAccountNo, repayAccountNo, carType 
         }}
       />
     </div>
