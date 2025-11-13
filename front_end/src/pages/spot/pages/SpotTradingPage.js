@@ -79,20 +79,37 @@ const SpotTradingPage = () => {
    * @param {number} amount 거래 금액
    * @param {string} product 상품 ('gold' 또는 'silver')
    * @returns {number} 계산된 수량 (g)
+   * 
+   * 백엔드 로직:
+   * - totalPrice = pBuyPrice * quantity (pBuyPrice는 1g당 가격)
+   * - 사용자가 입력한 금액 = amount
+   * - quantity = amount / pBuyPrice (g 단위)
+   * - 백엔드: totalPrice = pBuyPrice * (amount / pBuyPrice) = amount ✓
    */
   const calculateQuantityFromAmount = (amount, product) => {
     if (!amount || amount <= 0) return 0;
 
     const currentPrice = product === 'gold' ? goldPrice : silverPrice;
-    if (!currentPrice) return 0;
+    if (!currentPrice) {
+      console.warn('가격 정보가 없습니다. 가격을 다시 로드합니다.');
+      fetchPrices();
+      return 0;
+    }
 
     const pricePerUnit = tradingSide === 'buy'
       ? (currentPrice.buyPrice ?? currentPrice.basePrice ?? 0)
       : (currentPrice.sellPrice ?? currentPrice.basePrice ?? 0);
 
-    if (!pricePerUnit) return 0;
+    if (!pricePerUnit || pricePerUnit <= 0) {
+      console.warn('가격이 0이거나 유효하지 않습니다. 가격을 다시 로드합니다.');
+      fetchPrices();
+      return 0;
+    }
 
-    return (amount / pricePerUnit) * TRADE_UNIT_WEIGHT;
+    // 백엔드의 buyPrice는 1g당 가격입니다.
+    // 수량(g) = 금액 / 1g당 가격
+    // 백엔드: totalPrice = buyPrice * quantity = buyPrice * (amount / buyPrice) = amount
+    return amount / pricePerUnit;
   };
 
   /**
@@ -100,6 +117,10 @@ const SpotTradingPage = () => {
    * @param {number} quantity 수량 (g)
    * @param {string} product 상품 ('gold' 또는 'silver')
    * @returns {number} 계산된 금액 (원)
+   * 
+   * 백엔드 로직:
+   * - totalPrice = pBuyPrice * quantity (pBuyPrice는 1g당 가격)
+   * - 금액 = quantity * pBuyPrice
    */
   const calculateAmountFromQuantity = (quantity, product) => {
     if (!quantity || quantity <= 0) return 0;
@@ -113,7 +134,9 @@ const SpotTradingPage = () => {
 
     if (!pricePerUnit) return 0;
 
-    return (quantity / TRADE_UNIT_WEIGHT) * pricePerUnit;
+    // 백엔드의 buyPrice는 1g당 가격이므로,
+    // 금액 = quantity * buyPrice
+    return quantity * pricePerUnit;
   };
 
   /**
@@ -345,10 +368,27 @@ const SpotTradingPage = () => {
     try {
       const customerNo = getCustomerNo();
       const productId = selectedProduct === 'gold' ? 'AU' : 'AG';
+      
+      // 가격 확인
+      const currentPrice = selectedProduct === 'gold' ? goldPrice : silverPrice;
+      if (!currentPrice || !currentPrice.buyPrice || !currentPrice.sellPrice) {
+        setMessage('가격 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+        await fetchPrices();
+        setLoading(false);
+        return;
+      }
+      
       const quantityDecimal = calculateQuantityFromAmount(tradingAmount, selectedProduct);
 
       if (!customerNo) {
         setMessage('로그인이 필요합니다.');
+        setLoading(false);
+        return;
+      }
+      
+      if (!quantityDecimal || quantityDecimal <= 0) {
+        setMessage('거래 금액이 너무 작거나 가격 정보가 올바르지 않습니다. 가격을 다시 로드합니다.');
+        await fetchPrices();
         setLoading(false);
         return;
       }
