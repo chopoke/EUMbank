@@ -96,8 +96,10 @@ function App() {
 
   // 최초 1회: RT로 AT 복구
   useEffect(() => {
-    const isSocial = window.location.pathname.startsWith("/social/") && window.location.pathname !== "/social/agree";
-    if (isSocial) {
+    const path = window.location.pathname;
+    const isSocial = path.startsWith("/social/") && path !== "/social/agree";
+    const isLogin  = path === "/login";
+    if (isSocial || isLogin) {
       setIsLoggedIn(!!getAccessToken());
       setReady(true);
       return;
@@ -267,8 +269,16 @@ function App() {
         } />
 
         {/* 공과금페이지 */}
-        <Route path="/bills" element={<BillsLanding />} />
-
+        <Route path="/bills" element={
+          <ProtectedRoute>
+            <BillsLanding />
+          </ProtectedRoute>
+        } />
+        <Route path="/bills/:ubNo" element={
+          <ProtectedRoute>
+            <BillsLanding />
+          </ProtectedRoute>
+        } />
 
         {/* ✅ 현물(Spot) 라우팅 */}
         <Route path="/spot" element={

@@ -213,3 +213,9 @@ firebase:
     path: eumbank-86fbd-firebase-adminsdk-fbsvc-d3d743c1eb.json # firebase 마스터리 키 - json파일 필요함
   project-id: eumbank-86fbd # firebase에서 생성된 프로젝트명
 
+# ===================================================================
+# 공과금 API
+# ===================================================================
+kepco:
+  baseUrl: https://bigdata.kepco.co.kr/openapi/v1/powerUsage/contractType.do
+  apiKey: ${KEPCO_API_KEY:REPLACE_ME}

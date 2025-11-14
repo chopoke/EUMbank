@@ -156,7 +156,7 @@ const QuickActions = ({ isAdmin = false }) => {
 
   const items = [
     { id: "transfer", label: "계좌이체", icon: paths.send, href: "/transfer"  },
-    { id: "bill", label: "공과금", icon: paths.bill, href: "/test" },
+    { id: "bill", label: "공과금", icon: paths.bill, href: "/bills" },
     { id: "asset", label: "자산관리", icon: paths.chart, href: "/asset" },
     { id: "loan", label: "대출", icon: paths.loan, href: "/loan/products" },
     { id: "fx", label: "외화", icon: paths.fx, href: "/foreign/rate" },

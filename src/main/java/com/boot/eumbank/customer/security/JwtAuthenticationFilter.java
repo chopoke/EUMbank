@@ -43,7 +43,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
 
-        // 이미 인증되어 있으면 패스
         if (SecurityContextHolder.getContext().getAuthentication() != null) {
             chain.doFilter(req, res);
             return;
@@ -54,19 +53,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(7);
 
             if (jwt.validateAccessToken(token)) {
-                String userId = jwt.getUserIdFromAccess(token); // 토큰에서 userId(subject) 추출
+                String userId = jwt.getUserIdFromAccess(token); // subject = userId 가정
 
-                customers.findByUserId(userId).ifPresent(c -> {
-                    String raw = c.getRole();                       // "USER" / "ADMIN" / null
-                    String role = (raw == null || raw.isBlank()) ? "USER" : raw.toUpperCase();
-                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+                var opt = customers.findByUserId(userId);
+                if (opt.isPresent()) {
+                    var c = opt.get();
+
+                    // 비활성 계정 즉시 차단
+                    if (!c.isActive()) {
+                        SecurityContextHolder.clearContext();
+                        res.setStatus(423);
+                        res.setContentType("application/json;charset=UTF-8");
+                        res.getWriter().write("{\"code\":\"ACCOUNT_STATUS_BLOCKED\",\"message\":\"계정이 비활성화되었습니다.\"}");
+                        return;
+                    }
+
+                    String role = c.roleOrUser();
                     var auth = new UsernamePasswordAuthenticationToken(
-                            c,                       // Principal (원하면 UserDetails로 교체 가능)
-                            null,                    // Credentials
-                            authorities                // 권한(필요 시 매핑)
-                    );
+                            c, null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
                     SecurityContextHolder.getContext().setAuthentication(auth);
-                });
+                }
             }
         }
 

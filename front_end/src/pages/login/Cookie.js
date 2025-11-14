@@ -19,8 +19,14 @@ export default function Cookie() {
           window.dispatchEvent(new Event("auth:changed"));
           const agreed = await checkAgree();
           navigate(agreed ? "/" : "/social/agree", { replace: true });
-        } catch {
-          alert("소셜 로그인 실패");
+        } catch (e) {
+          const s = e?.response?.status;
+          const c = e?.response?.data?.code;
+          if (s === 423 || c === "ACCOUNT_STATUS_BLOCKED") {
+            alert("계정 상태로 로그인할 수 없습니다. 관리자에게 문의하세요.");
+          } else {
+            alert("소셜 로그인 실패");
+          }
           navigate("/login", { replace: true });
         } finally {
           booting = null;
