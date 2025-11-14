@@ -9,18 +9,10 @@
             margin-top: auto;
         }
         
-        .footer-content-container {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 1.5rem 16px;
-            font-size: 0.75rem;
-            color: #4b5563;
-        }
-        
         .footer-grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 1.25rem;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 1.5rem; /* gap-6 = 24px */
         }
         
         .footer-col {
@@ -92,9 +84,14 @@
         
         /* 갤럭시 폴드 접힘: 280px ~ 480px */
         @media (min-width: 280px) {
-            .footer-content-container {
-                padding: 1.25rem 12px;
-                font-size: 0.75rem;
+            .content-container {
+                padding-left: 1rem; /* 16px */
+                padding-right: 1rem; /* 16px */
+            }
+            
+            .py-10 {
+                padding-top: 2rem; /* 32px */
+                padding-bottom: 2rem; /* 32px */
             }
             
             .footer-grid {
@@ -117,9 +114,14 @@
         
         /* 작은 모바일: 481px ~ 640px */
         @media (min-width: 481px) {
-            .footer-content-container {
-                padding: 1.5rem 16px;
-                font-size: 0.8125rem;
+            .content-container {
+                padding-left: 1.5rem; /* 24px */
+                padding-right: 1.5rem; /* 24px */
+            }
+            
+            .py-10 {
+                padding-top: 2.5rem; /* 40px */
+                padding-bottom: 2.5rem; /* 40px */
             }
             
             .footer-grid {
@@ -143,18 +145,9 @@
         
         /* 태블릿: 641px ~ 1024px */
         @media (min-width: 641px) {
-            .footer-content-container {
-                padding: 2rem 24px;
-                font-size: 0.875rem;
-            }
-            
             .footer-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 1.5rem;
-            }
-            
-            .footer-title {
-                font-size: 0.875rem;
             }
             
             .footer-col > p,
@@ -173,18 +166,9 @@
         
         /* 데스크톱: 1025px 이상 */
         @media (min-width: 1025px) {
-            .footer-content-container {
-                padding: 2.5rem 24px;
-                font-size: 0.875rem;
-            }
-            
             .footer-grid {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
                 gap: 1.5rem;
-            }
-            
-            .footer-title {
-                font-size: 0.875rem;
             }
             
             .footer-col > p,
@@ -204,7 +188,7 @@
 </head>
 <th:block th:fragment="footer">
     <footer class="main-footer">
-        <div class="footer-content-container">
+        <div class="content-container py-10 footer-content">
             <div class="footer-grid">
                 <!-- E-UMBank 정보 -->
                 <div class="footer-col">
