@@ -1,4 +1,3 @@
-// src/main/java/com/boot/eumbank/loan/service/apply/LoanQuoteServiceImpl.java
 package com.boot.eumbank.loan.service.apply;
 
 import com.boot.eumbank.customer.entity.Customer;
@@ -140,9 +139,14 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
         else basis = orZero(req.getCollateralValue());                  // 그외가 들어올 경우 기준금액
 
         // usedLtv 산정 시 우선순위: DB > parseAll > parseLtvPercent > 70
-        Integer usedLtv = (product.getLtvMax()!=null && product.getLtvMax()>0) ? product.getLtvMax()
-                : (ltvMaxFromAll!=null ? ltvMaxFromAll
-                : (ltvPctFromRaw!=null ? ltvPctFromRaw : 70));
+        Integer usedLtv;
+        if (isAuto) {
+            usedLtv = 80;  // 자동차는 차량가의 80%까지만
+        } else {
+            usedLtv = (product.getLtvMax() != null && product.getLtvMax() > 0) ? product.getLtvMax()
+                    : (ltvMaxFromAll != null ? ltvMaxFromAll
+                    : (ltvPctFromRaw != null ? ltvPctFromRaw : 70));
+        }
 
 
         // LTV 캡  ==> 원단위 버리기
@@ -183,7 +187,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
             appliedRate = appliedRate.add(ltvAdjustment(effLtv));       // 금리 표 가져오기
         } else {
             // basis가 없으면 LTV 가산은 생략하고, effLtv는 null 유지
-            log.debug("[QUOTE] basis is zero or null; skip LTV-based adjustment");
+            log.debug("@@@@@@@@ [QUOTE] 기본금이 없어서 가산 생략 @@@@@@@@");
         }
         // 금리 범위 가드(2~25%)
         appliedRate = clampRate(appliedRate, new BigDecimal("2.00"), new BigDecimal("25.00"));
@@ -308,8 +312,8 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
         }
 
         // 12) 로그
-        log.info("[QUOTE] code={}, type={}, rate={}, rpay={}, raw='{}', absLimit={}, ltvPctRaw={}, usedLtvCap={}, desired={}, basis={}, productLimitMax={}, " +
-                        "appliedRate={}, approvedAmount={}, approvedTerm={}, monthly={}, totalInt={}",
+        log.info("@@@@@@@@ [QUOTE] code={}, type={}, rate={}, rpay={}, raw='{}', absLimit={}, ltvPctRaw={}, usedLtvCap={}, desired={}, basis={}, productLimitMax={}, " +
+                        "appliedRate={}, approvedAmount={}, approvedTerm={}, monthly={}, totalInt={} @@@@@@@@@",
                 product.getLoanCode(), product.getLoanType(), rateKo, rpayTypeNorm, rawLimit, absLimit, ltvPctFromRaw, usedLtv,
                 req.getDesiredAmount(), basis, product.getLimitMax(),
                 appliedRate, approvedAmount, approvedTerm, monthlyPayment, totalInterest);
