@@ -39,7 +39,7 @@ public class LoanDocumentServiceImpl implements LoanDocumentService {
 
     @Override
     @Transactional
-    public void saveLoanDocument(MultipartFile file, FileType fileType) {
+    public void saveLoanDocument(MultipartFile file, FileType fileType) { 
 
         if(file == null || file.isEmpty()){
             throw new IllegalArgumentException("업로드 된 파일이 없습니다.");
