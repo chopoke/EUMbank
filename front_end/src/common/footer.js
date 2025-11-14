@@ -1,27 +1,10 @@
 import React from 'react';
-import { Link, useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
-import mainlogo from '../resources/img/eumonly.png'
+import { Youtube, Instagram, Facebook  } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-// 데모용 아이콘 (간단한 SVG)
-const Icon = ({ path, label }) => (
-  // Tailwind의 inline-flex, items-center, gap-2를 대체
-  <span className="icon-wrapper" aria-hidden="true">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d={path} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-    {label && <span className="sr-only">{label}</span>}
-  </span>
-);
-
-export function Footer({ isLoggedIn, user, onLogout }) {
-    const navigate = useNavigate();
-
-    const handleLogoutClick = () => {
-        // 부모로부터 받은 onLogout 함수를 호출합니다.
-        onLogout();
-        // App.js의 onLogout에서 이미 navigate('/')를 처리하므로 여기서는 호출만 합니다.
-    };
+export function Footer() {
+    
 
     return (
     <footer className="main-footer">
@@ -38,17 +21,20 @@ export function Footer({ isLoggedIn, user, onLogout }) {
           <div className="footer-col">
             <div className="footer-title">약관</div>
             <ul className="footer-list">
-              <li><a href="#tos" className="hover-underline">전자금융거래약관</a></li>
-              <li><a href="#privacy" className="hover-underline">개인정보 처리방침</a></li>
-              <li><a href="#disclosure" className="hover-underline">경영공시</a></li>
+              <li><Link to='/ftagree' className="hover-underline">전자금융거래약관</Link></li>
+              <li><Link to='/ftprivacy' className="hover-underline">개인정보 처리방침</Link></li>
+              <li><Link to='/ftdisclosure' className="hover-underline">경영공시</Link></li>
             </ul>
           </div>
           <div className="footer-col">
             <div className="footer-title">고객지원</div>
             <ul className="footer-list">
-              <li><a href="#faq" className="hover-underline">FAQ</a></li>
+              {/* <li><a href="#faq" className="hover-underline">FAQ</a></li>
               <li><a href="#branch" className="hover-underline">지점/ATM 찾기</a></li>
-              <li><a href="#contact" className="hover:underline">문의하기</a></li>
+              <li><a href="#contact" className="hover:underline">문의하기</a></li> */}
+              <li>고객센터 02-000-0000</li>
+              <li>평일 AM 09:30 ~ PM 06:30</li>
+              <li>휴무 : 토,일요일 및 공휴일</li>
             </ul>
           </div>
           <div className="footer-col">
@@ -56,6 +42,12 @@ export function Footer({ isLoggedIn, user, onLogout }) {
             <p>ISMS · 개인정보보호 인증</p>
             {/* mt-2 text-gray-500 */}
             <p className="copyright">© 2025 E-UMBank</p>
+            <br></br>
+            <div className='flex space-x-4'>
+              <a href='https://www.youtube.com/' target='_blank' rel='noopener noreferrer'><Youtube size={26} strokeWidth={1.8} /></a>
+              <a href='https://www.instagram.com/' target='_blank' rel='noopener noreferrer'><Instagram /></a>
+              <a href='https://www.facebook.com/?locale=ko_KR/' target='_blank' rel='noopener noreferrer'><Facebook /></a>
+            </div>
           </div>
         </div>
       </div>

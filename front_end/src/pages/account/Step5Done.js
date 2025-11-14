@@ -15,7 +15,6 @@ export default function Step5Done() {
 
     // 2) 액션/빌더는 ref로 고정 (참조 불변)
     const buildPayloadRef = useRef(useAccountOpenStore.getState().buildPayload);
-    const markSubmittedRef = useRef(useAccountOpenStore.getState().markSubmitted);
 
     // 3) StrictMode 이펙트 중복 호출 방지
     const hasPostedRef = useRef(false);
@@ -32,7 +31,7 @@ export default function Step5Done() {
                 setSaving(true);
                 const payload = buildPayloadRef.current();
                 await saveAccount(payload);               // POST /api/account/save
-                markSubmittedRef.current();               // submitted=true (이펙트 종료)
+                //markSubmittedRef.current();               // submitted=true (이펙트 종료)
             } catch (e) {
                 console.error(e);
                 setSaveErr(e?.message || "계좌 저장 중 오류");
@@ -43,8 +42,8 @@ export default function Step5Done() {
     }, [submitted]);
 
     const productLabel =
-        step4.product === "saving" ? "자유적금" :
-            step4.product === "deposit" ? "입출금통장" : "-";
+        step4.product === "자유적금" ? "자유적금" :
+            step4.product === "입출금" ? "입출금통장" : "-";
     if (saving) {
         return (
             <Frame>

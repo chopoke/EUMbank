@@ -24,7 +24,14 @@ repositories {
     mavenCentral()
 }
 
+// Query DSL쓰기 위해 -> Q클래스 인식
+def querydslDir = "$buildDir/generated/sources/annotationProcessor/java/main"
+sourceSets {
+    main { java { srcDirs += querydslDir } }
+}
+
 dependencies {
+
     // --- Spring Boot Starters ---
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -32,6 +39,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+    implementation 'org.apache.httpcomponents.core5:httpcore5:5.3.1'
+    implementation 'org.apache.httpcomponents.core5:httpcore5-h2:5.3.1'
 
     // --- MyBatis ---
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.5'
@@ -47,6 +58,9 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
+    // --- oauth2 ---
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
     // --- mariadb ---
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 
@@ -60,9 +74,35 @@ dependencies {
     testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:3.0.5'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
+    // Apache PDFBox: PDDocument, PDPage 등 PDF 파일을 다루기 위한 라이브러리
+    implementation 'org.apache.pdfbox:pdfbox:2.0.27' // 최신 안정화 버전을 사용하는 것을 권장합니다
+
+    // chatbot
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.1'
     // 참고: 'spring-security-crypto'는 'spring-boot-starter-security'에 포함되어 있어 별도 추가가 필요 없습니다.
+
+    // Firebase Admin SDK: FCM 푸시 알림 전송을 위한 라이브러리 - java용 최신 안정화 버전은 9.7.0
+    implementation 'com.google.firebase:firebase-admin:9.7.0'
+
+
+}
+// 부트 실행 시 JKS trustStore 적용 (최상위 블록!)
+bootRun {
+    jvmArgs = [
+            "-Djavax.net.ssl.trustStore=" + file("certs/exim-cacerts.jks"),
+            "-Djavax.net.ssl.trustStorePassword=changeit",
+            "-Djavax.net.ssl.trustStoreType=JKS"
+    ]
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+    jvmArgs(
+            "-Djavax.net.ssl.trustStore=" + file("certs/exim-cacerts.jks"),
+            "-Djavax.net.ssl.trustStorePassword=changeit",
+            "-Djavax.net.ssl.trustStoreType=JKS"
+    )
 }

@@ -1,0 +1,78 @@
+package com.boot.eumbank.product.entity.product;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Builder
+@Table(name = "INSTALLMENT_PRODUCT_TBL")
+public class ProductInstallmentList {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ip_no")
+    private Integer ipNo;
+
+    @Column(name = "ip_code", unique = true, nullable = false, length = 50)
+    private String ipCode;
+
+    @Column(name = "ip_name", nullable = false, length = 100)
+    private String ipName;
+
+    @Column(name = "ip_description", columnDefinition = "TEXT")
+    private String ipDescription;
+
+    @Column(name = "ip_type", length = 50)
+    private String ipType;
+
+    @Column(name = "ip_min_months")
+    private Integer ipMinMonths;
+
+    @Column(name = "ip_max_months")
+    private Integer ipMaxMonths;
+
+    @Column(name = "ip_min_monthly_amount")
+    private Long ipMinMonthlyAmount;
+
+    @Column(name = "ip_max_monthly_amount")
+    private Long ipMaxMonthlyAmount;
+
+    @Column(name = "ip_early_termination_rate", precision = 5, scale = 2)
+    private String ipEarlyTerminationRate;
+
+    @Column(name = "ip_interest_payment_type", length = 20)
+    private String ipInterestPaymentType;
+
+    @CreationTimestamp
+    @Column(name = "ip_created_at", updatable = false)
+    private LocalDateTime ipCreatedAt;
+
+    @UpdateTimestamp
+    @Column(name = "ip_updated_at")
+    private LocalDateTime ipUpdatedAt;
+
+    @Column(name = "ip_is_active")
+    private String ipIsActive;
+
+    @Column(name= "ip_feature")
+    private String ipFeature;
+
+    @Column(name = "ip_button_text")
+    private String ipButtonText;
+
+    @Column(name = "ip_href")
+    private String ipHref;
+
+    @Column(name = "ip_rate")
+    private String ipRate;
+}

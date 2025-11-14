@@ -16,23 +16,45 @@ const fmtPhone = (v) => {
     const a = d.slice(0, 3), b = d.slice(3, 7), c = d.slice(7, 11);
     return [a, b, c].filter(Boolean).join("-");
 };
-const isRRN = (v) => /^\d{6}-\d{7}$/.test(v);
+const isRRN = (v) => /^\d{6}-\*{7}$/.test(v);
 const isPhone = (v) => /^010-\d{4}-\d{4}$/.test(v);
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+const formatChangePhone = (v) => {
+    // 이 함수가 이미 '000-0000-0000' 형식으로 만들어 줍니다.
+    const d = (v || "").replace(/[^0-9]/g, "").slice(0, 11);
+    const a = d.slice(0, 3), b = d.slice(3, 7), c = d.slice(7, 11);
+    return [a, b, c].filter(Boolean).join("-");
+};
+
+// 주민등록번호 마스킹 함수
+const maskRRN = (rrn) => {
+    if (!rrn) return "";
+
+    // 하이픈 제거
+    const cleaned = rrn.replace(/-/g, "");
+
+    // 앞 6자리만 표시, 뒷자리는 *******
+    if (cleaned.length >= 6) {
+        return `${cleaned.substring(0, 6)}-*******`;
+    }
+
+    return rrn;
+};
 
 export default function Step3Info() {
     const nav = useNavigate();
 
-    // ❗️Zustand는 각각 따로 구독: 객체 리턴 금지(매 렌더 새 객체 → 불필요 재렌더)
+    // Zustand는 각각 따로 구독: 객체 리턴 금지(매 렌더 새 객체 → 불필요 재렌더)
     const step2 = useAccountOpenStore((s) => s.step2);
     const setStep3 = useAccountOpenStore((s) => s.setStep3);
 
-    // ✅ 초기값은 useState "초기화 함수"에서 한 번만 계산 (useEffect로 setForm 하지 말 것)
+    // useState에서 적용
     const [form, setForm] = useState(() => ({
         name: step2?.name || "",
-        rrn: step2?.rrn6 ? `${step2.rrn6}-` : "",
-        phone: "",
-        email: "",
+        rrn: step2?.rrn13 ? maskRRN(step2.rrn13) : "",
+        phone: formatChangePhone(step2?.phone || ""),
+        email: step2?.email || "",
         address: step2?.address || ""
     }));
 

@@ -12,7 +12,7 @@ public interface ForeignProductRepository extends JpaRepository<ForeignProduct, 
     List<ForeignProduct> findByCurUnit(String curUnit);
 
     @Query("""
-        SELECT f FROM ForeignProduct f
+        SELECT f FROM AForeignProduct f
         WHERE (:q IS NULL OR LOWER(f.curUnit) LIKE LOWER(CONCAT('%', :q, '%'))
                OR LOWER(f.curNm) LIKE LOWER(CONCAT('%', :q, '%')))
           AND (:dp IS NULL OR f.dpProtectYn = :dp)

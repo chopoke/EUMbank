@@ -1,0 +1,558 @@
+import React from "react";
+import { fetchAccounts } from "../../api/accounts";
+import { Link } from "react-router-dom";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import '../../resources/css/other.css';
+
+
+function AccountListPage(){
+  
+  const[accounts, setAccounts] = React.useState([]);
+  const[loading, setLoading] = React.useState(false);
+  const[error, setError] = React.useState(null);
+
+  const [search, setSearch] = React.useState("");
+  const [type, setType] = React.useState("전체");
+  const [selectedBanks, setSelectedBanks] = React.useState(new Set());
+  const [minBal, setMinBal] = React.useState("");
+  const [maxBal, setMaxBal] = React.useState("");
+  const [statuses, setStatuses] = React.useState(new Set());
+  const [sortKey, setSortKey] = React.useState("recent");
+
+  // 계좌 타입 판단
+  const getDetailHref = (row) => {
+    if (row.accountType === "예금") {
+      return `/accounts/deposit/${row.id}`;
+    }
+    if (row.accountType === "적금") {
+      return `/accounts/installment/${row.id}`;
+    }
+    // 나머지는 입출금
+    return `/accounts/${row.id}`;
+  };
+
+  // 폰트 캐시
+  const fontCache = React.useRef ({regular: ""});
+  async function loadFontBase64(url){
+    if(!url) return "";
+    const res = await fetch(url);
+    const buf = await res.arrayBuffer();    
+    let binary = "";
+    const bytes = new Uint8Array(buf);  // AfterBuffer -> Base64
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
+
+  // 날짜포맷 유틸 ----------
+  const CustomDateFm = (d) => {
+    if(!(d instanceof Date) || isNaN(d)) return "-";    // 날짜가 아니면 -
+    const pad = (n) => String(n).padStart(2,"0");
+    const y = d.getFullYear();
+    const m = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    return `${y}-${m}-${day} ${hh}:${mm}`;
+  }
+
+  // 통화코드 유틸ㄹ 추가 ----------------
+  // 자릿수 설정
+    const CURRENCY_DIGITS = {   
+    KRW: 0, JPY: 0, IDR: 0,
+    BHD: 3, KWD: 3,
+    // 그 외 기본 2
+  };
+  function getDigits(code = "KRW") {
+    return CURRENCY_DIGITS[String(code || "KRW").toUpperCase()] ?? 2;
+  }
+  // 톻화 포맷터
+  function formatCurrency(amt, code = "KRW") {
+    const cur = String(code || "KRW").toUpperCase();
+    const digits = getDigits(cur);
+    const n = Number(amt || 0);
+    const sign = n < 0 ? "-" : "";
+    const abs = Math.abs(n).toLocaleString("en-US", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+    if (cur === "KRW") return `${sign}${abs}원`;   // KRW는 원으로 표기
+    return `${sign}${cur} ${abs}`;                  // 원화를 제외하 ㄴ외화는 그대로 통화표기
+  }
+
+  React.useEffect(()=>{
+    let alive = true;
+    setLoading(true);
+    setError(null);
+
+    // accounts.js -> axios
+    fetchAccounts()
+      .then(res=>{
+        if (!alive) return;
+        // 서버 : AccountSummaryDTO 
+        const rows = res.data || [];
+
+        // 값 매핑
+        const mapped = rows.map(d => {
+        // 안전 파싱 (문자열/epoch 모두 OK)
+        const raw = d.lastTransferAt;
+        const asDate = raw
+          ? new Date(typeof raw === 'number' ? raw : String(raw).replace(' ', 'T'))
+          : null;
+        const baseType = d.a_account_type || '입출금';
+        const ts = asDate ? asDate.getTime() : 0;
+        const lastText = asDate ? CustomDateFm(asDate) : '최근거래없음';
+
+        // 대출 뱃지용
+        const code = String(d.a_product_code ?? '').trim();
+        const isLoanRepay = code === '대출' || code === '상환';
+        const uiTags = [baseType, ...(isLoanRepay ? ['대출상환용'] : [])]; // 배지용 배열
+
+        const typeLabel = isLoanRepay ? `${baseType}·대출상환용` : baseType;
+
+        // 계좌명 디스플레이용
+        const disName = d.a_nickname || d.a_account_code || d.a_account_type || "계좌명";
+        return {
+          id: d.a_no,
+          nickname: d.a_nickname,
+          productCode: code,   
+          accountType: d.a_account_type || '입출금',  
+          bank: 'Eum', // 임시
+          number: d.a_account_no,
+          type: d.a_account_type,
+          balance: Number(d.a_balance),
+          currency: d.a_currency || 'KRW',
+          status: d.a_status === 'ACTIVE' ? '정상' : d.a_status,
+          favorite: false,
+          lastActivityTs: ts,
+          lastActivity: lastText,
+          disName,
+          typeLabel,
+          uiTags,
+          isLoanRepay,
+          filterType: isLoanRepay ? '대출' : baseType,
+        };
+      });
+        setAccounts(mapped);
+      }).catch((e) =>{
+        if (!alive) return;
+        setError(e);
+      }
+    )
+      .finally(() =>{
+        if (!alive) return;
+        setLoading(false)
+      });
+
+      return () => {
+      alive = false;
+    };
+  }, []
+);  
+  const typeOptions = ["전체","입출금","자유적금", "예금","적금", "대출","외환"];
+
+
+  
+
+  // 계좌번호 마스킹
+  const maskAcc = (s) =>
+    s.replace(/(\d{2,4})-(\d{2,4})-(\d{2,6})/, (_m, a, b, c) => `${a}-${b}-` + c.replace(/\d/g, "•"));
+
+  // 숫자 비교 유틸
+  function cmpCurrency(a, b) {
+    return String(a || "").localeCompare(String(b || ""), "en");
+  }
+  function cmpNumberAsc(a, b) {
+    return (Number(a) || 0) - (Number(b) || 0);
+  }
+  function cmpNumberDesc(a, b) {
+    return (Number(b) || 0) - (Number(a) || 0);
+  }
+  
+  // 통장 타입용 태그
+  const TagPill = ({children}) => (
+   <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] leading-5
+                   bg-gray-100 text-gray-700 border border-gray-200">
+     {children}
+    </span>
+  );
+  // 대출용
+  const LoanPill = ({children}) => (
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px]
+                    bg-blue-50 text-blue-700 border border-blue-200">
+      {children}
+    </span>
+  );
+
+
+  // 은행 필터 토글
+  function toggleBank(b) { const next = new Set(selectedBanks); next.has(b) ? next.delete(b) : next.add(b); setSelectedBanks(next); }
+  // 상태 필터 토글
+  function toggleStatus(s) { const next = new Set(statuses); next.has(s) ? next.delete(s) : next.add(s); setStatuses(next); }
+  // 필터 초기화
+  function resetFilters() { setSearch(""); setType("전체"); setSelectedBanks(new Set()); setMinBal(""); setMaxBal(""); setStatuses(new Set()); setSortKey("recent"); }
+
+
+  // 복사
+  function copyText(t) { 
+    navigator.clipboard?.writeText(t);
+    alert("복사되었습니다");
+  }
+
+
+  // csv 다운로드
+  function downloadCsv(rows) {
+    const header = ["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"];
+    const body = rows.map((r) => [
+      r.nickname, r.accountType, r.bank, r.number, r.typeLabel,
+      formatCurrency(r.balance, r.currency, 'code'), // 예: SAR 12,345.00
+      r.currency, r.status, r.lastActivity
+    ]);
+    const csv = [header, ...body].map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); 
+    a.href = url; 
+    a.download = "accounts.csv"; 
+    a.click(); 
+    URL.revokeObjectURL(url);
+  }
+
+  // pdf 파일 다운로드를 위한  npm i jspdf jspdf-autotable
+  async function downloadPdf(rows) {
+    
+    // 문서생성
+    const docu = new jsPDF({unit:"pt", format:"a4"})    // pt:단위
+    // 한글 폰트 로딩
+    if (!fontCache.current.regular) {
+      fontCache.current.regular = await loadFontBase64("/font/NotoSansKR.ttf");
+    }
+    docu.addFileToVFS("NotoSansKR.ttf", fontCache.current.regular);
+    docu.addFont("NotoSansKR.ttf", "NotoSansKR", "normal");
+    docu.setFont("NotoSansKR", "normal");
+
+    // 제목
+    docu.setFontSize(14);
+    docu.text("계좌 목록 내역", 40, 40);
+    docu.setFontSize(10);
+    docu.text(`생성일 : ${new Date().toLocaleString('ko-KR')}`,40, 58 );
+
+    // 테이블 구성
+    const head = [["별칭", "계좌명", "은행", "계좌번호", "유형", "잔액", "통화", "상태", "최근거래"]];
+    const body = rows.map((r) => [
+      r.nickname, r.accountType, r.bank, r.number, r.typeLabel,
+      formatCurrency(r.balance, r.currency, 'code'), // 예: SAR 12,345.00
+      r.currency, r.status, r.lastActivity
+    ]);
+
+    // autoTable 호출
+    autoTable(docu, {
+      head,
+      body,
+      startY:76,      // 테이블 시작점 :-> 제목 아래
+      styles:{font:"NotoSansKR", fontSize:9, cellPadding:6},
+      headStyles:{font:"NotoSansKR", fontStyle: "normal", fillColor:[242, 242, 242], textColor:20},
+      columnStyles: { 5: { halign: "right", cellWidth: 70 }, 8: { cellWidth: 140 } }, // 컬럼 폭
+      // 하단 페이지 번호 조정
+      didDrawPage:(data) => {
+        const pageCnt = docu.getNumberOfPages();
+        const str = `Page ${data.pageNumber} / ${pageCnt}`;
+        docu.setFontSize(9);
+        docu.text(str, 
+          docu.internal.pageSize.getWidth() -80, 
+          docu.internal.pageSize.getHeight() -20);
+      }
+    });
+    // 저장
+    docu.save(`accounts-${Date.now()}.pdf`);
+  }
+
+
+
+  // 필터
+  const filtered = React.useMemo(() => {    // Memoization 훅 활용  (계산값을 메모리에 저장해 재사용)
+    if (!accounts) return [];
+    return accounts
+      .filter((a) => {
+        const q = search.trim().toLowerCase();
+        const okQ = !q || [a.disName, a.accountType, a.number, a.typeLabel].some((s) => 
+          s?.toLowerCase().includes(q));
+        if (!okQ) return false;
+        if (type !== "전체") {
+          const typeMatch = a.type === type || a.filterType === type;
+          if (!typeMatch) return false;
+        }
+        if (selectedBanks.size > 0 && !selectedBanks.has(a.bank)) return false;
+        if (statuses.size > 0 && !statuses.has(a.status)) return false;
+        const balKRW = a.currency === "KRW" ? a.balance : null;
+        if (minBal !== "" && balKRW != null && balKRW < Number(minBal)) return false;
+        if (maxBal !== "" && balKRW != null && balKRW > Number(maxBal)) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        switch (sortKey) {
+          case "balDesc": {
+            // 1) 통화 코드로 먼저 정렬(그룹핑)
+            const byCur = cmpCurrency(a.currency, b.currency);
+            if (byCur !== 0) return byCur;
+            // 2) 같은 통화끼리는 잔액 내림차순
+            return cmpNumberDesc(a.balance, b.balance);
+          }
+          case "balAsc": {
+            const byCur = cmpCurrency(a.currency, b.currency);
+            if (byCur !== 0) return byCur;
+            return cmpNumberAsc(a.balance, b.balance);
+          }
+          case "name": return (a.disName || a.accountType).localeCompare(b.disName || b.accountType, "ko");
+          default: return b.lastActivityTs - a.lastActivityTs;
+        }
+      });
+  }, [accounts, search, type, selectedBanks, minBal, maxBal, statuses, sortKey]);     // 인자값이 업뎃될때마다 메모리값 업뎃
+
+  // 갯수 세팅
+  const totalCount = filtered.length;
+  
+
+  // 상태 칩
+  const Chip = ({ active, children, onClick }) => (
+    <button onClick={onClick} className={"px-3 py-1.5 rounded-full text-xs border transition " + (active ? "bg-blue-50 text-blue-700 border-blue-300" : "hover:bg-gray-50")}>{children}</button>
+  );
+
+  if (loading) return <div className="p-6">불러오는 중…</div>;
+  if (error) return <div className="p-6 text-red-600">계좌 조회 실패: {String(error)}</div>;
+
+  return (
+    <div className="bg-gray-50 py-8">
+      {/* 타이틀 배너 */}
+      <section className="border-b bg-white">
+        <div className="checkb mx-auto max-w-[1240px] px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl md:text-2xl font-semibold tracking-tight">계좌 목록 조회</h1>
+              <p className="text-sm text-gray-600 mt-1">보유 중인 계좌를 한눈에 확인하고, 빠르게 이체/관리하세요.</p>
+            </div>
+            <div className="flex items-center gap-2 px-42">
+              <Link to={`/account/open`}>
+              <button className="rounded-full border px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200">계좌개설</button>
+              </Link>
+              <Link to={`/transfer`}>
+              <button className="rounded-full border px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200">이체하기</button>
+              </Link>
+              <Link to={`/transfer/manage`}>
+              <button className="rounded-full border px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200">자동/예약 관리</button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 본문 */}
+      <section>
+        <div className="mx-auto max-w-screen-xl px-6 py-6">
+          <div className="grid grid-cols-12 gap-6">
+            {/* 필터 */}
+            <aside className="col-span-12 md:col-span-3">
+              <div className="rounded-2xl border bg-white p-4 md:p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-semibold text-gray-800">검색 / 필터</h2>
+                  <button onClick={resetFilters} className="text-xs text-gray-500 hover:underline">초기화</button>
+                </div>
+
+                {/* 검색 */}
+                <label className="block text-xs text-gray-600 mb-1">계좌/별칭 검색</label>
+                <input value={search} onChange={e=>setSearch(e.target.value)} type="text" placeholder="예) 월급통장, 3333-****"
+                      className="w-full rounded-lg border px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600"/>
+                {/* 유형별 검색(버튼) */}
+                <div className="mt-4">
+                  <div className="text-xs text-gray-600 mb-1">계좌 유형</div>
+                  <div className="flex flex-wrap gap-2">
+                    {typeOptions.map(t=> (
+                      <Chip key={t} active={type===t} onClick={()=>setType(t)}>{t}</Chip>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 은행별검색(체크박스)
+                // <div className="mt-4">
+                //   <div className="text-xs text-gray-600 mb-1">은행</div>
+                //   <div className="grid grid-cols-2 gap-2 text-xs">
+                //     {bankOptions.map(b=> (
+                //       <label key={b} className="inline-flex items-center gap-2">
+                //         <input type="checkbox" className="rounded border-gray-300"
+                //                checked={selectedBanks.has(b)} onChange={()=>toggleBank(b)} /> {b}
+                //       </label>
+                //     ))}
+                //   </div>
+                // </div> */}
+
+                {/* 금액별 검색 */}
+                <div className="mt-4">
+                  <div className="text-xs text-gray-600 mb-1">잔액 범위 (₩)</div>
+                  <div className="flex items-center gap-2">
+                    <input value={minBal} onChange={e=>setMinBal(e.target.value)} type="number" placeholder="최소"
+                           className="w-full rounded-lg border px-3 py-2 text-sm"/>
+                    <span className="text-gray-400">~</span>
+                    <input value={maxBal} onChange={e=>setMaxBal(e.target.value)} type="number" placeholder="최대"
+                           className="w-full rounded-lg border px-3 py-2 text-sm"/>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="text-xs text-gray-600 mb-1">상태</div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {['정상','휴면','해지예정'].map(s=> (
+                      <Chip key={s} active={statuses.has(s)} onClick={()=>toggleStatus(s)}>{s}</Chip>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <button className="w-full rounded-lg bg-blue-700 text-white py-2.5 text-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600">조회</button>
+                </div>
+              </div>
+            </aside>
+
+            {/* 결과-(내용) */}
+            <section className="col-span-12 md:col-span-9">
+              <div className="rounded-2xl border bg-white p-4 md:p-5 shadow-sm">
+                {/* 정렬 */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-gray-600">총 <b className="text-gray-900">{totalCount}</b>개 계좌</span>
+                    <span className="hidden md:inline-block w-px h-4 bg-gray-200"></span>
+                    <div className="flex items-center gap-2">
+                      <label className="text-gray-600">정렬</label>
+                      <select value={sortKey} onChange={e=>setSortKey(e.target.value)} className="rounded-md border px-2.5 py-1.5 text-sm">
+                        <option value="recent">최근 사용순</option>
+                        <option value="balDesc">잔액 높은순</option>
+                        <option value="balAsc">잔액 낮은순</option>
+                        <option value="name">이름순</option>
+                      </select>
+                    </div>
+                  </div>
+                  {/* csv */}
+                  <div className="flex items-center gap-2">
+                    <button onClick={()=>downloadCsv(filtered)} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">CSV 다운로드</button>
+                    <button onClick={()=>downloadPdf(filtered)} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">PDF 다운로드</button>
+                    <button onClick={()=>setAccounts(a=>[...a])} className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">목록 새로고침</button>
+                  </div>
+                </div>
+
+                {/* 이체 내역 결과 */}
+                <div className="mt-4 overflow-auto hidden md:block">
+                  <table className="min-w-[760px] w-full text-sm">
+                    <thead className="text-gray-600">
+                      <tr className="border-b bg-gray-50">
+                        <th className="text-left font-medium px-3 py-2">별칭 / 계좌명</th>
+                        <th className="text-left font-medium px-3 py-2 whitespace-nowrap">은행</th>
+                        <th className="text-center font-medium px-3 py-2 whitespace-nowrap">계좌번호</th>
+                        <th className="text-center font-medium px-3 py-2 whitespace-nowrap">잔액</th>
+                        <th className="text-left font-medium px-3 py-2 whitespace-nowrap">최근 거래</th>
+                        <th className="text-center font-medium px-3 py-2">상태</th>
+                        {/* <th className="text-center font-medium px-3 py-2">즐겨찾기</th> */}
+                        <th className="text-center font-medium px-3 py-2 ">업무</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {filtered.map(row => (
+                        <tr key={row.id} className="hover:bg-gray-50">
+                          {/* 계좌이름/별칭 */}
+                          <td className="px-3 py-3">
+                            <div className="font-medium text-gray-900">{row.disName}</div>
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                <TagPill>{row.type || '입출금'}</TagPill>
+                                {row.isLoanRepay && <LoanPill>대출상환용</LoanPill>}
+                              </div>
+                          </td>
+                          {/* 계좌번호 */}
+                          <td className="px-3 py-3">{row.bank}</td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono tracking-wider">{maskAcc(row.number)}</span>
+                              <button onClick={()=>copyText(row.number)} className="text-xs text-gray-500 hover:text-gray-900 whitespace-nowrap underline">복사</button>
+                            </div>
+                          </td>
+                          {/* 잔액 */}
+                          <td className="px-3 py-3 text-right whitespace-nowrap">
+                            <span className="font-medium">{formatCurrency(row.balance,row.currency)}</span>
+                          </td>
+                          {/* 최근거래일 */}
+                          <td className="px-3 py-3 text-gray-600 text-xs leading-tight tracking-tight">{row.lastActivity}</td>
+                          {/* 상태 */}
+                          <td className="px-3 py-3 text-center whitespace-nowrap">
+                            <span className={"inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium " + (row.status==="정상"?"bg-emerald-50 text-emerald-700":"bg-amber-50 text-amber-700")}>{row.status}</span>
+                          </td>
+                          {/* 즐겨찾기 */}
+                          {/* <td className="px-3 py-3 text-center whitespace-nowrap w-[80px]">
+                            <button  onClick={()=>setAccounts(list=>list.map(a=> a.id===row.id?{...a,favorite:!a.favorite}:a))} aria-label="즐겨찾기">
+                              {row.favorite ? (
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 .587l3.668 7.431 8.2 1.193-5.934 5.786 1.402 8.168L12 18.897l-7.336 3.868 1.402-8.168L.132 9.211l8.2-1.193L12 .587z"/></svg>
+                              ):(
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 17.75l-6.16 3.24 1.18-6.88L1 9.51l6.9-1 3.1-6.28 3.1 6.28 6.9 1-5.02 4.6 1.18 6.88L12 17.75z" stroke="#9ca3af" strokeWidth="1.5" fill="none"/></svg>
+                              )}
+                            </button>
+                          </td> */}
+                          {/* 부가기능 */}
+                          <td className="px-3 py-3 text-center whitespace-nowrap w-[180px]">
+                            <div className="flex justify-center gap-1.5">
+                              <Link to={`/transfer`} state={{ fromAccountNumber: row.number }}>
+                              <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">이체</button>
+                              </Link>
+                              <Link to={getDetailHref(row)}>
+                                <button className="px-2.5 py-1.5 rounded-md border text-xs bg-gray-100 hover:bg-gray-200">상세내역</button>
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 모바일용카드 */}
+                <div className="md:hidden space-y-3 mt-3">
+                  {filtered.map(row=> (
+                    <div key={row.id} className="rounded-xl border p-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="text-sm text-gray-500">{row.bank}</div>
+                          <div className="mt-0.5 flex flex-wrap gap-1">
+                            {row.uiTags?.map(tag => <TagPill key={tag}>{tag}</TagPill>)}
+                          </div>
+                          <div className="font-medium text-gray-900">{row.disName}</div>
+                        </div>
+                        <button onClick={()=>setAccounts(list=>list.map(a=> a.id===row.id?{...a,favorite:!a.favorite}:a))} aria-label="즐겨찾기">
+                          {row.favorite ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 .587l3.668 7.431 8.2 1.193-5.934 5.786 1.402 8.168L12 18.897l-7.336 3.868 1.402-8.168L.132 9.211l8.2-1.193L12 .587z"/></svg>
+                          ):(
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 17.75l-6.16 3.24 1.18-6.88L1 9.51l6.9-1 3.1-6.28 3.1 6.28 6.9 1-5.02 4.6 1.18 6.88L12 17.75z" stroke="#9ca3af" strokeWidth="1.5" fill="none"/></svg>
+                          )}
+                        </button>
+                      </div>
+                      <div className="text-xs text-gray-500 font-mono">{maskAcc(row.number)}</div>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="font-semibold">{formatCurrency(row.balance,row.currency)}</div>
+                        <button className="text-xs underline ">복사</button>
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">{row.lastActivity}</div>
+                      <div className="mt-3 flex gap-2">
+                        <Link to={`/transfer`} state={{ fromAccountNumber: row.number }}>
+                          <button className="flex-1 rounded-md border text-xs bg-gray-100 py-1.5 hover:bg-gray-200">이체</button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+export { AccountListPage };

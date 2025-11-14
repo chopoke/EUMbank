@@ -9,13 +9,22 @@ import java.util.Optional;
 
 public interface CustomerRepo extends JpaRepository<Customer, Integer> {
     Optional<Customer> findByUserId(String userId);
+
     boolean existsByUserId(String userId);
+
+    Optional<Customer> findByUserIdAndLoginType(String userId, String loginType);
+
+    boolean existsByNaverId(String naverId);
+
+    Optional<Customer> findByEmail(String email);
+
+    Optional<Customer> findByNaverId(String naverId);
 
     // 이메일 중복 체크 (대소문자 무시)
     @Query("""
-           select case when count(c) > 0 then true else false end
-           from Customer c
-           where lower(c.cEmail) = lower(:email)
-           """)
+            select case when count(c) > 0 then true else false end
+            from Customer c
+            where lower(c.email) = lower(:email)
+            """)
     boolean existsByEmailIgnoreCase(@Param("email") String email);
 }

@@ -1,7 +1,7 @@
 /* 페이지 헤더 */
 .fx-page { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
-.fx-page__head h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; margin: 4px 0 8px; }
-.fx-page__hint { color: #6b7280; font-size: 13px; }
+.fx-page__head h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; margin: 4px 0 8px; }
+.fx-page__hint { color: #6b7280; font-size: 16px; }
 
 /* 카드 그리드 */
 .fx-grid {
@@ -206,4 +206,438 @@
 .fr-link-btn:hover { background: #f9fafb; }
 .fr-link-btn--center { display:inline-flex; align-items:center; justify-content:center; }
 
+.notice-bar{
+  background:#FFFBE6;           /* 연노란 */
+  border:1px solid #FFE58F;     /* 톤 맞춘 테두리 */
+  color:#613400;                /* 가독성 좋은 브라운 */
+  border-radius:12px;
+  padding:12px 14px;
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  font-size:14px;
+  line-height:1.45;
+  margin-top:16px;              /* 위 내용과 간격 */
+}
+.notice-ico{ font-size:18px; line-height:1; }
+.notice-text{ flex:1; }
 
+/* 컨테이너 & 카드 */
+.fx-container{max-width:1100px;margin:0 auto;padding:16px 20px;}
+.fx-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;}
+.fx-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+.fx-title{margin:0 0 8px 0;font-size:20px;font-weight:700;}
+.fx-subtitle{margin:0 0 8px 0;font-size:16px;font-weight:700;}
+.fx-muted{color:#6b7280;margin:6px 0 12px 0;}
+.fx-list{list-style:none;padding:0;margin:0;line-height:28px;}
+
+.fx-steps span{margin-right:10px}
+.fx-steps .on{font-weight:700;text-decoration:underline}
+
+/* 폼 */
+.fx-field{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.fx-field>span{font-size:13px;color:#374151}
+.fx-check{display:flex;align-items:center;gap:8px;margin:10px 0}
+
+/* 버튼 */
+.fx-btn{border:1px solid #e5e7eb;background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}
+.fx-btn--primary{background:#2563eb;color:#fff;border-color:#2563eb}
+.fx-btn:disabled{opacity:.6;cursor:not-allowed}
+
+/* 아코디언 & 약관 박스 */
+.fx-acc{border:1px solid #e5e7eb;border-radius:10px;margin:10px 0;background:#fafafa}
+.fx-acc>summary{cursor:pointer;padding:10px 12px;font-weight:600}
+.fx-acc[open]>summary{border-bottom:1px solid #e5e7eb}
+.terms-box{max-height:180px;overflow:auto;padding:12px 12px;color:#374151;line-height:1.5}
+
+/* 반응형 */
+@media (max-width:1024px){
+  .fx-grid{grid-template-columns:1fr}
+}
+
+/* ===== 1) 상단 단계 표시(.fx-steps) 은행식 스텝퍼 ===== */
+.fx-steps{
+  counter-reset: fxstep;
+  display:flex; gap:18px; align-items:center; margin:6px 0 12px;
+}
+.fx-steps > span{
+  position:relative; padding-left:36px; color:#6b7280; font-weight:600;
+}
+.fx-steps > span::before{
+  content: counter(fxstep);
+  counter-increment: fxstep;
+  position:absolute; left:0; top:50%; transform:translateY(-50%);
+  width:28px; height:28px; border-radius:999px;
+  display:flex; align-items:center; justify-content:center;
+  background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0;
+  font-weight:800; font-size:13px;
+}
+.fx-steps > span::after{
+  content:""; position:absolute; left:32px; right:-18px; top:50%;
+  height:2px; background:#e5e7eb; transform:translateY(-50%); z-index:-1;
+}
+.fx-steps > span:last-child::after{ display:none; }
+.fx-steps > span.on{ color:#0f172a; }
+.fx-steps > span.on::before{
+  background:#2563eb; color:#fff; border-color:#2563eb;
+}
+.fx-steps > span.on + span::after{ background:#93c5fd; }
+
+/* ===== 2) 요약 칩(.chip) – JSX에 이미 쓰고 있는데 CSS가 없음 ===== */
+.chip{
+  display:inline-flex; align-items:center; gap:6px;
+  border:1px solid; border-radius:999px; padding:4px 10px;
+  font-size:12px; font-weight:700; line-height:1;
+}
+/* 칩 색상 오버라이드: 완료=하늘색, 미완료=흰 배경 */
+.chip--ok{
+  color:#2563eb;          /* 텍스트 파랑 */
+  background:#eff6ff;     /* 하늘색 배경 */
+  border-color:#bfdbfe;   /* 하늘색 테두리 */
+}
+
+.chip--bad{
+  color:#6b7280;          /* 회색 텍스트 */
+  background:#ffffff;     /* 흰 배경 */
+  border-color:#e5e7eb;   /* 연회색 테두리 */
+}
+/* 칩을 세로로 한 줄씩 배치하려면 JSX에서 인라인 style 줬으니 여긴 여백만 보강 */
+.chip + .chip{ margin-top:6px; }
+
+/* ===== 3) 검토 리스트(.fx-review) – Step3에 쓰는데 CSS가 없음 ===== */
+.fx-review{
+  background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;
+  padding:12px 14px; margin-top:6px;
+}
+.fx-review__row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 6px; border-top:1px dashed #e2e8f0; font-size:14px;
+}
+.fx-review__row:first-child{ border-top:0; }
+.fx-review__row > span{ color:#64748b; }
+.fx-review__row > b{ font-weight:700; color:#111827; }
+
+/* ===== 4) 입력/선택 포커스 & 버튼 톤 보강(은행 느낌) ===== */
+.fx-field input,
+.fx-field select{
+  height:42px; border-radius:10px; border:1px solid #e5e7eb; padding:0 12px;
+  background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.02);
+}
+.fx-field input:focus,
+.fx-field select:focus{
+  outline:0; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15);
+}
+
+.fx-btn{ height:40px; border-radius:10px; font-weight:700; }
+.fx-btn--primary{
+  background:#1d4ed8; border-color:#1d4ed8; color:#fff;
+  box-shadow:0 6px 14px rgba(29,78,216,.18);
+}
+.fx-btn--primary:hover{ background:#1e40af; border-color:#1e40af; }
+
+/* ===== 5) 카드/타이틀 결 마감(얇은 은행보더 느낌) ===== */
+.fx-card{
+  border:1px solid #e5e7eb; border-radius:16px;
+  box-shadow:0 1px 10px rgba(17,24,39,.05);
+}
+.fx-title{
+  font-size:22px; font-weight:800; letter-spacing:-0.02em; color:#0f172a;
+  border-bottom:1px solid #f1f5f9; padding-bottom:8px; margin-bottom:8px;
+}
+
+/* ===== 6) details 약관(아코디언) – 요약 줄 가독성/포커스 ===== */
+.fx-acc>summary{
+  list-style:none; outline:0;
+}
+.fx-acc>summary::-webkit-details-marker{ display:none; }
+.fx-acc>summary::before{
+  content:"▼"; margin-right:8px; color:#94a3b8; font-size:12px;
+}
+.fx-acc[open]>summary::before{ content:"▲"; color:#2563eb; }
+
+/* ===== 7) 완료 화면 강조 박스(결과) – result가 있을 때 더 뽀송하게 ===== */
+.fx-result{
+  border:1px solid #c7f9cc; background:#ecfdf5; color:#065f46;
+  border-radius:14px; padding:14px 16px; margin-top:10px;
+}
+.fx-result b{ color:#064e3b; }
+
+/* ========== 1) 칩: 가로폭 꽉 채워 균형 있게, 아이콘은 오른쪽 ========== */
+.chip{
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; padding:8px 12px; border-radius:999px; line-height:1;
+  font-weight:700; font-size:12px;
+}
+.chip--ok{  color:#2563eb; background:#eff6ff; border-color:#bfdbfe; }
+.chip--bad{ color:#6b7280; background:#ffffff; border-color:#e5e7eb; }
+.chip + .chip{ margin-top:8px; }
+
+/* ========== 2) 오른쪽 “가입 요약” 텍스트 정렬/간격 ========== */
+.fx-list{ margin-top:10px; }
+.fx-list li{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:6px 0; border-bottom:1px dashed #eef2f7;
+}
+.fx-list li:last-child{ border-bottom:0; }
+.fx-list li b{ font-weight:700; }
+
+/* ========== 3) 왼쪽 Step3 “개설 완료” 블록을 키–값 정렬로 ========== */
+/* h3(.fx-subtitle) 바로 뒤의 3줄을 카드형 라인으로 보이게 */
+.fx-card .fx-subtitle + p,
+.fx-card .fx-subtitle + p + p,
+.fx-card .fx-subtitle + p + p + p{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:10px 12px; margin:8px 0 0;
+  background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;
+}
+.fx-card .fx-subtitle + p b,
+.fx-card .fx-subtitle + p + p b,
+.fx-card .fx-subtitle + p + p + p b{
+  color:#475569; font-weight:600; min-width:92px;
+}
+
+/* ========== 4) 상단 타이틀/스텝 라인 정리 ========== */
+.fx-title{
+  display:flex; align-items:flex-end; justify-content:space-between;
+  margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #f1f5f9;
+}
+.fx-steps{ margin:6px 0 0; }
+.fx-steps > span{ padding-left:36px; }
+
+/* ========== 5) 카드와 폼 여백 살짝 키워서 ‘왼쪽 쏠림’ 완화 ========== */
+.fx-card{ padding:22px; border-radius:16px; box-shadow:0 1px 10px rgba(17,24,39,.05); }
+.fx-field{ margin:12px 0; }
+.fx-btn{ height:40px; border-radius:10px; }
+
+/* ========== 6) 완료 메시지 강조 상자(선택) ========== */
+.fx-result{
+  border:1px solid #c7f9cc; background:#ecfdf5; color:#065f46;
+  border-radius:14px; padding:14px 16px; margin-top:12px;
+}
+
+/* 1) 상태 배지: 개설 완료 (스텝퍼와 간격 확보 + 가운데 톤) */
+.fx-card .fx-subtitle + p{
+  display:inline-flex; align-items:center; gap:8px;
+  margin-top:14px; margin-bottom:12px;
+  padding:6px 10px; border-radius:999px;
+  background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0;
+  font-weight:700;
+}
+
+/* 2) 정보 행(계좌번호 / 통화·유형 / 개설일): 균형 잡힌 키-값 라인 */
+.fx-card .fx-subtitle + p + p,
+.fx-card .fx-subtitle + p + p + p,
+.fx-card .fx-subtitle + p + p + p + p{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:12px 14px; margin-top:10px;
+  background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;
+}
+
+/* 라벨은 고정폭, 값은 우측 정렬 */
+.fx-card .fx-subtitle + p + p b,
+.fx-card .fx-subtitle + p + p + p b,
+.fx-card .fx-subtitle + p + p + p + p b{
+  min-width:96px; color:#64748b; font-weight:600;
+}
+
+/* 3) “통화 / 유형” 행만: 4개 조각(라벨/값/라벨/값)을 균등 분배 */
+.fx-card .fx-subtitle + p + p + p{
+  justify-content:space-between; flex-wrap:wrap;
+}
+.fx-card .fx-subtitle + p + p + p b{ min-width:88px; }
+@media (min-width:768px){
+  /* 데스크톱에선 간격 더 촘촘히 */
+  .fx-card .fx-subtitle + p + p + p{ gap:18px; }
+}
+
+/* 4) 카드 상단과의 여백 + 전체 라운드/그림자 살짝 업 */
+.fx-card{ padding:22px; border-radius:16px; box-shadow:0 1px 10px rgba(17,24,39,.05); }
+.fx-title{ margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #f1f5f9; }
+
+/* 5) 칩(오른쪽 요약)도 좌우 균형 맞춰 보기 좋게 */
+.chip{
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; padding:8px 12px; border-radius:999px; font-weight:700; font-size:12px;
+}
+.chip--ok{  color:#2563eb; background:#eff6ff; border-color:#bfdbfe; }
+.chip--bad{ color:#6b7280; background:#ffffff; border-color:#e5e7eb; }
+.chip + .chip{ margin-top:8px; }
+
+/* 1) 개설 완료 배지: 더 또렷하게 + 가운데 정렬 + 위쪽 여백 보강 */
+.fx-card .fx-subtitle + p{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  margin-top:16px;            /* 상단과 간격 */
+  margin-bottom:12px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0;
+  font-weight:800;            /* 더 두껍게 */
+  letter-spacing:-0.01em;
+}
+.fx-card .fx-subtitle + p::before{
+  content:"✓";
+  font-weight:900;
+}
+
+/* 2) 정보행 공통(계좌번호/개설일) – 좌우 정렬 유지 */
+.fx-card .fx-subtitle + p + p,
+.fx-card .fx-subtitle + p + p + p + p{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:12px 14px; margin-top:10px;
+  background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;
+}
+.fx-card .fx-subtitle + p + p b,
+.fx-card .fx-subtitle + p + p + p + p b{
+  min-width:96px; color:#64748b; font-weight:600;
+}
+
+/* 3) 가운데 행(통화 / 유형)만 라벨-값을 '붙여서' 보이도록 재배치 */
+.fx-card .fx-subtitle + p + p + p{
+  /* 한 줄을 라벨/값/라벨/값 4칸으로 */
+  display:grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content; /* 내용 폭만큼만 */
+  column-gap:10px;                /* 라벨-값 사이 간격(=붙여 보이게) */
+  align-items:center;
+  justify-content:flex-start;     /* 왼쪽 정렬로 쓸데없는 벌어짐 제거 */
+  padding:12px 14px; margin-top:10px;
+  background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;
+  white-space:nowrap;             /* 줄바꿈 방지 → 더 촘촘 */
+}
+/* 가운데 행의 라벨(통화/유형)은 살짝 연해지고 고정폭 */
+.fx-card .fx-subtitle + p + p + p b{
+  color:#64748b; font-weight:600; min-width:42px; /* 통화/유형 라벨 폭을 최소화 */
+}
+/* 슬래시 주변 공백이 넓어 보일 때: 양옆 공백 제거 */
+.fx-card .fx-subtitle + p + p + p { letter-spacing:0; }
+
+/* ── B. '개설 완료'를 중앙, 초록 배지로 더 눈에 띄게 */
+.fx-card .fx-subtitle + p{
+  display:flex !important; align-items:center !important; justify-content:center !important;
+  gap:8px; margin-top:16px; margin-bottom:14px; padding:8px 12px;
+  border-radius:999px; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0;
+  font-weight:800; letter-spacing:-0.01em;
+}
+.fx-card .fx-subtitle + p::before{ content:"✓"; font-weight:900; }
+
+/* ── C. 계좌번호/개설일 행 공통 스타일(좌라벨/우값) */
+.fx-datarow{ display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:12px 14px; margin-top:10px;
+  background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;
+}
+.fx-datarow > b{ min-width:96px; color:#64748b; font-weight:600; }
+
+/* ── D. '통화 / 유형 / 별칭' 3쌍을 촘촘히 배치 */
+.fx-row-3{
+  display:grid; grid-auto-flow:column; grid-auto-columns:max-content;
+  column-gap:10px; align-items:center; justify-content:flex-start;
+  padding:12px 14px; margin-top:10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;
+  white-space:nowrap;
+}
+.fx-row-3 > b{ color:#64748b; font-weight:600; min-width:42px; } /* 라벨 최소폭만 */
+
+/* ── 완료 화면일 때: 전체 레이아웃을 가운데로 */
+.fx-center .fx-grid{
+  grid-template-columns: minmax(0, 760px);
+  justify-content: center;
+  margin-left: auto; margin-right: auto;
+}
+
+/* ── “개설 완료” 제목 중앙 정렬 (완료 화면에만) */
+.fx-done .fx-subtitle{
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ── 계좌번호/개설일 공통 라인 */
+.fx-datarow{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:12px 14px; margin-top:10px;
+  background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;
+}
+.fx-datarow > b{ min-width:96px; color:#64748b; font-weight:600; }
+
+/* ── 통화/유형/별칭 3쌍을 한 줄로 '붙여서' */
+.fx-row-3{
+  display:grid; grid-auto-flow:column; grid-auto-columns:max-content;
+  column-gap:10px; align-items:center; justify-content:flex-start;
+  padding:12px 14px; margin-top:10px;
+  background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px;
+  white-space:nowrap;
+}
+.fx-row-3 > b{ color:#64748b; font-weight:600; min-width:42px; }
+
+/* ── 개설 완료 배지를 중앙·강조 (p는 제목 다음 요소) */
+.fx-done .fx-subtitle + p{
+  display:flex !important; align-items:center !important; justify-content:center !important;
+  gap:8px; margin-top:16px; margin-bottom:14px; padding:8px 12px;
+  border-radius:999px; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0;
+  font-weight:800; letter-spacing:-0.01em;
+}
+.fx-done .fx-subtitle + p::before{ content:"✓"; font-weight:900; }
+
+/* 완료 화면: '개설 완료' 더 크게 + 중앙 정렬 + 굵게 */
+.fx-done .fx-subtitle{
+  text-align:center;
+  font-size: 22px;      /* ← 필요하면 24px로 더 키워도 OK */
+  line-height: 1.25;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  margin-top: 6px;
+  color:#0f172a;        /* 또렷한 잉크색 */
+}
+
+/* (선택) 스텝퍼와 너무 붙어 보이면 간격 조금만 띄우기 */
+.fx-done .fx-title + .fx-steps{ margin-bottom: 4px; }
+
+
+/* 약관 박스 기본 */
+.terms-box {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+/* 스크롤 가능한 긴 약관 박스 */
+.terms-box--scroll {
+  max-height: 260px;         /* 원하는 높이 */
+  overflow: auto;
+  white-space: pre-wrap;     /* 줄바꿈 유지 */
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+/* 스크롤 끝까지 안내 페이드(선택) */
+.terms-fade {
+  position: relative;
+}
+.terms-fade::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 36px;
+  pointer-events: none;
+  background: linear-gradient(to top, #fff, rgba(255,255,255,0));
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+
+.fx-page__head {
+  /* 배경 이미지 설정 */
+  background-image: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url('../../resources/img/exchange.png');
+  /* 첫 번째 rgba(0,0,0,0.5)는 검은색 50% 투명 오버레이를 의미합니다. */
+  /* 두 번째 rgba(0,0,0,0.5)도 동일하게 적용되어 이미지 위에 불투명도를 만듭니다. */
+  /* 필요에 따라 색상과 투명도(0.0 ~ 1.0)를 조절하세요. */
+  /* 예: 흰색 30% 투명 오버레이: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.3)) */
+  
+  /* 배경 이미지 관련 추가 스타일 (선택 사항) */
+  background-size: cover;        /* 이미지가 컨테이너를 채우도록 확대/축소 */
+  background-position: center;   /* 이미지를 중앙에 배치 */
+  background-repeat: no-repeat;  /* 이미지 반복 안 함 */
+  color: rgb(51, 125, 223); /* 텍스트가 잘 보이도록 흰색으로 변경 */
+  padding: 40px 20px; /* 내부 여백 추가 */
+  /* 텍스트 중앙 정렬 */
+  /* text-align: center;  */
+}

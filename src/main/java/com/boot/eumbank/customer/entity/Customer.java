@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "CUSTOMER_TBL")
@@ -36,7 +37,7 @@ public class Customer {
     private String cNameEn;
 
     @Column(name = "c_birth_dt")
-    private Instant cBirthDt;
+    private LocalDate cBirthDt;
 
     @Column(name = "c_gender_cd", length = 1)
     private String cGenderCd;
@@ -52,7 +53,7 @@ public class Customer {
     private String cPhoneHome;
 
     @Column(name = "c_email", nullable = false, length = 150)
-    private String cEmail;
+    private String email;
 
     @Column(name = "c_rrn_hash", length = 256)
     private String cRrnHash;
@@ -114,6 +115,38 @@ public class Customer {
 
     @Column(name = "c_login_type", nullable = false, length = 20)
     @Builder.Default
-    private String cLoginType = "EUM";
-}
+    private String loginType = "EUM";
 
+    @Column(name = "c_naver_id", length = 100)
+    private String naverId;
+
+    @Column(name = "c_pin_number")
+    private String pinNumber;
+
+    @Column(name = "c_address")
+    private String cAddress;
+
+    @Column(name = "c_zip_code")
+    private String cZipCode;
+
+    @Column(name = "c_role", nullable = false, length = 20)
+    @Builder.Default
+    private String role = "USER";
+
+    // 비즈니스 메서드들
+    public void updateAuthLevel(Integer authLevel) {
+        this.cAuthLevel = authLevel;
+    }
+
+    public void updateRiskGrade(String riskGrade) {
+        this.cRiskGrade = riskGrade;
+    }
+
+    public void updateStatus(String status) {
+        this.cStatus = status;
+    }
+
+    public boolean isActive() {
+        return "ACTIVE".equals(this.cStatus);
+    }
+}

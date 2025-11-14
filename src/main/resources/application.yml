@@ -11,11 +11,16 @@ spring:
   application:
     name: eum_bank # .properties 파일의 설정 적용
 
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.http.client.HttpClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.web.client.RestClientAutoConfiguration
   # --- Database Connection (MariaDB) ---
   # 기존 .yml 파일의 MariaDB 설정을 유지합니다.
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://localhost:3306/eum_bank
+
+    url: jdbc:mariadb://localhost:3306/eum_bank?sessionVariables=time_zone='+09:00'
     username: ${DB_USER} # 환경 변수에서 주입
     password: ${DB_PASS} # 환경 변수에서 주입
     hikari:
@@ -25,16 +30,16 @@ spring:
   # --- JPA & Hibernate ---
   # .properties 파일의 설정 기준으로 병합되었습니다.
   jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
+    database-platform: org.hibernate.dialect.MariaDBDialect
     hibernate:
       ddl-auto: validate # none -> validate로 변경
     open-in-view: false
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
         jdbc:
-          time_zone: UTC
+          time_zone: Asia/Seoul
 
   # --- Mail Sender (Gmail SMTP) ---
   # .properties 파일에서 가져온 새로운 설정입니다.
@@ -62,6 +67,46 @@ spring:
     time-zone: Asia/Seoul
     serialization:
       write-dates-as-timestamps: false
+
+# =================================================================
+# Thymeleaf 설정
+# =================================================================
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+  # ===================================================================
+  # OAuth2 : NAVER, GOOGLE
+  # ===================================================================
+
+  security:
+    oauth2:
+      client:
+        registration:
+          naver:
+            client-id: dYMyrfa3rgIKuDwUYZyH
+            client-secret: HwVQiFUqAQ
+            scope:
+              - name
+              - email
+            client-name: naver
+            authorization-grant-type: authorization_code
+            redirect-uri: http://localhost:8081/login/oauth2/code/naver
+          google:
+            client-name: google
+            client-id: 1009179449495-uqphuqqd21h1919m4354agk1cjottn33.apps.googleusercontent.com
+            client-secret: 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
+            redirect-uri: http://localhost:8081/login/oauth2/code/google
+            authorization-grant-type: authorization_code
+            scope:
+              - profile
+              - email
+        provider:
+          naver:
+            authorization-uri: https://nid.naver.com/oauth2.0/authorize
+            token-uri: https://nid.naver.com/oauth2.0/token
+            user-info-uri: https://openapi.naver.com/v1/nid/me
+            user-name-attribute: response
 
 # ===================================================================
 # MYBATIS CONFIGURATION
@@ -95,12 +140,12 @@ app:
 # EXTERNAL API CONFIGURATION
 # ===================================================================
 # --- Naver Clova OCR ---
-clove:
+clova:
   ocr:
     url: ${CLOVA_OCR_URL}
     secret: ${CLOVA_OCR_SECRET}
 
-# --- Korea EXIM API ---
+# --- Korea EXIM API : 한국수출입은행에서 환율(매매/기준환율) 데이터를 내려주는 공개 API ---
 exim:
   api:
     base: https://www.koreaexim.go.kr/site/program/financial/exchangeJSON
@@ -109,14 +154,13 @@ exim:
 # ===================================================================
 # JWT (JSON Web Token) CONFIGURATION
 # ===================================================================
-# .properties 파일의 하드코딩된 값으로 교체되었습니다.
 jwt:
   access:
     secret: change-this-to-a-very-long-random-access-secret-at-least-64-bytes
-    ttl-seconds: 1800
+    ttl-seconds: 36000
   refresh:
     secret: change-this-to-a-very-long-random-refresh-secret-at-least-64-bytes
-    ttl-seconds: 604800
+    ttl-seconds: 86400
 
 # ===================================================================
 # LOGGING CONFIGURATION
@@ -126,3 +170,46 @@ logging:
     com.boot.eumbank.mapper: DEBUG
     org.apache.ibatis: DEBUG
     org.mybatis.spring: DEBUG
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+
+# ===================================================================
+# 금감원 대출API
+# ===================================================================
+finlife:
+  base-url: "https://finlife.fss.or.kr"
+  api-key: "b8026175e9f7ea9382ca8f19aa8c3fe7"
+
+jobs:
+  finlife:
+    sync:
+      cron: "0 */1 * * * *"    # 매일 03:00  --> 매일 10분마다로 변경
+  timezone: "Asia/Seoul"
+
+
+# ==================================
+# --- Gemini API ---
+# ==================================
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
+  model: gemini-2.0-flash-exp
+#  model: gemini-2.5-pro
+
+# ===================================================================
+# firebase Cloud Messaging
+# ===================================================================
+firebase:
+  service-account:
+    path: eumbank-86fbd-firebase-adminsdk-fbsvc-d3d743c1eb.json # firebase 마스터리 키 - json파일 필요함
+  project-id: eumbank-86fbd # firebase에서 생성된 프로젝트명
+

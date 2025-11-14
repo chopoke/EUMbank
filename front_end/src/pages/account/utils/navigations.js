@@ -4,6 +4,6 @@
  */
 export const goToAccountOpenPage = (navigate) => {
   // navigate 함수가 유효한지 확인하고 실행 (안전장치)
-    navigate("/account/open");
-  
+  navigate("/account/open");
+
 };

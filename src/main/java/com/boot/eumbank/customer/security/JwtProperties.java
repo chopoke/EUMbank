@@ -13,7 +13,17 @@ public class JwtProperties {
     /** 최소 64바이트 이상 권장 */
     private String secret;
     /** 액세스 토큰 만료(분) */
-    private long accessExpMin = 30;
+    private long accessExpMin = 2;
     /** 리프레시 토큰 만료(일) */
-    private long refreshExpDay = 7;
+    private long refreshExpDay = 1;
+
+    private long accessTokenValidity;   // seconds
+
+    private long refreshTokenValidity;  // seconds
 }
+
+
+//private String secret;
+//private long accessTokenValidity;   // seconds
+//private long refreshTokenValidity;  // seconds
+//private String issuer;

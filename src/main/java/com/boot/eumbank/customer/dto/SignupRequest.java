@@ -1,8 +1,13 @@
 package com.boot.eumbank.customer.dto;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.time.LocalDate;
 
 @Getter @Setter
 public class SignupRequest {
@@ -24,6 +29,9 @@ public class SignupRequest {
     // 이메일 인증 코드 - 검증에만 사용
     @NotBlank
     private String emailCode;
+
+    @NotNull
+    private LocalDate c_birth_dt;
 
     private String c_agree_terms;
     private String c_agree_privacy;

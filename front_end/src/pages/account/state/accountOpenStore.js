@@ -1,16 +1,18 @@
 import { create } from "zustand";
+import { devtools } from 'zustand/middleware';
 
 // 새 계좌번호 생성 (형식: 110-123-456789)
 const rand = n => Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join("");
 export const genAccountNo = () => `110-${rand(3)}-${rand(6)}`;
 
-export const useAccountOpenStore = create((set, get) => ({
+export const useAccountOpenStore = create(devtools((set, get) => ({
+
     // 1단계
     step1: { all: false, eContract: false, privacy: false, marketing: false },
     setStep1: (agreements) => set({ step1: { ...agreements } }),
 
     // 2단계 (OCR 검증/추출)
-    step2: { verified: false, name: "", rrn6: "", address: "", pinNumber: "" },
+    step2: { verified: false, name: "", rrn13: "", rrn6: "", address: "", pinNumber: "", email: "", phone: "" },
     setStep2: (payload) => set({ step2: { ...get().step2, ...payload } }),
 
     // 3단계 (정보입력)
@@ -33,7 +35,7 @@ export const useAccountOpenStore = create((set, get) => ({
                 all: s1.all, eContract: s1.eContract, privacy: s1.privacy, marketing: s1.marketing
             },
             verification: {
-                verified: s2.verified, nameFromId: s2.name, rrn6FromId: s2.rrn6, addressFromId: s2.address, pinNumber: s2.pinNumber
+                verified: s2.verified, nameFromId: s2.name, rrn13FormId: s2.rrn13, rrn6FromId: s2.rrn6, addressFromId: s2.address, pinNumber: s2.pinNumber, email: s2.email, phone: s2.phone
             },
             customer: {
                 name: s3.name, rrn: s3.rrn, phone: s3.phone, email: s3.email, address: s3.address
@@ -50,9 +52,9 @@ export const useAccountOpenStore = create((set, get) => ({
 
     resetAll: () => set({
         step1: { all: false, eContract: false, privacy: false, marketing: false },
-        step2: { verified: false, name: "", rrn6: "", address: "", pinNumber: "" },
+        step2: { verified: false, name: "", rrn13: "", rrn6: "", address: "", pinNumber: "", email: "", phone: "" },
         step3: { name: "", rrn: "", phone: "", email: "", address: "" },
         step4: { product: "saving", fromAccount: "", mPin: "", newAccountNo: genAccountNo() },
         submitted: false,
     })
-}));
+}), { name: "AccountOpenStore" }));

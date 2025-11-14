@@ -3,6 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import '../resources/css/main.css';
 import mainacc from '../resources/img/acc_fin.png'
 import { goToAccountOpenPage } from "./account/utils/navigations";
+import PriceWidget from "./spot/components/PriceWidget";
+import getdata from "./mypage/getdata";
+import { AiOutlineGold } from "react-icons/ai";
 
 
 // 데모용 아이콘 (간단한 SVG)
@@ -89,7 +92,7 @@ const Hero = ({ isLoggedIn, name }) => {
                 {/* rounded-full bg-blue-700 text-white px-6 py-3 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
                 <button className="primary-button-lg" onClick={() => goToAccountOpenPage(navigate)}>지금 개설하기</button>
                 {/* rounded-full border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600 */}
-                <button className="secondary-button-lg">금리 보기</button>
+                {/* <button className="secondary-button-lg">금리 보기</button> */}
               </div>
             </div>
             {/* col-span-12 md:col-span-5 */}
@@ -148,26 +151,28 @@ const Hero = ({ isLoggedIn, name }) => {
   );
 };
 
-const QuickActions = () => {
+const QuickActions = ({ isAdmin = false }) => {
   const navigate = useNavigate();
 
   const items = [
     { id: "transfer", label: "계좌이체", icon: paths.send, href: "/transfer"  },
-    { id: "bill", label: "공과금", icon: paths.bill, href: "/" },
+    { id: "bill", label: "공과금", icon: paths.bill, href: "/bills" },
     { id: "asset", label: "자산관리", icon: paths.chart, href: "/" },
-    { id: "loan", label: "대출", icon: paths.loan, href: "/" },
+    { id: "loan", label: "대출", icon: paths.loan, href: "/loan/products" },
     { id: "fx", label: "외화", icon: paths.fx, href: "/foreign/rate" },
-    { id: "spot", label: "현물", icon: paths.card, href: "/" },
+    { id: "spot", label: "현물", icon: paths.card, href: "/spot" },
     { id: "deposit", label: "예적금가입", icon: paths.bank, href: "/depositSavingProductList/open" },
-    { id: "mypage", label: "마이페이지", icon: paths.arrowR, href: "/" },
+    { id: "mypage", label: isAdmin ? "관리자페이지" : "마이페이지", icon: paths.arrowR, href: isAdmin ? "__ADMIN__" : "/mypage" },
   ];
 
   const handleActionClick = (href) => {
-    if (href) {
-      navigate(href);
-    } else {
-      alert("이 기능은 현재 준비 중입니다.");
+    if (!href) return alert("준비 중");
+    if (href === "__ADMIN__") {
+      // 타임리프 관리자 진입: 8081로 정식 네비게이션
+      window.location.assign("http://localhost:8081/admin/enter");
+      return;
     }
+    navigate(href);
   };
 
   return (
@@ -193,8 +198,15 @@ const QuickActions = () => {
   );
 };
 
-const AccountSnapshot = ({ summary }) => {
+const AccountSnapshot = ({ summary, isLoggedIn, user }) => {
+  //const { isLoggedIn } = useAuth();
   const total = useMemo(() => summary.accounts.reduce((a, b) => a + b.balance, 0), [summary.accounts]);
+
+  console.log('ckuser :', user);
+  if (!isLoggedIn) {
+    return <section className="account-snapshot-section">
+      <div className="content-container h-[300px] py-10"><h1 className="text-center text-2xl">로그인이 필요합니다.</h1></div></section>;
+  }
   return (
     <section className="account-snapshot-section">
       {/* mx-auto max-w-screen-xl px-6 py-10 */}
@@ -266,6 +278,18 @@ const AccountSnapshot = ({ summary }) => {
           </div>
           {/* col-span-12 lg:col-span-4 space-y-6 */}
           <div className="snapshot-side-col">
+           {/* 현물 미니 시세 위젯 (오른쪽 사이드 카드 라인 정렬) */}
+            <div className="snapshot-card side-card">
+              <div className="card-header-icon small">
+                <div className="font-medium">현물 시세</div>
+                <Icon path={paths.chart} />
+              </div>
+              <div>
+                <PriceWidget size="small" showChart={false} className="w-full" />
+              </div>
+            </div>
+
+
             {/* rounded-2xl border bg-white p-5 shadow-sm */}
             <div className="snapshot-card side-card">
               {/* flex items-center justify-between mb-2 */}
@@ -291,17 +315,16 @@ const AccountSnapshot = ({ summary }) => {
               <div className="card-subtitle">상환일 {summary.loans[0].nextDue}</div>
             </div>
             {/* rounded-2xl border bg-white p-5 shadow-sm */}
-            <div className="snapshot-card side-card">
-              {/* flex items-center justify-between mb-3 */}
+            {/* <div className="snapshot-card side-card">
               <div className="card-header-icon small">
                 <div className="font-medium">이번달 지출 인사이트</div>
                 <Icon path={paths.chart} />
               </div>
-              {/* text-sm text-gray-600 */}
+              text-sm text-gray-600
               <div className="insight-text">카테고리 Top3: 식비 · 교통 · 쇼핑</div>
-              {/* mt-2 h-16 w-full rounded bg-gray-100 */}
+              mt-2 h-16 w-full rounded bg-gray-100
               <div className="insight-chart-placeholder" aria-hidden="true" />
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -309,7 +332,43 @@ const AccountSnapshot = ({ summary }) => {
   );
 };
 
-const RateFxTicker = ({ fx }) => (
+function RateFxTicker (){
+  const [topProducts, setTopProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchTopDeposits = async () => {
+      try {
+        setLoading(true); // 호출 시작 시 로딩 상태 설정
+        
+        // 2. import한 getdata 함수 호출
+        const data = await getdata(); 
+        
+        // 3. 받아온 데이터를 상태에 저장
+        setTopProducts(data.fx3.rows);
+        setError(null);
+        
+      } catch (err) {
+        // getdata.js에서 throw한 에러를 여기서 처리
+        setError(err.message || "알 수 없는 오류가 발생했습니다.");
+        setTopProducts([]); // 데이터 초기화
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTopDeposits();
+  }, []); // 컴포넌트 마운트 시 한 번만 실행
+
+  if (loading) {
+    return <div>상품 정보를 불러오는 중입니다...</div>;
+  }
+
+  if (error) {
+    return <div>오류: {error}</div>;
+  }
+  return(
   // aria-labelledby="rate-fx" className="border-y bg-white"
   <section aria-labelledby="rate-fx" className="fx-ticker-section">
     {/* mx-auto max-w-screen-xl px-6 py-4 */}
@@ -319,25 +378,26 @@ const RateFxTicker = ({ fx }) => (
         {/* font-medium text-gray-900 */}
         <h6 id="rate-fx" className="fx-ticker-title">오늘의 환율</h6>
         {/* text-sm text-blue-700 hover:underline */}
-        <a href="#fxmore" className="text-link">더보기</a>
+        <Link to='/foreign/rate' className="text-link">더보기</Link>
       </div>
       {/* mt-3 grid grid-cols-3 gap-4 text-sm */}
       <div className="fx-list-grid">
-        {fx.map((r) => (
+        {topProducts.map((r) => (
           // rounded-xl border p-3 flex items-center justify-between
-          <div key={r.pair} className="fx-rate-item">
+          <div key={r.cur} className="fx-rate-item">
             {/* text-gray-700 */}
-            <span className="fx-pair">{r.pair}</span>
+            <span className="fx-pair">{r.cur}/KRW</span>
             {/* font-semibold */}
-            <span className="fx-rate">{r.rate}</span>
+            <span className="fx-rate">{r.base}</span>
             {/* text-gray-400 */}
-            <span className="fx-time">{r.updatedAt} 기준</span>
+            <span className="fx-time">자정 기준</span>
           </div>
         ))}
       </div>
     </div>
   </section>
-);
+  )
+};
 
 const SecurityBanner = ({ notices }) => (
   // aria-labelledby="security" className="bg-amber-50 border-y border-amber-200"
@@ -365,6 +425,41 @@ const SecurityBanner = ({ notices }) => (
 
 // 펀드 중심/자산관리 중심 전환 플래그
 function FundSpotlight() {
+  const [topProducts, setTopProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchTopDeposits = async () => {
+      try {
+        setLoading(true); // 호출 시작 시 로딩 상태 설정
+        
+        // 2. import한 getdata 함수 호출
+        const data = await getdata(); 
+        
+        // 3. 받아온 데이터를 상태에 저장
+        setTopProducts(data.pro3);
+        setError(null);
+        
+      } catch (err) {
+        // getdata.js에서 throw한 에러를 여기서 처리
+        setError(err.message || "알 수 없는 오류가 발생했습니다.");
+        setTopProducts([]); // 데이터 초기화
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTopDeposits();
+  }, []); // 컴포넌트 마운트 시 한 번만 실행
+
+  if (loading) {
+    return <div>상품 정보를 불러오는 중입니다...</div>;
+  }
+
+  if (error) {
+    return <div>오류: {error}</div>;
+  }
   return (
     <section id="fund" className="fund-spotlight-section">
       {/* mx-auto max-w-screen-xl px-6 py-10 */}
@@ -372,21 +467,21 @@ function FundSpotlight() {
         {/* flex items-center justify-between */}
         <div className="section-header">
           <h4 className="card-title">예/적금 스포트라이트</h4>
-          <a href="#" className="text-link">모든 예/적금 보기</a>
+          <a href="/depositSavingProductList/open" className="text-link">모든 예/적금 보기</a>
         </div>
         {/* mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 */}
         <div className="fund-grid">
-          {[1, 2, 3].map((i) => (
+          {topProducts.map((product) => (
             // rounded-2xl border p-4
-            <div key={i} className="fund-item">
+            <div key={product.no} className="fund-item">
               {/* text-sm text-gray-500 */}
-              <div className="fund-type">액티브 주식형</div>
+              <div className="fund-type">{product.type} </div>
               {/* mt-1 text-lg font-semibold */}
-              <div className="fund-name">Neo 성장주 적금 {i}호</div>
+              <div className="fund-name">{product.name}</div>
               {/* mt-2 text-sm text-gray-600 */}
-              <div className="fund-return">1년 수익률 <b className="fund-return-positive">+8.4%</b></div>
+              <div className="fund-return">연 이율 <b className="fund-return-positive">+{product.rate}</b></div>
               {/* mt-3 inline-flex items-center gap-1 text-sm text-blue-700 hover:underline */}
-              <button className="text-link with-icon small">상세보기 <Icon path={paths.arrowR} /></button>
+              <Link to='/depositSavingProductList/open' className="text-link with-icon small">상세보기 <Icon path={paths.arrowR} /></Link>
             </div>
           ))}
         </div>
@@ -474,7 +569,7 @@ function WealthHubSummary() {
 // }
 export default function BankHome({ user }) {
   const summary = mockSummary;
-
+  const isAdmin = Array.isArray(user?.roles) && user.roles.includes("ADMIN");
   const isLoggedIn = !!user;
 
   return (
@@ -482,9 +577,9 @@ export default function BankHome({ user }) {
       <a href="#main" className="skip-nav-link">본문 바로가기</a>
       <main id="main">
         <Hero name={user?.name || user?.id || user?.loginId} />
-        <QuickActions />
+        <QuickActions isAdmin={isAdmin} />
 
-        <AccountSnapshot summary={summary} />
+        <AccountSnapshot summary={summary} isLoggedIn={isLoggedIn} user={user} />
         <FundSpotlight />
         <WealthHubSummary />
         <RateFxTicker fx={summary.fx} />

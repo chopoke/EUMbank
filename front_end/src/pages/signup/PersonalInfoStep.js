@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import EmailVerifyBox from './EmailVerifyBox';
 import { validUsername, validPassword } from './validators';
 
-export default function PersonalInfoStep({ formData, updateFormData }) {
+export default function PersonalInfoStep({ formData, updateFormData, onCheckUsername }) {
   const uOk = useMemo(() => validUsername(formData.username), [formData.username]);
   const pOk = useMemo(() => validPassword(formData.password), [formData.password]);
   const p2Ok = useMemo(
@@ -11,8 +11,19 @@ export default function PersonalInfoStep({ formData, updateFormData }) {
   );
 
   const handleInputChange = (field, value) => {
-    updateFormData({ [field]: value });
+    if (field === 'username') updateFormData({ username: value, usernameAvailable: null });
+    else updateFormData({ [field]: value });
   };
+
+  const formatPhoneNumber = (value) => {
+    // 숫자만 남김
+    const digits = value.replace(/\D/g, '');
+
+    // 010-XXXX-XXXX 형태로 포맷팅
+    if (digits.length < 4) return digits;
+    if (digits.length < 8) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+  }
 
   return (
     <div>
@@ -42,9 +53,27 @@ export default function PersonalInfoStep({ formData, updateFormData }) {
             <input
               type="tel"
               value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
+              onChange={(e) => { const formatted = formatPhoneNumber(e.target.value);
+                            handleInputChange('phone', formatted)}}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               placeholder="010-1234-5678"
+              maxLength={13}
+              required
+            />
+          </div>
+        </div>
+
+        {/* 생년월일 */}
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              생년월일 <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={formData.birth}
+              onChange={(e) => handleInputChange('birth', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               required
             />
           </div>
@@ -78,14 +107,21 @@ export default function PersonalInfoStep({ formData, updateFormData }) {
                 type="text"
                 value={formData.username}
                 onChange={(e) => handleInputChange('username', e.target.value)}
+                onBlur={() => { if (uOk && formData.username) onCheckUsername?.(formData.username); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 placeholder="영문, 숫자 조합 6~20자"
                 required
               />
               {formData.username && (
-                <p className={`mt-1 text-xs ${uOk ? 'text-green-600' : 'text-red-500'}`}>
-                  {uOk ? '사용 가능한 형식입니다.' : '영문과 숫자를 모두 포함하여 6~20자로 입력하세요.'}
-                </p>
+                <div className="mt-1 text-xs">
+                  {!uOk && <p className="text-red-500">영문과 숫자를 모두 포함하여 6~20자로 입력하세요.</p>}
+                  {uOk && formData.usernameAvailable === true && (
+                    <p className="text-green-600">사용 가능한 아이디입니다.</p>
+                  )}
+                  {uOk && formData.usernameAvailable === false && (
+                    <p className="text-red-500">이미 사용 중인 아이디입니다.</p>
+                  )}
+                </div>
               )}
             </div>
 
