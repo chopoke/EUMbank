@@ -108,15 +108,14 @@ export default function LoanProductDetailPage() {
     if (s) return s;
     if (d) return d;
     const t = (product?.type || "").toLowerCase();
-    if (t.includes("신용")) return "직장인을 위한 신용대출";
     if (t.includes("전세")) return "내집마련을 위한 전세자금대출";
     if (t.includes("담보") || t.includes("주택")) return "밑거름 삼아 발돋움하는 주택담보대출";
+    if (t.includes("자동차")) return "드림카 마련을 위한 자동차 담보 대출"; 
     return "-";
   }, [product]);
 
   // 상품 상세 스펙 테이블
   const SpecTable = () => {
-    const isCredit = (product?.type || "").includes("신용");
     const isAutoLocal =
       (product?.type || "").includes("자동차") ||
       (product?.type || "").toUpperCase().includes("AUTO");
@@ -125,8 +124,6 @@ export default function LoanProductDetailPage() {
 
     const termText = product?.termMonths?.length
       ? `${Math.min(...product.termMonths)} ~ ${Math.max(...product.termMonths)}개월`
-      : isCredit
-      ? "12 ~ 36개월(표시값)"
       : "-";
 
     const collateralText = isCredit
@@ -314,12 +311,12 @@ export default function LoanProductDetailPage() {
             목록으로
           </button>
 
-          {/* 항상 활성화된 ‘신청하기’ 버튼 */}
+          {/* 항상 활성화된 신청하기 버튼 */}
           <button
             type="button"
             onClick={() => {
               if (product) {
-                // 플로우 저장: Step1(agree)부터 시작하도록 마커 남김
+                // 플로우 저장: Step1(agree)부터 시작하도록
                 const prev = loadFlow(product.id) || {};
                 const next = {
                   ...prev,
@@ -332,7 +329,7 @@ export default function LoanProductDetailPage() {
                 };
                 saveFlow(product.id, next);
               }
-              // 약관 동의 페이지로 이동 (약관에서 batchKey 생성/동의 저장 → 제출 페이지로 진행)
+              // 약관 동의 페이지로 이동 (약관에서 batchKey 생성/동의 저장 -> 제출 페이지로 진행)
               navigate(`/loan/apply/${product.id}/agree`);
             }}
             className="px-4 py-2 rounded-xl text-white transition bg-blue-700 hover:bg-blue-800"
@@ -341,7 +338,7 @@ export default function LoanProductDetailPage() {
           </button>
         </div>
 
-        <Calculator product={product} isCredit={isCredit} isAuto={isAuto} carType={carType} onCarTypeChange={setCarType}/>
+        <Calculator product={product} isAuto={isAuto} carType={carType} onCarTypeChange={setCarType}/>
 
         {/* 상품설명 */}
         {(product.joinWay || product.erlyRpayFee || product.dlyRate || product.etcNote) && (

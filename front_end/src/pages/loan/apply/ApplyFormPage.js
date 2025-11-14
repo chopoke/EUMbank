@@ -17,6 +17,7 @@ function KoreanMoneyHint({ value, className = "", showWon = false, omitIl = true
   return <div className={`text-xs text-gray-500 mt-1 ${className}`}>({text}{showWon ? "원" : ""})</div>;
 }
 
+
 // 상환일자로 들어온 인풋값 포맷
 function toDateOnlyInputValue(d = new Date()) {
   const y = d.getFullYear();
@@ -59,7 +60,7 @@ function computeFirstDue(today, selectedDate) {
 }
 
 // 직업, 대출목적
-const PURPOSE_OPTIONS = ["생활비", "주거비", "교육비", "의료비", "사업자금", "기타"];
+const PURPOSE_OPTIONS = ["생활비", "주거비", "차량구매", "기타"];
 const JOB_OPTIONS = [
   { label: "직장인(근로소득)", value: "EMPLOYEE" },
   { label: "자영업자", value: "SELF_EMPLOYED" },

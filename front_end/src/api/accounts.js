@@ -47,6 +47,11 @@ export const fetchLoanProductDetail = (code) =>
 export const fetchLoanQuote = (code, req) =>
   api.post(`/api/loan/${encodeURIComponent(code)}/quote`, req);
 
+// 신청서 사인할떄 사용자 정보 끌어오기
+export async function fetchLoanSignInfo() {
+  const { data } = await api.get("/api/loan/me/sign-info");
+  return data;
+}
 
 // 대출 신청 전, pin검사
 export const verifyLoanPin = (code, pin) =>

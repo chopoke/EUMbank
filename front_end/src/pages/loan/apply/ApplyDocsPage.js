@@ -64,7 +64,7 @@ export default function ApplyDocsPage(){
   const [files, setFiles] = React.useState({ incomeProof: null, idCard: null, etc: null });
   const [errors, setErrors] = React.useState({});
   const [uploading, setUploading] = React.useState(false);
-  const [backendMode, setBackendMode] = React.useState(false); // 백엔드 없으면 false 유지
+  const [backendMode, setBackendMode] = React.useState(false); 
 
   // 플로우 로드/가드
   const flow = loadFlow(code);
@@ -186,12 +186,7 @@ export default function ApplyDocsPage(){
 
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-2 text-xs text-gray-600">
-              <input
-                type="checkbox"
-                checked={backendMode}
-                onChange={(e)=> setBackendMode(e.target.checked)}
-              />
-              백엔드 업로드 사용(서버 준비 후 체크)
+              <input/>
             </label>
 
             <button
@@ -201,10 +196,6 @@ export default function ApplyDocsPage(){
             >
               {uploading ? "처리중…" : "다음 (전자서명)"}
             </button>
-          </div>
-
-          <div className="text-xs text-gray-500">
-            ※ 백엔드 미구축 상태에선 브라우저 메모리(SessionStorage)와 임시 URL만 보관됩니다. 새로고침 시 임시 URL은 무효화될 수 있어요.
           </div>
         </div>
       </ApplyLayout>
