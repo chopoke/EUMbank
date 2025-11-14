@@ -169,7 +169,7 @@ const QuickActions = ({ isAdmin = false }) => {
     if (!href) return alert("준비 중");
     if (href === "__ADMIN__") {
       // 타임리프 관리자 진입: 8081로 정식 네비게이션
-      window.location.assign("http://localhost:8081/admin/enter");
+      window.location.assign(`${process.env.REACT_APP_API_URL || 'http://localhost:8081'}/admin/enter`);
       return;
     }
     navigate(href);
