@@ -49,6 +49,13 @@ export default function Login() {
 
       navigate("/");                                      // 성공 시 이동
     } catch (ex) {
+      const s = ex?.response?.status;
+      const c = ex?.response?.data?.code;
+      if (s === 423 || c === "ACCOUNT_STATUS_BLOCKED") {
+        alert("계정 상태로 로그인할 수 없습니다. 관리자에게 문의하세요.");
+        window.location.assign("/login");
+        return;
+      }
       const t =
         ex?.response?.data?.error ||
         ex?.response?.data?.message ||

@@ -58,4 +58,12 @@ public class GlobalExceptionHandler {
                 "detail", ex.getMessage()
         ));
     }
+
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<Map<String,Object>> handleDisabled(org.springframework.security.authentication.DisabledException ex) {
+        return ResponseEntity.status(423).body(Map.of(
+                "code", "ACCOUNT_STATUS_BLOCKED",
+                "message", "계정 상태로 인해 로그인할 수 없습니다."
+        ));
+    }
 }
