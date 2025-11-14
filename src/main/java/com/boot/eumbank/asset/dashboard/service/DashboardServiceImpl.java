@@ -39,9 +39,9 @@ public class DashboardServiceImpl implements DashboardService{
         BigDecimal foreign = dashboardRepository.sumForeign(cNo);
         BigDecimal installment = dashboardRepository.sumInstallment(cNo);
         BigDecimal deposit = dashboardRepository.sumDeposit(cNo);
-        BigDecimal gold = BigDecimal.ZERO;
+        BigDecimal gold = dashboardRepository.sumGold(cNo);
 
-        BigDecimal totalAssets = cash.add(foreign).add(installment).add(deposit);
+        BigDecimal totalAssets = cash.add(foreign).add(installment).add(deposit).add(gold);
         BigDecimal totalLiabilities  = BigDecimal.ZERO;       // 대출 붙이면 교체
         BigDecimal netWorth    = totalAssets.subtract(totalLiabilities);
         BigDecimal monthlyDue  = dashboardRepository.sumMonthlyDue(cNo);

@@ -6,6 +6,7 @@ import com.boot.eumbank.asset.dashboard.dto.TopDepositDto;
 import com.boot.eumbank.asset.dashboard.dto.TopInstallmentDto;
 import com.boot.eumbank.asset.dashboard.entity.AssetDailySnapshot;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.SubQueryExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.StringExpression;
@@ -27,6 +28,7 @@ import static com.boot.eumbank.product.entity.product.QProductInstallment.produc
 import static com.boot.eumbank.product.entity.product.QProductInstallmentList.productInstallmentList;
 import static com.boot.eumbank.product.entity.product.QProductDeposit.productDeposit;
 import static com.boot.eumbank.product.entity.product.QProductDepositList.productDepositList;
+import static com.boot.eumbank.spot.model.QGoldWallet.goldWallet;
 import static com.boot.eumbank.asset.dashboard.entity.QAssetDailySnapshot.assetDailySnapshot;
 
 @Repository
@@ -122,6 +124,59 @@ public class DashboardRepository {
                         productDeposit.cNo.eq(cNo),
                         productDeposit.dStatus.in("ACTIVE", "NONE")
                         //productDeposit.dStatus.eq("ACTIVE")
+                )
+                .fetchOne();
+    }
+
+    public BigDecimal sumGold(int cNo) {
+        // 최신 시세 서브쿼리 (created_at 최신 또는 p_no 최대값 기준 — 둘 중 하나 택1)
+        var auA = new com.boot.eumbank.spot.model.QPrice("auA");
+        var auB = new com.boot.eumbank.spot.model.QPrice("auB");
+        var agA = new com.boot.eumbank.spot.model.QPrice("agA");
+        var agB = new com.boot.eumbank.spot.model.QPrice("agB");
+
+        // 가장 최신의 p_base_price
+        SubQueryExpression<BigDecimal> auPriceSub = JPAExpressions
+                .select(auA.pBasePrice)
+                .from(auA)
+                .where(
+                        auA.pMetalCode.eq("AU"),
+                        auA.pCreatedAt.eq(
+                                JPAExpressions.select(auB.pCreatedAt.max())
+                                        .from(auB)
+                                        .where(auB.pMetalCode.eq("AU"))
+                        )
+                );
+
+        SubQueryExpression<BigDecimal> agPriceSub = JPAExpressions
+                .select(agA.pBasePrice)
+                .from(agA)
+                .where(
+                        agA.pMetalCode.eq("AG"),
+                        agA.pCreatedAt.eq(
+                                JPAExpressions.select(agB.pCreatedAt.max())
+                                        .from(agB)
+                                        .where(agB.pMetalCode.eq("AG"))
+                        )
+                );
+
+        NumberExpression<BigDecimal> auPrice = Expressions.numberTemplate(
+                BigDecimal.class, "({0})", auPriceSub);
+        NumberExpression<BigDecimal> agPrice = Expressions.numberTemplate(
+                BigDecimal.class, "({0})", agPriceSub);
+
+        // 총합: 월렛현금 + 금그램수*금시세 + 은그램수*은시세
+        NumberExpression<BigDecimal> totalExpr =
+                goldWallet.gwCashBalance
+                        .add(goldWallet.gwGoldBalance.multiply(auPrice))
+                        .add(goldWallet.gwSilverBalance.multiply(agPrice));
+
+        return queryFactory
+                .select(totalExpr.sum().coalesce(BigDecimal.ZERO))
+                .from(goldWallet)
+                .where(
+                        goldWallet.customer.customerNo.eq(cNo),
+                        goldWallet.gwActiveYn.eq("Y")
                 )
                 .fetchOne();
     }
