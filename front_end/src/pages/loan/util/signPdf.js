@@ -57,6 +57,14 @@ export async function mergePdfsAndAddSignature(signatureCanvas, pdfUrls, fields 
   const textColor = rgb(0, 0, 0);
   const fontSize = 10;
 
+  // === 오늘 날짜 (서명일) ===
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm   = String(now.getMonth() + 1).padStart(2, "0");
+  const dd   = String(now.getDate()).padStart(2, "0");
+  const signDateText = `${yyyy}년 ${mm}월 ${dd}일`;
+  const yy2 = String(yyyy).slice(2); // "25"
+
   // 예시 좌표 (A4 기준, 윗쪽에서 아래로 내려오게)
   const leftX = width * 0.14;   // 왼쪽 컬럼 시작 X
   const rightX = width * 0.56;  // 오른쪽 컬럼 시작 X
@@ -93,15 +101,20 @@ export async function mergePdfsAndAddSignature(signatureCanvas, pdfUrls, fields 
   // last.drawText(safe(fields.firstRepayDate),{ x: rightX + 90, y: rowY2, size: fontSize, font, color: textColor }); // 상환예정일
   // ---------------------------------------
 
-  /**
-   * - PDF-lib 좌표계 기준: (0,0)은 "왼쪽 아래"
-   * - y 값을 키우면 → 위로 올라감
-   * - 템플릿의 "대출신청인(서명)" 박스에 맞춰서 대략 값 넣어둔 거라
-   *   실제 양식에 맞게 숫자만 살짝 조정하면 된다.
-   */
+  // ==========날짜
+  const dateY = 185;          // 세로 위치
+  const yearX  = 435;         // "20" 뒤에 들어갈 2자리 연도
+  const monthX = 480;         // "월" 앞의 칸
+  const dayX   = 510;         // "일" 앞의 칸
+  last.drawText(yy2, {x: yearX,y: dateY,size: 11,font,color: textColor,});
+
+  last.drawText(mm, {x: monthX,y: dateY,size: 11,font,color: textColor,});
+
+  last.drawText(dd, {x: dayX,y: dateY,size: 11,font,color: textColor,});
+
 
   // 서명 이미지 너비 (페이지 폭의 비율로 설정)
-  const targetWidth = width * 0.30; // 필요하면 0.25 ~ 0.35 사이로 조절
+  const targetWidth = width * 0.30; 
 
   // 서명 캔버스 비율 유지랑 위치
   const aspect =
@@ -111,16 +124,12 @@ export async function mergePdfsAndAddSignature(signatureCanvas, pdfUrls, fields 
   const targetHeight = targetWidth * aspect;
 
   // --- 서명 박스 위치 추정값 ---
-  // 1) 서명 박스의 중앙 X (오른쪽 박스 중앙 근처)
-  const boxCenterX = width * 0.75; // 너무 왼쪽/오른쪽이면 이 값만 바꿔주면 됨
+  const boxCenterX = width * 0.75; 
 
-  // 2) 서명 박스의 "아래 y 좌표" (페이지 아래에서 얼마나 떨어져 있는지)
-  //    지금 네 스샷 기준으로 scribble 이 박스보다 너무 아래라서,
-  //    y 값을 "기존보다 더 크게" 잡아 박스 안으로 올려준다.
   const boxBottomY = 120; 
 
-  // 3) 서명 박스 높이 (대략)
-  const boxHeight = 30;   // 실제 박스 높이에 맞춰 조정
+  // 3) 서명 박스 높이
+  const boxHeight = 30;  
 
   // 박스 안에 수직 중앙 정렬
   const x = boxCenterX - targetWidth / 2;
