@@ -144,7 +144,7 @@ public class AccountTxnServiceImpl {
 
         historyRepository.save(th);
 
-        log.info("[출금] a_no={}, -{}, balance {} -> {}, memo={}, txId={}",
+        log.info("@@@@@@@@@@ [출금] a_no={}, -{}, balance {} -> {}, memo={}, txId={} @@@@@@@@@@",
                 accountNo, amount, before, after, memo, transferId);
     }
 

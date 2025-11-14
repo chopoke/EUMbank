@@ -2,7 +2,6 @@ package com.boot.eumbank.loan.controller;
 
 import com.boot.eumbank.account.open.jpa.repository.custom.CustomerRepository;
 import com.boot.eumbank.customer.entity.Customer;
-import com.boot.eumbank.customer.repo.CustomerRepo;
 import com.boot.eumbank.loan.dto.LoanProductDTO;
 import com.boot.eumbank.loan.dto.LoanProductDetailDTO;
 import com.boot.eumbank.loan.dto.apply.*;
@@ -15,7 +14,6 @@ import com.boot.eumbank.loan.service.apply.LoanConsentService;
 import com.boot.eumbank.loan.service.apply.LoanQuoteService;
 import com.boot.eumbank.loan.service.LoanService;
 import com.boot.eumbank.loan.service.payment.LoanRepaymentService;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -77,6 +75,22 @@ public class LoanController {
         return ResponseEntity.ok(loanQuoteService.quote(loanCode, req, customer));
     }
 
+    /** 대출 신청용지 사인할 때ㅏ 사용자 정보 가져와서 용지 프린팅 */
+    @GetMapping("/me/sign-info")
+    public ResponseEntity<LoanSignCustDTO> getSignInfo(@AuthenticationPrincipal Customer customer) {
+        if (customer == null) {
+            return ResponseEntity.status(401).build();
+        }
+        LoanSignCustDTO dto = new LoanSignCustDTO(
+                customer.getCustomerNo(),
+                customer.getCNameKr(),
+                customer.getCRrnHash(),
+                customer.getCPhoneMobile(),
+                customer.getCAddress()
+        );
+        return ResponseEntity.ok(dto);
+    }
+
     /**
      * DB에 저장된 사용자의 PIN번호 확인하여 대출신청허가
      */
@@ -116,7 +130,6 @@ public class LoanController {
                                                        @RequestBody LoanSaveConsentsRequestDTO req,
                                                        @AuthenticationPrincipal Customer customer){
         Integer cNo = (customer != null) ? customer.getCustomerNo() : Integer.valueOf(req.getCustomerNo());
-        // la_no는 아직 없을 수도 있음(동의 → 신청 전 단계). 그땐 NULL로 저장해도 됨.
         LoanSaveConsentsResponseDTO res = loanConsentService.saveConsents(req, null, cNo);
         return ResponseEntity.ok(res);
     }

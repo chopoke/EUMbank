@@ -5,6 +5,7 @@ import com.boot.eumbank.account.open.dto.mypage.DocumentListResponse;
 import com.boot.eumbank.account.open.enums.DocumentStatus;
 import com.boot.eumbank.account.open.enums.FileType;
 import com.boot.eumbank.account.open.service.mypage.DocumentMyPageService;
+import com.boot.eumbank.product.service.product.LoanDocumentService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,9 @@ public class DocumentController {
     private final DocumentMyPageService documentService;
     private final Logger logger = LoggerFactory.getLogger(DocumentController.class);
 
+    // 대출서류 업로드
+    private final LoanDocumentService loanDocuSer;
+
     /**
      * 서류 업로드
      */
@@ -40,7 +44,12 @@ public class DocumentController {
         logger.info("서류 업로드 요청 - type: {}", fileType);
         
         try {
-            documentService.saveDocument(file, fileType);
+            if(fileType == FileType.대출신청서명){
+                loanDocuSer.saveLoanDocument(file, fileType);
+            }
+            else{
+                documentService.saveDocument(file, fileType);
+            }
             return ResponseEntity.ok("업로드 성공");
         } catch (Exception e) {
             logger.error("업로드 실패: {}", e.getMessage(), e);
