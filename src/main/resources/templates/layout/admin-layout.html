@@ -2,6 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko" th:fragment="layout(content)">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${title} ?: 'Admin'">Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
@@ -24,20 +25,443 @@
         .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e7eb;border-radius:9999px;padding:6px 10px;background:#fff;color:#111827;white-space:nowrap}
         .idchip{display:flex;align-items:center;gap:6px;white-space:nowrap}
         .idchip i{font-size:18px;color:#374151}
+        
+        /* 푸터 스타일 */
+        .main-footer {
+            background-color: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            margin-top: auto;
+        }
+        
+        .content-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+        
+        .footer-content {
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+        
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 1rem;
+        }
+        
+        /* 작은 모바일: 280px ~ 480px */
+        @media (min-width: 280px) {
+            .footer-grid {
+                gap: 1rem;
+            }
+        }
+        
+        /* 모바일: 481px ~ 640px */
+        @media (min-width: 481px) {
+            .footer-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1.25rem;
+            }
+        }
+        
+        /* 태블릿: 641px ~ 1024px */
+        @media (min-width: 641px) {
+            .footer-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1.5rem;
+            }
+        }
+        
+        /* 데스크톱: 1025px 이상 */
+        @media (min-width: 1025px) {
+            .footer-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 1.5rem;
+            }
+        }
+        
+        .footer-col > p {
+            margin-top: 0;
+            margin-bottom: 0.25rem;
+        }
+        
+        .footer-title {
+            font-weight: 500;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+        
+        .footer-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .footer-list > li {
+            margin-bottom: 0.25rem;
+        }
+        
+        .footer-list a {
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .footer-list a:hover {
+            text-decoration: underline;
+        }
+        
+        .hover-underline:hover {
+            text-decoration: underline;
+        }
+        
+        .copyright {
+            margin-top: 0.5rem;
+            color: #6b7280;
+        }
+        
+        .flex {
+            display: flex;
+        }
+        
+        .space-x-4 > * + * {
+            margin-left: 1rem;
+        }
+        
+        /* 반응형 레이아웃 - 갤럭시 폴드 접힘 기준 (280px) */
+        .admin-container {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+        
+        .admin-sidebar {
+            width: 256px;
+            flex-shrink: 0;
+        }
+        
+        .admin-main {
+            flex: 1;
+            padding: 2rem;
+            min-width: 0;
+        }
+        
+        /* 모바일: 280px ~ 640px (갤럭시 폴드 접힘 포함) */
+        @media (max-width: 640px) {
+            .admin-container {
+                flex-direction: column;
+            }
+            
+            .admin-sidebar {
+                width: 100%;
+                position: fixed;
+                top: 64px;
+                left: -100%;
+                height: calc(100vh - 64px);
+                z-index: 50;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+            }
+            
+            .admin-sidebar.mobile-open {
+                left: 0;
+            }
+            
+            .admin-main {
+                padding: 1rem;
+                width: 100%;
+            }
+            
+            .content-container {
+                padding: 0 16px;
+            }
+            
+            .hdr {
+                padding: 0 12px;
+            }
+            
+            .logo span {
+                display: none;
+            }
+            
+            .nav {
+                display: none;
+            }
+            
+            .right {
+                gap: 8px;
+            }
+            
+            .idchip span {
+                display: none;
+            }
+            
+            .btn {
+                padding: 6px 12px;
+                font-size: 0.875rem;
+            }
+            
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .footer-content {
+                padding: 1.5rem 0;
+            }
+        }
+        
+        /* 작은 태블릿: 641px ~ 768px */
+        @media (min-width: 641px) and (max-width: 768px) {
+            .admin-sidebar {
+                width: 200px;
+            }
+            
+            .admin-main {
+                padding: 1.5rem;
+            }
+            
+            .footer-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        
+        /* 태블릿: 769px ~ 1024px */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .admin-sidebar {
+                width: 220px;
+            }
+            
+            .admin-main {
+                padding: 1.5rem;
+            }
+            
+            .footer-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        
+        /* 햄버거 메뉴 버튼 */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #111827;
+            cursor: pointer;
+            padding: 8px;
+        }
+        
+        @media (max-width: 640px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
+        
+        /* 사이드바 오버레이 (모바일) */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 64px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
+        /* 사이드바 컨텐츠 스타일 */
+        .admin-sidebar-content {
+            height: calc(100vh - 64px);
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 640px) {
+            .admin-sidebar-content {
+                height: 100%;
+            }
+        }
+        
+        /* 대시보드 섹션 스타일 */
+        .dashboard-section {
+            padding: 0;
+        }
+        
+        .dashboard-header {
+            margin-bottom: 2rem;
+        }
+        
+        .dashboard-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            margin: 0;
+        }
+        
+        /* 2열 4행 그리드 레이아웃 */
+        .stats-grid-2col {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        /* 카드 기본 스타일 */
+        .stat-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            transition: all 0.2s ease;
+        }
+        
+        .stat-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .stat-card-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        /* 아이콘 래퍼 */
+        .stat-icon-wrapper {
+            width: 56px;
+            height: 56px;
+            background-color: #eef2ff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .stat-icon {
+            font-size: 24px;
+            color: #4f46e5;
+        }
+        
+        /* 통계 정보 */
+        .stat-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .stat-title {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin: 0 0 0.5rem 0;
+            font-weight: 500;
+        }
+        
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #111827;
+            margin: 0;
+            line-height: 1.2;
+            word-break: break-word;
+        }
+        
+        /* 모바일: 481px ~ 640px */
+        @media (min-width: 481px) {
+            .stats-grid-2col {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1rem;
+            }
+        }
+        
+        /* 태블릿: 641px ~ 1024px */
+        @media (min-width: 641px) {
+            .stats-grid-2col {
+                gap: 1.25rem;
+            }
+            
+            .stat-card {
+                padding: 1.75rem;
+            }
+        }
+        
+        /* 데스크톱: 1025px 이상 */
+        @media (min-width: 1025px) {
+            .stats-grid-2col {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1.5rem;
+            }
+            
+            .stat-card {
+                padding: 2rem;
+            }
+            
+            .stat-value {
+                font-size: 2rem;
+            }
+            
+            .stat-icon-wrapper {
+                width: 64px;
+                height: 64px;
+            }
+            
+            .stat-icon {
+                font-size: 28px;
+            }
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
+<body class="bg-gray-50 text-gray-900" style="display: flex; flex-direction: column; min-height: 100vh;">
 
 <!-- Header -->
 <div th:replace="fragments/admin-header :: header"></div>
 
-<div class="mx-auto w-[1280px] flex">
+<!-- 모바일 메뉴 오버레이 -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<div class="admin-container">
     <!-- Sidebar -->
-    <div th:replace="fragments/admin-sidebar :: sidebar"></div>
+    <aside class="admin-sidebar" id="adminSidebar">
+        <div th:replace="fragments/admin-sidebar :: sidebar"></div>
+    </aside>
 
     <!-- Main slot -->
-    <main class="flex-1 p-8" th:insert="${content}"></main>
+    <main class="admin-main" th:insert="${content}"></main>
 </div>
+
+<!-- Footer -->
+<div th:replace="fragments/admin-footer :: footer"></div>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('adminSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (sidebar.classList.contains('mobile-open')) {
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+        } else {
+            sidebar.classList.add('mobile-open');
+            overlay.classList.add('active');
+        }
+    }
+    
+    // 모바일에서 사이드바 외부 클릭 시 닫기
+    document.getElementById('sidebarOverlay').addEventListener('click', toggleSidebar);
+    
+    // 화면 크기 변경 시 사이드바 상태 초기화
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 640) {
+            const sidebar = document.getElementById('adminSidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+        }
+    });
+</script>
 
 </body>
 </html>

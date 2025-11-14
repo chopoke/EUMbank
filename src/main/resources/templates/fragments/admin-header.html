@@ -2,8 +2,11 @@
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
 <body>
 <header th:fragment="header" class="hdr">
-    <!-- Left: 로고 + 메뉴 + 종 -->
+    <!-- Left: 햄버거 메뉴 + 로고 + 메뉴 + 종 -->
     <div class="left">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="메뉴">
+            <i class="ri-menu-line"></i>
+        </button>
         <a href="http://localhost:3000/" class="logo">
             <img th:src="@{/img/eumonly.png}" alt="이음은행">
             <span>이음은행</span>

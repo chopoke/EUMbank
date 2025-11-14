@@ -3,74 +3,21 @@
       th:replace="~{layout/admin-layout :: layout (~{::content})}">
 
 <th:block th:fragment="content">
-    <section class="space-y-8">
-        <h2 class="text-xl font-semibold">Service Overview</h2>
-
-        <!-- 카드 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div th:each="stat: ${stats}" class="bg-white rounded-xl shadow p-6 flex items-center gap-4">
-                <div class="p-3 bg-indigo-50 rounded-xl">
-                    <i th:class="${stat.icon} + ' text-2xl text-indigo-600'"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-gray-500" th:text="${stat.title}">Title</p>
-                    <p class="text-3xl font-bold" th:text="${stat.value}">0</p>
-                </div>
-            </div>
+    <section class="dashboard-section">
+        <div class="dashboard-header">
+            <h2 class="dashboard-title">Service Overview</h2>
         </div>
 
-        <!-- 테이블 2칸 -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Recent Loans -->
-            <div class="bg-white rounded-xl shadow">
-                <div class="p-6 border-b font-semibold text-gray-900">Recent Loans</div>
-                <div class="p-6">
-                    <table class="w-full text-sm">
-                        <thead>
-                        <tr class="text-left text-gray-500 border-b">
-                            <th class="py-2">Name</th><th class="py-2">Amount</th><th class="py-2">Loan Date</th><th class="py-2">Status</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr class="border-b last:border-0" th:each="loan: ${recentLoans}">
-                            <td class="py-3 font-medium text-gray-900" th:text="${loan.name}"></td>
-                            <td class="py-3" th:text="${loan.amount}"></td>
-                            <td class="py-3 text-gray-600" th:text="${loan.date}"></td>
-                            <td class="py-3">
-                <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                      th:text="${loan.status}"></span>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <div class="mt-6 text-center">
-                        <button class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">View All</button>
+        <!-- 통계 카드 (8개 항목) - 2열 4행 레이아웃 -->
+        <div class="stats-grid-2col">
+            <div th:each="stat: ${stats}" class="stat-card">
+                <div class="stat-card-content">
+                    <div class="stat-icon-wrapper">
+                        <i th:class="${stat.icon} + ' stat-icon'"></i>
                     </div>
-                </div>
-            </div>
-
-            <!-- Recent Inquiries -->
-            <div class="bg-white rounded-xl shadow">
-                <div class="p-6 border-b font-semibold text-gray-900">Recent Inquiries</div>
-                <div class="p-6">
-                    <table class="w-full text-sm">
-                        <thead>
-                        <tr class="text-left text-gray-500 border-b">
-                            <th class="py-2">Subject</th><th class="py-2">Status</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr class="border-b last:border-0" th:each="inq: ${recentInquiries}">
-                            <td class="py-3 font-medium text-gray-900" th:text="${inq.subject}"></td>
-                            <td class="py-3">
-                <span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
-                      th:text="${inq.status}"></span>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                    <div class="mt-6 text-center">
-                        <button class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">View All</button>
+                    <div class="stat-info">
+                        <p class="stat-title" th:text="${stat.title}">Title</p>
+                        <p class="stat-value" th:text="${stat.value}">0</p>
                     </div>
                 </div>
             </div>
