@@ -1,4 +1,3 @@
-// src/pages/loan/apply/ApplySignPage.js
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ApplyLayout, ApplyGuard } from "./ApplyLayoutGuard";
@@ -10,6 +9,7 @@ import {
 import agreementPdf from "../assets/loan.pdf";
 import { fetchLoanSignInfo } from "../../../api/accounts";
 import consentsPdf from "../assets/loan_consent.pdf";
+import {uploadLoanAgreementPdf } from "../../../api/accounts"
 
 const JOB_LABEL_BY_VALUE = {
   EMPLOYEE: "직장인(근로소득)",
@@ -75,7 +75,7 @@ export default function ApplySignPage() {
       });
   }, [code, nav]);
 
-  // 🔹 2) 약관(1장) + 신청서 템플릿(1장) 미리보기 생성 (서명 이력 없을 때만)
+  // 2) 약관(1장) + 신청서 템플릿(1장) 미리보기 생성 (서명 이력 없을 때만)
   React.useEffect(() => {
     // 이미 서명된 PDF 미리보기 URL 있으면 건드리지 않음
     if (signMeta?.previewUrl) return;
@@ -184,13 +184,26 @@ export default function ApplySignPage() {
       console.log("[ApplySignPage] quote >>>", quote);
       console.log("[ApplySignPage] fields for PDF >>>", fields);
 
-      // 실제 PDF 생성 (반드시 await)
-      // 🔹 consentsPdf(약관) + agreementPdf(신청서) → 마지막 페이지(신청서)에 서명
+      // PDF 생성 
+      // consentsPdf(약관) + agreementPdf(신청서) → 마지막 페이지(신청서)에 서명
       const blob = await mergePdfsAndAddSignature(
         canvas,
         [consentsPdf, agreementPdf],
         fields
       );
+
+      const meta = buildSignatureMeta(blob, [consentsPdf, agreementPdf]);
+
+      // document_tbl 업로드
+      try {
+        const uploadRes = await uploadLoanAgreementPdf(
+          blob,
+          meta?.fileName || "loan-agreement.pdf"
+        );
+        console.log("서명 PDF 업로드 성공:", uploadRes.data);
+      } catch (err) {
+        console.error("서명 PDF 업로드 실패:", err);
+      }
 
       // 미리보기용 URL 생성 & 기존 blob URL 정리
       const signedUrl = URL.createObjectURL(blob);
@@ -200,8 +213,6 @@ export default function ApplySignPage() {
         }
         return signedUrl;
       });
-
-      const meta = buildSignatureMeta(blob, [consentsPdf, agreementPdf]);
 
       const next = {
         ...flow,

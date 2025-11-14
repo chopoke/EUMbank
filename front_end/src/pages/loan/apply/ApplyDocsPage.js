@@ -81,7 +81,7 @@ export default function ApplyDocsPage(){
         etc: null,
       });
     }
-  }, [flow, code, nav]);
+  }, [ code, nav]);
 
   if (!flow) return null;
 

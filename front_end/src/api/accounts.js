@@ -68,19 +68,24 @@ export const createLoanConsents = (code, payload) =>
 
 // 대출 서류 제출
 export const uploadLoanDoc = (code, file) => {
-  // 백엔드 준비 후 실제 구현:
-  // const form = new FormData();
-  // form.append("file", file);
-  // return api.post(`/api/loan/${encodeURIComponent(code)}/attachments`, form, {
-  //   headers: {"Content-Type": "multipart/form-data"}
-  // });
-
-  // 임시 스텁(프론트만 사용): 즉시 성공 형태 흉내
   return Promise.resolve({
     fileId: `TEMP-${Date.now()}`,
     url: URL.createObjectURL(file),
   });
 };
+
+// 대출서류 마이페이지 저장을 위함
+export function uploadLoanAgreementPdf(blob, fileName = "loan-agreement.pdf") {
+  const formData = new FormData();
+  const file = new File([blob], fileName, { type: "application/pdf" });
+
+  formData.append("file", file);
+  formData.append("type", "대출신청서명"); 
+  
+  return api.post("/api/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
 
 
 //  ========================== [  대출관리자단  ] ============================
