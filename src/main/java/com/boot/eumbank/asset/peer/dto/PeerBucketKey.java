@@ -2,8 +2,8 @@ package com.boot.eumbank.asset.peer.dto;
 
 public record PeerBucketKey(
         String gender,
-        Integer age,
-        String income,
-        String job,
-        String region
+        Integer ageBand,
+        String incomeCd,
+        String jobCd,
+        String regionCd
 ) {}

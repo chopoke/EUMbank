@@ -40,28 +40,44 @@ const REGIONS = [
 
 const LS_KEY = "peerProfileDraft";
 
-export default function PeerProfileForm({ onSaved }) {
+export default function PeerProfileForm({ 
+  onSaved,
+  onCancel,                  // ← 선택: 수정모드에서 취소 버튼
+  initialValues = null,      // ← 선택: { gender, ageBand, incomeCd, jobCd, regionCd }
+  submitLabel = "저장",
+  useDraft = true,           // ← 초깃값 작성(true), 수정(false)
+}) {
   const [form, setForm] = useState({
-    gender: "", ageBand: "", jobGroup: "", incomeBand: "", region: "",
+    gender: "", ageBand: "", jobCd: "", incomeCd: "", regionCd: "",
   });
   const [saving, setSaving] = useState(false);
+
   const valid = useMemo(
-    () => !!(form.gender && form.ageBand && form.jobGroup && form.incomeBand && form.region),
+    () => !!(form.gender && form.ageBand && form.jobCd && form.incomeCd && form.regionCd),
     [form]
   );
 
-  // 임시 저장 복구
+  // initialValues → 폼에 주입 (수정 모드)
   useEffect(() => {
-    const draft = window.localStorage.getItem(LS_KEY);
-    if (draft) {
-      try { setForm(JSON.parse(draft)); } catch {}
+    if (initialValues) {
+      setForm({
+        gender:     initialValues.gender ?? "",
+        ageBand:    String(initialValues.ageBand ?? ""),
+        jobCd:   initialValues.jobCd ?? "",
+        incomeCd: initialValues.incomeCd ?? "",
+        regionCd:     initialValues.regionCd ?? initialValues.region ?? "",
+      });
+    } else if(useDraft) {
+      const draft = localStorage.getItem(LS_KEY);
+      if (draft) try { setForm(JSON.parse(draft)); } catch {}
     }
-  }, []);
+  }, [initialValues]);
 
-  // 입력 변경 시 임시 저장
+   //초깃값 모드에서만 draft 저장
   useEffect(() => {
+    if (!useDraft || initialValues) return;
     window.localStorage.setItem(LS_KEY, JSON.stringify(form));
-  }, [form]);
+  }, [form, useDraft, initialValues]);
 
   const onChange = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -73,13 +89,14 @@ export default function PeerProfileForm({ onSaved }) {
       const payload = {
         gender : form.gender,
         ageBand: Number(form.ageBand),
-        incomeCd: form.incomeBand,
-        jobCd: form.jobGroup,
-        region: form.region,
+        incomeCd: form.incomeCd,
+        jobCd: form.jobCd,
+        regionCd: form.regionCd,
       };
       const res = await api.post("/api/asset/peer/profile", payload);
-      window.localStorage.removeItem(LS_KEY);
-      onSaved?.(res.data ?? form);
+
+      if (useDraft && !initialValues) window.localStorage.removeItem(LS_KEY);
+      onSaved?.({ ...payload, ...(res?.data || {}) });
     } catch (err) {
       alert("저장에 실패했습니다. 다시 시도해 주세요.");
     } finally {
@@ -105,9 +122,9 @@ export default function PeerProfileForm({ onSaved }) {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           <SelectField label="성별" value={form.gender} onChange={onChange("gender")} options={GENDERS} />
           <SelectField label="연령대" value={form.ageBand} onChange={onChange("ageBand")} options={AGE_BANDS} />
-          <SelectField label="직업" value={form.jobGroup} onChange={onChange("jobGroup")} options={JOB_GROUPS} />
-          <SelectField label="월 소득(세전)" value={form.incomeBand} onChange={onChange("incomeBand")} options={INCOME_BANDS} />
-          <SelectField label="거주 지역" value={form.region} onChange={onChange("region")} options={REGIONS} />
+          <SelectField label="직업" value={form.jobCd} onChange={onChange("jobCd")} options={JOB_GROUPS} />
+          <SelectField label="월 소득(세전)" value={form.incomeCd} onChange={onChange("incomeCd")} options={INCOME_BANDS} />
+          <SelectField label="거주 지역" value={form.regionCd} onChange={onChange("regionCd")} options={REGIONS} />
         </div>
 
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">
@@ -115,19 +132,15 @@ export default function PeerProfileForm({ onSaved }) {
         </div>
 
         <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50"
-            onClick={() => setForm({ gender:"", ageBand:"", jobGroup:"", incomeBand:"", region:"" })}
-          >
-            초기화
-          </button>
-          <button
-            type="submit"
-            disabled={!valid || saving}
-            className={`rounded-md px-4 py-2 text-sm text-white ${valid ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-300 cursor-not-allowed"}`}
-          >
-            {saving ? "저장 중…" : "또래 비교 시작하기"}
+          {!!onCancel && (
+            <button type="button"
+              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50"
+              onClick={onCancel}
+            >취소</button>
+          )}
+          <button type="submit" disabled={!valid || saving}
+            className={`rounded-md px-4 py-2 text-sm text-white ${valid ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-300 cursor-not-allowed"}`}>
+            {saving ? "저장 중…" : submitLabel}
           </button>
         </div>
       </form>

@@ -49,8 +49,8 @@ public class AssetManagementData {
     @Column(name = "amd_job_cd", length = 25, nullable = false)
     private String amdJobCd;            // J1~J8 등 코드
 
-    @Column(name = "amd_region", length = 20, nullable = false)
-    private String amdRegion;
+    @Column(name = "amd_region_cd", length = 20, nullable = false)
+    private String amdRegionCd;
 
     @Column(name = "amd_created", nullable = false, updatable = false)
     private LocalDateTime amdCreatedAt;

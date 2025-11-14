@@ -1,11 +1,14 @@
 package com.boot.eumbank.asset.peer.repository;
 
+import com.boot.eumbank.asset.peer.dto.BucketCounts;
 import com.boot.eumbank.asset.peer.dto.PeerBucketKey;
-import com.boot.eumbank.asset.peer.dto.PeerBucketSums;
 import com.boot.eumbank.asset.peer.dto.PeerTotals;
 import com.boot.eumbank.asset.peer.entity.AssetManagementData;
 import com.boot.eumbank.asset.peer.entity.AssetPeerData;
+import com.boot.eumbank.asset.peer.entity.QAssetManagementData;
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -49,12 +52,12 @@ public class PeerRepository {
      * @param incomeMin 하한
      * @param incomeMax 상한
      * @param jobCd 직업
-     * @param region 지역
+     * @param regionCd 지역
      * @return long
      */
     public long updateAmdProfile(
             int cNo, String gender, Integer ageBand, String incomeCd,
-            Integer incomeMin, Integer incomeMax, String jobCd, String region
+            Integer incomeMin, Integer incomeMax, String jobCd, String regionCd
     ) {
         return queryFactory.update(assetManagementData)
                 .set(assetManagementData.amdGender, gender)
@@ -63,7 +66,7 @@ public class PeerRepository {
                 .set(assetManagementData.amdIncomeMin, incomeMin)
                 .set(assetManagementData.amdIncomeMax, incomeMax)
                 .set(assetManagementData.amdJobCd, jobCd)
-                .set(assetManagementData.amdRegion, region)
+                .set(assetManagementData.amdRegionCd, regionCd)
                 .where(assetManagementData.cno.eq(cNo))
                 .execute();
     }
@@ -107,10 +110,10 @@ public class PeerRepository {
      * @param ageBand 연령대
      * @param incomeCd 월소득
      * @param jobCd 직업
-     * @param region 지역
+     * @param regionCd 지역
      * @return AssetPeerData
      */
-    public Optional<AssetPeerData> findPeerBucket(String gender, Integer ageBand, String incomeCd, String jobCd, String region) {
+    public Optional<AssetPeerData> findPeerBucket(String gender, Integer ageBand, String incomeCd, String jobCd, String regionCd) {
         return Optional.ofNullable(
                 queryFactory.selectFrom(assetPeerData)
                         .where(
@@ -118,7 +121,7 @@ public class PeerRepository {
                                 assetPeerData.apdAgeBand.eq(ageBand),
                                 assetPeerData.apdIncomeCd.eq(incomeCd),
                                 assetPeerData.apdJobCd.eq(jobCd),
-                                assetPeerData.apdRegion.eq(region)
+                                assetPeerData.apdRegionCd.eq(regionCd)
                         )
                         .fetchOne()
         );
@@ -144,10 +147,10 @@ public class PeerRepository {
                 .set(assetPeerData.apdTotalGold, assetPeerData.apdTotalGold.add(d.gold()))
                 .where(
                         assetPeerData.apdGender.eq(k.gender()),
-                        assetPeerData.apdAgeBand.eq(k.age()),
-                        assetPeerData.apdIncomeCd.eq(k.income()),
-                        assetPeerData.apdJobCd.eq(k.job()),
-                        assetPeerData.apdRegion.eq(k.region())
+                        assetPeerData.apdAgeBand.eq(k.ageBand()),
+                        assetPeerData.apdIncomeCd.eq(k.incomeCd()),
+                        assetPeerData.apdJobCd.eq(k.jobCd()),
+                        assetPeerData.apdRegionCd.eq(k.regionCd())
                 )
                 .execute();
     }
@@ -162,8 +165,8 @@ public class PeerRepository {
     public void insertPeerBucketIfMissing(PeerBucketKey k, int nInit, PeerTotals t) {
         try {
             apdRepository.save(AssetPeerData.builder()
-                    .apdGender(k.gender()).apdAgeBand(k.age())
-                    .apdIncomeCd(k.income()).apdJobCd(k.job()).apdRegion(k.region())
+                    .apdGender(k.gender()).apdAgeBand(k.ageBand())
+                    .apdIncomeCd(k.incomeCd()).apdJobCd(k.jobCd()).apdRegionCd(k.regionCd())
                     .apdNCustomers(nInit)
                     .apdTotalAssets(t.totalAssets())
                     .apdTotalLiabilities(t.totalLiabilities())
@@ -177,5 +180,45 @@ public class PeerRepository {
         } catch (DataIntegrityViolationException e) {
             applyDeltaToPeerBucket(k, nInit, t);
         }
+    }
+
+    /**
+     * 상위 퍼센트 (총인원, 해당 고객 이하 인원수)
+     * @param gender 성별
+     * @param ageBand 연령대
+     * @param incomeCd 월소득
+     * @param jobCd 직업
+     * @param regionCd 지역
+     * @param myNetWorth 순자산
+     * @return BucketCounts
+     */
+    public BucketCounts fetchNetWorthCounts(String gender, Integer ageBand, String incomeCd, String jobCd, String regionCd, BigDecimal myNetWorth) {
+
+        Long n = queryFactory
+                .select(assetManagementData.count())
+                .from(assetManagementData)
+                .where(
+                        assetManagementData.amdGender.eq(gender),
+                        assetManagementData.amdAgeBand.eq(ageBand),
+                        assetManagementData.amdIncomeCd.eq(incomeCd),
+                        assetManagementData.amdJobCd.eq(jobCd),
+                        assetManagementData.amdRegionCd.eq(regionCd)
+                )
+                .fetchOne();
+
+        Long le = queryFactory
+                .select(assetManagementData.count())
+                .from(assetManagementData)
+                .where(
+                        assetManagementData.amdGender.eq(gender),
+                        assetManagementData.amdAgeBand.eq(ageBand),
+                        assetManagementData.amdIncomeCd.eq(incomeCd),
+                        assetManagementData.amdJobCd.eq(jobCd),
+                        assetManagementData.amdRegionCd.eq(regionCd),
+                        assetManagementData.amdNetWorth.loe(myNetWorth)
+                )
+                .fetchOne();
+
+        return new BucketCounts(n != null ? n : 0L, le != null ? le : 0L);
     }
 }

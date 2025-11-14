@@ -21,16 +21,24 @@ export default function AssetPeerComparison() {
   const [needProfile, setNeedProfile] = useState(false);
   const [compare, setCompare] = useState(null);   // PeerCompareResponse
 
+  // 편집 모드 on/off
+  const [editing, setEditing] = useState(false);
+  const [rawProfile, setRawProfile] = useState(null); // 코드값 보관
+
+  // 첫 진입 시 기존 프로필 조회 → 없으면 폼 페이지로 이동시켜도 됨
   useEffect(() => {
     (async () => {
       try {
         const res = await api.get("/api/asset/peer/profile"); // 없으면 204/404로 가정
         if (res?.data) {
           const p = res.data;
+          
+          setRawProfile(p);
           setNeedProfile(false);
           
           const cmp = await api.post("/api/asset/peer/profile", p);
           setCompare(cmp.data);
+          console.log(cmp.data);
           setProfile({
             genderLabel: cmp.data.genderLabel,
             ageBandLabel: cmp.data.ageBandLabel,
@@ -48,7 +56,9 @@ export default function AssetPeerComparison() {
     })();
   }, []);
 
+  // 수정 저장 처리(폼에서 돌아온 데이터 반영)
   const handleProfileSaved = (resDataOrForm) => {
+    // 백엔드가 compare 응답을 돌려준다고 가정
     setCompare(resDataOrForm);
     setProfile({
       genderLabel: resDataOrForm.genderLabel,
@@ -57,10 +67,23 @@ export default function AssetPeerComparison() {
       jobCdLabel: resDataOrForm.jobCdLabel,
       regionLabel: resDataOrForm.regionLabel,
     });
+    setRawProfile({
+      gender:  resDataOrForm.gender,
+      ageBand: resDataOrForm.ageBand,
+      incomeCd:resDataOrForm.incomeCd,
+      jobCd:   resDataOrForm.jobCd,
+      regionCd:resDataOrForm.regionCd,
+    });
     setNeedProfile(false);
+    setEditing(false); // ← 편집 모드 종료
   };
 
-  const toMillion = (v) => Math.round(Number(v ?? 0) / 1_000_000);
+  // “수정하기” 버튼 핸들러
+  const startEdit = () => {
+    setEditing(true);
+  };
+
+  const asInt = (v) => Math.trunc(Number(v ?? 0));
 
   const compareOptions = useMemo(
     () => ({
@@ -75,8 +98,8 @@ export default function AssetPeerComparison() {
           callbacks: {
             label: (ctx) => {
               const label = ctx.label || "";
-              const val = ctx.parsed.x;
-              return ` ${label}: ${Number(val ?? 0).toLocaleString("ko-KR")} 백만`;
+              const intVal = Math.trunc(Number(ctx.raw ?? 0)); // 원 단위
+              return ` ${label}: ${intVal.toLocaleString("ko-KR")}원`;
             },
           },
         },
@@ -87,7 +110,7 @@ export default function AssetPeerComparison() {
           grid: { color: "#E5E7EB" },
           ticks: {
             maxTicksLimit: 4,
-            callback: (v) => `${v}`,
+            callback: (v) => Math.trunc(Number(v)).toLocaleString("ko-KR"),
           },
         },
         y: {
@@ -101,13 +124,13 @@ export default function AssetPeerComparison() {
   // 순자산 비교용 데이터
   const netWorthData = useMemo(() => {
     if (!compare) return null;
-    const left = toMillion(compare.myNetWorth);
-    const right = toMillion(compare.avgNetWorth);
+    const left = asInt(compare.myNetWorth);
+    const right = asInt(compare.avgNetWorth);
     return {
       labels: ["나", "평균"],
       datasets: [
         {
-          label: "순자산 (백만 원 기준)",
+          label: "순자산",
           data: [left, right],
           backgroundColor: ["#3b82f6", "#9ca3af"],
           borderRadius: 8,
@@ -117,71 +140,126 @@ export default function AssetPeerComparison() {
     };
   }, [compare]);
 
-  // 자산 구성 비교용 (입출금/적금/예금/외환/현물/대출) 공통 생성 함수
-  const buildAssetCompareData = (myVal, avgVal) => {
-    const left = toMillion(myVal);
-    const right = toMillion(avgVal);
-    return {
-      labels: ["나", "평균"],
-      datasets: [
-        {
-          data: [left, right],
-          backgroundColor: ["#3b82f6", "#9ca3af"],
-          borderRadius: 8,
-          barThickness: 18,
+  // 퍼센트 유틸 (0~100, 소수1자리)
+  const pct = (part, total) => {
+    const P = Number(total) > 0 ? (Number(part) / Number(total)) * 100 : 0;
+    return Math.max(0, Math.min(100, Number.isFinite(P) ? P : 0));
+  };
+
+  // 퍼센트용 차트 옵션 (x축 %)
+  const percentOptions = useMemo(() => ({
+    indexAxis: "y",
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => ` ${ctx.label}: ${Math.floor(ctx.parsed.x)}%`,
         },
-      ],
-    };
+      },
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        max: 100,
+        ticks: {
+          stepSize: 20,
+          callback: (v) => `${v}%`,
+        },
+        grid: { color: "#E5E7EB" },
+      },
+      y: { grid: { display: false } },
+    },
+  }), []);
+
+  // 자산 구성 비교용 (입출금/적금/예금/외환/현물/대출) 공통 생성 함수
+  const buildAssetCompareData = (myVal, avgVal, myTotal, avgTotal) => ({
+    labels: ["나", "평균"],
+    datasets: [{
+      data: [ Math.floor(pct(myVal, myTotal)), Math.floor(pct(avgVal, avgTotal)) ],
+      backgroundColor: ["#3b82f6", "#9ca3af"],
+      borderRadius: 8,
+      barThickness: 18,
+    }],
+  });
+
+  const badgeBySeverity = {
+    good: "border-green-200 bg-green-50 text-green-800",
+    info: "border-yellow-200 bg-yellow-50 text-yellow-800",
+    warn: "border-red-200 bg-red-50 text-red-800",
   };
 
   const cashData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myCash, compare.avgCash)
+        ? buildAssetCompareData(compare.myCash, compare.avgCash, compare.myTotalAssets, compare.avgTotalAssets)
         : null,
     [compare]
   );
   const installmentData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myInstallment, compare.avgInstallment)
+        ? buildAssetCompareData(compare.myInstallment, compare.avgInstallment, compare.myTotalAssets, compare.avgTotalAssets)
         : null,
     [compare]
   );
   const depositData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myDeposit, compare.avgDeposit)
+        ? buildAssetCompareData(compare.myDeposit, compare.avgDeposit, compare.myTotalAssets, compare.avgTotalAssets)
         : null,
     [compare]
   );
   const foreignData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myForeign, compare.avgForeign)
+        ? buildAssetCompareData(compare.myForeign, compare.avgForeign, compare.myTotalAssets, compare.avgTotalAssets)
         : null,
     [compare]
   );
   const goldData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myGold, compare.avgGold)
+        ? buildAssetCompareData(compare.myGold, compare.avgGold, compare.myTotalAssets, compare.avgTotalAssets)
         : null,
     [compare]
   );
   const liabilitiesData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(
-            compare.myTotalLiabilities,
-            compare.avgTotalLiabilities
-          )
+        ? buildAssetCompareData(compare.myTotalLiabilities, compare.avgTotalLiabilities, compare.myTotalAssets, compare.avgTotalAssets)
         : null,
     [compare]
   );
 
   if (loading) {
     return <main className="content-container p-6">로딩 중…</main>;
+  }
+
+  // ===== 렌더링 분기 =====
+  // 1) 첫 진입: 프로필 없음 → 폼 보여주기
+  // 2) 수정하기 클릭: editing=true → 폼 보여주기
+  if (needProfile || editing) {
+    return (
+      <main className="bg-gray-50 text-gray-900 min-h-screen">
+        <header className="content-container px-6 pt-8 md:pt-10 pb-4">
+          <h1 className="text-xl font-semibold text-gray-900">
+            {needProfile ? "또래 비교 시작하기" : "나의 프로필 수정"}
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">그룹 기준을 선택해 주세요.</p>
+        </header>
+
+        <section className="content-container px-6 pb-16">
+          <PeerProfileForm
+            initialValues={editing ? rawProfile : null}
+            submitLabel={editing ? "저장" : "시작하기"}
+            onSaved={handleProfileSaved}
+            onCancel={editing ? () => setEditing(false) : undefined}
+          />
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -205,7 +283,15 @@ export default function AssetPeerComparison() {
             {/* 상단: 나의 프로필 + 순자산 비교 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* 나의 프로필 */}
-              <div className="rounded-md border border-gray-200 bg-gray-50 p-4 flex flex-col gap-4">
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-4 flex flex-col gap-4 relative">
+                <button
+                  onClick={startEdit}
+                  className="absolute top-4 right-4 text-xs font-medium text-blue-600 hover:text-blue-700
+                            px-2 py-1 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  aria-label="프로필 수정하기"
+                >
+                  수정하기
+                </button>
                 <div>
                   <h2 className="text-base font-semibold text-gray-900">나의 프로필</h2>
                   <p className="text-[12px] text-gray-500 -mt-1">
@@ -213,7 +299,7 @@ export default function AssetPeerComparison() {
                   </p>
                 </div>
 
-                <ul className="text-sm text-gray-700 space-y-3">
+                <ul className="text-sm text-gray-700 space-y-5">
                   <li className="flex justify-between">
                     <span className="text-[12px] text-gray-500">성별</span>
                     <span className="font-medium text-gray-900">{profile.genderLabel}</span>
@@ -236,11 +322,10 @@ export default function AssetPeerComparison() {
                   </li>
                 </ul>
 
-                {typeof compare?.nCustomers === "number" && compare.nCustomers > 0 && (
-                  <div className="mt-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-[12px] text-blue-700 font-medium">
-                    표본 수: 동일 조건 {compare.nCustomers.toLocaleString()}명
-                  </div>
-                )}
+                {/* <div className="mt-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-[12px] text-blue-700 font-medium">
+                  표본 수: 동일 조건 {Number(compare?.nCustomers ?? 0).toLocaleString()}명
+                </div> */}
+
               </div>
 
               {/* 순자산 비교 */}
@@ -253,7 +338,7 @@ export default function AssetPeerComparison() {
                     </p>
                   </div>
                   <span className="rounded-full bg-green-50 text-green-700 text-[11px] font-medium px-2 py-0.5 border border-green-200">
-                    상위 22%
+                    상위{Number(compare?.topPct ?? 0).toLocaleString()}%
                   </span>
                 </div>
 
@@ -261,27 +346,19 @@ export default function AssetPeerComparison() {
                   {netWorthData && (<Bar data={netWorthData} options={compareOptions} />)}
                 </div>
                 
-                {/* <BarCompareStatic
-                    metric="순자산 (백만 원 기준)"
-                    leftLabel="나"
-                    rightLabel="평균"
-                    leftValue={Math.round(Number((compare?.myNetWorth ?? 0)) / 1_000_000)}
-                    rightValue={Math.round(Number((compare?.avgNetWorth ?? 0)) / 1_000_000)}
-                  /> */}
-
-                {/* <PlaceholderChart label="분포 차트 (박스플롯 등)" height="h-40" /> */}
+                
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="rounded-md bg-white border border-gray-200 p-4">
                     <div className="text-[12px] text-gray-500">내 순자산</div>
                     <div className="font-semibold text-gray-900">
-                      {Number(compare?.myNetWorth ?? 0).toLocaleString()}원
+                      {Math.floor(Number(compare?.myNetWorth ?? 0)).toLocaleString()}원
                     </div>
                   </div>
                   <div className="rounded-md bg-white border border-gray-200 p-4">
                     <div className="text-[12px] text-gray-500">그룹 평균</div>
                     <div className="font-semibold text-gray-900">
-                      {Number(compare?.avgNetWorth ?? 0).toLocaleString()}원
+                      {Math.floor(Number(compare?.avgNetWorth ?? 0)).toLocaleString()}원
                     </div>
                   </div>
                 </div>
@@ -302,88 +379,60 @@ export default function AssetPeerComparison() {
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 입출금 자산 비중 </div>
                   <div className="h-24">
-                    {compare && ( <Bar data={cashData} options={compareOptions} />)}
+                    {cashData && ( <Bar data={cashData} options={percentOptions} />)}
                   </div>
                 </div>
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 적금 자산 비중 </div>
                   <div className="h-24">
-                    {compare && ( <Bar data={installmentData} options={compareOptions} />)}
+                    {installmentData && ( <Bar data={installmentData} options={percentOptions} />)}
                   </div>
                 </div>
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 예금 자산 비중 </div>
                   <div className="h-24">
-                    {compare && ( <Bar data={depositData} options={compareOptions} />)}
+                    {depositData && ( <Bar data={depositData} options={percentOptions} />)}
                   </div>
                 </div>
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 외환 자산 비중 </div>
                   <div className="h-24">
-                    {compare && ( <Bar data={foreignData} options={compareOptions} />)}
+                    {foreignData && ( <Bar data={foreignData} options={percentOptions} />)}
                   </div>
                 </div>
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 현물 자산 비중 </div>
                   <div className="h-24">
-                    {compare && ( <Bar data={goldData} options={compareOptions} />)}
+                    {goldData && ( <Bar data={goldData} options={percentOptions} />)}
                   </div>
                 </div>
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 대출 비중 </div>
                   <div className="h-24">
-                    {compare && ( <Bar data={liabilitiesData} options={compareOptions} />)}
+                    {liabilitiesData && ( <Bar data={liabilitiesData} options={percentOptions} />)}
                   </div>
                 </div>
-                {/* <BarCompareStatic
-                  metric="입출금 자산 비중"
-                  leftLabel="나" rightLabel="평균"
-                  leftValue={Math.round(Number((compare?.myCash ?? 0)) / 1_000_000)}
-                  rightValue={Math.round(Number((compare?.avgCash ?? 0)) / 1_000_000)}
-                />
-                <BarCompareStatic
-                  metric="적금 자산 비중"
-                  leftLabel="나" rightLabel="평균"
-                  leftValue={Math.round(Number((compare?.myInstallment ?? 0)) / 1_000_000)}
-                  rightValue={Math.round(Number((compare?.avgInstallment ?? 0)) / 1_000_000)}
-                />
-                <BarCompareStatic
-                  metric="예금 자산 비중"
-                  leftValue={Math.round(Number((compare?.myDeposit ?? 0)) / 1_000_000)}
-                  rightValue={Math.round(Number((compare?.avgDeposit ?? 0)) / 1_000_000)}
-                />
-                <BarCompareStatic
-                  metric="외환 자산 비중"
-                  leftValue={Math.round(Number((compare?.myForeign ?? 0)) / 1_000_000)}
-                  rightValue={Math.round(Number((compare?.avgForeign ?? 0)) / 1_000_000)}
-                />
-                <BarCompareStatic
-                  metric="현물 자산 비중"
-                  leftValue={Math.round(Number((compare?.myGold ?? 0)) / 1_000_000)}
-                  rightValue={Math.round(Number((compare?.avgGold ?? 0)) / 1_000_000)}
-                />
-                <BarCompareStatic
-                  metric="대출 비중"
-                  leftValue={Math.round(Number((compare?.myTotalLiabilities ?? 0)) / 1_000_000)}
-                  rightValue={Math.round(Number((compare?.avgTotalLiabilities ?? 0)) / 1_000_000)}
-                /> */}
               </div>
 
             </div>
 
             {/* 맞춤 안내 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-                또래 평균 대비 투자 비중이 낮습니다. 매달 일정 금액을 자동으로 투자하는
-                방식이 목표 달성에 도움이 될 수 있습니다.
-              </div>
+              {(compare?.advice ?? []).map((a) => (
+                <div key={a.code}
+                  className={`rounded-md border p-4 text-sm ${badgeBySeverity[a.severity] || badgeBySeverity.info}`}>
+                  <div className="font-semibold mb-1">{a.title}</div>
+                  <div>{a.message}</div>
+                </div>
+              ))}
 
-              <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-                부채 비율이 양호하므로, 추가 대출 없이도 적금 납입액을 소폭 늘릴 수 있는
-                여력이 있습니다.
-              </div>
+              {/* fallback (백엔드가 아직 조언을 안 줬을 때) */}
+              {(!compare?.advice || compare.advice.length === 0) && (
+                <div className="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                  데이터에 기반한 안내를 준비 중입니다.
+                </div>
+              )}
             </div>
-
           </div>
         )}
         

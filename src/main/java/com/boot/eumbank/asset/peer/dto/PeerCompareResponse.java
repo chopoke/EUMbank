@@ -3,6 +3,7 @@ package com.boot.eumbank.asset.peer.dto;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
@@ -35,11 +36,16 @@ public class PeerCompareResponse {
     // 표본 수
     private int nCustomers;
 
+    // 상위퍼센트
+    private int topPct;
+
     // 프로필 라벨(프론트 표시에 사용)
     private String genderLabel;
     private String ageBandLabel;
     private String incomeCdLabel;
     private String jobCdLabel;
     private String regionLabel;
+
+    private List<AdviceItem> advice;
 
 }

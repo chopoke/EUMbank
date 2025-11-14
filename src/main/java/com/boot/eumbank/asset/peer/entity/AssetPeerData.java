@@ -14,7 +14,7 @@ import java.math.BigDecimal;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "ux_apd",
-                        columnNames = {"apd_gender","apd_age_band","apd_income_cd","apd_job_cd","apd_region"}
+                        columnNames = {"apd_gender","apd_age_band","apd_income_cd","apd_job_cd","apd_region_cd"}
                 )
         }
 )
@@ -42,8 +42,8 @@ public class AssetPeerData {
     @Column(name = "apd_job_cd", length = 25, nullable = false)
     private String apdJobCd;
 
-    @Column(name = "apd_region", length = 20, nullable = false)
-    private String apdRegion;
+    @Column(name = "apd_region_cd", length = 20, nullable = false)
+    private String apdRegionCd;
 
     @Column(name = "apd_n_customers", nullable = false)
     private Integer apdNCustomers;
