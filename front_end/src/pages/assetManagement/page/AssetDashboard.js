@@ -1,5 +1,5 @@
 import { StatCard } from "../components/StatCard";
-import { DonutPercentOnly, LineChartWithDatesStatic, TrendFooterStats } from "../components/StaticCharts";
+import { TrendFooterStats } from "../components/StaticCharts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../../api/axios";
 
@@ -23,6 +23,17 @@ const COLOR_MAP = {
   "예금":   "#34dfa6",
   "현물":   "#ff6161",
 };
+
+const METRICS = [
+  { key: "NET_WORTH",         label: "순자산",   color: "#87259b" },
+  { key: "TOTAL_ASSETS",      label: "총자산",   color: "#2563eb" },
+  { key: "TOTAL_LIABILITIES", label: "총부채",   color: "#ef4444" },
+  { key: "CASH",              label: "입출금",   color: "#53d2f8" },
+  { key: "INSTALLMENT",       label: "적금",     color: "#fc7fd2" },
+  { key: "DEPOSIT",           label: "예금",     color: "#34dfa6" },
+  { key: "FOREIGN",           label: "외환",     color: "#fac569" },
+  { key: "GOLD",              label: "현물",     color: "#ff6161" },
+];
 
 const UNITS = [
   { k: 1e12, s: "조" },
@@ -97,6 +108,7 @@ function useResizeKey(ref) {
 export default function AssetDashboard() {
   const [summary, setSummary] = useState(null);
   const [trend, setTrend] = useState(null);
+  const [metric, setMetric] = useState("NET_WORTH");
   const [topSavings, setTopSavings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [donutRef, donutInView] = useInView(0.2);
@@ -110,7 +122,7 @@ export default function AssetDashboard() {
       try {
         const [s,t,ts] = await Promise.all([
            api.get("/api/asset/dashboard/summary"),
-           api.get("/api/asset/dashboard/trend"),
+           api.get(`/api/asset/dashboard/trend?metric=${metric}`),
            api.get("/api/asset/dashboard/top-savings")
         ]);
         setSummary(s.data);
@@ -124,7 +136,7 @@ export default function AssetDashboard() {
       }
     };
     run();
-  }, []);
+  }, [metric]);
 
   const totalAssets      = summary?.totalAssets ?? 0;
   const totalLiabilities = summary?.totalLiabilities ?? 0;
@@ -198,32 +210,33 @@ export default function AssetDashboard() {
     }
   }), [donutData.total]);
 
+  const activeColor = METRICS.find(m => m.key===metric)?.color || "#87259b";
+
   const lineData = useMemo(() => ({
     labels,
     datasets: [{
-      label: "순자산",
+      label: METRICS.find(m => m.key===metric)?.label || "추이",
       data: values,
       borderWidth: 2.5,
-      borderColor: "#87259b",
+      borderColor: activeColor,
       pointRadius: 3.2,
       pointHoverRadius: 4,
       pointHitRadius: 6,
-      pointBackgroundColor: "#87259b",
+      pointBackgroundColor: activeColor,
       pointBorderColor: "#ffffff",
       pointBorderWidth: 1,
       tension: 0.15,
       fill: true,
       backgroundColor: (ctx) => {
-        const { chart } = ctx;
-        const { ctx: c, chartArea } = chart;
-        if (!chartArea) return "rgba(162, 37, 235, 0.08)";
+        const { chartArea, ctx: c } = ctx.chart;
+        if (!chartArea) return "rgba(0,0,0,0.05)";
         const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-        g.addColorStop(0, "rgba(162, 37, 235, 0.25)");
-        g.addColorStop(1, "rgba(162, 37, 235, 0.04)");
+        g.addColorStop(0, hexToRgba(activeColor, 0.25));
+        g.addColorStop(1, hexToRgba(activeColor, 0.05));
         return g;
       },
     }]
-  }), [labels.join(","), values.join(",")]);
+  }), [labels.join("|"), values.join(","), activeColor, metric]);
 
   const tickStep = Math.max(1, Math.round((labels.length || 1) / 6));
 
@@ -278,7 +291,7 @@ export default function AssetDashboard() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard title="순자산" value={loading ? "..." : formatKrw(netWorth)} sub={loading ? "..." : `전일 대비 ${formatKrwSigned(dayDelta)}`} />
             <StatCard title="총자산" value={loading ? "..." : formatKrw(totalAssets)} sub="입출금 · 예금 · 적금 · 외환 · 대출 · 현물 포함" />
-            <StatCard title="총부채" value={loading ? "..." : formatKrw(totalLiabilities)} sub="주택담보대출 1건" />
+            <StatCard title="총부채" value={loading ? "..." : formatKrw(totalLiabilities)} />
             <StatCard title="이번 달 납입 예정액" value={loading ? "..." : formatKrw(monthlyDue)} sub="적금 · 공과금 · 대출 상환 합산" />
           </div>
 
@@ -339,12 +352,31 @@ export default function AssetDashboard() {
             <div className="col-span-1 xl:col-span-2 flex flex-col gap-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-base font-semibold text-gray-900">최근 30일 순자산 추이</h2>
+                  <h2 className="text-base font-semibold text-gray-900">
+                      최근 30일 {METRICS.find(m => m.key === metric)?.label} 추이
+                  </h2>
                   <span className="mt-1 text-[12px] text-blue-700 flex items-center gap-2">
                     본 화면의 수치는 <strong>매일 05:00(KST) </strong> 기준으로 집계됩니다.
-                    당일 중 변동분은 다음날 새벽 반영됩니다.
                   </span>
                 </div>
+              </div>
+
+              {/* 탭(스크롤 가능 pill) */}
+              <div className="flex gap-1 overflow-x-auto">
+                {METRICS.map(m => (
+                  <button
+                    key={m.key}
+                    onClick={() => setMetric(m.key)}
+                    className={`px-2.5 py-1 text-[12px] rounded-md border ${
+                      metric===m.key
+                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                        : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                    }`}
+                    aria-pressed={metric===m.key}
+                  >
+                    {m.label}
+                  </button>
+                ))}
               </div>
 
               <div ref={lineRef} className="w-full" style={{ height: 270 }}>
@@ -439,7 +471,7 @@ export default function AssetDashboard() {
                 <div className="text-[12px] text-gray-500 -mt-1">금리와 상환 일정을 한눈에 확인하세요.</div>
               </div>
 
-              <ul className="divide-y divide-gray-200 text-sm">
+              {/* <ul className="divide-y divide-gray-200 text-sm">
                 <li className="py-3 flex items-center justify-between">
                   <div>
                     <div className="font-medium text-gray-900">주택담보대출</div>
@@ -454,7 +486,32 @@ export default function AssetDashboard() {
 
               <button className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-gray-50 border-blue-200 text-blue-700">
                 금리 낮은 대출로 갈아타기
-              </button>
+              </button> */}
+
+               {loading ? (
+                  <div className="h-16 grid place-items-center text-sm text-gray-500">로딩 중…</div>
+                ) : topSavings?.loan ? (
+                  <ul className="divide-y divide-gray-200 text-sm">
+                    <li className="py-3 flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-gray-900">{topSavings.loan.productName}</div>
+                        <div className="text-[12px] text-gray-500">
+                          {formatMonths(topSavings.loan.termMonth)} · {formatRate(topSavings.loan.interestRate)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-gray-900">{formatKrw(topSavings.loan.balance)}</div>
+                      </div>
+                    </li>
+                  </ul>
+                ) : (
+                  <button
+                    className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-gray-50 border-blue-200 text-blue-700"
+                    onClick={() => (window.location.href = "/loan/products")}
+                  >
+                    대출 상품 찾기
+                  </button>
+                )}
             </div>
           </div>
         </div>

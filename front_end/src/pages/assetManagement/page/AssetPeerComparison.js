@@ -1,4 +1,3 @@
-import { BarCompareStatic } from "../components/StaticCharts";
 import { useEffect, useMemo, useState } from "react";
 import api from "../../../api/axios";
 import PeerProfileForm from "../components/PeerProfileForm";
@@ -24,6 +23,59 @@ export default function AssetPeerComparison() {
   // 편집 모드 on/off
   const [editing, setEditing] = useState(false);
   const [rawProfile, setRawProfile] = useState(null); // 코드값 보관
+
+  const COLOR_MAP = {
+    CASH: "#53d2f8",       // 입출금
+    INSTALLMENT: "#fc7fd2",// 적금
+    DEPOSIT: "#34dfa6",    // 예금
+    FOREIGN: "#fac569",    // 외환
+    GOLD: "#ff6161",       // 현물
+    LIABILITIES: "#ef4444",// 총부채(대출)
+    AVG: "#9ca3af",        // 평균(회색)
+  };
+  const METRIC_COLORS = {
+    NET_WORTH: "#87259b",  // 순자산
+  };
+
+  // 막대 끝에 값 표시(퍼센트/금액) 플러그인
+  const endLabelPlugin = {
+    id: "endLabelPlugin",
+    afterDatasetsDraw(chart, args, pluginOptions) {
+      const { ctx, data } = chart;
+      const formatter =
+        pluginOptions?.formatter ||
+        ((v) => String(v)); // 기본 포매터
+
+      ctx.save();
+      ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#374151";
+
+      const meta = chart.getDatasetMeta(0);
+      if (!meta) return;
+
+      // dataset 0 기준으로 라벨 찍기(“나” 값)
+      meta.data.forEach((el, i) => {
+        const { x, y } = el.tooltipPosition();
+        const raw = data.datasets[0].data[i];
+        const label = formatter(raw, i);
+        // 막대 오른쪽 바깥 6px
+        ctx.fillText(label, x + 6, y);
+      });
+
+      const metaAvg = chart.getDatasetMeta(1);
+      metaAvg?.data.forEach((el, i) => {
+        const { x, y } = el.tooltipPosition();
+        const raw = data.datasets[1].data[i];
+        const label = formatter(raw, i);
+        ctx.fillStyle = "#6B7280";
+        ctx.fillText(label, x + 6, y + 12); // 평균은 한 줄 아래
+      });
+
+      ctx.restore();
+    },
+  };
+  ChartJS.register(endLabelPlugin);
 
   // 첫 진입 시 기존 프로필 조회 → 없으면 폼 페이지로 이동시켜도 됨
   useEffect(() => {
@@ -104,6 +156,11 @@ export default function AssetPeerComparison() {
           },
         },
       },
+      // 막대 끝에 금액 라벨 노출
+      endLabelPlugin: {
+        formatter: (v) =>
+          `${Math.trunc(Number(v ?? 0)).toLocaleString("ko-KR")}원`,
+      },
       scales: {
         x: {
           beginAtZero: true,
@@ -132,7 +189,7 @@ export default function AssetPeerComparison() {
         {
           label: "순자산",
           data: [left, right],
-          backgroundColor: ["#3b82f6", "#9ca3af"],
+          backgroundColor: [METRIC_COLORS.NET_WORTH, COLOR_MAP.AVG],
           borderRadius: 8,
           barThickness: 18,
         },
@@ -159,6 +216,9 @@ export default function AssetPeerComparison() {
         },
       },
     },
+    endLabelPlugin: {
+       formatter: (v) => `${Math.floor(Number(v ?? 0))}%`,
+     },
     scales: {
       x: {
         beginAtZero: true,
@@ -174,11 +234,11 @@ export default function AssetPeerComparison() {
   }), []);
 
   // 자산 구성 비교용 (입출금/적금/예금/외환/현물/대출) 공통 생성 함수
-  const buildAssetCompareData = (myVal, avgVal, myTotal, avgTotal) => ({
+  const buildAssetCompareData = (myVal, avgVal, myTotal, avgTotal, color) => ({
     labels: ["나", "평균"],
     datasets: [{
       data: [ Math.floor(pct(myVal, myTotal)), Math.floor(pct(avgVal, avgTotal)) ],
-      backgroundColor: ["#3b82f6", "#9ca3af"],
+      backgroundColor: [color, COLOR_MAP.AVG],
       borderRadius: 8,
       barThickness: 18,
     }],
@@ -193,42 +253,42 @@ export default function AssetPeerComparison() {
   const cashData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myCash, compare.avgCash, compare.myTotalAssets, compare.avgTotalAssets)
+        ? buildAssetCompareData(compare.myCash, compare.avgCash, compare.myTotalAssets, compare.avgTotalAssets, COLOR_MAP.CASH)
         : null,
     [compare]
   );
   const installmentData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myInstallment, compare.avgInstallment, compare.myTotalAssets, compare.avgTotalAssets)
+        ? buildAssetCompareData(compare.myInstallment, compare.avgInstallment, compare.myTotalAssets, compare.avgTotalAssets, COLOR_MAP.INSTALLMENT)
         : null,
     [compare]
   );
   const depositData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myDeposit, compare.avgDeposit, compare.myTotalAssets, compare.avgTotalAssets)
-        : null,
+        ? buildAssetCompareData(compare.myDeposit, compare.avgDeposit, compare.myTotalAssets, compare.avgTotalAssets, COLOR_MAP.DEPOSIT)
+        : null
     [compare]
   );
   const foreignData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myForeign, compare.avgForeign, compare.myTotalAssets, compare.avgTotalAssets)
+        ? buildAssetCompareData(compare.myForeign, compare.avgForeign, compare.myTotalAssets, compare.avgTotalAssets, COLOR_MAP.FOREIGN)
         : null,
     [compare]
   );
   const goldData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myGold, compare.avgGold, compare.myTotalAssets, compare.avgTotalAssets)
+        ? buildAssetCompareData(compare.myGold, compare.avgGold, compare.myTotalAssets, compare.avgTotalAssets, COLOR_MAP.GOLD)
         : null,
     [compare]
   );
   const liabilitiesData = useMemo(
     () =>
       compare
-        ? buildAssetCompareData(compare.myTotalLiabilities, compare.avgTotalLiabilities, compare.myTotalAssets, compare.avgTotalAssets)
+        ? buildAssetCompareData(compare.myTotalLiabilities, compare.avgTotalLiabilities, compare.myTotalAssets, compare.avgTotalAssets, COLOR_MAP.LIABILITIES)
         : null,
     [compare]
   );

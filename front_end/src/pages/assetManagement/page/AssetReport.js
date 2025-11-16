@@ -3,7 +3,6 @@ import { useState, useEffect, useMemo } from "react";
 import AssetPageHeader from "../components/AssetPageHeader";
 import AssetCashflowCalendar from "./AssetCashflowCalendar";
 import { CategoryBarsStatic } from "../components/StaticCharts";
-import { Link } from "react-router-dom";
 import { getMonthlyReport, getDailyTransactions } from "../../../api/assetApi";
 import TransactionDetailModal from "./TransactionDetailModal";
 import AssetHubNav from "../components/AssetHubNav";

@@ -14,7 +14,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static java.util.Comparator.naturalOrder;
 
 @Service
 @RequiredArgsConstructor
@@ -42,9 +45,14 @@ public class DashboardServiceImpl implements DashboardService{
         BigDecimal gold = dashboardRepository.sumGold(cNo);
 
         BigDecimal totalAssets = cash.add(foreign).add(installment).add(deposit).add(gold);
-        BigDecimal totalLiabilities  = BigDecimal.ZERO;       // 대출 붙이면 교체
+        BigDecimal totalLiabilities  = dashboardRepository.sumLoan(cNo);       // 대출 붙이면 교체
         BigDecimal netWorth    = totalAssets.subtract(totalLiabilities);
-        BigDecimal monthlyDue  = dashboardRepository.sumMonthlyDue(cNo);
+
+
+        BigDecimal dueInstallments  = dashboardRepository.sumInstallmentMonthlyDue(cNo);
+        BigDecimal dueLoans = dashboardRepository.sumLoanMonthlyDue(cNo);
+        BigDecimal dueBills = dashboardRepository.sumBillMonthlyDue(cNo);
+        BigDecimal monthlyDue = dueInstallments.add(dueLoans).add(dueBills);
 
         List<AssetCompositionDto> composition = List.of(
                 new AssetCompositionDto("입출금",    cash),
@@ -115,7 +123,7 @@ public class DashboardServiceImpl implements DashboardService{
     }
 
     /**
-     *
+     * 최근 30일 순자산 추이
      * @param cNo 고객번호
      * @return AssetTrendDto
      */
@@ -135,7 +143,7 @@ public class DashboardServiceImpl implements DashboardService{
         List<AssetTrendPoint> points = assetTrendDto.stream()
                 .sorted(Comparator.comparing(AssetDailySnapshot::getAdsYmd))
                 .map(r -> new AssetTrendPoint(r.getAdsYmd(), r.getAdsNetWorth()))
-                .collect(Collectors.toList());
+                .toList();
 
         BigDecimal first = points.get(0).netWorth();
         BigDecimal last = points.get(points.size() - 1).netWorth();
@@ -150,12 +158,12 @@ public class DashboardServiceImpl implements DashboardService{
 
         BigDecimal max = points.stream()
                 .map(AssetTrendPoint::netWorth)
-                .max(Comparator.naturalOrder())
+                .max(naturalOrder())
                 .orElse(last);
 
         BigDecimal min = points.stream()
                 .map(AssetTrendPoint::netWorth)
-                .min(Comparator.naturalOrder())
+                .min(naturalOrder())
                 .orElse(last);
 
         BigDecimal changePct = BigDecimal.ZERO;
@@ -166,6 +174,50 @@ public class DashboardServiceImpl implements DashboardService{
 
         return new AssetTrendDto(points, dayDelta, change30, max, min, changePct);
     }
+
+    public AssetTrendDto getTrend(int cNo, TrendMetric metric) {
+        logger.info("<<< DashboardService getTrend >>>");
+
+        LocalDate end = LocalDate.now();
+        LocalDate start = end.minusDays(30);
+
+        List<AssetDailySnapshot> rows = dashboardRepository.getSnapshots(cNo, start, end);
+        if (rows.isEmpty()) {
+            return new AssetTrendDto(List.of(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        }
+
+        // 스냅샷에서 어떤 값을 뽑을지 선택
+        Function<AssetDailySnapshot, BigDecimal> pick = switch (metric) {
+            case NET_WORTH         -> AssetDailySnapshot::getAdsNetWorth;
+            case TOTAL_ASSETS      -> AssetDailySnapshot::getAdsTotalAssets;
+            case TOTAL_LIABILITIES -> AssetDailySnapshot::getAdsTotalLiabilities;
+            case CASH              -> AssetDailySnapshot::getAdsTotalCash;
+            case INSTALLMENT       -> AssetDailySnapshot::getAdsTotalInstallment;
+            case DEPOSIT           -> AssetDailySnapshot::getAdsTotalDeposit;
+            case FOREIGN           -> AssetDailySnapshot::getAdsTotalForeign;
+            case GOLD              -> AssetDailySnapshot::getAdsTotalGold;
+        };
+
+        List<AssetTrendPoint> points = rows.stream()
+                .sorted(Comparator.comparing(AssetDailySnapshot::getAdsYmd))
+                .map(r -> new AssetTrendPoint(r.getAdsYmd(), pick.apply(r)))
+                .toList();
+
+        BigDecimal first = points.get(0).netWorth();
+        BigDecimal last  = points.get(points.size()-1).netWorth();
+        BigDecimal prev  = points.size() > 1 ? points.get(points.size()-2).netWorth() : last;
+
+        BigDecimal dayDelta = last.subtract(prev);
+        BigDecimal change30 = last.subtract(first);
+        BigDecimal max = points.stream().map(AssetTrendPoint::netWorth).max(naturalOrder()).orElse(last);
+        BigDecimal min = points.stream().map(AssetTrendPoint::netWorth).min(naturalOrder()).orElse(last);
+        BigDecimal changePct = (first.signum()!=0)
+                ? change30.divide(first, 6, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
+                : BigDecimal.ZERO;
+
+        return new AssetTrendDto(points, dayDelta, change30, max, min, changePct);
+    }
+
 
     /**
      * 잔액이 가장 많은 예,적금 조회 
@@ -180,8 +232,10 @@ public class DashboardServiceImpl implements DashboardService{
                 dashboardRepository.getTopInstallment(cNo).orElse(null);
         TopDepositDto deposit =
                 dashboardRepository.getTopDeposit(cNo).orElse(null);
+        TopLoanDto loan =
+                dashboardRepository.getTopLoan(cNo).orElse(null);
 
-        return new TopSavingsDto(installment, deposit);
+        return new TopSavingsDto(installment, deposit, loan);
     }
 
 }

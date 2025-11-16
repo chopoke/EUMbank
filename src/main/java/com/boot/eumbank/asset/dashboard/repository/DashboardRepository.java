@@ -1,9 +1,6 @@
 package com.boot.eumbank.asset.dashboard.repository;
 
-import com.boot.eumbank.asset.dashboard.dto.AssetCompositionDto;
-import com.boot.eumbank.asset.dashboard.dto.AssetSummaryDto;
-import com.boot.eumbank.asset.dashboard.dto.TopDepositDto;
-import com.boot.eumbank.asset.dashboard.dto.TopInstallmentDto;
+import com.boot.eumbank.asset.dashboard.dto.*;
 import com.boot.eumbank.asset.dashboard.entity.AssetDailySnapshot;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.SubQueryExpression;
@@ -25,10 +22,16 @@ import static com.boot.eumbank.customer.entity.QCustomer.customer;
 import static com.boot.eumbank.account.open.entity.account.QAccount.account;
 import static com.boot.eumbank.foreign.entity.QForeignRate.foreignRate;
 import static com.boot.eumbank.product.entity.product.QProductInstallment.productInstallment;
-import static com.boot.eumbank.product.entity.product.QProductInstallmentList.productInstallmentList;
+import static com.boot.eumbank.product.entity.
+        product.QProductInstallmentList.productInstallmentList;
 import static com.boot.eumbank.product.entity.product.QProductDeposit.productDeposit;
 import static com.boot.eumbank.product.entity.product.QProductDepositList.productDepositList;
 import static com.boot.eumbank.spot.model.QGoldWallet.goldWallet;
+import static com.boot.eumbank.loan.entity.QLoan.loan;
+import static com.boot.eumbank.loan.entity.QLoanSchedule.loanSchedule;
+import static com.boot.eumbank.loan.entity.QLoanProduct.loanProduct;
+import static com.boot.eumbank.bill.entity.QUtilityBill.utilityBill;
+import static com.boot.eumbank.bill.entity.QBillInvoice.billInvoice;
 import static com.boot.eumbank.asset.dashboard.entity.QAssetDailySnapshot.assetDailySnapshot;
 
 @Repository
@@ -114,7 +117,9 @@ public class DashboardRepository {
     }
 
     /**
-     * 예금 총액(현재 원금잔액)
+     * 예금 총액(현재 잔액)
+     * @param cNo 고객번호
+     * @return BIgDecimal
      */
     public BigDecimal sumDeposit(int cNo) {
         NumberExpression<BigDecimal> dAmount = Expressions.numberTemplate(BigDecimal.class, "{0}", productDeposit.dAmount);
@@ -128,6 +133,11 @@ public class DashboardRepository {
                 .fetchOne();
     }
 
+    /**
+     * 현물 총액(현물 통장 + 금 + 은)
+     * @param cNo 고객번호
+     * @return BigDecimal
+     */
     public BigDecimal sumGold(int cNo) {
         // 최신 시세 서브쿼리 (created_at 최신 또는 p_no 최대값 기준 — 둘 중 하나 택1)
         var auA = new com.boot.eumbank.spot.model.QPrice("auA");
@@ -182,11 +192,27 @@ public class DashboardRepository {
     }
 
     /**
-     * 오늘 기준 이번달 납입 예정액(적금, 대출, 공과금)
+     * 총부채
+     * @param cNo 고객번호
+     * @return BIgDecimal
+     */
+    public BigDecimal sumLoan(int cNo) {
+        return queryFactory
+                .select(loan.balance.sum().coalesce(BigDecimal.ZERO))
+                .from(loan)
+                .where(
+                        loan.cNo.eq(cNo),
+                        loan.status.eq("ACTIVE")
+                )
+                .fetchOne();
+    }
+
+    /**
+     * 오늘 기준 이번달 적금 납입 예정액
      * @param cNo 고객번호
      * @return BigDecimal
      */
-    public BigDecimal sumMonthlyDue(int cNo) {
+    public BigDecimal sumInstallmentMonthlyDue(int cNo) {
         int today =LocalDate.now().getDayOfMonth();
         NumberExpression<Integer> payDay = Expressions.numberTemplate(Integer.class, "cast({0} as integer)", productInstallment.iPayDay);
 
@@ -199,6 +225,46 @@ public class DashboardRepository {
                         productInstallment.iStatus.eq("ACTIVE"),
                         payDay.gt(today)
                 ).fetchOne();
+    }
+
+    /**
+     * 오늘 기준 이번달 대출 납입 예정액
+     * @param cNo 고객번호
+     * @return BigDecimal
+     */
+    public BigDecimal sumLoanMonthlyDue(int cNo) {
+        int today = LocalDate.now().getDayOfMonth();
+
+        return queryFactory
+                .select(loanSchedule.dueTotal.sum().coalesce(BigDecimal.ZERO))
+                .from(loanSchedule)
+                .join(loan)
+                .on(loanSchedule.loanNo.eq(loan.lNo))
+                .where(
+                        loan.cNo.eq(cNo),
+                        loan.status.eq("ACTIVE"),
+                        loanSchedule.status.eq("DUE"),
+                        loan.payDay.gt(today)
+                )
+                .fetchOne();
+    }
+
+    /**
+     * 오늘 기준 이번달 공과금 납입 예정액
+     * @param cNo 고객번호
+     * @return BigDecimal
+     */
+    public BigDecimal sumBillMonthlyDue(int cNo) {
+        return queryFactory
+                .select(billInvoice.biAmount.sum().coalesce(BigDecimal.ZERO))
+                .from(billInvoice)
+                .join(utilityBill).on(billInvoice.ubNo.eq(utilityBill.ubNo))
+                .where(
+                        utilityBill.cNo.eq(cNo),
+                        billInvoice.biStatus.eq("READY"),
+                        billInvoice.biDueAt.isNull()
+                )
+                .fetchOne();
     }
 
     /**
@@ -292,5 +358,31 @@ public class DashboardRepository {
                 .fetchOne();
 
         return Optional.ofNullable(depositDto);
+    }
+
+    /**
+     * 잔액이 가장 많은 대출 조회
+     * @param cNo 고객번호
+     * @return TopLoanDto
+     */
+    public Optional<TopLoanDto> getTopLoan(int cNo) {
+        TopLoanDto row = queryFactory
+                .select(Projections.constructor(TopLoanDto.class,
+                        loanProduct.loanName,        // 상품명
+                        loan.termMonth,             // 가입개월
+                        loan.interestRate,          // 금리(연, %)
+                        loan.balance                // 잔액
+                ))
+                .from(loan)
+                .join(loanProduct).on(loan.lpdNo.eq(loanProduct.loanNo))
+                .where(
+                        loan.cNo.eq(cNo),
+                        loan.status.eq("ACTIVE")
+                )
+                .orderBy(loan.balance.desc())
+                .limit(1)
+                .fetchOne();
+
+        return Optional.ofNullable(row);
     }
 }
