@@ -809,6 +809,7 @@ function SecurityTab() {
         </h3>
         <div className="flex items-center justify-between">
             <>
+                <div>6개월에 한번씩 변경해주세요.</div>
                 <div className="flex space-x-2">
                     <button
                         onClick={() => setShowPinModal(true)}
@@ -830,8 +831,8 @@ function SecurityTab() {
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div>
-                  <p className="font-medium text-gray-800">거래 비밀번호</p>
-                  <p className="text-sm text-gray-600">마지막 변경: 2024년 1월 10일</p>
+                  <p className="font-medium text-gray-800">로그인 비밀번호</p>
+                  {/* <p className="text-sm text-gray-600">마지막 변경: 2024년 1월 10일</p> */}
               </div>
             <button
               onClick={() => setShowPasswordModal(true)}
@@ -880,7 +881,7 @@ function SecurityTab() {
       </div> */}
 
       {/* 로그인 기록 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-history-line text-indigo-600 mr-2"></i>
           최근 로그인 기록
@@ -932,7 +933,7 @@ function SecurityTab() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
         {/* PIN 재설정 모달 */}
         {showOTPModal && (
@@ -2269,7 +2270,7 @@ function Sidebar({ customerName, customerPhone }) {
         </div>
 
         {/* 최근 활동 */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        {/* <div className="bg-white rounded-xl p-4 shadow-sm">
           <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
             <i className="ri-time-line text-purple-600 mr-2"></i>
             최근 활동
@@ -2288,7 +2289,7 @@ function Sidebar({ customerName, customerPhone }) {
               <div className="text-gray-400">1시간 전</div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </aside>
   );
