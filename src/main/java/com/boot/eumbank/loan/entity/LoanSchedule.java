@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * 상환 스케쥴 테이블
@@ -29,7 +30,7 @@ public class LoanSchedule {
     private Integer installmentNo;
 
     @Column(name = "ls_due_date", nullable = false)
-    private LocalDate dueDate;
+    private LocalDateTime dueDate;
 
     @Column(name = "ls_due_principal", nullable = false, precision = 18, scale = 2)
     private BigDecimal duePrincipal;
