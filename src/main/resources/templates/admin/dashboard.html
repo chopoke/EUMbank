@@ -12,8 +12,14 @@
         <div class="stats-grid-2col">
             <div th:each="stat: ${stats}" class="stat-card">
                 <div class="stat-card-content">
-                    <div class="stat-icon-wrapper">
-                        <i th:class="${stat.icon} + ' stat-icon'"></i>
+                    <div class="stat-icon-wrapper" 
+                         th:classappend="${stat.iconColor != null and stat.iconColor != ''} ? ('stat-icon-wrapper-' + ${stat.iconColor}) : ''">
+                        <!-- FontAwesome 아이콘 -->
+                        <i th:if="${stat.icon != null and stat.icon != '' and stat.icon.startsWith('fa-')}" 
+                           th:class="${stat.icon} + ' stat-icon'"></i>
+                        <!-- RemixIcon 아이콘 -->
+                        <i th:if="${stat.icon != null and stat.icon != '' and stat.icon.startsWith('ri-')}" 
+                           th:class="${stat.icon} + ' stat-icon'"></i>
                     </div>
                     <div class="stat-info">
                         <p class="stat-title" th:text="${stat.title}">Title</p>

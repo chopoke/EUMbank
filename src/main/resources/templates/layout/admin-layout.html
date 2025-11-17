@@ -6,6 +6,7 @@
     <title th:text="${title} ?: 'Admin'">Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <!-- 헤더 전용 스타일: 여기(레이아웃 head)에 둔다 -->
     <style>
@@ -352,6 +353,15 @@
         .stat-icon {
             font-size: 24px;
             color: #4f46e5;
+        }
+        
+        /* 금/은 아이콘 색상 */
+        .stat-icon-wrapper-gold .stat-icon {
+            color: #ffd700 !important; /* 금색 */
+        }
+        
+        .stat-icon-wrapper-silver .stat-icon {
+            color: #c0c0c0 !important; /* 은색 */
         }
         
         /* 통계 정보 */
