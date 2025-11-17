@@ -269,20 +269,24 @@ function Card({ title, icon, children, iconColor = "text-gray-600" }) {
 }
 
 /* utils */
+function maskAccountNo(n) {
+  const s = String(n || "");
+  if (s.length <= 8) return s;
+  return s.slice(0, 8) + "*".repeat(s.length - 8);
+}
+
 function mapAccountRow(row) {
   const aNo = row?.aNo ?? row?.a_no ?? row?.ano;
-  const accountNo = String(row?.accountNo ?? row?.a_account_no ?? row?.accountno ?? "");
+  const accountNo = String(
+    row?.accountNo ?? row?.a_account_no ?? row?.accountno ?? ""
+  );
   const pureNo = accountNo.replace(/^.*\(([^)]+)\).*$/, "$1");
-  const masked = pureNo.replace(/\d(?=(?:\D*\d){4})/g, "*");
+  const masked = maskAccountNo(pureNo);   // ← 통일된 마스킹 함수 사용
+
   return {
     aNo: Number(aNo),
     accountNo: pureNo,
     name: "계좌",
     label: masked,
   };
-}
-function maskAccountNo(n) {
-  if (!n) return "";
-  const s = String(n);
-  return s.replace(/\d(?=(?:\D*\d){4})/g, "*");
 }
