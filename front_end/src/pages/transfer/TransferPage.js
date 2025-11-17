@@ -600,6 +600,15 @@ export default function TransferPage() {
         return;
       }
 
+      // 예약이체 선택 시 검증
+      if (isReserved) {
+        if (!reserveDate || !reserveTime) {
+          alert('예약 이체 날짜와 시간을 모두 선택해주세요.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // 자동이체 선택 시 검증
       if (isAutoTransfer) {
         if (!autoStartYear || !autoStartMonth || !autoDayOfMonth || !autoRepeatCount) {
@@ -607,6 +616,23 @@ export default function TransferPage() {
           setIsLoading(false);
           return;
         }
+      }
+
+      // 기본 필수 항목 검증
+      if (!selectedAccount) {
+        alert('보내는 계좌를 선택해주세요.');
+        setIsLoading(false);
+        return;
+      }
+      if (!selectedRecipient) {
+        alert('받는 분을 선택해주세요.');
+        setIsLoading(false);
+        return;
+      }
+      if (numericAmount <= 0) {
+        alert('이체할 금액을 입력해주세요.');
+        setIsLoading(false);
+        return;
       }
 
       // 이체 요청 데이터 구성
@@ -970,7 +996,7 @@ export default function TransferPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <main id="main">
         <section className="mx-auto max-w-screen-xl px-6 py-[32px]">
-          <div className="tranb flex items-center justify-between w-[1240px] h-[152px]">
+          <div className="tranb flex items-center justify-between mx-auto w-full h-[152px]">
             <h1 className="text-2xl font-semibold tracking-tight">계좌 이체</h1>
             <div className="flex items-center gap-3">
               <button 

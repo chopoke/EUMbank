@@ -107,7 +107,6 @@ public class FinlifeUpsert {
             if (isNew) {
                 product.setLoanCode(finPrdtCd);
                 product.setLoanType(loanType);
-                product.setStatus("PUBLISHED");
                 product.setIsActive(true);
                 product.setSourceType("API");
             }

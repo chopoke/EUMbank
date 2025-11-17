@@ -6,6 +6,6 @@ import java.util.List;
 
 public interface AccountProductService {
 
-    public List<AccountDTO> findAllAccounts(Integer accountNo);
+    public List<AccountDTO> findAllofOneAccounts(Integer accountNo);
 
 }

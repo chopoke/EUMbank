@@ -16,14 +16,14 @@ const CalculatorBox = ({
     onSubscribe
 }) => {
 
-    console.log("amount:", amount);
-    console.log("setTerm:", setTerm);
-    console.log("setAmount:", setAmount);
-    console.log("term:", term);
-    console.log("isConfirmed:", isConfirmed);
-    console.log("setIsConfirmed:", setIsConfirmed);
-    console.log("onSubscribe:", onSubscribe);
-    console.log("formattedProduct:", formattedProduct);
+    // console.log("amount:", amount);
+    // console.log("setTerm:", setTerm);
+    // console.log("setAmount:", setAmount);
+    // console.log("term:", term);
+    // console.log("isConfirmed:", isConfirmed);
+    // console.log("setIsConfirmed:", setIsConfirmed);
+    // console.log("onSubscribe:", onSubscribe);
+    // console.log("formattedProduct:", formattedProduct);
 
 
     const handleAmountChange = (newAmount) => {

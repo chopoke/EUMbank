@@ -38,6 +38,7 @@ import TransferReserveComplete from "./pages/transfer/TransferReserveComplete";
 import BulkTransferDashboard from "./pages/transfer/BulkTransferDashboard";
 import BulkTransferComplete from "./pages/transfer/BulkTransferComplete";
 import AutoTransferComplete from "./pages/transfer/AutoTransferComplete";
+import TransferManagePage from "./pages/transfer/TransferManagePage";
 
 // 주택담보대출
 import LoanProductList from "./pages/loan/products/LoanProductList"
@@ -60,14 +61,19 @@ import ApplyCompletePage from "./pages/loan/apply/ApplyCompletePage";
 
 // 관리자페이지
 import AdminPage from "./pages/admin/page";
-import LoanApplicaion from "./pages/loan/admin/LoanApplicaion";
-import LoanAdminDetailPage from "./pages/loan/admin/LoanAdminDetailPage";
 
 // 공과금
 import BillsLanding from "./pages/bills/BillsLanding";
 
 // 마이페이지 - 상품 대시보드
 import MyProductsPage from "./pages/mypage/MyProductsPage";
+
+// 현물(Spot) 페이지들
+import SpotTradingPage from "./pages/spot/pages/SpotTradingPage";
+import SpotBalancePage from "./pages/spot/pages/SpotBalancePage";
+import SpotWalletsPage from "./pages/spot/pages/SpotWalletsPage";
+import SpotHistoryPage from "./pages/spot/pages/SpotHistoryPage";
+import SpotPriceHistoryPage from "./pages/spot/pages/SpotPriceHistoryPage";
 
 //import {chatBotRouteElements} from "./pages/chat/router/chatBotRoutes";
 
@@ -162,18 +168,13 @@ function App() {
         {/* 예금계좌 이체내역 */}
         <Route path="/accounts/deposit/:d_no" element={<ProtectedRoute><DepositHistoryPage/></ProtectedRoute>} />
 
-        {/* 주택담보대출 상품 목록 */}
+        {/* 대출 상품 목록 */}
         <Route path="/loan/products" element={<LoanProductList />} />
         
         {/* 상품 상세 */}
-        <Route path="/loan/products/:code" element={<LoanProductDetail />} />
+        <Route path="/loan/products/:code" element={<ProtectedRoute><LoanProductDetail /></ProtectedRoute>} />
 
-        {/* 대출상품 한도/금리조회()
-        <Route path="/loan/:code/quote" element={
-          <ProtectedRoute>
-            <LoanQuotePage />
-          </ProtectedRoute>
-          } /> */}
+
         {/* 대출 신청 스탭 */}
         <Route path="/loan/apply/:code/agree"  element={<ProtectedRoute><ApplyAgree/></ProtectedRoute>} />
         <Route path="/loan/apply/:code/form"   element={<ProtectedRoute><ApplyFormPage/></ProtectedRoute>} />
@@ -183,10 +184,6 @@ function App() {
         <Route path="/loan/apply/:code/complete/:laId" element={<ProtectedRoute><ApplyCompletePage/></ProtectedRoute> } />
 
 
-
-        {/* 대출관리자
-        <Route path="/admin/loan/applications" element={<LoanApplicaion/>} />
-        <Route path="/admin/loan/applications/:laId" element={<LoanAdminDetailPage/>} /> */}
         
 
         {/* 계좌 개설: 각 단계 독립 경로 */}
@@ -247,6 +244,11 @@ function App() {
             <BulkTransferComplete />
           </ProtectedRoute>
         } />
+        <Route path="/transfer/manage" element={
+          <ProtectedRoute>
+            <TransferManagePage />
+          </ProtectedRoute>
+        } />
         <Route path="/transfer/auto" element={
           <ProtectedRoute>
             <Navigate to="/transfer" replace />
@@ -259,10 +261,52 @@ function App() {
         } />
 
         {/* 공과금페이지 */}
-        <Route path="/bills" element={<BillsLanding />} />
+        <Route path="/bills" element={
+          <ProtectedRoute>
+            <BillsLanding />
+          </ProtectedRoute>
+        } />
+        <Route path="/bills/:ubNo" element={
+          <ProtectedRoute>
+            <BillsLanding />
+          </ProtectedRoute>
+        } />
+
+        {/* ✅ 현물(Spot) 라우팅 */}
+        <Route path="/spot" element={
+          <ProtectedRoute>
+            <SpotTradingPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/spot/trade" element={
+          <ProtectedRoute>
+            <SpotTradingPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/spot/balance" element={
+          <ProtectedRoute>
+            <SpotBalancePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/spot/wallets" element={
+          <ProtectedRoute>
+            <SpotWalletsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/spot/history" element={
+          <ProtectedRoute>
+            <SpotHistoryPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/spot/SpotPriceHistory" element={
+          <ProtectedRoute>
+            <SpotPriceHistoryPage />
+          </ProtectedRoute>
+        } />
 
         {/* 관리자페이지 */}
         <Route path="/admin" element={<AdminPage/>} />
+
 
         {/* 마이페이지 진입 */}
         <Route path="/mypage" element={

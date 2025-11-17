@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,7 +29,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -98,16 +101,23 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
     }
 
     /**
-     * 서류 목록 조회 (페이징)
+     * 서류 목록 조회 (페이징) - 주민등록증 우선, 크기 조정
      */
     @Override
     @Transactional(readOnly = true)
     public DocumentListResponse getDocuments(Pageable pageable) {
+        logger.info("=== DocumentServiceImpl => getDocuments() ===");
+
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
+        Integer customerNo = customer.getCustomerNo();
 
-        Page<DocumentFile> documentPage = documentRepository.findBycNoOrderByCreatedAtDesc(
-                customer.getCustomerNo(), pageable);
+        // ✅ 간단하게: 모든 문서를 일반 페이징으로 조회
+        Page<DocumentFile> documentPage = documentRepository.findBycNo(Long.valueOf(customerNo), pageable);
+
+        logger.info("페이지: {}, 크기: {}, 전체: {}, 조회된 문서: {}",
+                documentPage.getNumber(), documentPage.getSize(),
+                documentPage.getTotalElements(), documentPage.getContent().size());
 
         List<DocumentResponse> documents = documentPage.getContent().stream()
                 .map(this::convertToResponse)

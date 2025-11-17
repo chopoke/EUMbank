@@ -56,7 +56,7 @@ public class FinlifeSaveSync {
             Integer max = pr.getMaxPageNo();
             if (now == null || max == null || now >= max) {
                 log.info("@@@@@@@@@@@@@@@@@@@@ [ 금융감독원 대출 API 끌어오기 시작 ] @@@@@@@@@@@@@@@@@@@@");
-                log.info("[SYNC:{}] 마지막 페이지 {} 완료. 총 upsert {}", loanType, page, total);
+                log.info("@@@@@@@@@@@@@@@@@@@@ [SYNC:{}] 마지막 페이지 {} 완료. 총 upsert {} @@@@@@@@@@@@@@@@@@@@", loanType, page, total);
                 break;
             }
             page++;

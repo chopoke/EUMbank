@@ -35,9 +35,12 @@ public class LoanConsent {
     @Column(name = "term_title", nullable = false, length = 200)
     private String termTitle;
 
-    // 주의: JPA @Version 아님! 그냥 문자열 컬럼
     @Column(name = "version", nullable = false, length = 20)
     private String version;
+
+    // 구분용키
+    @Column(name = "batch_key")
+    private String batchKey;
 
     // 본문 (MEDIUMTEXT)
     @Lob
@@ -51,10 +54,6 @@ public class LoanConsent {
     // 동의 시각 (NOT NULL)
     @Column(name = "agreed_at", nullable = false)
     private LocalDateTime agreedAt;
-
-    // 본문 해시 (VARCHAR(64))
-    @Column(name = "body_hash", length = 64)
-    private String bodyHash;
 
     // 생성/수정 시각
     @Column(name = "created_at", nullable = false, updatable = false)

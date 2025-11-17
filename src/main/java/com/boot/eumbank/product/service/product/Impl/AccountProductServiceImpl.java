@@ -24,7 +24,7 @@ public class AccountProductServiceImpl implements AccountProductService {
     private final AccountQueryRepository accountQueryRepository;
 
     @Override
-    public List<AccountDTO> findAllAccounts(Integer accountNo) {
+    public List<AccountDTO> findAllofOneAccounts(Integer accountNo) {
 
         logger.info("DepositServiceImpl => findAllAccounts()");
 

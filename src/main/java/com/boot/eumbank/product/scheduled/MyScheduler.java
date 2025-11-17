@@ -377,6 +377,7 @@ public class MyScheduler {
                 .transactionType("DEPOSIT")
                 .accountOut(BigDecimal.valueOf(depositEntity.getDPrincipalBal()))
                 .accountIn(BigDecimal.ZERO)
+                .pId(deposit.getANo())
                 .build();
 
         entityManager.persist(history);
@@ -470,6 +471,7 @@ public class MyScheduler {
                     .transactionType("DEPOSIT_MATURITY")
                     .accountOut(BigDecimal.ZERO)
                     .accountIn(BigDecimal.valueOf(depositEntity.getDExpectedMaturityAmount()))
+                    .pId(depositEntity.getANo())
                     .build();
 
             entityManager.persist(history);
@@ -781,6 +783,7 @@ public class MyScheduler {
                 .transactionType("INSTALLMENT")
                 .accountOut(BigDecimal.valueOf(savingEntity.getIPrincipalBal()))
                 .accountIn(BigDecimal.ZERO)
+                .pId(saving.getANo())
                 .build();
 
         entityManager.persist(history);

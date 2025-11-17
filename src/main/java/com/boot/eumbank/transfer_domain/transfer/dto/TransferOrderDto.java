@@ -28,5 +28,6 @@ public class TransferOrderDto {
     private String status;                // 상태 (SCHEDULED, ACTIVE, COMPLETED, CANCELLED)
     private String memo;                  // 이체 메모
     private String createdAt;             // 생성 시간
-    private String password;               // 계좌 비밀번호 (예약 이체 등록 시 검증용)
+    private String executionType;         // 실행 유형 (AUTO, RESERVE 등)
+    private String password;              // 계좌 비밀번호 (예약 이체 등록 시 검증용)
 }

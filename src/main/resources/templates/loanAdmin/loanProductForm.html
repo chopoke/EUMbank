@@ -30,15 +30,6 @@
                             ID #<span th:text="${product.loanNo}"></span>
                         </span>
                         <span class="px-2 py-1 rounded-full text-[10px] font-semibold"
-                              th:text="${product.status}"
-                              th:classappend="${
-                                    product.status == 'PUBLISHED' ? ' bg-emerald-50 text-emerald-700' :
-                                    (product.status == 'DRAFT' ? ' bg-gray-50 text-gray-500' :
-                                    (product.status == 'HIDDEN' ? ' bg-yellow-50 text-yellow-700' :
-                                    (product.status == 'ARCHIVED' ? ' bg-slate-50 text-slate-500' :
-                                    ' bg-gray-50 text-gray-500')))}">
-                        </span>
-                        <span class="px-2 py-1 rounded-full text-[10px] font-semibold"
                               th:text="${product.isActive} ? 'Active' : 'Off'"
                               th:classappend="${product.isActive} ?
                                     ' bg-indigo-50 text-indigo-600' :
@@ -82,10 +73,11 @@
 
                     <label class="block text-xs text-gray-700">
                         상품코드
-                        <input id="loanCode" type="text" th:field="*{loanCode}"
-                               placeholder="L + 랜덤수 6자"
+                        <input id="loanCode" type="text" onclick="return false;"
+                               th:value="${product.loanCode} != null ? product.loanCode : '저장 시 자동 생성됩니다.'"
                                class="mt-1 w-full border border-gray-200 px-3 py-2 rounded-lg text-sm
-                                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"/>
+                                bg-gray-50 text-gray-500"
+                               readonly />
                         <span th:if="${codeError}" th:text="${codeError}"
                               class="text-[10px] text-red-500 mt-1 block"></span>
                     </label>
@@ -133,26 +125,140 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <label class="block text-xs text-gray-700">
                         최저 금리(%)
-                        <input type="number" step="0.01" th:field="*{rateMin}"
-                               placeholder="예: 3.50"
-                               class="mt-1 w-full border border-gray-200 px-3 py-2 rounded-lg text-sm
-                                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"/>
+                        <input type="text"
+                               th:value="${product.rateMin} != null ? product.rateMin : '옵션 기준 자동 계산'"
+                               class="mt-1 w-full border border-gray-100 px-3 py-2 rounded-lg text-sm bg-gray-50 text-gray-500"
+                               readonly />
                     </label>
 
                     <label class="block text-xs text-gray-700">
                         최고 금리(%)
-                        <input type="number" step="0.01" th:field="*{rateMax}"
-                               placeholder="예: 6.20"
-                               class="mt-1 w-full border border-gray-200 px-3 py-2 rounded-lg text-sm
-                                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"/>
+                        <input type="text"
+                               th:value="${product.rateMax} != null ? product.rateMax : '옵션 기준 자동 계산'"
+                               class="mt-1 w-full border border-gray-100 px-3 py-2 rounded-lg text-sm bg-gray-50 text-gray-500"
+                               readonly />
                     </label>
 
                     <label class="block text-xs text-gray-700">
                         최대 한도(원)
                         <input type="number" th:field="*{limitMax}"
                                placeholder="예: 200000000"
+                               required
                                class="mt-1 w-full border border-gray-200 px-3 py-2 rounded-lg text-sm
-                                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"/>
+                    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"/>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 섹션: 금리 옵션 (loan_rate_option_tbl) -->
+            <div id="rate-options" class="mt-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                        <i class="ri-bar-chart-2-line text-indigo-500"></i>
+                        금리 / 상환 옵션
+                    </h3>
+                    <button type="button" onclick="addOptionRow()"
+                            class="px-2 py-1 text-[11px] border rounded-lg text-indigo-600 border-indigo-200">
+                        + 옵션 추가
+                    </button>
+                </div>
+
+                <!-- 기본 1행 -->
+                <div class="option-row grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+                    <!-- 상환방법: 셀렉트 -->
+                    <label class="text-xs text-gray-700">
+                        상환방법
+                        <select name="optRpayTypeNmList"
+                                class="mt-1 w-full border border-gray-200 px-2 py-1.5 rounded-lg text-xs">
+                            <option value="">선택</option>
+                            <option value="원리금균등상환">원리금균등상환</option>
+                            <option value="원금균등상환">원금균등상환</option>
+                            <option value="만기일시상환">만기일시상환</option>
+                        </select>
+                    </label>
+
+                    <!-- 금리유형 -->
+                    <label class="text-xs text-gray-700">
+                        금리유형
+                        <select name="optLendRateTypeNmList"
+                                class="mt-1 w-full border border-gray-200 px-2 py-1.5 rounded-lg text-xs">
+                            <option value="">선택</option>
+                            <option value="고정금리">고정금리</option>
+                            <option value="변동금리">변동금리</option>
+                        </select>
+                    </label>
+
+                    <!-- 옵션 최저/최고금리 -->
+                    <label class="text-xs text-gray-700">
+                        옵션 최저금리(%)
+                        <input type="number" step="0.01" name="optLendRateMinList"
+                               class="mt-1 w-full border border-gray-200 px-2 py-1.5 rounded-lg text-xs"/>
+                    </label>
+
+                    <label class="text-xs text-gray-700">
+                        옵션 최고금리(%)
+                        <input type="number" step="0.01" name="optLendRateMaxList"
+                               class="mt-1 w-full border border-gray-200 px-2 py-1.5 rounded-lg text-xs"/>
+                    </label>
+
+                    <!-- 주택담보일 때만 활성화할 note -->
+                    <label class="text-xs text-gray-700">
+                        비고 (주담대용)
+                        <input type="text" name="optNoteList"  value="담보유형 : 아파트 외"
+                               class="mt-1 w-full border border-gray-200 px-2 py-1.5 rounded-lg text-xs mortgage-note"/>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 섹션: 상품 상세 정보 (loan_product_tbl) -->
+            <div class="mt-8">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="ri-file-text-line text-indigo-500"></i>
+                    <h3 class="text-sm font-semibold text-gray-900">상품 상세 정보</h3>
+                    <span class="text-[10px] text-gray-400">
+      상세 페이지의 상품설명 표에 사용됩니다.
+    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <label class="block text-gray-700">
+                        가입 방법 (join_way)
+                        <textarea th:field="*{joinWay}" rows="2"
+                                  placeholder="예: 인터넷뱅킹, 모바일앱, 영업점"
+                                  class="mt-1 w-full border border-gray-200 px-3 py-2 rounded-lg text-sm
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </label>
+
+                    <label class="block text-gray-700">
+                        대출 한도 안내 (loan_lmt_raw)
+                        <textarea th:field="*{loanLmtRaw}" rows="2"
+                                  placeholder="예: 전세보증금의 최대 80%, 최대 4억원"
+                                  class="mt-1 w-full border border-gray-200 px-3 py-2 rounded-lg text-sm
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </label>
+
+                    <label class="block text-gray-700">
+                        중도상환해약금 (erly_rpay_fee)
+                        <textarea th:field="*{erlyRpayFee}" rows="2"
+                                  placeholder="예: 대출기간 3년 초과 시 0.5% 이내"
+                                  class="mt-1 w-full border border-gray-200 px-3 py-2 rounded-lg text-sm
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </label>
+
+                    <label class="block text-gray-700">
+                        연체이자율 (dly_rate)
+                        <textarea th:field="*{dlyRate}" rows="2"
+                                  placeholder="예: 대출금리 + 3%p, 최고 연 15%"
+                                  class="mt-1 w-full border border-gray-200 px-3 py-2 rounded-lg text-sm
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                    </label>
+
+                    <label class="block text-gray-700">
+                        최대 LTV (%)
+                        <input type="number" th:field="*{ltvMax}"
+                               placeholder="주택담보/전세자금일 때만 입력"
+                               class="mt-1 w-full border border-gray-200 px-3 py-2 rounded-lg text-sm
+                    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
                     </label>
                 </div>
             </div>
@@ -182,17 +288,6 @@
                 </label>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <label class="block text-xs text-gray-700">
-                        상태
-                        <select th:field="*{status}"
-                                class="mt-1 w-full border border-gray-200 px-3 py-2 rounded-lg text-sm
-                                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="DRAFT">DRAFT (작성 중)</option>
-                            <option value="PUBLISHED">PUBLISHED (노출)</option>
-                            <option value="HIDDEN">HIDDEN (임시숨김)</option>
-                            <option value="ARCHIVED">ARCHIVED (종료)</option>
-                        </select>
-                    </label>
 
                     <label class="block text-xs text-gray-700">
                         활성 여부
@@ -237,6 +332,53 @@
                     </button>
                 </div>
             </div>
+            <script>
+                function addOptionRow() {
+                  const container = document.getElementById('rate-options');
+                  if (!container) return;
+
+                  const firstRow = container.querySelector('.option-row');
+                  if (!firstRow) return;
+
+                  const clone = firstRow.cloneNode(true);
+
+                  // 값 초기화
+                  clone.querySelectorAll('input').forEach((el) => {
+                    el.value = '';
+                  });
+                  clone.querySelectorAll('select').forEach((el) => {
+                    el.selectedIndex = 0;
+                  });
+
+                  container.appendChild(clone);
+                  toggleMortgageNote(); // 주담대 여부에 따라 note 활성화 상태 맞추기
+                }
+
+                function toggleMortgageNote() {
+                  const loanTypeSelect = document.querySelector('[name="loanType"]');
+                  const loanType = loanTypeSelect ? loanTypeSelect.value : '';
+                  const isMortgage = loanType === 'MORTGAGE';
+
+                  document.querySelectorAll('.mortgage-note').forEach((input) => {
+                    input.disabled = !isMortgage;
+                    input.classList.toggle('bg-gray-50', !isMortgage);
+                    if (!isMortgage) {
+                      // 비활성화 시 값 유지할지 초기화할지는 정책에 따라
+                      // input.value = '';
+                    }
+                  });
+                }
+
+                document.addEventListener('change', (e) => {
+                  if (e.target && e.target.name === 'loanType') {
+                    toggleMortgageNote();
+                  }
+                });
+
+                document.addEventListener('DOMContentLoaded', () => {
+                  toggleMortgageNote();
+                });
+            </script>
 
         </form>
     </div>

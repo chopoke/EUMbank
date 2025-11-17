@@ -35,21 +35,30 @@ public class LoanConsentServiceImpl implements LoanConsentService{
     @Transactional
     public LoanSaveConsentsResponseDTO saveConsents(LoanSaveConsentsRequestDTO req, Long laNo, Integer cNo) {
 
+        // 신청별 묶음을 위한 키 생성
+        String batchKey = (req.getBatchKey() == null || req.getBatchKey().isBlank())
+                ? java.util.UUID.randomUUID().toString()
+                : req.getBatchKey();
+
         int n = 0;
 
         for (var it : Optional.ofNullable(req.getItems()).orElse(List.of())) {
             if (!it.isAgreed()) continue; // 동의한 것만 기록
 
+            // 같은 세션(batchKey) + 같은 항목(term_code, version)은 1건만 허용
+            boolean exists = repo.existsByBatchKeyAndTermCodeAndVersion(batchKey, it.getTermCode(), it.getVersion());
+            if (exists) continue;
+
             LoanConsent lc = LoanConsent.builder()
-                    .laNo(laNo)
+                    .laNo(laNo)                 // 신청전엔 null로 들어감
                     .customerNo(cNo)
                     .termCode(it.getTermCode())
+                    .batchKey(batchKey)
                     .termTitle(it.getTitle())
                     .version(it.getVersion())
                     .bodyMd(it.getBody())
                     .agreed(true)
                     .agreedAt(parseTime(it.getAgreedAt()))
-                    .bodyHash(sha256(it.getBody()))
                     .build();
             repo.save(lc);
             n++;
@@ -65,21 +74,16 @@ public class LoanConsentServiceImpl implements LoanConsentService{
 
     @Override
     @Transactional
-    public void attachConsentsToApplication(Integer customerNo, Long laNo) {
-        int updated = repo.attachLaNoToConsents(customerNo, laNo);
+    public void attachConsentsToApp(Integer customerNo, Long laNo, String batchKey) {
+        int updated = repo.attachLaNoToConsents(customerNo, laNo, batchKey);
     }
+
 
     // ================ 유틸 메서드들
     private static LocalDateTime parseTime(String s){
-        try { return LocalDateTime.parse(s.replace("Z","")); } catch(Exception e){ return LocalDateTime.now(); }
-    }
-    private static String sha256(String s){
-        try {
-            var md = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] d = md.digest((s==null?"":s).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b: d) sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (Exception e){ return null; }
+        try { return LocalDateTime.parse(s.replace("Z",""));
+        } catch(Exception e){
+            return LocalDateTime.now();
+        }
     }
 }

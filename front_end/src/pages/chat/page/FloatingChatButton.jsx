@@ -16,6 +16,8 @@ const FloatingChatButton = () => {
     const handleMouseDown = (e) => {
         if (isOpen) return; // 챗봇이 열려있으면 드래그 불가
 
+        e.preventDefault();
+
         setIsDragging(true);
         setDragStart({
             x: e.clientX - position.x,
@@ -101,7 +103,18 @@ const FloatingChatButton = () => {
                     <span className="close-icon">✕</span>
                 ) : (
                     <>
-                        <span className="chat-icon"><img src={sym} className="sym" /></span>
+                        <span className="chat-icon">
+                            <img
+                                src={sym}
+                                className="sym"
+                                draggable={false}  // 이미지 드래그 방지
+                                alt="챗봇 아이콘"
+                                style={{
+                                    userSelect: 'none',
+                                    pointerEvents: 'none'
+                                }}
+                            />
+                        </span>
                         {hasNewMessage && <span className="notification-badge"></span>}
                     </>
                 )}

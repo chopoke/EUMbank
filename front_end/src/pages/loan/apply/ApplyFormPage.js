@@ -7,17 +7,18 @@ import NumberInput from "./components/NumberInput";
 import AccountPickers from "./components/AccountPickers";
 import LoanSummaryCard from "./components/LoanSummaryCard";
 import { won, numberToKorean } from "../util/money";
-import { computeVisibility, toKoRateType, normalizeRpayKo } from "../util/loan";
+import { toKoRateType, normalizeRpayKo } from "../util/loan";
 import useLoanQuote from "./hooks/useLoanQuote";
 
-/** 숫자를 한글 화폐(억/만)로 힌트 표기 */
+// 숫자를 한글로 표기해주기 (억, 만.. 단위)
 function KoreanMoneyHint({ value, className = "", showWon = false, omitIl = true }) {
   if (!value || Number(value) === 0) return null;
   const text = numberToKorean(value, { money: true, omitIl });
   return <div className={`text-xs text-gray-500 mt-1 ${className}`}>({text}{showWon ? "원" : ""})</div>;
 }
 
-/** Date -> 'YYYY-MM-DD' (input[type=date] 값) */
+
+// 상환일자로 들어온 인풋값 포맷
 function toDateOnlyInputValue(d = new Date()) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -25,12 +26,12 @@ function toDateOnlyInputValue(d = new Date()) {
   return `${y}-${m}-${day}`;
 }
 
-/** 납부일 1~28로 클램프 */
+// 납부일 1~28사이로 재지정
 function clampPayDay(day) {
   return Math.max(1, Math.min(28, Number(day || 0)));
 }
 
-/** 선택한 날짜 기준 최초 납부일/월 판정 */
+// 선택한 날짜 기준, 최초 납부일 판별 (날짜가 당일이라면 바로 납부)
 function computeFirstDue(today, selectedDate) {
   const tY = today.getFullYear();
   const tM = today.getMonth();
@@ -58,6 +59,16 @@ function computeFirstDue(today, selectedDate) {
   return { payDay, clamped, due, isSoonInThisMonth, isNextMonth };
 }
 
+// 직업, 대출목적
+const PURPOSE_OPTIONS = ["생활비", "주거비", "차량구매", "기타"];
+const JOB_OPTIONS = [
+  { label: "직장인(근로소득)", value: "EMPLOYEE" },
+  { label: "자영업자", value: "SELF_EMPLOYED" },
+  { label: "공무원", value: "PUBLIC" },
+  { label: "학생", value: "STUDENT" },
+  { label: "주부/무직", value: "UNEMPLOYED" }, // 백엔드는 UNEMPLOYED만 인식
+];
+
 export default function ApplyFormPage() {
   const { code } = useParams();
   const nav = useNavigate();
@@ -66,7 +77,7 @@ export default function ApplyFormPage() {
   const [useSameAccount, setUseSameAccount] = React.useState(true);
   const [flow, setFlow] = React.useState(null);
   const [product, setProduct] = React.useState(null);
-  const [accounts, setAccounts] = React.useState([]);        // 전체 계좌 (백엔드 원본)
+  const [accounts, setAccounts] = React.useState([]);        // 전체 계좌 
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState(null);
 
@@ -92,7 +103,7 @@ export default function ApplyFormPage() {
     customerId: "1",
     preferredPayDay: null,      // 1~28
     preferredFirstDueDate: "",  // 'YYYY-MM-DD'
-    carType: "NEW",     // 신차 중고차
+    carType: "NEW",             // 신차 중고차
   });
 
   // ====== 초기 로드: flow/상품/계좌 ======
@@ -135,13 +146,13 @@ export default function ApplyFormPage() {
         }
         setProduct(prod);
 
-        // 4) 계좌 로드 (백엔드 원본)
+        // 4) 계좌 로드
         const accRes = await fetchAccounts().catch(() => ({ data: [] }));
         const list = accRes?.data ?? accRes ?? [];
         const arr = Array.isArray(list) ? list : [];
         setAccounts(arr); // 전체 계좌 저장
 
-        // 5) (초기) '입출금' 계좌 중 첫 번째를 기본 선택으로
+        // 5) 입출금 계좌 중 첫 번째를 기본 선택으로
         const eligible = arr.filter(a => (a.a_account_type ?? a.accountType) === '입출금');
         if (eligible.length > 0) {
           const first = eligible[0].a_no;
@@ -223,35 +234,39 @@ export default function ApplyFormPage() {
   const isBullet = /만기일시/.test(String(form.rpayType));
   const needsCollateral = isMortgage || isJeonse || isAuto;
 
-  // ====== 폼 값 보정 ======
+  //  폼 값 보정
   React.useEffect(() => {
-    if (allowedTerms.length && !allowedTerms.includes(Number(form.desiredTerm))) {
-      setForm((s) => ({ ...s, desiredTerm: allowedTerms[0] }));
-    }
-    if (allowedRateTypesKo.length && !form.rateType) {
-      setForm((s) => ({ ...s, rateType: allowedRateTypesKo[0] }));
-    }
-    if (allowedRpayTypesKo.length && !form.rpayType) {
-      setForm((s) => ({ ...s, rpayType: allowedRpayTypesKo[0] }));
-    }
     const limitMax = product?.limitMax ?? product?.limit_max;
-    if (limitMax != null && Number(form.desiredAmount) > Number(limitMax)) {
-      setForm((s) => ({ ...s, desiredAmount: Number(limitMax) }));
-    }
-    if (!needsCollateral) {
-      setForm((s) => ({ ...s, collateralValue: null, jeonseDeposit: null }));
-    }
-    // 자동차 아닌 경우 carType 정리
-    if (!isAuto && form.carType !== "NEW") {
-      setForm((s) => ({ ...s, carType: "NEW" }));
-    }
-  }, [allowedTerms, allowedRateTypesKo, allowedRpayTypesKo, needsCollateral,isAuto]); 
+    setForm((s) => {
+     const next = { ...s };
+      if (allowedTerms.length && !allowedTerms.includes(Number(s.desiredTerm))) {
+        next.desiredTerm = allowedTerms[0];
+      }
+      if (allowedRateTypesKo.length && !s.rateType) {
+        next.rateType = allowedRateTypesKo[0];
+      }
+      if (allowedRpayTypesKo.length && !s.rpayType) {
+        next.rpayType = allowedRpayTypesKo[0];
+      }
+      if (limitMax != null && Number(s.desiredAmount) > Number(limitMax)) {
+        next.desiredAmount = Number(limitMax);
+      }
+      if (!needsCollateral) {
+        next.collateralValue = null;
+        next.jeonseDeposit = null;
+      }
+      if (!isAuto && s.carType !== "NEW") {
+        next.carType = "NEW";
+      }
+      return next;
+    });
+  }, [allowedTerms, allowedRateTypesKo, allowedRpayTypesKo, needsCollateral, isAuto, product?.limitMax, product?.limit_max]);
 
-  // ====== 유효성 ======
+  // 유효성검증
   const invalidCollateral = isMortgage && (!form.collateralValue || Number(form.collateralValue) <= 0);
   const invalidJeonse    = isJeonse && (!form.jeonseDeposit  || Number(form.jeonseDeposit)  <= 0);
 
-  // ====== 견적 훅 ======
+  // 견적내기 훅
   const {
     quote, quoting, fieldErr, onRequote, canRequote,
     derived: { annualRate, P_req, P_appr, n, r, monthlyAppr },
@@ -409,6 +424,34 @@ export default function ApplyFormPage() {
                       </select>
                     </label>
 
+                    {/* 신청자 직업 */}
+                    <label className="block text-sm">
+                      <span className="text-gray-600">신청자 직업</span>
+                      <select
+                        className="mt-1 w-full rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200/70 outline-none px-3 py-2 transition"
+                        value={form.occupation}
+                        onChange={(e) => setForm((s) => ({ ...s, occupation: e.target.value }))}
+                      >
+                        {JOB_OPTIONS.map((j) => (
+                          <option key={j.value} value={j.value}>{j.label}</option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {/* 자금용도 */}
+                    <label className="block text-sm md:col-span-2">
+                      <span className="text-gray-600">자금용도</span>
+                      <select
+                        className="mt-1 w-full rounded-xl border border-gray-200 focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200/70 outline-none px-3 py-2 transition"
+                        value={form.purpose}
+                        onChange={(e) => setForm((s) => ({ ...s, purpose: e.target.value }))}
+                      >
+                        {PURPOSE_OPTIONS.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </label>
+
                     {/* 상환방식 */}
                     <label className="block text-sm">
                       <span className="text-gray-600">상환방식</span>
@@ -457,36 +500,13 @@ export default function ApplyFormPage() {
                     {isAuto && (
                       <div className="block text-sm md:col-span-2">
                         <span className="text-gray-600">차량 유형</span>
-                        <div className="mt-2 inline-flex rounded-xl border border-gray-200 overflow-hidden">
-                          <button
-                            type="button"
-                            onClick={() => setForm(s => ({ ...s, carType: "NEW" }))}
-                            className={
-                              "px-4 py-2 text-sm transition " +
-                              (form.carType === "NEW"
-                                ? "bg-gray-900 text-white"
-                                : "bg-white text-gray-700 hover:bg-gray-50")
-                            }
-                          >
-                            신차
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setForm(s => ({ ...s, carType: "USED" }))}
-                            className={
-                              "px-4 py-2 text-sm transition border-l border-gray-200 " +
-                              (form.carType === "USED"
-                                ? "bg-gray-900 text-white"
-                                : "bg-white text-gray-700 hover:bg-gray-50")
-                            }
-                          >
-                            중고차
-                          </button>
+                        <div className="mt-2">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
+                            {form.carType === "USED" ? "중고차" : "신차"}
+                          </span>
                         </div>
                         <div className="mt-1 text-xs text-gray-500">
-                          {form.carType === "USED"
-                            ? "중고차 선택 시 기준 금리에 0.7%p 가산되어 적용됩니다."
-                            : "신차 선택 시 상품 기본 금리가 적용됩니다."}
+                          변경하려면 <b>한도/금리 조회</b> 화면에서 다시 선택하세요.
                         </div>
                       </div>
                     )}
@@ -574,6 +594,7 @@ export default function ApplyFormPage() {
                   canRequote={canRequote}
                   quoting={quoting}
                   totalAtMaturityAppr={totalAtMaturityAppr}
+                  showLtvBadge={isMortgage}
                 />
 
                 <div className="rounded-2xl border border-gray-100 shadow-sm bg-white p-5">

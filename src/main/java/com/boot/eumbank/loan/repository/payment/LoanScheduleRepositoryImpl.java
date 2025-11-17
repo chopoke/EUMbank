@@ -25,7 +25,7 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
     @Override
     public List<LoanSchedule> findRepayTargets(Long loanNo) {
         return queryFactory.selectFrom(loanSchedule)
-                .where(loanSchedule.loanNo.loe(loanNo)
+                .where(loanSchedule.loanNo.eq(loanNo)
                 .and(loanSchedule.status.in("DUE", "PARTIAL", "FAILED", "OVERDUE")))
                 .orderBy(loanSchedule.dueDate.asc(),
                         loanSchedule.installmentNo.asc())
@@ -81,7 +81,7 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
      * @return
      */
     @Override
-    public List<LoanSchedule> findOverdueTargets(LocalDate asOfDate) {
+    public List<LoanSchedule> findOverdueTargets(LocalDate asOfDate) {          // 오늘 이전은 전부
         return queryFactory.selectFrom(loanSchedule)
                 .where(
                         loanSchedule.dueDate.before(asOfDate),
