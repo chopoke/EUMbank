@@ -178,12 +178,6 @@ export const AccountMainComp = ({ user, cards = [], loans = [] }) => {
                     </b>
                   </p>
                 </div>
-                <button
-                  className="text-link"
-                  onClick={() => navigate("/accounts")}
-                >
-                  계좌관리
-                </button>
               </div>
 
               {/* 잔액 top2 계좌  */}
@@ -236,7 +230,7 @@ export const AccountMainComp = ({ user, cards = [], loans = [] }) => {
                     </Link>
                   </div>
                   <ul className="transaction-list">
-                    {fxAccounts.slice(0, 3).map((a) => (
+                    {fxAccounts.slice(0, 1).map((a) => (
                       <li key={a.id} className="transaction-item">
                         <div className="transaction-detail">
                           <span className="transaction-date">
