@@ -1,7 +1,7 @@
 import React from "react";
 
 // === 상세 페이지 내 계산기 컴포넌트 ===
-export function InlineCalculator({ product, isCredit, isAuto, carType: carTypeProp, onCarTypeChange }) {
+export function InlineCalculator({ product, isAuto, carType: carTypeProp, onCarTypeChange }) {
   // 기본 금액/기간은 상품 정보 기준으로 세팅
   const terms = React.useMemo(() => {
     if (!product) return [];
@@ -9,11 +9,11 @@ export function InlineCalculator({ product, isCredit, isAuto, carType: carTypePr
     const list =
       product.termMonths && product.termMonths.length > 0
         ? product.termMonths
-        : isCredit
+        : isAuto
         ? [12, 24, 36]
         : [];
     return list.map((m) => ({ months: m, rate: base }));
-  }, [product, isCredit]);
+  }, [product, isAuto]);
 
   const fmt = (n) => Number(n || 0).toLocaleString("ko-KR");
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -60,7 +60,6 @@ export function InlineCalculator({ product, isCredit, isAuto, carType: carTypePr
     <section className="mt-8 rounded-2xl border border-gray-100 p-4 lg:p-6 bg-white">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 bg-indigo-50 rounded-xl px-3 py-2">
-          {/* 아이콘은 굳이 추가 임포트 안 해도 됨. 필요하면 lucide-react Calc 아이콘 써도 O */}
           <span className="text-sm font-semibold text-indigo-800">간편 계산기 (원리금균등 예시)</span>
         </div>
       </div>
@@ -73,6 +72,7 @@ export function InlineCalculator({ product, isCredit, isAuto, carType: carTypePr
             <input
               type="number"
               value={amount}
+              step="1000000"
               min={1_000_000}
               max={product?.limitMax || 1_000_000_000}
               onChange={(e) =>

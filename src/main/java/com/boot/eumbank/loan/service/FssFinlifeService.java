@@ -54,16 +54,16 @@ public class FssFinlifeService {
         // 로그 마스크용
         String masked = apiKey == null ? "null"
                 : (apiKey.length()>6 ? apiKey.substring(0,3)+"****"+apiKey.substring(apiKey.length()-3):"***");
-        log.info("[FSS] GET {} (auth={})", uri, masked);
+        log.info("@@@@@@@@@@@@@@@@@@@@ [FSS] GET {} (auth={}) @@@@@@@@@@@@@@@@@@@@", uri, masked);
 
         var resp = client.get().uri(uri).retrieve().toEntity(String.class);
-        log.info("[FSS] STATUS={}, HEADERS={}", resp.getStatusCode(), resp.getHeaders());
+        log.info(" @@@@@@@@@@@@@@@@@@@@ [FSS] STATUS={}, HEADERS={} @@@@@@@@@@@@@@@@@@@@", resp.getStatusCode(), resp.getHeaders());
 
         String body = resp.getBody();
-        log.info("[FSS] BODY {}", body == null ? "null" : body.substring(0, Math.min(200, body.length())));
+        log.info("@@@@@@@@@@@@@@@@@@@@ [FSS] BODY {}", body == null ? "null @@@@@@@@@@@@@@@@@@@@" : body.substring(0, Math.min(200, body.length())));
 
         if (body == null || body.isBlank()) {
-            throw new IllegalStateException("FSS 주담대 API body 비어있음 (status=" + resp.getStatusCode() + ")");
+            throw new IllegalStateException("@@@@@@@@@@@@@@@@@@@@ FSS 주담대 API body 비어있음 (status= " + resp.getStatusCode() + ") @@@@@@@@@@@@@@@@@@@@");
         }
         return body;
     }
@@ -78,7 +78,7 @@ public class FssFinlifeService {
         var resp = client.get().uri(uri).retrieve().toEntity(String.class);
         String body = resp.getBody();
         if (body == null || body.isBlank()) 
-            throw new IllegalStateException("FSS 전세자금 API body 비어있음 (status=" + resp.getStatusCode() + ")");
+            throw new IllegalStateException(" @@ FSS 전세자금 API body 비어있음 (status=" + resp.getStatusCode() + ") @@");
         return body;
     }
 

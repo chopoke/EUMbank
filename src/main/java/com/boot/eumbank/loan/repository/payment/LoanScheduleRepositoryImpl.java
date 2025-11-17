@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
     @Override
     public List<LoanSchedule> findRepayTargets(Long loanNo) {
         return queryFactory.selectFrom(loanSchedule)
-                .where(loanSchedule.loanNo.loe(loanNo)
+                .where(loanSchedule.loanNo.eq(loanNo)
                 .and(loanSchedule.status.in("DUE", "PARTIAL", "FAILED", "OVERDUE")))
                 .orderBy(loanSchedule.dueDate.asc(),
                         loanSchedule.installmentNo.asc())
@@ -44,10 +45,10 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
      * @return
      */
     @Override
-    public List<LoanSchedule> findAllDueForAutoDebit(LocalDate dueDate) {
+    public List<LoanSchedule> findAllDueForAutoDebit(LocalDateTime dueDate) {
         return queryFactory.selectFrom(loanSchedule)
                 .where(
-                        loanSchedule.dueDate.eq(dueDate),
+                        loanSchedule.dueDate.loe(dueDate),
                         loanSchedule.status.in("DUE", "PARTIAL", "FAILED", "OVERDUE"),
                         hasRemaining()
                 )
@@ -61,10 +62,10 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
      * @return
      */
     @Override
-    public List<LoanSchedule> findNeedRetry(LocalDate forDate) {
+    public List<LoanSchedule> findNeedRetry(LocalDateTime forDate) {
         return queryFactory.selectFrom(loanSchedule)
                 .where(
-                        loanSchedule.dueDate.eq(forDate),
+                        loanSchedule.dueDate.loe(forDate),
                         loanSchedule.status.in("DUE", "PARTIAL", "FAILED", "OVERDUE"),
                         hasRemaining()
                 )
@@ -81,7 +82,7 @@ public class LoanScheduleRepositoryImpl implements LoanScheduleRepositoryCustom{
      * @return
      */
     @Override
-    public List<LoanSchedule> findOverdueTargets(LocalDate asOfDate) {
+    public List<LoanSchedule> findOverdueTargets(LocalDateTime asOfDate) {          // 오늘 이전은 전부
         return queryFactory.selectFrom(loanSchedule)
                 .where(
                         loanSchedule.dueDate.before(asOfDate),
