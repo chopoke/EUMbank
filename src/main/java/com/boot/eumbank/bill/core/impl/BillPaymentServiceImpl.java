@@ -27,14 +27,14 @@ public class BillPaymentServiceImpl implements BillPaymentService {
 
         BigDecimal amt = inv.getBiAmount();
 
-        // 1) 계좌 잔액 차감 (임의 SQL. 실제 a_balance 컬럼 존재 기준)
+        // 1) 계좌 잔액 차감
         int debited = jdbc.update(
                      "UPDATE account_tbl SET a_balance = a_balance - ? WHERE a_no = ? AND a_balance >= ?",
                      amt, aNo, amt
         );
         if (debited != 1) throw new IllegalStateException("잔액 부족");
 
-        // 2) 거래내역 INSERT: 출금 표시(th_account_out=amt, after_balance=서브쿼리)
+        // 2) 거래내역 INSERT: 출금 표시
         jdbc.update("""
           INSERT INTO transfer_history_tbl
           (a_no, th_account_in, th_account_out, th_after_balance, th_amount,
