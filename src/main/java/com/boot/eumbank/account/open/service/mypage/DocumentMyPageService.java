@@ -19,4 +19,14 @@ public interface DocumentMyPageService {
 
     public void deleteDocument(Integer dNo);
 
+    /**
+     * 서버에서 생성한 PDF(예: 공과금 영수증)를 증빙서류로 저장
+     * @return 생성된 문서번호(dNo)
+     */
+    Integer saveGeneratedDocument(byte[] pdfBytes,
+                                  FileType fileType,
+                                  Integer cNo,
+                                  Integer aNo,
+                                  String fileName);
+
 }
