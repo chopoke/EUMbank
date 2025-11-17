@@ -1,4 +1,3 @@
-// src/main/java/com/boot/eumbank/loan/service/apply/LoanQuoteServiceImpl.java
 package com.boot.eumbank.loan.service.apply;
 
 import com.boot.eumbank.customer.entity.Customer;
@@ -70,7 +69,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
         if (req.getDesiredTerm() == null || req.getDesiredTerm() < 6)
             throw new IllegalArgumentException("신청 기간은 최소 6개월 이상이어야 합니다.");
 
-        // 3) 금리유형 정규화 (FIXED / VARIABLE) 및 한글 라벨
+        // 3) 금리유형 정규화 (FIXED 고정금리 / VARIABLE 변동금리) 한글라벨
         final String rateKind = toRateKind(Optional.ofNullable(req.getRateType()).orElse(""));
         final String rateKo   = "VARIABLE".equals(rateKind) ? "변동금리" : "고정금리";      // UI표기를 위한 라벨링
 
@@ -123,16 +122,16 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
             appliedRate = firstNonNull(avgByKind, avgAll, productBase, optionMinAll, new BigDecimal("6.00"));
         }
 
-        // 변동금리 가산: 변동은 +0.30%
+        // 변동금리 가산= +0.3%
         if ("VARIABLE".equals(rateKind)) appliedRate = appliedRate.add(new BigDecimal("0.30"));
 
-        // 자동차인 경우, 중고차는 기존금리 + 0.7% 적용
+        // 자동차인 경우 중고차는 기존금리 + 0.7% 적용
         if (isAuto) {
             String carKind = resolveCarKind(req); // NEW / USED
             if ("USED".equals(carKind)) appliedRate = appliedRate.add(new BigDecimal("0.70"));
         }
 
-        // 8) 승인 한도 계산: LTV 캡 ∩ 원문 절대한도 ∩ DB 상품한도
+        // 8) 승인 한도 계산: LTV 캡 + 원문 절대한도 + DB 상품한도
         BigDecimal basis;
         if (isJeonse) basis = orZero(req.getJeonseDeposit());       // 전세자금 한도기준금액
         else if (isMortgage) basis = orZero(req.getCollateralValue());  // 주담대 한도 기준 금액
@@ -140,9 +139,14 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
         else basis = orZero(req.getCollateralValue());                  // 그외가 들어올 경우 기준금액
 
         // usedLtv 산정 시 우선순위: DB > parseAll > parseLtvPercent > 70
-        Integer usedLtv = (product.getLtvMax()!=null && product.getLtvMax()>0) ? product.getLtvMax()
-                : (ltvMaxFromAll!=null ? ltvMaxFromAll
-                : (ltvPctFromRaw!=null ? ltvPctFromRaw : 70));
+        Integer usedLtv;
+        if (isAuto) {
+            usedLtv = 80;  // 자동차는 차량가의 80%까지만
+        } else {
+            usedLtv = (product.getLtvMax() != null && product.getLtvMax() > 0) ? product.getLtvMax()
+                    : (ltvMaxFromAll != null ? ltvMaxFromAll
+                    : (ltvPctFromRaw != null ? ltvPctFromRaw : 70));
+        }
 
 
         // LTV 캡  ==> 원단위 버리기
@@ -151,7 +155,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
                 .divide(BigDecimal.valueOf(100), 0, RoundingMode.DOWN);
 
         // 절대한도와 DB상품한도 교집합
-        BigDecimal hardLimit = minNotNull(
+        BigDecimal hardLimit = minNotNull(      // 최대한도는 여러 한도들의 최솟값으로
                 minNotNull(capByLtv, absLimit),
                 minNotNull(product.getLimitMax(), scenarioMax)
         );
@@ -183,7 +187,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
             appliedRate = appliedRate.add(ltvAdjustment(effLtv));       // 금리 표 가져오기
         } else {
             // basis가 없으면 LTV 가산은 생략하고, effLtv는 null 유지
-            log.debug("[QUOTE] basis is zero or null; skip LTV-based adjustment");
+            log.debug("@@@@@@@@ [QUOTE] 기본금이 없어서 가산 생략 @@@@@@@@");
         }
         // 금리 범위 가드(2~25%)
         appliedRate = clampRate(appliedRate, new BigDecimal("2.00"), new BigDecimal("25.00"));
@@ -209,107 +213,44 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
             }
         }
 
-        // 10-1) 인지세(Stamp)만 반영 → 실수령액(netDisbursement) 계산
+        // 계산결과 관리용 트레이스
         Map<String, String> trace = new LinkedHashMap<>();
-        BigDecimal stampTax = BigDecimal.ZERO;
-        try {
-            // 수수료/부대비용 원문 – 실제 상품 엔티티의 컬럼/게터 이름에 맞춰 시도
-            String feeRaw = getStr(product, "getFeeTextRaw", "getLpdFeeRaw", "getFeesRaw", "getEtcFeeRaw", "getEtc");
-            if (feeRaw != null && !feeRaw.isBlank()) {
-                Map<String,Object> feeAll = FeeTextParser.parseAll(feeRaw);
-                // 인지세: "stampTax.ratePct"(%) / "stampTax.exemptUnderWon"(원) 스키마 가정
-                Double stampPct    = (feeAll.get("stampTax.ratePct") instanceof Number n1) ? n1.doubleValue() : null;
-                Long   exemptUnder = (feeAll.get("stampTax.exemptUnderWon") instanceof Number n2) ? n2.longValue() : null;
+        trace.put("rateKind", rateKind);          // FIXED / VARIABLE
+        trace.put("rpayType", rpayTypeNorm);      // ANNUITY / EQUAL_PRINCIPAL / BULLET
+        trace.put("appliedRate.final", n2s(appliedRate));
 
-                if (stampPct != null) {
-                    boolean exempt = (exemptUnder != null) && approvedAmount.longValue() <= exemptUnder;
-                    if (!exempt) {
-                        stampTax = approvedAmount
-                                .multiply(BigDecimal.valueOf(stampPct))
-                                .divide(BigDecimal.valueOf(100), 0, RoundingMode.CEILING);
-                    }
-                    trace.put("stamp.ratePct", String.valueOf(stampPct));
-                    if (exemptUnder != null) trace.put("stamp.exemptUnderWon", String.valueOf(exemptUnder));
-                } else {
-                    trace.put("stamp.info", "no_rate_in_text");
-                }
-            } else {
-                trace.put("stamp.info", "no_fee_text");
-            }
-        } catch (Exception e) {
-            trace.put("stamp.error", e.getClass().getSimpleName() + ":" + e.getMessage());
-        }
-
-        BigDecimal netDisbursement = approvedAmount.subtract(stampTax).max(BigDecimal.ZERO);
-        trace.put("stamp.amount", n2s(stampTax));
-        trace.put("netDisbursement", n2s(netDisbursement));
-
-        // 11) 트레이스 (산출근거) 넣어서 관리
         trace.put("raw_limit", String.valueOf(rawLimit));
         trace.put("abs_limit_won", n2s(absLimit));
         trace.put("ltv_pct_from_raw", String.valueOf(ltvPctFromRaw));
         trace.put("usedLtv_cap", String.valueOf(usedLtv));
         trace.put("basis", n2s(basis));
         trace.put("effLtv", String.valueOf(effLtv));
+        trace.put("hardLimit", n2s(hardLimit));
+        trace.put("approvedAmount", n2s(approvedAmount));
+        trace.put("approvedTerm", String.valueOf(approvedTerm));
+        
         trace.put("avgAll", n2s(avgAll));
         trace.put("productBase", n2s(productBase));
         trace.put("optionMinAll", n2s(optionMinAll));
-        if (isAuto) trace.put("auto.kind", resolveCarKind(req)); // NEW/USED
-
-        String earlyRaw = getStr(product, "getErlyRpayFeeRaw","getLpdErlyRpayFee","getEarlyRepayFeeRaw","getErlyRepayTxt");
-        if (earlyRaw != null && !earlyRaw.isBlank()) {
-            Map<String,Object> erly = EarlyRepayTextParser.parseAll(earlyRaw);
-            Object pct = erly.get("rate.flatPct");
-            if (pct != null) trace.put("early.flatPct", String.valueOf(pct));
-            Object denom = erly.get("denominator");
-            if (denom != null) trace.put("early.denom", String.valueOf(denom));
-        }
-
-        // (선택) 조기상환수수료 예시 계산: 12개월 차에 전액상환 가정 (표시용 보수적 추정)
-        try {
-            if (earlyRaw != null && !earlyRaw.isBlank()) {
-                Map<String,Object> erly2 = EarlyRepayTextParser.parseAll(earlyRaw);
-                Object flatObj  = erly2.get("rate.flatPct");   // 단일 요율(%)이 있다고 가정
-                Object denomObj = erly2.get("denominator");    // "3년" | "대출기간" | "unknown"
-                Double flatPct = (flatObj instanceof Number n) ? n.doubleValue() : null;
-                String denom   = denomObj == null ? "unknown" : denomObj.toString();
-
-                if (flatPct != null) {
-                    int sampleMonth  = Math.min(12, approvedTerm);
-                    int remaining    = Math.max(approvedTerm - sampleMonth, 0);
-                    int denomMonths  = "3년".equals(denom) ? 36 : Math.max(approvedTerm, 1);
-
-                    BigDecimal penalty = approvedAmount
-                            .multiply(BigDecimal.valueOf(flatPct))
-                            .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP)
-                            .multiply(BigDecimal.valueOf(remaining))
-                            .divide(BigDecimal.valueOf(denomMonths), 0, RoundingMode.CEILING);
-
-                    trace.put("early.example.fullPrepayAt12m", n2s(penalty));
-                } else {
-                    trace.put("early.example.info", "no_flatPct_in_text");
-                }
-            }
-        } catch (Exception ignore) {}
+        if (isAuto) trace.put("auto.kind", resolveCarKind(req));            // 신차인지 중고인지
 
 
-
-        String dlyRaw = getStr(product, "getDlyRateRaw","getLpdDlyRate","getDelinqRateRaw","getDlyRate");
-        if (dlyRaw != null && !dlyRaw.isBlank()) {
-            Map<String,Object> d = DelinqRateParser.parseAll(dlyRaw);
-            Object add = d.get("addPct");
-            Object cap = d.get("capMaxPct");
-            if (add != null) trace.put("dly.addPct", String.valueOf(add));
-            if (cap != null) trace.put("dly.capMaxPct", String.valueOf(cap));
-        }
-
-        if ("BULLET".equals(rpayTypeNorm)) {
-            trace.put("bullet_monthly_interest", n2s(monthlyPayment));
-        }
+//        // ====== 연체부분 미적용..
+//        String dlyRaw = getStr(product, "getDlyRateRaw","getLpdDlyRate","getDelinqRateRaw","getDlyRate");
+//        if (dlyRaw != null && !dlyRaw.isBlank()) {
+//            Map<String,Object> d = DelinqRateParser.parseAll(dlyRaw);
+//            Object add = d.get("addPct");
+//            Object cap = d.get("capMaxPct");
+//            if (add != null) trace.put("dly.addPct", String.valueOf(add));
+//            if (cap != null) trace.put("dly.capMaxPct", String.valueOf(cap));
+//        }
+//        if ("BULLET".equals(rpayTypeNorm)) {
+//            trace.put("bullet_monthly_interest", n2s(monthlyPayment));
+//        }
 
         // 12) 로그
-        log.info("[QUOTE] code={}, type={}, rate={}, rpay={}, raw='{}', absLimit={}, ltvPctRaw={}, usedLtvCap={}, desired={}, basis={}, productLimitMax={}, " +
-                        "appliedRate={}, approvedAmount={}, approvedTerm={}, monthly={}, totalInt={}",
+        log.info("@@@@@@@@ [QUOTE] code={}, type={}, rate={}, rpay={}, raw='{}', absLimit={}, ltvPctRaw={}, usedLtvCap={}, desired={}, basis={}, productLimitMax={}, " +
+                        "appliedRate={}, approvedAmount={}, approvedTerm={}, monthly={}, totalInt={} @@@@@@@@@",
                 product.getLoanCode(), product.getLoanType(), rateKo, rpayTypeNorm, rawLimit, absLimit, ltvPctFromRaw, usedLtv,
                 req.getDesiredAmount(), basis, product.getLimitMax(),
                 appliedRate, approvedAmount, approvedTerm, monthlyPayment, totalInterest);
@@ -324,7 +265,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
                 .appliedRate(appliedRate.setScale(2, RoundingMode.HALF_UP))
                 .approvedAmount(approvedAmount)
                 .approvedTerm(approvedTerm)
-                .monthlyPayment(monthlyPayment)   // 주의: BULLET은 "월 이자"를 의미
+                .monthlyPayment(monthlyPayment)   //  BULLET은 (월이자)를 말함
                 .totalInterest(totalInterest)
                 .maxLimit(hardLimit)
                 .usedLtv(effLtv)
@@ -332,7 +273,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
                 .build();
     }
 
-    // ========================= 금리 선택/보조 =========================
+    // ========================= 금리 선택/보조
 
     /**
      * 담보/전세 금리 산출(금리유형/상환방식/기간 근접 옵션 평균 → 중간값 → 최소/최대 순)
@@ -367,7 +308,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
                     .toList();
         }
 
-        // 4) 평균 → (미존재 시) min/max의 중간값 → min → max
+        // 4) 평균 --> (미존재 시) min/max의 중간값 → min → max
         BigDecimal avg = averageRate(pool);
         if (avg != null) return avg;
 
@@ -394,14 +335,14 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
 
     /**
      * 옵션의 한글 상환방식 라벨이 정규화 코드와 매칭되는지 여부
-     * - "원리금", "원금/분할상환", "만기일시/만기일시상환" 등 다양한 표기를 허용
+     * - "원리금", "원금/분할상환", "만기일시/만기일시상환" 등 다양한 표기 감지
      */
     private static boolean rpayMatches(String rawKo, String norm) {
         if (rawKo == null) return false;
         return switch (norm) {
             case "ANNUITY" -> rawKo.contains("원리금");
             case "EQUAL_PRINCIPAL" -> rawKo.contains("원금") || rawKo.contains("분할상환");
-            case "BULLET" -> rawKo.contains("만기일시"); //  "만기일시상환" 포함
+            case "BULLET" -> rawKo.contains("만기일시"); //  만기일시상환 포함
             default -> false;
         };
     }
@@ -421,7 +362,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
                 }
             }
         } catch (Exception ignore) {}
-        return "NEW"; // 디폴트 = 신차
+        return "NEW";                           // 디폴트 = 신차
     }
 
     /**
@@ -444,7 +385,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
         return Math.abs(v - target);
     }
 
-    /** 리스트의 평균 금리 추정(평균→(없으면)min/max로 유추) */
+    /** 리스트의 평균 금리 추정(평균  (없으면)min/max로 유추) */
     private static BigDecimal averageRate(List<LoanRateOption> list) {
         if (list == null || list.isEmpty()) return null;
         BigDecimal sum = BigDecimal.ZERO;
@@ -563,69 +504,6 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
                 .divide(BigDecimal.valueOf(12), 12, RoundingMode.HALF_UP);
         BigDecimal monthlyInterest = principal.multiply(m);
         return monthlyInterest.multiply(BigDecimal.valueOf(months)).setScale(0, RoundingMode.CEILING);
-    }
-
-    // ===== 점수/버킷/직업/상환유형 =====
-
-    /** 요청의 extra.creditScore → 없으면 직업 기반 디폴트 스코어 산정 */
-    private int resolveCreditScoreFromReq(LoanQuoteRequestDTO req) {
-        try {
-            Map<String, Object> extra = req.getExtra();
-            if (extra != null) {
-                Object v = extra.get("creditScore");
-                if (v != null) {
-                    int s = Integer.parseInt(String.valueOf(v));
-                    return Math.max(300, Math.min(900, s));
-                }
-            }
-        } catch (Exception ignore) {}
-        String job = Optional.ofNullable(req.getOccupation()).orElse("EMPLOYEE").toUpperCase();
-        return switch (job) {
-            case "PUBLIC" -> 820;
-            case "EMPLOYEE" -> 760;
-            case "SELF_EMPLOYED" -> 700;
-            case "STUDENT" -> 680;
-            case "UNEMPLOYED" -> 620;
-            default -> 700;
-        };
-    }
-
-    /** 신용점수 → 내부 버킷 코드 매핑 */
-    private String mapScoreToBucket(int score) {
-        if (score >= 900) return "G1";
-        if (score >= 820) return "G4";
-        if (score >= 760) return "G5";
-        if (score >= 720) return "G6";
-        if (score >= 680) return "G10";
-        if (score >= 640) return "G11";
-        if (score >= 600) return "G12";
-        return "G13";
-    }
-
-    /** 직업별 금리 가감(샘플 룰) */
-    private BigDecimal jobAdjustment(String jobRaw) {
-        String job = jobRaw == null ? "EMPLOYEE" : jobRaw.toUpperCase();
-        return switch (job) {
-            case "PUBLIC" -> new BigDecimal("-0.50");
-            case "EMPLOYEE" -> new BigDecimal("-0.20");
-            case "SELF_EMPLOYED" -> new BigDecimal("0.30");
-            case "STUDENT" -> new BigDecimal("0.10");
-            case "UNEMPLOYED" -> new BigDecimal("1.00");
-            default -> BigDecimal.ZERO;
-        };
-    }
-
-    /** 직업별 기본 한도 캡(필요 시 사용) */
-    private BigDecimal baseCapByJob(String jobRaw) {
-        String job = jobRaw == null ? "EMPLOYEE" : jobRaw.toUpperCase();
-        return switch (job) {
-            case "PUBLIC" -> new BigDecimal("80000000");
-            case "EMPLOYEE" -> new BigDecimal("50000000");
-            case "SELF_EMPLOYED" -> new BigDecimal("40000000");
-            case "STUDENT" -> new BigDecimal("20000000");
-            case "UNEMPLOYED" -> new BigDecimal("10000000");
-            default -> new BigDecimal("30000000");
-        };
     }
 
     /** LTV 구간별 금리 가감 */

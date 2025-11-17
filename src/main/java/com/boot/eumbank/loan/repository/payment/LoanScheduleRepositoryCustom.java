@@ -4,6 +4,7 @@ package com.boot.eumbank.loan.repository.payment;
 import com.boot.eumbank.loan.entity.LoanSchedule;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -24,7 +25,7 @@ public interface LoanScheduleRepositoryCustom {
      */
     void lockLoanRow(Long loanNo);
 
-    List<LoanSchedule> findAllDueForAutoDebit(LocalDate dueDate);
-    List<LoanSchedule> findNeedRetry(LocalDate forDate);
-    List<LoanSchedule> findOverdueTargets(LocalDate asOfDate);
+    List<LoanSchedule> findAllDueForAutoDebit(LocalDateTime dueDate);
+    List<LoanSchedule> findNeedRetry(LocalDateTime forDate);
+    List<LoanSchedule> findOverdueTargets(LocalDateTime asOfDate);
 }
