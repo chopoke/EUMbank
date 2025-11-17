@@ -1,50 +1,55 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
 <body>
-<header th:fragment="header" class="hdr">
-    <!-- Left: 햄버거 메뉴 + 로고 + 메뉴 + 종 -->
-    <div class="left">
-        <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="메뉴">
-            <i class="ri-menu-line"></i>
-        </button>
-        <a href="http://localhost:3000/" class="logo">
-            <img th:src="@{/img/eumonly.png}" alt="이음은행">
-            <span>이음은행</span>
-        </a>
+<header th:fragment="header" class="main-header">
+    <!-- Main Nav -->
+    <div class="main-nav-bar">
+        <!-- Left: 햄버거 메뉴 + 로고 + 메뉴 -->
+        <div class="main-nav-left">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="메뉴">
+                <i class="ri-menu-line"></i>
+            </button>
+            <img th:src="@{/img/eumonly.png}" class="mainlogo" alt="이음은행">
+            <a href="http://localhost:3000/" class="logo">이음은행</a>
+            
+            <nav class="main-nav-links">
+                <a href="http://localhost:3000/accounts" class="nav-link">개인</a>
+                <div class="nav-link group relative">
+                    <span>상품</span>
+                    <!-- 드롭다운 필요 시 별도 구현 -->
+                </div>
+                <a href="http://localhost:3000/wealth" class="nav-link nav-link-active">자산관리</a>
+                <a href="http://localhost:3000/foreign/rate" class="nav-link">외환/환율</a>
+            </nav>
+        </div>
 
-        <nav class="nav">
-            <a href="http://localhost:3000/accounts">개인</a>
+        <!-- Right: 관리자 버튼 + 로그인 상태 + 보안 + 로그아웃 -->
+        <div class="main-nav-right">
+            <a sec:authorize="hasRole('ADMIN')" href="/admin/enter">
+                <button class="login-button">관리자</button>
+            </a>
 
-            <div class="nav">
-                <span>상품</span>
-                <!-- 드롭다운 필요 시 별도 구현 -->
+            <div sec:authorize="isAuthenticated()" class="logged-in-status">
+                <span class="user-chip" aria-label="로그인 사용자">
+                    <a href="http://localhost:3000/mypage" class="nav-link">
+                        <img th:src="@{/img/mypage.png}" class="mypage" alt="마이페이지">
+                    </a>
+                    <span class="ml-1" th:text="${#authentication?.principal?.UserId} + '님 접속중'">고객님 접속중</span>
+                </span>
+                <span class="security-tag" aria-label="보안">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 3l7 3v6c0 5-3.5 8-7 9-3.5-1-7-4-7-9V6l7-3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-gray-700">보안</span>
+                </span>
             </div>
 
-            <a href="http://localhost:3000/wealth" class="active">자산관리</a>
-            <a href="http://localhost:3000/foreign/rate">외환/환율</a>
-
-            <i class="ri-notification-2-line bell" sec:authorize="isAuthenticated()" aria-label="알림"></i>
-        </nav>
-    </div>
-
-    <!-- Right: 관리자 버튼 + 로그인 상태 + 보안 + 로그아웃 -->
-    <div class="right">
-        <a sec:authorize="hasRole('ADMIN')" href="/admin/enter"><button class="btn btn-blue">관리자</button></a>
-
-        <span class="idchip" sec:authorize="isAuthenticated()">
-          <i class="ri-user-line"></i>
-          <span th:text="${#authentication?.principal?.UserId} + '님 접속중'">고객님 접속중</span>
-        </span>
-
-        <span class="chip" aria-label="보안">
-          <span>보안</span>
-        </span>
-
-        <!-- 로그아웃: POST /logout (SecurityConfig에서 3000으로 리다이렉트) -->
-        <form th:action="@{/admin/logout}" method="post" class="inline">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-            <button type="submit" class="btn btn-blue">로그아웃</button>
-        </form>
+            <!-- 로그아웃: POST /logout -->
+            <form sec:authorize="isAuthenticated()" th:action="@{/admin/logout}" method="post" class="inline">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button type="submit" class="login-button">로그아웃</button>
+            </form>
+        </div>
     </div>
 </header>
 </body>
