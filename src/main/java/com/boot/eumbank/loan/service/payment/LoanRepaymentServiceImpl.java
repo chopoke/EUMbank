@@ -41,6 +41,8 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
     private final AccountTxnServiceImpl accountTxn;     // 출금용 서비스
     private final LoanDelinquencyRepository delinquencyRepo;        // 연체 레포
 
+
+
     private static final BigDecimal ZERO = new BigDecimal("0.00");
 
     // -------- 유틸
@@ -50,7 +52,10 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
     private static BigDecimal min(BigDecimal a, BigDecimal b) {
         return (a.compareTo(b) <= 0) ? a : b;
     }
-    private static String nextPaymentId() {
+
+    private String nextPaymentId() {
+
+        //String date = loanClock.today().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String date = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
         String rnd = String.format("%06d", new java.util.Random().nextInt(1_000_000));
         return "RP" + date + "-" + rnd;
@@ -81,6 +86,8 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
         // 없으면 now()로 대체 저장하기
         LocalDateTime payTime = Optional.ofNullable(req.getPaymentTime())
                 .orElse(LocalDateTime.now());
+//        LocalDateTime payTime = Optional.ofNullable(req.getPaymentTime())
+//                .orElse(loanClock.now());
 
 
         // ------------------------ 2단계!
@@ -114,7 +121,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
             }
 
         } else {
-            // findRepayTargets 결과도 가변 리스트로 한번 감싸두는 게 안전
+            // findRepayTargets 결과도 가변 리스트로 한번 감싸두기
             targets = new ArrayList<>(scheduleRepo.findRepayTargets(loanNo));
             if (targets.isEmpty()) {
                 throw new IllegalArgumentException("상환 대상 스케줄이 없습니다.");
@@ -380,3 +387,4 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
     }
 
 }
+

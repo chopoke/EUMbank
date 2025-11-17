@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 
 /**
@@ -25,7 +26,10 @@ public class LoanDelinquencyServiceImpl implements LoanDelinquencyService{
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)      // 실패할때마다 항상 등록되어야 하니 별개 트랜으로 분기
-    public long upsertDailySnapshot(Long loanNo, Long scheduleIdOrNull, LocalDate asOfDate, BigDecimal penMarginPct, BigDecimal capPct, BigDecimal appliedDelRatePct, BigDecimal overdueAmt, BigDecimal delAmount, String waivedYn, String memo) {
+    public long upsertDailySnapshot(Long loanNo, Long scheduleIdOrNull, LocalDateTime asOfDate, BigDecimal penMarginPct, BigDecimal capPct, BigDecimal appliedDelRatePct, BigDecimal overdueAmt, BigDecimal delAmount, String waivedYn, String memo) {
+
+        // 논리날짜 유지
+        LocalDate asOfDay = asOfDate.toLocalDate();
 
         // 대출번호 + 날짜 조합ㅇ로 유니크키 생성하기
         String ldId = LdIdMaker.make(loanNo, asOfDate, scheduleIdOrNull);
@@ -34,7 +38,7 @@ public class LoanDelinquencyServiceImpl implements LoanDelinquencyService{
                 .loanNo(loanNo)
                 .ldId(ldId)
                 .scheduleId(scheduleIdOrNull)
-                .calcDate(asOfDate.atStartOfDay()) // 시간만 00:00:00로 고정
+                .calcDate(asOfDay.atStartOfDay()) // 시간만 00:00:00로 고정
                 .penMargin(penMarginPct)
                 .delRate(appliedDelRatePct)
                 .capRate(capPct)

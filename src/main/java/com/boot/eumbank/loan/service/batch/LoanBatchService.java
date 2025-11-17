@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Comparator;
@@ -42,15 +41,16 @@ public class LoanBatchService {
     private static final ZoneId ZONE = ZoneId.of("Asia/Seoul");
     private static final BigDecimal ZERO = BigDecimal.ZERO;
 
+
     /**
      * 1) 당일 및 기한 경과분 자동 출금
      * - 상환계좌(repayAccount)가 지정된 대출만 대상
      * 오늘자 자동이체 과정
      */
     //@Scheduled(cron = "0 0/5 * * * *", zone = "Asia/Seoul") // 5분마다
-    @Scheduled(cron = "0/30 * * * * *", zone = "Asia/Seoul")        // 매 30초마다 실행
+    @Scheduled(cron = "0/20 * * * * *", zone = "Asia/Seoul")        // 매 20초마다 실행
     public void autoDebitForToday() {
-        LocalDate today = LocalDate.now(ZONE);
+        LocalDateTime today = LocalDateTime.now(ZONE);
 
         // due_date <= today && status in (DUE, PARTIAL, FAILED, OVERDUE) && 잔액>0
         // 오늘보다 이전인 납기일, 즉 상환안된 스케줄들 찾아 dues에 적립
@@ -92,11 +92,11 @@ public class LoanBatchService {
             // 상환==================
             try {
                 LocalDateTime payTime = LocalDateTime.now(ZONE);        // 상환타임 지정
-                
+
                 String idem = "AUTO-" + loan.getLNo()
                         + "-" + ls.getInstallmentNo()
                         + "-" + today;
-                
+
                 // 상환정보 담기
                 RepaymentRequestDTO req = RepaymentRequestDTO.builder()
                         .amount(remaining)
@@ -126,9 +126,10 @@ public class LoanBatchService {
      * - 연체 상태(OVERDUE) 포함해서 계속 재시도
      */
     //@Scheduled(cron = "0 2/15 * * * *", zone = "Asia/Seoul") // 매 15분, 2분부터
-    @Scheduled(cron = "3/30 * * * * *", zone = "Asia/Seoul")        // 3초부텃 ㅣ작해서 30초마다 실행
+    @Scheduled(cron = "3/20 * * * * *", zone = "Asia/Seoul")        // 3초부텃 ㅣ작해서 20초마다 실행
     public void retryFailedOrPartial() {
-        LocalDate today = LocalDate.now(ZONE);
+        LocalDateTime today = LocalDateTime.now(ZONE);
+
         List<LoanSchedule> targets = scheduleRepo.findNeedRetry(today);
 
         targets.sort(Comparator
@@ -191,10 +192,11 @@ public class LoanBatchService {
      * ==> 일정주기로 재시도 하면서 입금이 늦어도 어쨋든 상환되게 하기
      */
     //@Scheduled(cron = "0 10 0 * * *", zone = "Asia/Seoul") // 매일 00:10
-    @Scheduled(cron = "6/30 * * * * *", zone = "Asia/Seoul")        // 6초부터 시작해서 30초마다 실행
+    @Scheduled(cron = "6/20 * * * * *", zone = "Asia/Seoul")        // 6초부터 시작해서 20초마다 실행
     public void markOverdueAndAccruePenalty() {
-        
-        LocalDate today = LocalDate.now(ZONE);
+
+        LocalDateTime today = LocalDateTime.now(ZONE);
+
         // 연체건들 찾아
         List<LoanSchedule> overdueTargets = scheduleRepo.findOverdueTargets(today);
 
@@ -249,7 +251,7 @@ public class LoanBatchService {
 
     // ================== 내부 유틸 ==================
 
-    private void handleAutoDebitFailure(LocalDate today,
+    private void handleAutoDebitFailure(LocalDateTime today,
                                         LoanSchedule ls,
                                         Loan loan,
                                         BigDecimal overdueAmt,
@@ -312,3 +314,4 @@ public class LoanBatchService {
         return v == null ? ZERO : v;
     }
 }
+
