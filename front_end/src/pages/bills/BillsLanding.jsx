@@ -120,14 +120,26 @@ export default function BillsLanding() {
       try {
         const res = await fetchAccounts();
         const arr = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-        const mapped = arr.map(mapAccountRow);
+
+        // ① 입출금 통장만 필터
+        const onlyPayable = arr.filter(isPayableAccount);
+
+        // ② 마스킹/매핑
+        const mapped = onlyPayable.map(mapAccountRow);
+
         if (!alive) return;
         setAccounts(mapped);
+
+        // ③ 기본 선택 계좌도 필터된 목록 중 첫 번째로
         if (mapped.length) setAccount(String(mapped[0].aNo));
+        else setAccount("");
       } catch {}
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [USE_API]);
+
 
   return (
     <div className="min-h-screen bg-white">
@@ -269,20 +281,34 @@ function Card({ title, icon, children, iconColor = "text-gray-600" }) {
 }
 
 /* utils */
+
+// 입출금 통장만 true
+function isPayableAccount(row) {
+  const t = String(
+    row?.aType ?? row?.a_type ?? row?.accountType ?? row?.a_account_type ?? ""
+  ).trim();
+
+  return t === "입출금";   // DB 실제 값
+}
+
+function maskAccountNo(n) {
+  const s = String(n || "");
+  if (s.length <= 8) return s;
+  return s.slice(0, 8) + "*".repeat(s.length - 8);
+}
+
 function mapAccountRow(row) {
   const aNo = row?.aNo ?? row?.a_no ?? row?.ano;
-  const accountNo = String(row?.accountNo ?? row?.a_account_no ?? row?.accountno ?? "");
+  const accountNo = String(
+    row?.accountNo ?? row?.a_account_no ?? row?.accountno ?? ""
+  );
   const pureNo = accountNo.replace(/^.*\(([^)]+)\).*$/, "$1");
-  const masked = pureNo.replace(/\d(?=(?:\D*\d){4})/g, "*");
+  const masked = maskAccountNo(pureNo);   // ← 통일된 마스킹 함수 사용
+
   return {
     aNo: Number(aNo),
     accountNo: pureNo,
     name: "계좌",
     label: masked,
   };
-}
-function maskAccountNo(n) {
-  if (!n) return "";
-  const s = String(n);
-  return s.replace(/\d(?=(?:\D*\d){4})/g, "*");
 }

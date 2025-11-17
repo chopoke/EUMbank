@@ -224,4 +224,59 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
                 .fileExtension(extension)
                 .build();
     }
+
+    /**
+     * 서버에서 생성한 PDF를 증빙서류(document_tbl)에 저장
+     * - 예: 공과금 영수증
+     */
+    @Override
+    @Transactional
+    public Integer saveGeneratedDocument(byte[] pdfBytes,
+                                         FileType fileType,
+                                         Integer cNo,
+                                         Integer aNo,
+                                         String fileName) {
+        logger.info("자동 생성 문서 저장 - type: {}, cNo: {}, aNo: {}", fileType, cNo, aNo);
+
+        if (pdfBytes == null || pdfBytes.length == 0) {
+            throw new IllegalArgumentException("PDF 데이터가 비어 있습니다.");
+        }
+
+        // 디렉토리 생성 (기존 uploadDir 그대로 사용)
+        File directory = new File(uploadDir);
+        if (!directory.exists()) {
+            boolean created = directory.mkdirs();
+            if (!created) {
+                throw new RuntimeException("디렉토리 생성에 실패했습니다: " + uploadDir);
+            }
+        }
+
+        // 서버 내부에 저장할 실제 파일명(랜덤)
+        String savedFilename = UUID.randomUUID().toString() + ".pdf";
+        Path filePath = Paths.get(uploadDir, savedFilename);
+
+        try {
+            Files.write(filePath, pdfBytes);
+            logger.info("자동 생성 PDF 저장 완료: {}", filePath);
+        } catch (IOException e) {
+            logger.error("자동 생성 PDF 저장 중 오류 발생: {}", e.getMessage(), e);
+            throw new RuntimeException("자동 생성 PDF 저장에 실패했습니다.", e);
+        }
+
+        // DB(document_tbl)에 기록
+        DocumentFile documentFile = DocumentFile.builder()
+                .type(fileType)                 // 예: FileType.공과금영수증
+                .pdfPath(filePath.toString())   // 서버 실제 경로
+                .pdfName(fileName)              // 화면에 보여줄 논리적 파일명
+                .cNo(cNo)
+                .aNo(aNo)
+                .status(DocumentStatus.PENDING) // 필요하면 다른 기본값으로 변경 가능
+                .build();
+
+        documentFile = documentRepository.save(documentFile);
+        logger.info("자동 생성 문서 DB 저장 완료 - dNo: {}, cNo: {}, aNo: {}",
+                documentFile.getDNo(), cNo, aNo);
+
+        return documentFile.getDNo();
+    }
 }
