@@ -15,7 +15,7 @@ import java.util.*;
 /**
  * Finlife (금감원 API) 호출 담당 Service
  * 각 메서드 역할 
- * -> API를 호출해서 JSON반환(raw)
+ * -> API를 호출해서 JSON반환 (원본 raw)
  * getMortgageProductRaw : 주택담보대출 API호출
  * getJeonseProductRaw : 전세자금대출 API호출
  * getCreditProductRaw : 신용대출 API 호출 --> 제거
@@ -94,66 +94,6 @@ public class FssFinlifeService {
 //        if (body == null || body.isBlank()) throw new IllegalStateException("FSS empty body (credit)");
 //        return body;
 //    }
-
-    //  파서 유틸(문구 -> 숫자) -----------
-    private static final java.util.regex.Pattern P_EOK =
-            java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*억(?:원)?");
-    private static final java.util.regex.Pattern P_CHEONMAN =
-            java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*천\\s*만(?:원)?");
-    private static final java.util.regex.Pattern P_MAN =
-            java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*만(?:원)?");
-    private static final java.util.regex.Pattern P_WON =
-            java.util.regex.Pattern.compile("(\\d{1,3}(?:,\\d{3})+|\\d+)\\s*원");
-
-    private static final BigDecimal U_EOK      = new BigDecimal("100000000");
-    private static final BigDecimal U_CHEONMAN = new BigDecimal("10000000");
-    private static final BigDecimal U_MAN      = new BigDecimal("10000");
-
-    /** "3천만~2억" "1.5억" "250만" "123,456,789원" 등에서 최대 원화 금액 추출 */
-    private static BigDecimal extractMaxWon(String raw){
-        if (raw == null) return null;
-        String s = raw.replaceAll("\\s+", "");
-        BigDecimal max = null;
-        max = maxOf(max, scanAll(s, P_EOK, U_EOK, false));
-        max = maxOf(max, scanAll(s, P_CHEONMAN, U_CHEONMAN, false));
-        max = maxOf(max, scanAll(s, P_MAN, U_MAN, false));
-        max = maxOf(max, scanAll(s, P_WON, BigDecimal.ONE, true));
-        return max;
-    }
-
-    private static BigDecimal scanAll(String s, java.util.regex.Pattern p, BigDecimal unit, boolean stripComma) {
-        var m = p.matcher(s);
-        BigDecimal max = null;
-        while (m.find()) {
-            String n = m.group(1);
-            if (stripComma) n = n.replace(",", "");
-            try {
-                BigDecimal v = new BigDecimal(n).multiply(unit);
-                max = maxOf(max, v);
-            } catch (Exception ignore) {}
-        }
-        return max;
-    }
-
-    private static BigDecimal maxOf(BigDecimal a, BigDecimal b) {
-        if (b == null) return a;
-        if (a == null) return b;
-        return a.max(b);
-    }
-
-    /** "% 숫자"들 중 최댓값 정수로 */
-    private static Integer extractMaxLtv(String raw){
-        if (raw == null) return null;
-        var m = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%").matcher(raw);
-        BigDecimal max = null;
-        while (m.find()) {
-            try {
-                BigDecimal v = new BigDecimal(m.group(1));
-                max = (max == null) ? v : max.max(v);
-            } catch (Exception ignore) {}
-        }
-        return (max == null) ? null : max.setScale(0, RoundingMode.HALF_UP).intValue();
-    }
 
 
 }
