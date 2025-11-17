@@ -112,7 +112,7 @@ export function Header({ isLoggedIn, user, onLogout }) {
           {isLoggedIn && isAdmin && (
             <button
               className="login-button"
-              onClick={() => window.location.href = `${process.env.REACT_APP_API_URL || 'http://localhost:8081'}/admin/enter`}
+              onClick={() => navigate("/admin")}
             >
               관리자
             </button>

@@ -1,9 +1,56 @@
+import { useState, useEffect } from 'react';
+import api from '../../../api/axios';
 
 export default function Dashboard() {
+  const [spotStats, setSpotStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSpotStatistics = async () => {
+      try {
+        const response = await api.get('/api/admin/spot/statistics');
+        setSpotStats(response.data);
+      } catch (error) {
+        console.error('현물 통계 조회 실패:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSpotStatistics();
+  }, []);
+
   const stats = [
     { title: 'Total Users', value: '1,200', icon: 'ri-user-line', color: 'text-blue-600' },
     { title: 'Active Loans', value: '350', icon: 'ri-file-list-line', color: 'text-green-600' },
-    { title: 'Inquiry Resolution Rate', value: '80%', icon: 'ri-checkbox-circle-line', color: 'text-teal-600' }
+    { title: 'Inquiry Resolution Rate', value: '80%', icon: 'ri-checkbox-circle-line', color: 'text-teal-600' },
+    // 현물 통계 추가
+    ...(spotStats ? [
+      { 
+        title: '현물 지갑 수', 
+        value: spotStats.totalWalletCount?.toLocaleString() || '0', 
+        icon: 'ri-wallet-line', 
+        color: 'text-yellow-600' 
+      },
+      { 
+        title: '금 보유량', 
+        value: `${(spotStats.totalGoldBalance || 0).toLocaleString()}g`, 
+        icon: 'ri-money-dollar-circle-line', 
+        color: 'text-yellow-600' 
+      },
+      { 
+        title: '은 보유량', 
+        value: `${(spotStats.totalSilverBalance || 0).toLocaleString()}g`, 
+        icon: 'ri-money-dollar-circle-line', 
+        color: 'text-gray-600' 
+      },
+      { 
+        title: '현물 총 자산', 
+        value: `₩${(spotStats.totalSpotAssets || 0).toLocaleString()}`, 
+        icon: 'ri-line-chart-line', 
+        color: 'text-green-600' 
+      }
+    ] : [])
   ];
 
   const recentLoans = [
@@ -21,7 +68,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <div key={index} className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center">
