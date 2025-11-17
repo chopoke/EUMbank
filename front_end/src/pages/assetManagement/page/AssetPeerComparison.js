@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../../api/axios";
 import PeerProfileForm from "../components/PeerProfileForm";
 import AssetHubNav from "../components/AssetHubNav";
@@ -13,6 +13,49 @@ import {
   Legend,
 } from "chart.js";
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
+
+// 파일 상단(컴포넌트 바깥)에 두기
+function useReveal(threshold = 0.2, rootMargin = "120px 0px") {
+  const ref = useRef(null);
+  const [revealed, setRevealed] = useState(false);
+  const [key, setKey] = useState(0);
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      ([it]) => {
+        if (it.isIntersecting && !revealed) {
+          setRevealed(true);
+          setKey(k => k + 1);
+        }
+      },
+      { threshold, rootMargin }
+    );
+    if (ref.current) io.observe(ref.current);
+    return () => io.disconnect();
+  }, [threshold, rootMargin, revealed]);
+  return { ref, revealed, key };
+}
+
+const withRevealAnim = (baseOptions, revealed) => ({
+  ...baseOptions,
+  animation: revealed ? { duration: 700, easing: "easeOutQuad" } : false,
+});
+
+// ▶ 차트 하나를 감싸는 재사용 컴포넌트
+function RevealBar({ data, options, height = "h-24", keyPrefix = "bar" }) {
+  const rev = useReveal(0.2, "120px 0px");
+  return (
+    <div className={height} ref={rev.ref}>
+      {data && (
+        <Bar
+          key={`${keyPrefix}|${rev.key}`}
+          data={data}
+          options={withRevealAnim(options, rev.revealed)}
+        />
+      )}
+    </div>
+  );
+}
+
 
 export default function AssetPeerComparison() {
   const [profile, setProfile] = useState(null);
@@ -393,11 +436,7 @@ export default function AssetPeerComparison() {
                   </span>
                 </div>
 
-                <div className="h-28">
-                  {netWorthData && (<Bar data={netWorthData} options={compareOptions} />)}
-                </div>
-                
-                
+                <RevealBar data={netWorthData} options={compareOptions} height="h-28" keyPrefix="networth" />
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="rounded-md bg-white border border-gray-200 p-4">
@@ -429,39 +468,27 @@ export default function AssetPeerComparison() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 입출금 자산 비중 </div>
-                  <div className="h-24">
-                    {cashData && ( <Bar data={cashData} options={percentOptions} />)}
-                  </div>
+                  <RevealBar data={cashData} options={percentOptions} keyPrefix="cash" />
                 </div>
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 적금 자산 비중 </div>
-                  <div className="h-24">
-                    {installmentData && ( <Bar data={installmentData} options={percentOptions} />)}
-                  </div>
+                  <RevealBar data={installmentData} options={percentOptions} keyPrefix="installment" />
                 </div>
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 예금 자산 비중 </div>
-                  <div className="h-24">
-                    {depositData && ( <Bar data={depositData} options={percentOptions} />)}
-                  </div>
+                  <RevealBar data={depositData} options={percentOptions} keyPrefix="deposit" />
                 </div>
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 외환 자산 비중 </div>
-                  <div className="h-24">
-                    {foreignData && ( <Bar data={foreignData} options={percentOptions} />)}
-                  </div>
+                  <RevealBar data={foreignData} options={percentOptions} keyPrefix="foreign" />
                 </div>
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 현물 자산 비중 </div>
-                  <div className="h-24">
-                    {goldData && ( <Bar data={goldData} options={percentOptions} />)}
-                  </div>
+                  <RevealBar data={goldData} options={percentOptions} keyPrefix="gold" />
                 </div>
                 <div className="rounded-md border border-gray-200 bg-white p-3">
                   <div className="text-[12px] text-gray-500 mb-2"> 대출 비중 </div>
-                  <div className="h-24">
-                    {liabilitiesData && ( <Bar data={liabilitiesData} options={percentOptions} />)}
-                  </div>
+                  <RevealBar data={liabilitiesData} options={percentOptions} keyPrefix="liabilities" />
                 </div>
               </div>
 

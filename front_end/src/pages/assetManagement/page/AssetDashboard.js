@@ -51,6 +51,7 @@ function formatKrwAuto(n, digits = 1) {
   }
   return v.toLocaleString("ko-KR") + "원";
 }
+
 function formatKrwSigned(n) {
   const sign = (n ?? 0) >= 0 ? "+" : "-";
   return `${sign}${formatKrwAuto(Math.abs(n))}`;
@@ -79,6 +80,7 @@ function hexToRgba(hex, a = 0.14) {
   const b = bigint & 255;
   return `rgba(${r}, ${g}, ${b}, ${a})`;
 }
+
 const pct = (v) => `${Math.round(v)}%`;
 const formatRate = (v) => (v == null ? "-" : `${Number(v).toFixed(2)}%`);
 const formatMonths = (m) => (m == null ? "-" : `${m}개월`);
@@ -96,6 +98,7 @@ function useInView(threshold = 0.3) {
   }, [threshold]);
   return [ref, inView];
 }
+
 function useResizeKey(ref) {
   const [key, setKey] = useState(0);
   useEffect(() => {
@@ -198,7 +201,7 @@ export default function AssetDashboard() {
   const donutOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 900, easing: 'easeOutQuart' },
+    animation: { duration: 1000, easing: 'easeOutQuart' },
     animations: {                                          // ← 도넛 반경 그로우
       radius: { from: 0, duration: 800, easing: 'easeOutQuad' }
     },
@@ -234,7 +237,7 @@ export default function AssetDashboard() {
       pointBackgroundColor: activeColor,
       pointBorderColor: "#ffffff",
       pointBorderWidth: 1,
-      tension: 0.15,
+      tension: 0.25,
       fill: true,
       backgroundColor: (ctx) => {
         const { chartArea, ctx: c } = ctx.chart;
@@ -249,17 +252,51 @@ export default function AssetDashboard() {
 
   const tickStep = Math.max(1, Math.round((labels.length || 1) / 6));
 
+  const vmeta = useMemo(() => {
+    const nums = values.filter((n) => Number.isFinite(n));
+    if (!nums.length) return { min: 0, max: 0, pinZero: false };
+    const min = Math.min(...nums);
+    const max = Math.max(...nums);
+    // "0이 포함되면 바닥을 0으로" : min === 0 이면 정확히 0이 존재
+    const pinZero = (min === 0);
+    return { min, max, pinZero };
+  }, [values.join(",")]);
+
   const lineOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
-    animation: { duration: 800, easing: 'easeOutQuart' },
+    animation: { duration: 0 },
     animations: {
-      y: {
-        from: (ctx) => ctx.chart.scales.y.getPixelForValue(0),
-        duration: 800,
-        easing: 'easeOutQuad'
-      }
+      // X: 왼→오른쪽으로 순차적으로 그려지는 느낌
+     x: {
+       type: 'number',
+       easing: 'easeOutCubic',
+       duration: 300,
+       from: NaN,
+       delay(ctx) {
+         // 데이터 포인트에만 지연 적용, 중복 방지
+         if (ctx.type !== 'data' || ctx.xStarted) return 0;
+         ctx.xStarted = true;
+         return ctx.dataIndex * 30; // 포인트 간 30ms 간격
+       },
+     },
+     // Y: 0이 아니라 "첫 데이터값의 높이"에서 부드럽게 상승
+     y: {
+       type: 'number',
+       easing: 'easeInOutQuad',
+       duration: 900,
+       from(ctx) {
+         const s = ctx.chart.scales.y;
+         const first = ctx.chart.data?.datasets?.[ctx.datasetIndex]?.data?.[0] ?? 0;
+         return s.getPixelForValue(first);
+       },
+       delay(ctx) {
+         if (ctx.type !== 'data' || ctx.yStarted) return 0;
+         ctx.yStarted = true;
+         return ctx.dataIndex * 30;
+       },
+     },
     },
     plugins: {
       legend: { display: false },
@@ -280,6 +317,8 @@ export default function AssetDashboard() {
       },
       y: {
         beginAtZero: false,
+        ...(vmeta.pinZero ? { min: 0 } : {}), // ← 0이 포함될 때만 바닥 0
+        grace: '5%',
         ticks: {
           callback: (v) => formatKrwAuto(v),
           maxTicksLimit: 5,
@@ -288,6 +327,8 @@ export default function AssetDashboard() {
       }
     }
   }), [labels.join(","), values.join(","), tickStep]);
+
+  
 
   return (
     <main className="bg-gray-50 text-gray-900 min-h-screen">
@@ -342,7 +383,7 @@ export default function AssetDashboard() {
                     ? <div className="h-full grid place-items-center text-sm text-gray-500">표시할 데이터가 없습니다</div>
                     : donutInView && (
                       <Doughnut
-                        key={donutData.labels.join("|") + donutData.shares.map(v => v|0).join(",") + `|${donutResizeKey}`}
+                        key={`donut|${donutInView?'on':'off'}|${donutResizeKey}|${donutData.labels.join('|')}`}
                         data={donutData.chart}
                         options={donutOptions}
                       />
@@ -403,7 +444,7 @@ export default function AssetDashboard() {
                       ? <div className="h-full grid place-items-center text-sm text-gray-500">표시할 데이터가 없습니다</div>
                       : lineInView && (
                         <Line
-                          key={labels.join("|") + values.join(",") + `|${lineResizeKey}`}
+                          key={`line|${lineInView?'on':'off'}|${lineResizeKey}|${metric}|${labels.join('|')}`}
                           data={lineData}
                           options={lineOptions}
                         />
