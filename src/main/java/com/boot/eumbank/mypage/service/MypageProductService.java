@@ -30,7 +30,7 @@ public class MypageProductService {
     private final MyPageDepositRepository depositRepo;
     private final TransferHistoryRepository thRepo;
 
-    /* ================= 공통 유틸 ================= */
+    /* ---------------- 공통 유틸 ---------------- */
     private static Integer asInt(Object o) {
         if (o == null) return null;
         if (o instanceof Number n) return n.intValue();
@@ -44,10 +44,6 @@ public class MypageProductService {
         try { return new BigDecimal(o.toString().trim()); }
         catch (Exception e) { return null; }
     }
-    private static Double asDouble(Object o) {
-        BigDecimal bd = asBD(o);
-        return (bd != null) ? bd.doubleValue() : null;
-    }
     private static String asStr(Object o) {
         if (o == null) return null;
         String s = o.toString().trim();
@@ -60,12 +56,12 @@ public class MypageProductService {
         }
         return null;
     }
-    private Integer pickAccountNo(Map<String, Object> m) {
-        Integer aNo = asInt(m.get("aNo"));
-        if (aNo == null) aNo = asInt(m.get("accountNo"));
-        if (aNo == null) aNo = asInt(m.get("a_no"));
-        if (aNo == null) aNo = asInt(m.get("i_account_no"));
-        return aNo;
+    // Long 캐스팅
+    private static Long asLong(Object o) {
+        if (o == null) return null;
+        if (o instanceof Number n) return n.longValue();
+        try { return new BigDecimal(o.toString().trim()).longValue(); }
+        catch (Exception e) { return null; }
     }
 
     public int resolveCustomerNo(Principal principal, Integer cno) {
@@ -90,81 +86,96 @@ public class MypageProductService {
         return null;
     }
 
-    /* ============== 목록 조회 ============== */
-    public List<SavingItemDto> mySavings(int cNo) {
-        return repo.findMySavings(cNo).stream()
-                .map(this::toSavingDtoWithHistory)   // 평탄화된 DTO로 매핑
-                .toList();
-    }
-
-    /** 예금: DTO 전용 리포지토리에서 평탄화된 MyDepositDTO 그대로 반환 */
-    public List<MyDepositDTO> myDeposits(int cNo) {
+    /* ---------------- 목록 조회 ---------------- */
+    public List<MyDepositDTO> myDeposits(int cNo) {              // 예금: 평탄 DTO 그대로
         return depositRepo.findMyDeposits(cNo);
     }
 
-    public List<LoanItemDto> myLoans(int cNo) {
+    public List<SavingItemDto> mySavings(int cNo) {              // 적금
+        return repo.findMySavings(cNo).stream()
+                .map(this::toSavingDtoWithHistory)
+                .toList();
+    }
+
+    public List<LoanItemDto> myLoans(int cNo) {                  // 대출
         return repo.findMyLoans(cNo).stream()
                 .map(this::toLoanDto)
                 .toList();
     }
 
-    /* ============== 적금 매핑 (product 제거, 평탄화) ============== */
+    /* --------- 적금 평탄화 --------- */
     private SavingItemDto toSavingDtoWithHistory(Map<String, Object> m) {
         Integer totalRounds = asInt(m.get("totalInstallments"));
         if (totalRounds == null) totalRounds = asInt(m.get("i_month"));
 
-        Integer paidFromDb = asInt(m.get("paidInstallments"));
-        Integer aNo = pickAccountNo(m);
+        // ▶ 진행 회차: i_count_period(= paidInstallments) 우선
+        Integer paidInstallments = asInt(m.get("paidInstallments"));   // i_count_period
+        Integer iPaid            = asInt(m.get("iPaidInstallments"));  // 레거시 i_paid_installments
 
-        Integer paidFromHistory = null;
-        if (aNo != null) {
-            try {
-                // 트랜잭션 타입 명은 운영 값에 맞춰 사용
-                paidFromHistory = (int) thRepo.countByAccountNoAndTransactionType(aNo, "SAVING_PAY");
-            } catch (Exception e) {
-                log.warn("[mypage] SAVING_PAY count 실패 aNo={}", aNo, e);
-            }
+        // null 인 경우에만 레거시 값으로 보정 (0은 정상 값이므로 그대로 둔다)
+        if (paidInstallments == null) {
+            paidInstallments = iPaid;
         }
-        int finalPaid = (paidFromHistory != null) ? paidFromHistory : (paidFromDb != null ? paidFromDb : 0);
 
-        // 평탄화된 ip* 필드들로 직접 세팅
+        Integer monthlyAmount = asInt(m.get("monthlyAmount"));
+
+        // ▶ 현재 원금 잔액: i_principal_bal(alias iPrincipalBal) 사용
+        Long principalBalance = asLong(
+                m.get("iPrincipalBal") != null
+                        ? m.get("iPrincipalBal")
+                        : m.get("principalBalance")
+        );
+
+        Long expectedMaturityAmount = asLong(
+                m.get("expectedMaturityAmount") != null
+                        ? m.get("expectedMaturityAmount")
+                        : m.get("i_expected_maturity_amount")
+        );
+
         return SavingItemDto.builder()
                 .id(pickStr(m, "id"))
                 .productName(pickStr(m, "productName", "ip_name"))
                 .totalInstallments(totalRounds)
-                .paidInstallments(finalPaid)
-                .monthlyAmount(asInt(m.get("monthlyAmount")))
-                .nextDueDate(pickStr(m, "nextDueDate", "nextDue", "nextPayDate"))
+                .paidInstallments(paidInstallments == null ? 0 : paidInstallments)
+                .monthlyAmount(monthlyAmount == null ? 0 : monthlyAmount)
+                .nextDueDate(pickStr(m, "nextDueDate"))
+                .principalBalance(principalBalance)
+                .expectedMaturityAmount(expectedMaturityAmount)
 
-                // ----- ip* (Installment Product Spec) -----
                 .ipName(pickStr(m, "ipName", "ip_name", "productName"))
                 .ipType(pickStr(m, "ipType", "ip_type"))
                 .ipRate(pickStr(m, "ipRate", "ip_rate"))
-                .ipMinMonths(asInt(m.get("ipMinMonths") != null ? m.get("ipMinMonths") : m.get("ip_min_months")))
-                .ipMaxMonths(asInt(m.get("ipMaxMonths") != null ? m.get("ipMaxMonths") : m.get("ip_max_months")))
-                .ipMinMonthlyAmount(asInt(m.get("ipMinMonthlyAmount") != null ? m.get("ipMinMonthlyAmount") : m.get("ip_min_monthly_amount")))
-                .ipMaxMonthlyAmount(asInt(m.get("ipMaxMonthlyAmount") != null ? m.get("ipMaxMonthlyAmount") : m.get("ip_max_monthly_amount")))
-                .ipInterestPaymentType(pickStr(m, "ipInterestPaymentType", "ip_interest_payment_type"))
-                .ipEarlyTerminationRate(pickStr(m, "ipEarlyTerminationRate", "ip_early_termination_rate"))
-                .ipFeature(pickStr(m, "ipFeature", "ip_feature", "ip_featue"))
-                .ipButtonText(pickStr(m, "ipButtonText", "ip_button_text"))
-                .ipHref(pickStr(m, "ipHref", "ip_href"))
+                .ipMinMonths(asInt(m.get("ipMinMonths")))
+                .ipMaxMonths(asInt(m.get("ipMaxMonths")))
+                .ipMinMonthlyAmount(asInt(m.get("ipMinMonthlyAmount")))
+                .ipMaxMonthlyAmount(asInt(m.get("ipMaxMonthlyAmount")))
+                .ipInterestPaymentType(pickStr(m, "ipInterestPaymentType"))
+                .ipEarlyTerminationRate(pickStr(m, "ipEarlyTerminationRate"))
+                .ipFeature(pickStr(m, "ipFeature"))
+                .ipButtonText(pickStr(m, "ipButtonText"))
+                .ipHref(pickStr(m, "ipHref"))
                 .build();
     }
 
-    /* ============== 대출 매핑 ============== */
+    /* --------- 대출 평탄화 (모달 키와 1:1) --------- */
     private LoanItemDto toLoanDto(Map<String, Object> m) {
         return new LoanItemDto(
                 pickStr(m, "id"),
                 pickStr(m, "productName"),
-                m.get("balance") == null ? null : asBD(m.get("balance")),
-                m.get("rate") == null ? null : asBD(m.get("rate")),
+                asBD(m.get("principal")),
+                asBD(m.get("balance")),
+                asBD(m.get("rate")),
+                asInt(m.get("termMonths")),
                 pickStr(m, "openedAt"),
-                pickStr(m, "maturityAt")
+                pickStr(m, "maturityAt"),
+                pickStr(m, "loanType"),
+                pickStr(m, "repayMethod"),
+                pickStr(m, "rateType"),
+                pickStr(m, "lender")
         );
     }
 
-    /* ====== (선택) 레거시 용 ====== */
+    /* ====== 레거시(필요시) ====== */
     @Deprecated
     public List<DepositItemDto> myDepositsLegacy(int cNo) {
         return repo.findMyDeposits(cNo).stream()
@@ -176,24 +187,24 @@ public class MypageProductService {
         Map<String, Object> product = new LinkedHashMap<>();
         product.put("dpName",      pickStr(m, "productName"));
         product.put("dpType",      pickStr(m, "dpType", "dp_type"));
-        product.put("dpMinAmount", asBD(m.get("dpMinAmount") != null ? m.get("dpMinAmount") : m.get("dp_min_amount")));
-        product.put("dpMaxAmount", asBD(m.get("dpMaxAmount") != null ? m.get("dpMaxAmount") : m.get("dp_max_amount")));
-        product.put("dpMinMonths", asInt(m.get("dpMinMonths") != null ? m.get("dpMinMonths") : m.get("dp_min_months")));
-        product.put("dpMaxMonths", asInt(m.get("dpMaxMonths") != null ? m.get("dpMaxMonths") : m.get("dp_max_months")));
-        product.put("dpEarlyTerminationRate", asBD(m.get("dpEarlyTerminationRate") != null ? m.get("dpEarlyTerminationRate") : m.get("dp_early_termination_rate")));
-        product.put("dpInterestPaymentType",  pickStr(m, "dpInterestPaymentType", "dp_interest_payment_type"));
-        product.put("dpRate",                  asBD(m.get("dpRate") != null ? m.get("dpRate") : m.get("dp_rate")));
-        product.put("dpFeature",               pickStr(m, "dpFeature", "dp_feature"));
-        product.put("dpButtonText",            pickStr(m, "dpButtonText", "dp_button_text"));
-        product.put("dpHref",                  pickStr(m, "dpHref", "dp_href"));
+        product.put("dpMinAmount", asBD(m.get("dpMinAmount")));
+        product.put("dpMaxAmount", asBD(m.get("dpMaxAmount")));
+        product.put("dpMinMonths", asInt(m.get("dpMinMonths")));
+        product.put("dpMaxMonths", asInt(m.get("dpMaxMonths")));
+        product.put("dpEarlyTerminationRate", asBD(m.get("dpEarlyTerminationRate")));
+        product.put("dpInterestPaymentType",  pickStr(m, "dpInterestPaymentType"));
+        product.put("dpRate",                  asBD(m.get("dpRate")));
+        product.put("dpFeature",               pickStr(m, "dpFeature"));
+        product.put("dpButtonText",            pickStr(m, "dpButtonText"));
+        product.put("dpHref",                  pickStr(m, "dpHref"));
 
         return DepositItemDto.builder()
                 .id(pickStr(m, "id"))
                 .productName(pickStr(m, "productName"))
-                .balance(asInt(m.get("dPrincipalBal") != null ? m.get("dPrincipalBal") : m.get("d_principal_bal")))
-                .goalAmount(asInt(m.get("dAmount") != null ? m.get("dAmount") : m.get("d_amount")))
-                .openedAt(pickStr(m, "openedAt", "openDate", "dJoinDate", "d_join_date"))
-                .maturityAt(pickStr(m, "maturityAt", "dMaturityDate", "d_maturity_date"))
+                .balance(asInt(m.get("dPrincipalBal")))
+                .goalAmount(asInt(m.get("dAmount")))
+                .openedAt(pickStr(m, "openedAt"))
+                .maturityAt(pickStr(m, "maturityAt"))
                 .build();
     }
 }

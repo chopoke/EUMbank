@@ -25,4 +25,5 @@ public class DepositItemDto {
     private String   dpFeature;            // 필요 시 List<String> 로
     private String   dpButtonText;
     private String   dpHref;
+    private Long principalBalance;
 }

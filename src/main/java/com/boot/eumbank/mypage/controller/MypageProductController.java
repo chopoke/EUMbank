@@ -20,7 +20,7 @@ public class MypageProductController {
 
     private final MypageProductService service;
 
-    /** 예금 목록: 항상 MyDepositDTO(카멜 스키마)로 반환 */
+    /** 예금 목록 */
     @GetMapping("/deposits")
     public List<MyDepositDTO> deposits(Principal principal,
                                        @RequestParam(value = "cno", required = false) Integer cno) {
@@ -38,7 +38,7 @@ public class MypageProductController {
         return service.mySavings(customerNo);
     }
 
-    /** 대출 목록 */
+    /**  대출 목록  */
     @GetMapping("/loans")
     public List<LoanItemDto> loans(Principal principal,
                                    @RequestParam(value = "cno", required = false) Integer cno) {
@@ -46,6 +46,4 @@ public class MypageProductController {
         log.info("[mypage] loans cNo={}", customerNo);
         return service.myLoans(customerNo);
     }
-
-
 }

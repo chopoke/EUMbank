@@ -3,6 +3,7 @@ package com.boot.eumbank.account.select.repository;
 import com.boot.eumbank.account.open.entity.account.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+
 public interface AccountSelectRepository extends JpaRepository<Account, Integer>, AccountRepositoryCustom {
 
     // JPQL 버전 --> Query DSL로 변경중

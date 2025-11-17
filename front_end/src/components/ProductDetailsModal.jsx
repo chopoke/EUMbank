@@ -1,6 +1,15 @@
+// src/components/ProductDetailsModal.jsx
 import React from "react";
 
-export default function ProductDetailsModal({ open, onClose, title, subtitle, sections = [], cta }) {
+export default function ProductDetailsModal({
+  open,
+  onClose,
+  title,
+  subtitle,
+  sections = [],
+  cta,
+  variant = "default", // deposit | saving | loan
+}) {
   if (!open) return null;
 
   const show = (v) => {
@@ -8,6 +17,21 @@ export default function ProductDetailsModal({ open, onClose, title, subtitle, se
     const s = String(v);
     return s.trim() === "" ? "-" : s;
   };
+
+  // 섹션들 합치고, variant별로 특정 라벨 숨김
+  const allRows = sections.flatMap((sec) => sec?.rows || []);
+
+  // ✅ 숨김 규칙
+  const HIDE_LABELS =
+    variant === "saving"
+      ? new Set(["이자 지급 방식", "최소/최대 금액"])
+      : variant === "deposit"
+      ? new Set(["이자 지급 방식", "최소/최대 금액"])
+      : variant === "loan"
+      ? new Set(["대출종류", "은행/금융사"])
+      : new Set();
+
+  const filteredRows = allRows.filter((r) => !HIDE_LABELS.has(String(r?.label ?? "")));
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
@@ -19,28 +43,30 @@ export default function ProductDetailsModal({ open, onClose, title, subtitle, se
               <h3 className="text-xl font-extrabold text-gray-900 truncate">{show(title)}</h3>
               {subtitle ? <p className="mt-1 text-sm text-gray-500 truncate">{show(subtitle)}</p> : null}
             </div>
-            <button onClick={onClose} className="rounded-lg px-2.5 py-1.5 text-sm bg-gray-900 text-white hover:bg-gray-800">
+            <button
+              onClick={onClose}
+              className="rounded-lg px-2.5 py-1.5 text-sm bg-gray-900 text-white hover:bg-gray-800"
+            >
               닫기
             </button>
           </div>
         </div>
 
         <div className="p-5 sm:p-6 space-y-6 overflow-y-auto">
-          {sections.map((sec, i) => (
-            <div key={i} className="space-y-3">
-              {sec.heading ? <div className="text-sm font-semibold text-gray-800">{sec.heading}</div> : null}
-              <div className="divide-y divide-gray-100 rounded-xl ring-1 ring-gray-100 overflow-hidden">
-                {sec.rows.map((r, j) => (
-                  <div key={j} className="flex items-start justify-between gap-4 bg-white/60 px-4 py-3">
-                    <div className="text-[13px] text-gray-500">{r.label}</div>
-                    <div className="text-sm font-medium text-gray-900 text-right break-words max-w-[60%]">
-                      {show(r.value)}
-                    </div>
+          {/* 항상 '핵심 정보' 하나만 노출 */}
+          <div className="space-y-3">
+            <div className="text-sm font-semibold text-gray-800">핵심 정보</div>
+            <div className="divide-y divide-gray-100 rounded-xl ring-1 ring-gray-100 overflow-hidden">
+              {filteredRows.map((r, idx) => (
+                <div key={idx} className="flex items-start justify-between gap-4 bg-white/60 px-4 py-3">
+                  <div className="text-[13px] text-gray-500">{r.label}</div>
+                  <div className="text-sm font-medium text-gray-900 text-right break-words max-w-[60%]">
+                    {show(r.value)}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
 
           {cta?.href ? (
             <a

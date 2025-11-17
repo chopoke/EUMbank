@@ -40,7 +40,8 @@ public class MyPageDepositRepository {
                 p.dp_early_termination_rate                  AS dpEarlyTerminationRate,
                 p.dp_feature                                 AS dpFeature,
                 p.dp_button_text                             AS dpButtonText,
-                p.dp_href                                    AS dpHref
+                p.dp_href                                    AS dpHref,
+                d.d_expected_maturity_amount                 AS expectedMaturityAmount
             FROM deposit_tbl d
             JOIN deposit_product_tbl p ON p.dp_no = d.dp_no
             WHERE d.c_no = :cno
@@ -57,10 +58,10 @@ public class MyPageDepositRepository {
             // 인덱스는 SELECT 순서와 1:1 매칭
             String  id          = String.valueOf(((Number) r[0]).intValue());
             String  productName = str(r[1]);
-            Integer balance     = toInt(r[2]);
-            Integer goalAmount  = toInt(r[3]);
-            String  openedAt    = str(r[4]);  // yyyy-MM-dd
-            String  maturityAt  = str(r[5]);  // yyyy-MM-dd
+            Integer balance     = toInt(r[2]);   // d_principal_bal
+            Integer goalAmount  = toInt(r[3]);   // d_amount
+            String  openedAt    = str(r[4]);     // yyyy-MM-dd
+            String  maturityAt  = str(r[5]);     // yyyy-MM-dd
             Integer termMonths  = toInt(r[6]);
 
             // 평탄화된 dp_* 필드
@@ -76,13 +77,15 @@ public class MyPageDepositRepository {
             String     dpFeature                = str(r[16]);
             String     dpButtonText             = str(r[17]);
             String     dpHref                   = str(r[18]);
+            Long       expectedMaturityAmount   = toLong(r[19]); // ★ 새 필드
 
             out.add(new MyDepositDTO(
                     id, productName, balance, goalAmount,
                     openedAt, maturityAt, termMonths,
                     dpName, dpType, dpRate, dpMinMonths, dpMaxMonths,
                     dpMinAmount, dpMaxAmount, dpInterestPaymentType,
-                    dpEarlyTerminationRate, dpFeature, dpButtonText, dpHref
+                    dpEarlyTerminationRate, dpFeature, dpButtonText, dpHref,
+                    expectedMaturityAmount   // ★ 마지막 인자로 추가
             ));
         }
         return out;
@@ -105,6 +108,12 @@ public class MyPageDepositRepository {
         if (o instanceof BigDecimal b) return b;
         if (o instanceof Number n) return new BigDecimal(n.toString());
         try { return new BigDecimal(o.toString().trim()); }
+        catch (Exception e) { return null; }
+    }
+    private static Long toLong(Object o) {
+        if (o == null) return null;
+        if (o instanceof Number n) return n.longValue();
+        try { return new BigDecimal(o.toString().trim()).longValue(); }
         catch (Exception e) { return null; }
     }
 }

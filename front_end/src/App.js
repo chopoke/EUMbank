@@ -86,8 +86,10 @@ function App() {
 
   // 최초 1회: RT로 AT 복구
   useEffect(() => {
-    const isSocial = window.location.pathname.startsWith("/social/");
-    if (isSocial) {
+    const path = window.location.pathname;
+    const isSocial = path.startsWith("/social/");
+    const isLogin  = path === "/login";
+    if (isSocial || isLogin) {
       setIsLoggedIn(!!getAccessToken());
       setReady(true);
       return;

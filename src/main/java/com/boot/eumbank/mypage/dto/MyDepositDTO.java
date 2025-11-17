@@ -9,10 +9,10 @@ import java.math.BigDecimal;
 public record MyDepositDTO(
         String  id,
         String  productName,
-        Integer balance,
-        Integer goalAmount,
-        String  openedAt,               // yyyy-MM-dd
-        String  maturityAt,             // yyyy-MM-dd
+        Integer balance,                     // d_principal_bal
+        Integer goalAmount,                  // d_amount
+        String  openedAt,                    // yyyy-MM-dd
+        String  maturityAt,                  // yyyy-MM-dd
         Integer termMonths,
 
         String     dpName,
@@ -24,7 +24,10 @@ public record MyDepositDTO(
         BigDecimal dpMaxAmount,
         String     dpInterestPaymentType,
         BigDecimal dpEarlyTerminationRate,
-        Object     dpFeature,           // String or List<String>
+        Object     dpFeature,                // String or List<String>
         String     dpButtonText,
-        String     dpHref
+        String     dpHref,
+
+        //  만기 예상 금액 (d_expected_maturity_amount)
+        Long       expectedMaturityAmount
 ) {}

@@ -9,7 +9,9 @@ import com.boot.eumbank.customer.repo.CustomerRepo;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.JPQLQueryFactory;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,8 +23,8 @@ public class CustomerAdminService {
 
     private final JPQLQueryFactory qf;
     private final CustomerRepo customerRepo;
-
-    /* ===== 코드 → 한글 ===== */
+    // (선택) 계좌 레포지토리 연결 시 주석 해제
+    // private final AccountRepo accountRepo;
 
     private String toStatusKo(String status) {
         if (status == null) return "-";
@@ -31,15 +33,6 @@ public class CustomerAdminService {
             case "INACTIVE" -> "휴면";
             case "BLOCKED"  -> "정지";
             default         -> status;
-        };
-    }
-
-    private String toVerificationKo(Integer level) {
-        if (level == null) return "대기중";
-        return switch (level) {
-            case 2  -> "인증완료";
-            case 0  -> "거부됨";
-            default -> "대기중"; // 1 또는 기타
         };
     }
 
@@ -54,45 +47,30 @@ public class CustomerAdminService {
         };
     }
 
-    /* ===== Entity -> Row DTO ===== */
-
     private CustomerAdminRow map(Customer c) {
         return new CustomerAdminRow(
-                c.getCustomerNo(),                // id
-                c.getCNameKr(),                   // name
-                c.getCCreatedAt(),                // joinDate(Instant)
-                toStatusKo(c.getCStatus()),       // 상태(한글)
-                toVerificationKo(c.getCAuthLevel()), // 인증(한글)
-                toRiskKo(c.getCRiskGrade())       // 위험등급(한글)
+                c.getCustomerNo(),
+                c.getCNameKr(),
+                c.getEmail(),
+                c.getCCreatedAt(),
+                toStatusKo(c.getCStatus()),
+                toRiskKo(c.getCRiskGrade())
         );
     }
 
-    /* ===== 목록 ===== */
-
     @Transactional(readOnly = true)
-    public Page<CustomerAdminRow> list(String keyword, String status, String verification, int page, int size) {
-        QCustomer C = QCustomer.customer;
-        BooleanBuilder where = new BooleanBuilder();
+    public Page<CustomerAdminRow> list(String keyword, String status, int page, int size) {
+        var C = QCustomer.customer;
+        var where = new BooleanBuilder();
 
-        // 상태 필터: ACTIVE/INACTIVE/BLOCKED/All
         if (status != null && !"All".equalsIgnoreCase(status) && !status.isBlank()) {
             where.and(C.cStatus.equalsIgnoreCase(status));
         }
 
-        // 인증상태 필터: Verified/Pending/Rejected (select의 value는 영어 유지)
-        if (verification != null && !verification.isBlank()) {
-            switch (verification.toUpperCase()) {
-                case "VERIFIED" -> where.and(C.cAuthLevel.eq(2));
-                case "REJECTED" -> where.and(C.cAuthLevel.eq(0));
-                case "PENDING"  -> where.and(C.cAuthLevel.eq(1));
-                default -> { /* ignore */ }
-            }
-        }
-
-        // 키워드: 이름 부분검색 (세 글자 이하도 통과)
         if (keyword != null && !keyword.isBlank()) {
             String kw = keyword.trim();
-            where.and(C.cNameKr.containsIgnoreCase(kw));
+            where.and(C.cNameKr.containsIgnoreCase(kw)
+                    .or(C.email.containsIgnoreCase(kw)));
         }
 
         int pageNo = Math.max(page, 0);
@@ -105,20 +83,15 @@ public class CustomerAdminService {
                 .limit(pageSize)
                 .fetch();
 
-        Long total = qf.select(C.count())
-                .from(C)
-                .where(where)
-                .fetchOne();
+        Long total = qf.select(C.count()).from(C).where(where).fetchOne();
 
         List<CustomerAdminRow> rows = content.stream().map(this::map).toList();
         return new PageImpl<>(rows, PageRequest.of(pageNo, pageSize), total == null ? 0 : total);
     }
 
-    /* ===== 집계 ===== */
-
     @Transactional(readOnly = true)
     public CustomerAdminStats stats() {
-        QCustomer C = QCustomer.customer;
+        var C = QCustomer.customer;
 
         long total       = nvl(qf.select(C.count()).from(C).fetchOne());
         long active      = nvl(qf.select(C.count()).from(C).where(C.cStatus.eq("ACTIVE")).fetchOne());
@@ -133,25 +106,35 @@ public class CustomerAdminService {
 
     private long nvl(Long v) { return v == null ? 0L : v; }
 
-    /* ===== 상태/인증 토글 ===== */
+    /* ===== 상태/정지 ===== */
 
+    /** 고객 정지 */
     @Transactional
-    public void toggleStatus(Integer id) {
-        Customer c = customerRepo.findById(id).orElseThrow();
-        String next = "ACTIVE".equalsIgnoreCase(c.getCStatus()) ? "INACTIVE" : "ACTIVE";
-        c.updateStatus(next);
+    public void freezeCustomer(Integer id) {
+        var c = customerRepo.findById(id).orElseThrow();
+        c.updateStatus("BLOCKED");
         customerRepo.save(c);
+
+        // (선택) 고객 모든 계좌 정지
+        // accountRepo.freezeAllByCustomer(id);
+    }
+
+    /** ✅ 고객 정지 해제 */
+    @Transactional
+    public void unfreezeCustomer(Integer id) {
+        var c = customerRepo.findById(id).orElseThrow();
+        c.updateStatus("ACTIVE"); // 또는 정책에 따라 INACTIVE로 복귀
+        customerRepo.save(c);
+
+        // (선택) 고객 모든 계좌 정지 해제
+        // accountRepo.unfreezeAllByCustomer(id);
     }
 
     @Transactional
-    public void setVerification(Integer id, String action) {
-        Customer c = customerRepo.findById(id).orElseThrow();
-        int level = switch (action.toLowerCase()) {
-            case "approve", "verify" -> 2;
-            case "reject" -> 0;
-            default -> 1; // pending
-        };
-        c.updateAuthLevel(level);
+    public void toggleStatus(Integer id) {
+        var c = customerRepo.findById(id).orElseThrow();
+        String next = "ACTIVE".equalsIgnoreCase(c.getCStatus()) ? "INACTIVE" : "ACTIVE";
+        c.updateStatus(next);
         customerRepo.save(c);
     }
 

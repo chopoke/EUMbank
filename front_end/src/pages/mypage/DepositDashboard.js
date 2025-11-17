@@ -1,124 +1,81 @@
 // src/pages/mypage/DepositDashboard.js
 import React, { useMemo, useState } from "react";
 import ProductDetailsModal from "../../components/ProductDetailsModal";
-import api from "../../api/axios";
 
-const DEBUG_SAVING = true;
 /* ================= 공통 유틸 ================= */
-const clamp = (v, min = 0, max = 100) => Math.max(min, Math.min(max, v));
+const clamp = (v, min = 0, max = 100) =>
+  Math.max(min, Math.min(max, v));
+
+const toNum = (v) => {
+  if (v == null || v === "") return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
 const pct = (num, den) => {
-  const n = Number(num ?? 0);
-  const d = Number(den ?? 0);
+  const n = toNum(num);
+  const d = toNum(den);
   if (!Number.isFinite(n) || !Number.isFinite(d) || d === 0) return 0;
   return clamp(Math.round((n / d) * 100));
 };
-const betweenMonths = (startISO, endISO, now = new Date()) => {
-  if (!startISO || !endISO) return { total: 0, done: 0, pct: 0 };
-  const s = new Date(startISO);
-  const e = new Date(endISO);
-  const total =
-    (e.getFullYear() - s.getFullYear()) * 12 +
-    (e.getMonth() - s.getMonth()) +
-    (e.getDate() >= s.getDate() ? 1 : 0);
-  const done =
-    (now.getFullYear() - s.getFullYear()) * 12 +
-    (now.getMonth() - s.getMonth()) +
-    (now.getDate() >= s.getDate() ? 1 : 0);
-  const safeTotal = Math.max(total, 0);
-  const safeDone = clamp(done, 0, safeTotal);
-  return { total: safeTotal, done: safeDone, pct: safeTotal ? clamp(Math.round((safeDone / safeTotal) * 100)) : 0 };
-};
 
-// 통화 표기
-const fmt = (v, unit = "") => {
-  if (v === null || v === undefined || v === "") return "-";
-  const n = Number(String(v).replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(n) ? `${n.toLocaleString()}${unit}` : `${String(v)}${unit}`;
-};
+const fmt = (v, u = "") =>
+  v == null || v === "" ? "-" : `${toNum(v).toLocaleString()}${u}`;
+const show = (v) =>
+  v == null || String(v).trim() === "" ? "-" : String(v);
 
-// 화면 표시 세이프가드
-const show = (v) => {
-  if (v === null || v === undefined) return "-";
-  const s = String(v);
-  return s.trim() ? s : "-";
-};
+const showPct = (v) =>
+  v == null || String(v).trim() === ""
+    ? "-"
+    : `${toNum(v).toFixed(2).replace(/\.00$/, "")}%`;
 
-// % 텍스트
-const showPercent = (v) => {
-  if (v === null || v === undefined || String(v).trim() === "") return "-";
-  const n = Number(String(v).replace(/[^\d.-]/g, ""));
-  return Number.isFinite(n) ? `${n}%` : `${String(v)}`;
-};
-
-// 후보 값 중 첫 번째 유효값
-const pick = (...vals) => vals.find((x) => !(x === undefined || x === null || String(x).trim?.() === ""));
-
-// p(상품), r(row)에서 키 배열을 순서대로 탐색
-const fromKeys = (p, r, keys) => pick(...keys.map((k) => p?.[k]), ...keys.map((k) => r?.[k]));
-
-/* ===== 상품 정규화/보강 유틸 ===== */
-const resolveSavingProduct = (row = {}) =>
-  row.product ?? row.installmentProduct ?? row.installmentProductDto ?? row.ip ?? null;
-
-const first = (objs, keys, fallback = undefined) => {
-  for (const o of objs) {
-    if (!o) continue;
-    for (const k of keys) {
-      const v = k.split(".").reduce((acc, kk) => (acc ? acc[kk] : undefined), o);
-      if (v !== undefined && v !== null && v !== "") return v;
+/** obj["a.b"] 처럼 중첩 키도 찾아주는 get */
+const getPath = (obj, path) => {
+  if (!obj || !path) return undefined;
+  const parts = path.split(".");
+  let cur = obj;
+  for (const part of parts) {
+    if (cur && Object.prototype.hasOwnProperty.call(cur, part)) {
+      cur = cur[part];
+    } else {
+      return undefined;
     }
   }
-  return fallback;
+  return cur;
 };
 
-const synthesizeSavingProduct = (row = {}) => {
-  const g = (ks) => fromKeys(row, row.raw ?? row, ks);
-  return {
-    ipName: g(["ipName", "ip_name", "productName", "i_name", "title"]),
-    ipType: g(["ipType", "ip_type", "type", "i_type"]),
-    ipRate: g(["ipRate", "ip_rate", "rate", "interestRate", "i_interest_rate"]),
-    ipMinMonths: g(["ipMinMonths", "ip_min_months", "minMonths"]),
-    ipMaxMonths: g(["ipMaxMonths", "ip_max_months", "maxMonths"]),
-    ipMinMonthlyAmount: g(["ipMinMonthlyAmount", "ip_min_monthly_amount", "minMonthlyAmount", "i_min_monthly_amount"]),
-    ipMaxMonthlyAmount: g(["ipMaxMonthlyAmount", "ip_max_monthly_amount", "maxMonthlyAmount", "i_max_monthly_amount"]),
-    ipInterestPaymentType: g(["ipInterestPaymentType", "ip_interest_payment_type", "interestPaymentType"]),
-    ipEarlyTerminationRate: g(["ipEarlyTerminationRate", "ip_early_termination_rate", "earlyTerminationRate"]),
-    ipFeature: g(["ipFeature", "ip_feature", "ip_featue", "feature", "features"]),
-    ipHref: g(["ipHref", "ip_href", "href"]),
-    ipButtonText: g(["ipButtonText", "ip_button_text", "buttonText"]),
-  };
-};
-
-const ensureSavingProduct = async (c) => {
-  const existing = resolveSavingProduct(c.raw ?? c);
-  if (existing) return existing;
-
-  const r = c.raw ?? c;
-  const ipNo = first([r, c], ["ipNo", "ip_no", "i_no", "productId", "ip.id", "product.ipNo"]);
-  if (!ipNo) return null;
-
-  const urls = [
-    `/api/products/installments/${ipNo}`,
-    `/api/installments/products/${ipNo}`,
-    `/api/products/ip/${ipNo}`,
-  ];
-  for (const u of urls) {
-    try {
-      const { data } = await api.get(u);
-      return resolveSavingProduct(data) ?? data ?? null;
-    } catch {}
+/** 여러 후보 키 중에서 처음 발견되는 값을 숫자로 변환 */
+const numFrom = (obj, keys = []) => {
+  for (const k of keys) {
+    const v = getPath(obj, k);
+    if (v != null && v !== "") return toNum(v);
   }
-  return null;
+  return 0;
 };
 
-/* ================= 도넛 ================= */
+/* ===== Donut (72px) ===== */
 function ProgressDonut({ value = 0, size = 72, stroke = 10 }) {
+  const p = clamp(Math.round(toNum(value)), 0, 100);
+
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const dash = (c * clamp(value)) / 100;
+  const dash = (c * p) / 100;
+
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
-      <circle cx={size / 2} cy={size / 2} r={r} stroke="#E5E7EB" strokeWidth={stroke} fill="none" />
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      className="shrink-0"
+    >
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        stroke="#E5E7EB"
+        strokeWidth={stroke}
+        fill="none"
+      />
       <circle
         cx={size / 2}
         cy={size / 2}
@@ -131,270 +88,327 @@ function ProgressDonut({ value = 0, size = 72, stroke = 10 }) {
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         className="text-indigo-600"
       />
-      <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="14" fontWeight="800" fill="#111827">
-        {clamp(value)}%
+      <text
+        x="50%"
+        y="50%"
+        dominantBaseline="middle"
+        textAnchor="middle"
+        fontSize="14"
+        fontWeight="800"
+        fill="#111827"
+      >
+        {p}%
       </text>
     </svg>
   );
 }
 
-/* ================= 본문 ================= */
-export default function DepositDashboard({ deposits = [], savings = [], loans = [] }) {
+/* ===== 본문 ===== */
+export default function DepositDashboard({ deposits = [], savings = [] }) {
   const [open, setOpen] = useState(false);
-  const [detail, setDetail] = useState({ title: "", subtitle: "", sections: [], cta: null });
+  const [detail, setDetail] = useState({
+    title: "",
+    subtitle: "",
+    sections: [],
+    cta: null,
+    variant: "deposit",
+  });
 
-  /* ---------- 적금 카드 ---------- */
+  console.log("▶ deposits raw", deposits);
+  console.log("▶ savings raw", savings);
+
+  /* ---------------- 적금 카드 ---------------- */
   const savingCards = useMemo(
     () =>
       (savings || []).map((s) => {
-        const productData = resolveSavingProduct(s) || synthesizeSavingProduct(s) || {};
-        const title = pick(productData.ipName, productData.ip_name, s.productName, s.i_name, "적금");
-        const paid = s.paidInstallments ?? s.i_paid_installments ?? 0;
-        const total = s.totalInstallments ?? s.i_month ?? productData.ipMaxMonths ?? 0;
+        // (1) 기본 값들 (모달용: 금액 계산은 그대로 둠)
+        let savingPrincipal = numFrom(s, [
+          "principalBalance",
+          "iPrincipalBal",
+          "i_principal_bal",
+          "balance",
+          "raw.principalBalance",
+          "raw.balance",
+        ]);
+
+        let savingTotalMoney = numFrom(s, [
+          "expectedMaturityAmount",
+          "iExpectedMaturityAmount",
+          "i_expected_maturity_amount",
+          "amount",
+          "iAmount",
+          "i_amount",
+          "raw.expectedMaturityAmount",
+        ]);
+
+        const paid = numFrom(s, [
+          "paidInstallments",
+          "iPaidInstallments",
+          "i_paid_installments",
+        ]);
+        const total = numFrom(s, ["totalInstallments", "i_month"]);
+
+        const monthly = numFrom(s, ["monthlyAmount", "i_monthly_amt"]);
+
+        // 금액 정보는 모달에서 쓰려고 남겨두지만,
+        // === 도넛 퍼센트는 "회차" 기준으로만 계산 ===
+        const percent = total > 0 ? pct(paid, total) : 0;
+
+        console.log("[SavingCard]", {
+          id: s.id,
+          productName: s.productName,
+          paid,
+          total,
+          monthly,
+          savingPrincipal,
+          savingTotalMoney,
+          percent,
+        });
+
         return {
           kind: "SAVING",
-          id: s.id ?? s.i_no,
-          title,
-          subtitleTop: `납입 ${paid} / ${total}회`,
-          subtitleBottom: `다음 납입 ${show(s.nextDueDate ?? s.nextDue ?? s.nextPayDate)}`,
-          percent: pct(paid, total),
-          product: productData,
-          raw: s,
+          id: s.id,
+          title: s.productName ?? s.ipName ?? "적금",
+          subtitleTop:
+            total != null && total !== 0
+              ? `납입 ${paid} / ${total}회`
+              : `납입 ${paid}회`,
+          subtitleBottom: `다음 납입 ${show(
+            s.nextDueDate ?? s.nextDue ?? s.nextPayDate
+          )}`,
+          percent,
+          raw: {
+            ...s,
+            _computedPrincipal: savingPrincipal,
+            _computedTotal: savingTotalMoney,
+            _computedPaid: paid,
+            _computedTotalInstallments: total,
+          },
         };
       }),
     [savings]
   );
 
-  /* ---------- 예금 카드 ---------- */
+  /* ---------------- 예금 카드 ---------------- */
   const depositCards = useMemo(
     () =>
       (deposits || []).map((d) => {
-        // 루트(dp*)/레거시(d_*) 혼용 대응
-        const title = pick(d.dpName, d.dp_name, d.productName, d.d_name, "예금");
+        const principal = numFrom(d, [
+          "balance",
+          "principalBalance",
+          "dPrincipalBal",
+          "d_principal_bal",
+          "raw.balance",
+          "raw.principalBalance",
+        ]);
 
+        const totalMoney = numFrom(d, [
+          "expectedMaturityAmount",
+          "dExpectedMaturityAmount",
+          "d_expected_maturity_amount",
+          "goalAmount",
+          "dAmount",
+          "d_amount",
+          "raw.expectedMaturityAmount",
+          "raw.goalAmount",
+        ]);
+
+        // 예금: 만기/목표 금액이 있으면 그 비율, 없고 잔액만 있으면 100%
         let percent = 0;
-        if ((d.goalAmount ?? d.d_amount) != null) {
-          percent = pct(d.balance ?? d.d_principal_bal, d.goalAmount ?? d.d_amount);
+        if (totalMoney > 0 && principal > 0) {
+          percent = pct(principal, totalMoney);
+        } else if (principal > 0) {
+          percent = 100;
         } else {
-          const opened = d.openedAt ?? d.openDate ?? d.d_join_date;
-          const maturity = d.maturityAt ?? d.maturity ?? d.d_maturity_date;
-          if (opened && maturity) percent = betweenMonths(opened, maturity).pct;
+          percent = 0;
         }
+
+        console.log("[DepositCard]", {
+          id: d.id,
+          productName: d.productName,
+          principal,
+          totalMoney,
+          percent,
+        });
 
         return {
           kind: "DEPOSIT",
-          id: d.id ?? d.d_no,
-          title,
-          subtitle: `잔액 ${fmt(d.balance ?? d.d_principal_bal, "원")} · 만기 ${show(d.maturityAt ?? d.maturity ?? d.d_maturity_date)}`,
+          id: d.id,
+          title: d.productName ?? d.dpName ?? "예금",
+          subtitleTop: `잔액 ${fmt(principal, "원")}`,
+          subtitleBottom: `만기 ${show(d.maturityAt)}`,
           percent,
-          product: {},
           raw: d,
         };
       }),
     [deposits]
   );
 
+  /* ===== 모달: 적금 ===== */
+  const openSavingMore = (c) => {
+    const m = c.raw || c;
 
-  /* ---------- 대출 카드 ---------- */
-  const loanCards = useMemo(
-    () =>
-      (loans || []).map((l) => {
-        const title = l.productName ?? "대출";
-        const { pct: p } = betweenMonths(l.openedAt, l.maturityAt);
-        return {
-          kind: "LOAN",
-          id: l.id ?? l.l_no,
-          title,
-          subtitle: `약정금리 ${showPercent(l.rate)} · 만기 ${show(l.maturityAt)}`,
-          percent: p,
-          product: l,
-          raw: l,
-        };
-      }),
-    [loans]
-  );
+    let savingPrincipal = numFrom(m, [
+      "_computedPrincipal", // 앞에서 계산해 둔 값 우선 사용
+      "principalBalance",
+      "iPrincipalBal",
+      "i_principal_bal",
+      "balance",
+      "raw.principalBalance",
+      "raw.balance",
+    ]);
 
-  /* ================= 모달: 적금 ================= */
-  const openSavingMore = async (c0) => {
-    // 원본(row) 우선으로 합치기
-    const r = c0.raw || c0;                 // 응답 루트 (ip*가 여기에 있음)
-    const p = c0.product || {};             // 혹시 남아있을 수 있는 product 보조
+    let savingTotalMoney = numFrom(m, [
+      "_computedTotal",
+      "expectedMaturityAmount",
+      "iExpectedMaturityAmount",
+      "i_expected_maturity_amount",
+      "amount",
+      "iAmount",
+      "i_amount",
+      "raw.expectedMaturityAmount",
+    ]);
 
-    // 병합 객체(원본 최우선)
-    const m = { ...p, ...r };
+    const paid = numFrom(m, [
+      "_computedPaid",
+      "paidInstallments",
+      "iPaidInstallments",
+      "i_paid_installments",
+    ]);
+    const total = numFrom(m, [
+      "_computedTotalInstallments",
+      "totalInstallments",
+      "i_month",
+    ]);
+    const monthly = numFrom(m, ["monthlyAmount", "i_monthly_amt"]);
 
-    // 값 뽑기 (루트 우선 + 다양한 키 후보 지원)
-    const name   = pick(m.ipName, m.ip_name, m.productName, m.i_name, c0.title, "적금");
-    const type   = pick(m.ipType, m.ip_type, m.i_type, m.type);
-    const rate   = pick(m.ipRate, m.ip_rate, m.rate, m.interestRate);
-    const minMon = pick(m.ipMinMonths, m.ip_min_months, m.minMonths);
-    const maxMon = pick(m.ipMaxMonths, m.ip_max_months, m.maxMonths);
-    const minAmt = pick(m.ipMinMonthlyAmount, m.ip_min_monthly_amount, m.minMonthlyAmount);
-    const maxAmt = pick(m.ipMaxMonthlyAmount, m.ip_max_monthly_amount, m.maxMonthlyAmount);
-    const payTyp = pick(m.ipInterestPaymentType, m.ip_interest_payment_type, m.interestPaymentType);
-    const early  = pick(m.ipEarlyTerminationRate, m.ip_early_termination_rate, m.earlyTerminationRate);
-    const feat   = pick(m.ipFeature, m.ip_feature, m.ip_featue, m.feature, m.features);
-    const href   = pick(m.ipHref, m.ip_href, m.href);
-    const btnTxt = pick(m.ipButtonText, m.ip_button_text, m.buttonText);
-
-    const totalInstallments = pick(m.totalInstallments, m.i_month, m.ipMaxMonths);
-    const paidInstallments  = pick(m.paidInstallments, m.i_paid_installments);
-    const monthlyAmount     = m.monthlyAmount;
-    const nextDue           = pick(m.nextDueDate, m.nextDue, m.nextPayDate);
-
-    // 👇 여기서 “적금 type” 디버그 로그
-      if (DEBUG_SAVING) {
-        console.groupCollapsed("[SavingModal] type 디버그");
-        console.log("결과(type):", type);
-        console.table({
-          "m.ipType": m.ipType,
-          "m.ip_type": m.ip_type,
-          "m.type": m.type,
-          "type":type,
-          "title": name,
-        });
-        console.log("row(m) 샘플:", m);
-        console.groupEnd();
-      }
-
+    // 모달용 금액 보정 (UI는 그대로 사용)
+    if (savingPrincipal <= 0 && paid > 0 && monthly > 0) {
+      savingPrincipal = monthly * paid;
+    }
+    if (savingTotalMoney <= 0 && total > 0 && monthly > 0) {
+      savingTotalMoney = monthly * total;
+    }
 
     setDetail({
       title: "적금 상세정보",
-      subtitle: show(name),
+      subtitle: show(m.productName ?? m.ipName),
       sections: [
         {
           heading: "핵심 정보",
           rows: [
-            { label: "상품명", value: show(name) },
-            { label: "상품유형", value: show(type) },
-            { label: "연이율(약정)", value: showPercent(rate) },
+            { label: "상품명", value: show(m.productName ?? m.ipName) },
+            { label: "상품유형", value: show(m.ipType) },
+            { label: "연이율(약정)", value: showPct(m.ipRate) },
             {
               label: "가입 기간",
-              value:
-                totalInstallments != null
-                  ? `${totalInstallments}개월`
-                  : (minMon || maxMon) ? `${show(minMon)} ~ ${show(maxMon)}개월` : "-",
+              value: total ? `${total}개월` : "-",
             },
             {
-              label: "월 납입 한도",
-              value:
-                (minAmt || maxAmt)
-                  ? `${fmt(minAmt, "원")} ~ ${fmt(maxAmt, "원")}`
-                  : (monthlyAmount != null) ? fmt(monthlyAmount, "원") : "-",
+              label: "월 납입 금액",
+              value: fmt(monthly, "원"),
+            },
+            {
+              label: "현재 적립 원금",
+              value: fmt(savingPrincipal, "원"),
+            },
+            {
+              label: "만기 예상 금액",
+              value: fmt(savingTotalMoney, "원"),
             },
           ],
         },
         {
           heading: "납입/해지 조건",
           rows: [
-            { label: "이자 지급 방식", value: show(payTyp) },
-            { label: "중도 해지 이율", value: showPercent(early) },
-            { label: "다음 납입일", value: show(nextDue) },
             {
               label: "납입 회차",
-              value:
-                paidInstallments != null && totalInstallments != null
-                  ? `${paidInstallments} / ${totalInstallments}회`
-                  : "-",
+              value: total ? `${paid} / ${total}회` : "-",
             },
-            { label: "특징", value: Array.isArray(feat) ? feat.join(", ") : show(feat) },
+            {
+              label: "다음 납입일",
+              value: show(m.nextDueDate ?? m.nextDue ?? m.nextPayDate),
+            },
           ],
         },
       ],
-      cta: href ? { href, text: show(btnTxt) === "-" ? "상품 페이지" : show(btnTxt) } : null,
+      cta: m.ipHref
+        ? { href: m.ipHref, text: show(m.ipButtonText) || "상품 페이지" }
+        : null,
+      variant: "saving",
     });
     setOpen(true);
   };
 
-
-  /* ================= 모달: 예금 ================= */
+  /* ===== 모달: 예금 ===== */
   const openDepositMore = (c) => {
-    const r = c.raw || c;   // 서버 응답 루트 (dp*가 여기에 있음)
-    const p = c.product || {}; // 혹시 남아있을 수 있는 product 보조
-    const m = { ...p, ...r };  // root 우선으로 읽게 p 뒤에 r을 합침
+    const m = c.raw || c;
 
-    const name = pick(m.dpName, m.dp_name, m.productName, m.d_name, "예금");
-    const type = pick(m.dpType, m.dp_type, m.type) || (String(name).includes("예금") ? "정기예금" : undefined);
-    const rate = pick(m.d_interest_rate, m.rate, m.dpRate, m.dp_rate, m.interestRate);
-
-    const minMonths = pick(m.dpMinMonths, m.dp_min_months, m.minMonths);
-    const maxMonths = pick(m.dpMaxMonths, m.dp_max_months, m.maxMonths);
-    const minAmount = pick(m.dpMinAmount, m.dp_min_amount, m.minAmount);
-    const maxAmount = pick(m.dpMaxAmount, m.dp_max_amount, m.maxAmount);
-
-    const interestPayType = pick(m.dpInterestPaymentType, m.dp_interest_payment_type, m.interestPaymentType);
-    const earlyRate = pick(m.dpEarlyTerminationRate, m.dp_early_termination_rate, m.earlyTerminationRate);
-    const feature = pick(m.dpFeature, m.dp_feature, m.feature, m.features);
-    const href = pick(m.dpHref, m.dp_href, m.href);
-    const buttonText = pick(m.dpButtonText, m.dp_button_text, m.buttonText);
-
-    const termMonths = pick(m.termMonths, m.d_period);
-    const opened = pick(m.openedAt, m.openDate, m.d_join_date);
-    const maturity = pick(m.maturityAt, m.maturity, m.d_maturity_date);
+    const joinAmount = numFrom(m, [
+      "goalAmount",
+      "dAmount",
+      "d_amount",
+      "raw.goalAmount",
+    ]);
+    const expected = numFrom(m, [
+      "expectedMaturityAmount",
+      "dExpectedMaturityAmount",
+      "d_expected_maturity_amount",
+      "raw.expectedMaturityAmount",
+    ]);
+    const principal = numFrom(m, [
+      "balance",
+      "principalBalance",
+      "dPrincipalBal",
+      "d_principal_bal",
+      "raw.balance",
+      "raw.principalBalance",
+    ]);
 
     setDetail({
       title: "예금 상세정보",
-      subtitle: show(name),
+      subtitle: show(m.productName ?? m.dpName),
       sections: [
         {
           heading: "핵심 정보",
           rows: [
-            { label: "상품명", value: show(name) },
-            { label: "상품유형", value: show(type) },
-            { label: "약정(적용) 금리", value: showPercent(rate) },
+            { label: "상품명", value: show(m.productName ?? m.dpName) },
+            { label: "상품유형", value: show(m.dpType) },
+            { label: "약정(적용) 금리", value: showPct(m.dpRate) },
             {
               label: "계약 기간",
-              value:
-                termMonths != null
-                  ? `${termMonths}개월`
-                  : (minMonths || maxMonths)
-                  ? `${show(minMonths)} ~ ${show(maxMonths)}개월`
-                  : opened && maturity
-                  ? `${betweenMonths(opened, maturity).total}개월`
-                  : "-",
+              value: m.termMonths ? `${m.termMonths}개월` : "-",
             },
-            { label: "가입 금액", value: fmt(m.goalAmount ?? m.d_amount, "원") },
+            { label: "가입 금액", value: fmt(joinAmount, "원") },
+            { label: "만기 예상 금액", value: fmt(expected, "원") },
           ],
         },
         {
           heading: "수익/해지 조건",
           rows: [
-            { label: "이자 지급 방식", value: show(interestPayType) },
-            { label: "중도 해지 이율", value: showPercent(earlyRate) },
-            { label: "최소/최대 금액", value: `${fmt(minAmount, "원")} / ${fmt(maxAmount, "원")}` },
-            { label: "특징", value: Array.isArray(feature) ? feature.join(", ") : show(feature) },
+            {
+              label: "이자 지급 방식",
+              value: show(m.dpInterestPaymentType),
+            },
+            {
+              label: "중도 해지 이율",
+              value: showPct(m.dpEarlyTerminationRate),
+            },
+            {
+              label: "현재 원금 잔액",
+              value: fmt(principal, "원"),
+            },
           ],
         },
       ],
-      cta: href ? { href, text: show(buttonText) === "-" ? "상품 페이지" : show(buttonText) } : null,
+      cta: m.dpHref
+        ? { href: m.dpHref, text: show(m.dpButtonText) || "상품 페이지" }
+        : null,
+      variant: "deposit",
     });
     setOpen(true);
   };
 
-
-  /* ================= 모달: 대출 ================= */
-  const openLoanMore = (c) => {
-    const p = c.product || {};
-    setDetail({
-      title: "대출 상세정보",
-      subtitle: show(p.productName ?? c.title),
-      sections: [
-        {
-          heading: "핵심 정보",
-          rows: [
-            { label: "대출 상품", value: show(p.productName ?? c.title) },
-            { label: "약정 금리", value: showPercent(p.rate) },
-            { label: "개시일", value: show(p.openedAt) },
-            { label: "만기일", value: show(p.maturityAt) },
-          ],
-        },
-      ],
-      cta: null,
-    });
-    setOpen(true);
-  };
-
-  /* ================= 카드/행 ================= */
   const Card = ({ children }) => (
     <div className="relative rounded-2xl bg-gradient-to-r from-gray-50 to-white p-6 shadow-sm ring-1 ring-gray-100">
       {children}
@@ -407,15 +421,15 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
         <div className="flex items-center gap-6">
           <ProgressDonut value={item.percent} />
           <div>
-            <div className="text-lg md:text-xl font-semibold text-gray-900">{show(item.title)}</div>
-            {item.subtitle ? (
-              <div className="mt-1 text-base text-gray-600">{item.subtitle}</div>
-            ) : (
-              <>
-                <div className="mt-1 text-base text-gray-600">{item.subtitleTop}</div>
-                <div className="text-base text-gray-600">{item.subtitleBottom}</div>
-              </>
-            )}
+            <div className="text-lg md:text-xl font-semibold text-gray-900">
+              {show(item.title)}
+            </div>
+            <div className="mt-1 text-base text-gray-600">
+              {item.subtitleTop}
+            </div>
+            <div className="text-base text-gray-600">
+              {item.subtitleBottom}
+            </div>
           </div>
         </div>
         <button
@@ -458,20 +472,6 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
         </section>
       )}
 
-      {loanCards.length > 0 && (
-        <section className="mt-10 space-y-4">
-          <div className="flex items-center gap-2 text-xl font-bold">
-            <i className="ri-file-list-2-line text-rose-600" />
-            대출 진행률
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {loanCards.map((c) => (
-              <Row key={`L-${c.id}`} item={c} onMore={openLoanMore} />
-            ))}
-          </div>
-        </section>
-      )}
-
       <ProductDetailsModal
         open={open}
         onClose={() => setOpen(false)}
@@ -479,6 +479,7 @@ export default function DepositDashboard({ deposits = [], savings = [], loans = 
         subtitle={detail.subtitle}
         sections={detail.sections}
         cta={detail.cta}
+        variant={detail.variant}
       />
     </>
   );

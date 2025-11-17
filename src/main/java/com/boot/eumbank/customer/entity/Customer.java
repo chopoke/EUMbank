@@ -146,7 +146,14 @@ public class Customer {
         this.cStatus = status;
     }
 
+    /** 상태가 ACTIVE 인지(대소문자 무시, null 안전) */
     public boolean isActive() {
-        return "ACTIVE".equals(this.cStatus);
+        return this.cStatus != null && "ACTIVE".equalsIgnoreCase(this.cStatus);
     }
+
+    /** role 이 비어있으면 USER, 대문자 통일 */
+    public String roleOrUser() {
+        return (this.role == null || this.role.isBlank()) ? "USER" : this.role.toUpperCase();
+    }
+
 }

@@ -7,21 +7,19 @@
     <div class="flex items-center justify-between mb-6">
         <div class="flex flex-col gap-1">
             <h1 class="text-2xl font-semibold text-gray-900">회원 관리</h1>
-            <p class="text-sm text-gray-400">가입 회원 목록 · 상태/인증 관리</p>
+            <p class="text-sm text-gray-400">가입 회원 목록 · 상태 관리</p>
         </div>
     </div>
 
     <form th:action="@{/admin/user}" method="get" class="mb-4 flex flex-wrap items-center gap-3">
         <div class="relative">
             <i class="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base"></i>
-            <input type="text" name="keyword" th:value="${cond.keyword}"
-                   placeholder="이름 검색"
+            <input type="text" name="keyword" th:value="${cond.keyword}" placeholder="이름/이메일 검색"
                    class="w-72 h-11 pl-9 pr-3 border border-gray-200 rounded-xl text-sm
                     placeholder:text-gray-400 focus:outline-none focus:ring-2
                     focus:ring-indigo-500 focus:border-transparent"/>
         </div>
 
-        <!-- 상태 -->
         <div class="relative">
             <i class="ri-toggle-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base"></i>
             <select name="status"
@@ -34,19 +32,6 @@
             </select>
         </div>
 
-        <!-- 인증상태 -->
-        <div class="relative">
-            <i class="ri-shield-check-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base"></i>
-            <select name="verification"
-                    class="h-11 pl-9 pr-8 border border-gray-200 rounded-xl text-sm bg-white
-                     focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                <option value=""         th:selected="${cond.verification}==null or ${cond.verification}==''">인증상태 전체</option>
-                <option value="VERIFIED" th:selected="${cond.verification}=='VERIFIED'">인증완료</option>
-                <option value="PENDING"  th:selected="${cond.verification}=='PENDING'">대기중</option>
-                <option value="REJECTED" th:selected="${cond.verification}=='REJECTED'">거부됨</option>
-            </select>
-        </div>
-
         <button type="submit"
                 class="h-11 px-5 inline-flex items-center gap-1 rounded-xl bg-indigo-600 text-white text-sm
                    shadow-sm hover:bg-indigo-700 transition">
@@ -54,76 +39,83 @@
         </button>
     </form>
 
-    <!-- 목록 카드 -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <table class="w-full text-sm">
             <thead class="bg-gray-50/80 text-gray-500">
             <tr>
-                <th class="px-5 py-3 text-left font-medium">고객번호</th>
+                <!-- 고객번호만 가운데 정렬 -->
+                <th class="px-5 py-3 text-center font-medium">고객번호</th>
                 <th class="px-5 py-3 text-left font-medium">이름</th>
+                <th class="px-5 py-3 text-left font-medium">이메일</th>
                 <th class="px-5 py-3 text-left font-medium">가입일</th>
                 <th class="px-5 py-3 text-left font-medium">상태</th>
-                <th class="px-5 py-3 text-left font-medium">인증상태</th>
                 <th class="px-5 py-3 text-left font-medium">위험등급</th>
-                <th class="px-5 py-3 text-center font-medium">관리</th>
+                <th class="px-5 py-3 text-center font-medium">조치</th>
             </tr>
             </thead>
 
-            <tbody>
+            <tbody id="user-tbody">
             <tr th:each="u : ${page.content}"
-                class="border-t border-gray-50 hover:bg-indigo-50/40 transition-colors">
-                <td class="px-5 py-3 font-medium text-gray-900" th:text="${u.id}"></td>
+                class="border-t border-gray-50 hover:bg-indigo-50/40 transition-colors"
+                th:attr="data-cno=${u.id}">
+                <!-- 여기도 가운데 정렬 -->
+                <td class="px-5 py-3 font-medium text-gray-900 text-center" th:text="${u.id}"></td>
                 <td class="px-5 py-3 text-gray-900" th:text="${u.name}">-</td>
+                <td class="px-5 py-3 text-gray-700" th:text="${u.email}">-</td>
                 <td class="px-5 py-3 text-gray-500"
                     th:text="${#temporals.format(u.joinDate, 'yyyy-MM-dd HH:mm')}">-</td>
 
-                <!-- 상태 -->
                 <td class="px-5 py-3">
-                  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold"
-                        th:text="${u.status}"
-                        th:classappend="${
-                          u.status=='정상' ? ' bg-emerald-50 text-emerald-700' :
-                          (u.status=='휴면' ? ' bg-amber-50 text-amber-700' :
-                          (u.status=='정지' ? ' bg-red-50 text-red-600' : ' bg-gray-50 text-gray-500'))}">
-                  </span>
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold"
+                th:text="${u.status}"
+                th:classappend="${
+                  u.status=='정상' ? ' bg-emerald-50 text-emerald-700' :
+                  (u.status=='휴면' ? ' bg-amber-50 text-amber-700' :
+                  (u.status=='정지' ? ' bg-red-50 text-red-600' : ' bg-gray-50 text-gray-500'))}">
+          </span>
                 </td>
 
-                <!-- 인증상태 -->
                 <td class="px-5 py-3">
-                  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold"
-                        th:text="${u.verification}"
-                        th:classappend="${
-                          u.verification=='인증완료' ? ' bg-emerald-50 text-emerald-700' :
-                          (u.verification=='대기중' ? ' bg-amber-50 text-amber-700' : ' bg-red-50 text-red-600')}">
-                  </span>
+          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold"
+                th:text="${u.risk}"
+                th:classappend="${
+                  u.risk=='낮음'      ? ' bg-sky-50 text-sky-700'   :
+                  (u.risk=='보통'     ? ' bg-gray-100 text-gray-700' :
+                  (u.risk=='높음'     ? ' bg-orange-50 text-orange-700' :
+                                        ' bg-red-50 text-red-600'))}">
+          </span>
                 </td>
 
-                <!-- 위험등급 -->
-                <td class="px-5 py-3">
-                  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold"
-                        th:text="${u.risk}"
-                        th:classappend="${
-                          u.risk=='낮음'      ? ' bg-sky-50 text-sky-700'   :
-                          (u.risk=='보통'     ? ' bg-gray-100 text-gray-700' :
-                          (u.risk=='높음'     ? ' bg-orange-50 text-orange-700' :
-                                                ' bg-red-50 text-red-600'))}">
-                  </span>
-                </td>
-
-                <!-- 액션 -->
+                <!-- 조치: 정지 → 정지 해제 버튼 / 정지 아님 & 높은 위험 → 계좌 정지 / 그 외 조치 없음 -->
                 <td class="px-5 py-3 text-center">
-                    <div class="inline-flex items-center gap-1">
-                        <a th:href="@{|/admin/user/${u.id}|}"
-                           class="px-3 h-8 inline-flex items-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">보기</a>
-                        <a th:href="@{|/admin/user/${u.id}/edit|}"
-                           class="px-3 h-8 inline-flex items-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">수정</a>
-                        <a th:href="@{|/admin/user/${u.id}/toggle|}"
-                           class="px-3 h-8 inline-flex items-center rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50">상태</a>
-                    </div>
+                    <!-- 정지 해제 -->
+                    <form th:if="${u.status=='정지'}"
+                          th:action="@{|/admin/user/${u.id}/unfreeze|}"
+                          method="post" class="inline-block">
+                        <input type="hidden" th:if="${_csrf != null}"
+                               th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <button class="px-3 h-8 rounded-lg bg-gray-800 text-white hover:bg-gray-900">
+                            정지 해제
+                        </button>
+                    </form>
+
+                    <!-- 정지 아님 + 위험 높음/매우 높음 → 정지 -->
+                    <form th:if="${u.status!='정지' and (u.risk=='높음' or u.risk=='매우 높음')}"
+                          th:action="@{|/admin/user/${u.id}/freeze|}"
+                          method="post" class="inline-block">
+                        <input type="hidden" th:if="${_csrf != null}"
+                               th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                        <button class="px-3 h-8 rounded-lg bg-red-600 text-white hover:bg-red-700">
+                            계정 정지
+                        </button>
+                    </form>
+
+                    <!-- 그 외 -->
+                    <span th:if="${u.status!='정지' and !(u.risk=='높음' or u.risk=='매우 높음')}"
+                          class="text-gray-400">조치 없음</span>
                 </td>
             </tr>
 
-            <!-- 빈 목록 -->
             <tr th:if="${page.content.isEmpty()}">
                 <td colspan="7" class="px-5 py-8 text-center text-gray-400">검색 결과가 없습니다.</td>
             </tr>
@@ -131,23 +123,22 @@
         </table>
     </div>
 
-    <!-- 페이징 -->
     <nav th:if="${page.totalPages > 1}"
          class="mt-6 flex items-center justify-center gap-1 text-sm">
         <a th:if="${!page.first}"
-           th:href="@{/admin/user(page=${page.number-1}, keyword=${cond.keyword}, status=${cond.status}, verification=${cond.verification})}"
+           th:href="@{/admin/user(page=${page.number-1}, keyword=${cond.keyword}, status=${cond.status})}"
            class="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">이전</a>
 
         <a th:each="i : ${#numbers.sequence(0, page.totalPages-1)}"
-           th:href="@{/admin/user(page=${i}, keyword=${cond.keyword}, status=${cond.status}, verification=${cond.verification})}"
+           th:href="@{/admin/user(page=${i}, keyword=${cond.keyword}, status=${cond.status})}"
            th:text="${i+1}"
            class="px-3 py-1.5 rounded-lg border text-gray-600"
            th:classappend="${i} == ${page.number}
-            ? ' bg-indigo-600 text-white border-indigo-600'
-            : ' bg-white border-gray-200 hover:bg-gray-50'"></a>
+        ? ' bg-indigo-600 text-white border-indigo-600'
+        : ' bg-white border-gray-200 hover:bg-gray-50'"></a>
 
         <a th:if="${!page.last}"
-           th:href="@{/admin/user(page=${page.number+1}, keyword=${cond.keyword}, status=${cond.status}, verification=${cond.verification})}"
+           th:href="@{/admin/user(page=${page.number+1}, keyword=${cond.keyword}, status=${cond.status})}"
            class="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">다음</a>
     </nav>
 
