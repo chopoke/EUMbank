@@ -94,7 +94,8 @@ public class InstallQueryRepository {
      * @param installDto
      * @return
      */
-    public void installSave(InstallSubscriptionRequestDto installDto, Customer customer, ProductDto installProducts, Account oneAccount, String signedPdfFilePath) {
+    public void installSave(InstallSubscriptionRequestDto installDto, Customer customer,
+                            ProductDto installProducts, Account oneAccount, String signedPdfFilePath) {
 
         logger.info("InstallQueryRepository  => installmentSave()");
 
@@ -127,31 +128,31 @@ public class InstallQueryRepository {
                         productInstallment.iBonusAmt,              // 18. 우대금액
                         productInstallment.iArrearsCnt,            // 19. 연체회차
                         productInstallment.iArrearsAmt,            // 20. 연체금액
-                        productInstallment.iUpdatedAt,              // 21. 수정일
-                        productInstallment.aAccountNo,              // 22. 계조번호
+                        productInstallment.iUpdatedAt,             // 21. 수정일
+                        productInstallment.aAccountNo,             // 22. 계좌번호
                         productInstallment.iPrincipalBal,
                         productInstallment.iExpectedMaturityAmount,
                         productInstallment.iPdfPath
                 ).values(
                         null,
-                        installProducts.getNo(), // dposit_product_tbl dpNo
+                        installProducts.getNo(), // installment_product_tbl ipNo
                         customer.getCustomerNo(),
                         oneAccount.getANo(),
-                        installProducts.getId(), // deposit_product_tbl dpId
+                        installProducts.getId(), // installment_product_tbl ipCode
                         installDto.getSavingAccount(),
-                        LocalDateTime.now(),                        // 6. dJoinDate - 가입일 (현재시간)
-                        LocalDateTime.now().plusMonths(installDto.getPeriod()), // 7. dMaturityDate - 만기일 (가입일 + 개월수)
-                        installDto.getPeriod(),                                         // 9. iMonth - 가입개월
-                        "KRW",                                                          // 11. iCurrency - 통화
-                        new BigDecimal(installProducts.getRate()),                      // 12. iInterestRate - 연이율
-                        installDto.getPayDay(),    // 13. iPayDay - 납입일 (기본값: 1일)
-                        "ACTIVE",                                                       // 14. iStatus - 상태 (초기값: ACTIVE)
-                        0,                                                              // 15. iPaidInstallments - 납입회차 (초기값: 0)
-                        0,                                                              // 16. iPrincipalPaid - 납입원금 (초기값: 0)
-                        0,                                                              // 17. iInterestAccrued - 미지급이자누계 (초기값: 0)
-                        BigDecimal.ZERO,                                                // 18. iBonusAmt - 우대금액 (초기값: 0)
-                        0,                                                              // 19. iArrearsCnt - 연체회차 (초기값: 0)
-                        BigDecimal.ZERO,                                                // 20. iArrearsAmt - 연체금액 (초기값: 0)
+                        LocalDateTime.now(),
+                        LocalDateTime.now().plusMonths(installDto.getPeriod()),
+                        installDto.getPeriod(),
+                        "KRW",
+                        new BigDecimal(installProducts.getRate()),
+                        installDto.getPayDay(),
+                        "ACTIVE",
+                        0,
+                        0,
+                        0,
+                        BigDecimal.ZERO,
+                        0,
+                        BigDecimal.ZERO,
                         LocalDateTime.now(),
                         oneAccount.getAccountNo(),
                         installDto.getAmount().intValue(),
@@ -169,16 +170,24 @@ public class InstallQueryRepository {
         logger.info("AccountQueryRepository => findOneAccount()");
 
         String fullText = requestDto.getLinkedAccount(); // "(110-784-589413) - 계좌 종류 : 자유적금"
-
-        String accountPart = fullText.split(" - ")[0]; // 결과: "(110-784-589413)"
-
+        String accountPart = fullText.split(" - ")[0];   // "(110-784-589413)"
         String accountNumber = accountPart.substring(1, accountPart.length() - 1);
 
         return queryFactory
                 .selectFrom(account)
-                .where(account.cNo.eq(customer.getCustomerNo()).and(account.accountNo.eq(accountNumber)))
+                .where(account.cNo.eq(customer.getCustomerNo())
+                        .and(account.accountNo.eq(accountNumber)))
                 .fetchOne();
-
     }
 
+    /**  활성화된 적금 상품 개수 */
+    public long countActiveInstallmentProducts() {
+        Long count = queryFactory
+                .select(productInstallmentList.count())
+                .from(productInstallmentList)
+                .where(productInstallmentList.ipIsActive.eq("Y"))
+                .fetchOne();
+
+        return (count != null) ? count : 0L;
+    }
 }
