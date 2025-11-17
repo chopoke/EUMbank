@@ -120,14 +120,26 @@ export default function BillsLanding() {
       try {
         const res = await fetchAccounts();
         const arr = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-        const mapped = arr.map(mapAccountRow);
+
+        // ① 입출금 통장만 필터
+        const onlyPayable = arr.filter(isPayableAccount);
+
+        // ② 마스킹/매핑
+        const mapped = onlyPayable.map(mapAccountRow);
+
         if (!alive) return;
         setAccounts(mapped);
+
+        // ③ 기본 선택 계좌도 필터된 목록 중 첫 번째로
         if (mapped.length) setAccount(String(mapped[0].aNo));
+        else setAccount("");
       } catch {}
     })();
-    return () => { alive = false; };
+    return () => {
+      alive = false;
+    };
   }, [USE_API]);
+
 
   return (
     <div className="min-h-screen bg-white">
@@ -269,6 +281,16 @@ function Card({ title, icon, children, iconColor = "text-gray-600" }) {
 }
 
 /* utils */
+
+// 입출금 통장만 true
+function isPayableAccount(row) {
+  const t = String(
+    row?.aType ?? row?.a_type ?? row?.accountType ?? row?.a_account_type ?? ""
+  ).trim();
+
+  return t === "입출금";   // DB 실제 값
+}
+
 function maskAccountNo(n) {
   const s = String(n || "");
   if (s.length <= 8) return s;
