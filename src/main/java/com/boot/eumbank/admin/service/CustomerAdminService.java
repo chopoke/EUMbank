@@ -23,7 +23,7 @@ public class CustomerAdminService {
 
     private final JPQLQueryFactory qf;
     private final CustomerRepo customerRepo;
-    // (선택) 계좌 레포지토리 연결 시 주석 해제
+    //  계좌 레포지토리 연결 시 주석 해제
     // private final AccountRepo accountRepo;
 
     private String toStatusKo(String status) {
