@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,6 +41,8 @@ import static com.boot.eumbank.asset.dashboard.entity.QAssetDailySnapshot.assetD
 public class DashboardRepository {
 
     private final JPAQueryFactory queryFactory;
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     /**
      * 입출금 총액
@@ -213,7 +216,7 @@ public class DashboardRepository {
      * @return BigDecimal
      */
     public BigDecimal sumInstallmentMonthlyDue(int cNo) {
-        int today =LocalDate.now().getDayOfMonth();
+        int today =LocalDate.now(KST).getDayOfMonth();
         NumberExpression<Integer> payDay = Expressions.numberTemplate(Integer.class, "cast({0} as integer)", productInstallment.iPayDay);
 
         NumberExpression<BigDecimal> principalBal = Expressions.numberTemplate(BigDecimal.class, "{0}", productInstallment.iPrincipalBal);
@@ -233,7 +236,7 @@ public class DashboardRepository {
      * @return BigDecimal
      */
     public BigDecimal sumLoanMonthlyDue(int cNo) {
-        int today = LocalDate.now().getDayOfMonth();
+        int today = LocalDate.now(KST).getDayOfMonth();
 
         return queryFactory
                 .select(loanSchedule.dueTotal.sum().coalesce(BigDecimal.ZERO))
@@ -280,6 +283,10 @@ public class DashboardRepository {
                 .fetch();
     }
 
+    /**
+     * 마지막 스냅샷 저장날
+     * @return LocalDate
+     */
     public Optional<LocalDate> getLastSnapshotDate() {
         LocalDate last = queryFactory
                 .select(assetDailySnapshot.adsYmd.max())
@@ -298,7 +305,7 @@ public class DashboardRepository {
     public List<AssetDailySnapshot> getSnapshots(int cNo, LocalDate from, LocalDate to) {
         return queryFactory.selectFrom(assetDailySnapshot)
                 .where(
-                        assetDailySnapshot.cNo.eq(cNo),
+                        assetDailySnapshot.cno.eq(cNo),
                         assetDailySnapshot.adsYmd.between(from, to)
                 )
                 .orderBy(assetDailySnapshot.adsYmd.asc())

@@ -4,6 +4,7 @@ import com.boot.eumbank.asset.peer.dto.PeerCompareResponse;
 import com.boot.eumbank.asset.peer.dto.PeerProfileDto;
 import com.boot.eumbank.asset.peer.service.PeerService;
 import com.boot.eumbank.customer.entity.Customer;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,7 +24,7 @@ public class PeerController {
     }
 
     @PostMapping("/profile")
-    public ResponseEntity<PeerCompareResponse> saveProfile(@AuthenticationPrincipal Customer customer, @RequestBody PeerProfileDto dto) {
+    public ResponseEntity<PeerCompareResponse> saveProfile(@AuthenticationPrincipal Customer customer, @Valid @RequestBody PeerProfileDto dto) {
         PeerCompareResponse res = peerService.saveProfileAndCompare(customer.getCustomerNo(), dto);
         return ResponseEntity.ok(res);
     }

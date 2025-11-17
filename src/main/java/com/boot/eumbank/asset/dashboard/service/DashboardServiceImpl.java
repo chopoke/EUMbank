@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -25,9 +26,10 @@ public class DashboardServiceImpl implements DashboardService{
 
     private static final Logger logger = LoggerFactory.getLogger(DashboardServiceImpl.class);
 
-
     private final DashboardRepository dashboardRepository;
     private final AssetDailySnapshotRepository assetDailySnapshotRepository;
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     /**
      * 대시보드 요약
@@ -99,7 +101,7 @@ public class DashboardServiceImpl implements DashboardService{
                 BigDecimal gold        = comp.getOrDefault("현물",   BigDecimal.ZERO);
 
                 rows.add(AssetDailySnapshot.builder()
-                        .cNo(cNo)
+                        .cno(cNo)
                         .adsYmd(ymd)                         // DATE 컬럼
                         .adsTotalAssets(s.totalAssets())
                         .adsTotalLiabilities(s.totalLiabilities())
@@ -117,10 +119,33 @@ public class DashboardServiceImpl implements DashboardService{
         }
 
         // 3) 배치 저장 (중복키는 '하루 1건' 유니크 제약으로 걸러짐)
-        assetDailySnapshotRepository.saveAll(rows);
+        //assetDailySnapshotRepository.saveAll(rows);
+        upsertSnapshots(rows);
         logger.info("<<< 스냅샷 적재 완료: {}건 >>>", rows.size());
 
     }
+
+    @Transactional
+    public void upsertSnapshots(List<AssetDailySnapshot> rows) {
+        for (var r : rows) {
+            assetDailySnapshotRepository
+                    .findByCnoAndAdsYmd(r.getCno(), r.getAdsYmd())
+                    .ifPresentOrElse(
+                            exist -> { // update
+                                exist.setAdsTotalAssets(r.getAdsTotalAssets());
+                                exist.setAdsTotalLiabilities(r.getAdsTotalLiabilities());
+                                exist.setAdsNetWorth(r.getAdsNetWorth());
+                                exist.setAdsTotalCash(r.getAdsTotalCash());
+                                exist.setAdsTotalInstallment(r.getAdsTotalInstallment());
+                                exist.setAdsTotalDeposit(r.getAdsTotalDeposit());
+                                exist.setAdsTotalForeign(r.getAdsTotalForeign());
+                                exist.setAdsTotalGold(r.getAdsTotalGold());
+                            },
+                            () -> assetDailySnapshotRepository.save(r)
+                    );
+        }
+    }
+
 
     /**
      * 최근 30일 자산 추이
@@ -131,7 +156,7 @@ public class DashboardServiceImpl implements DashboardService{
     public AssetTrendDto getTrend(int cNo, TrendMetric metric) {
         logger.info("<<< DashboardService getTrend >>>");
 
-        LocalDate end = LocalDate.now();
+        LocalDate end = LocalDate.now(KST);
         LocalDate start = end.minusDays(30);
 
         List<AssetDailySnapshot> rows = dashboardRepository.getSnapshots(cNo, start, end);

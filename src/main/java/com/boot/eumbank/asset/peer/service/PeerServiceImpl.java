@@ -231,8 +231,7 @@ public class PeerServiceImpl implements PeerService{
           case   20 -> "20대";
           case   30 -> "30대";
           case   40 -> "40대";
-          case   50 -> "50대이상";
-          default -> "";
+          default -> "50대이상";
         };
     }
 

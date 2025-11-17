@@ -28,7 +28,7 @@ public class AssetDailySnapshot {
     private Integer adsNo;
 
     @Column(name = "c_no", nullable = false)
-    private Integer cNo;
+    private Integer cno;
 
     @Column(name = "ads_ymd", nullable = false)
     private LocalDate adsYmd;
