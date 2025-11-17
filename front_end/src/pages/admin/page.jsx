@@ -10,7 +10,7 @@ import Verification from './components/Verification';
 import SpotManagement from './components/SpotManagement';
 
 export default function AdminPage() {
-  const [activeMenu, setActiveMenu] = useState('dashboard');
+  const [activeMenu, setActiveMenu] = useState('deposit');
 
   const renderContent = () => {
     switch (activeMenu) {

@@ -3,7 +3,7 @@ import React from "react";
 export default function Sidebar({ activeMenu, setActiveMenu }) {
 
   // 목적지 매핑
-  const ADMIN_URL = process.env.REACT_APP_API_URL || "http://localhost:8081";
+  const ADMIN_URL = "http://localhost:8081";
   const targets = {
     dashboard: `${ADMIN_URL}/admin/dashboard`,
     loan: `${ADMIN_URL}/admin/loan`,

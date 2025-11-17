@@ -5,7 +5,7 @@ import axios from 'axios';
  * @returns {Promise<Array<Object>>} 조회된 상품 목록 (ProductResponseDto 리스트)
  */
 const getTop3Deposits = async () => {
-    const API_URL = `${process.env.REACT_APP_API_URL || 'http://localhost:8081'}/api/best3`;
+    const API_URL = 'http://localhost:8081/api/best3';
 
     try {
         console.log("TOP 3 예금 상품 데이터 호출 시작...");
