@@ -58,6 +58,12 @@ import ApplyFormPage from "./pages/loan/apply/ApplyFormPage";
 import ApplyDocsPage from "./pages/loan/apply/ApplyDocsPage";
 import ApplyCompletePage from "./pages/loan/apply/ApplyCompletePage";
 
+// 자산관리
+import AssetAnalysis from "./pages/assetManagement/page/AssetAnalysis";
+import AssetDashboard from "./pages/assetManagement/page/AssetDashboard";
+import AssetPeerComparison from "./pages/assetManagement/page/AssetPeerComparison";
+import AssetRecommendation from "./pages/assetManagement/page/AssetRecommendation";
+import AssetReport from "./pages/assetManagement/page/AssetReport";
 
 // 관리자페이지
 import AdminPage from "./pages/admin/page";
@@ -91,7 +97,7 @@ function App() {
   // 최초 1회: RT로 AT 복구
   useEffect(() => {
     const path = window.location.pathname;
-    const isSocial = path.startsWith("/social/");
+    const isSocial = path.startsWith("/social/") && path !== "/social/agree";
     const isLogin  = path === "/login";
     if (isSocial || isLogin) {
       setIsLoggedIn(!!getAccessToken());
@@ -148,7 +154,10 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/social/cookie" element={<Cookie />} />
-        <Route path="/social/agree" element={<SocialAgree />} />
+        <Route path="/social/agree" element={
+          <ProtectedRoute>
+            <SocialAgree />
+          </ProtectedRoute>} />
         <Route path="/social/link" element={<NaverLink />} />
 
         {/* 계좌 목록 */}
@@ -168,7 +177,7 @@ function App() {
 
         {/* 대출 상품 목록 */}
         <Route path="/loan/products" element={<LoanProductList />} />
-        
+
         {/* 상품 상세 */}
         <Route path="/loan/products/:code" element={<ProtectedRoute><LoanProductDetail /></ProtectedRoute>} />
 
@@ -242,6 +251,7 @@ function App() {
             <BulkTransferComplete />
           </ProtectedRoute>
         } />
+
         <Route path="/transfer/manage" element={
           <ProtectedRoute>
             <TransferManagePage />
@@ -301,6 +311,59 @@ function App() {
             <SpotPriceHistoryPage />
           </ProtectedRoute>
         } />
+
+        {/* 자산관리 */}
+        <Route path="/asset" element={<Navigate to="/asset/dashboard" replace />}/>
+
+         {/* 자산 대시보드 (자산 현황) */}
+        <Route
+          path="/asset/dashboard"
+          element={
+            <ProtectedRoute>
+              <AssetDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 자산 분석 */}
+        <Route
+          path="/asset/analysis"
+          element={
+            <ProtectedRoute>
+              <AssetAnalysis />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 또래 비교 */}
+        <Route
+          path="/asset/peer"
+          element={
+            <ProtectedRoute>
+              <AssetPeerComparison />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 맞춤형 추천 */}
+        <Route
+          path="/asset/recommend"
+          element={
+            <ProtectedRoute>
+              <AssetRecommendation />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* 월간 리포트 */}
+        <Route
+          path="/asset/report"
+          element={
+            <ProtectedRoute>
+              <AssetReport />
+            </ProtectedRoute>
+          }
+        />
 
         {/* 관리자페이지 */}
         <Route path="/admin" element={<AdminPage/>} />
