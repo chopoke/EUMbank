@@ -3,7 +3,6 @@ import api from '../../../api/axios';
 
 export default function Dashboard() {
   const [spotStats, setSpotStats] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchSpotStatistics = async () => {
@@ -12,8 +11,6 @@ export default function Dashboard() {
         setSpotStats(response.data);
       } catch (error) {
         console.error('현물 통계 조회 실패:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -26,29 +23,26 @@ export default function Dashboard() {
     { title: 'Inquiry Resolution Rate', value: '80%', icon: 'ri-checkbox-circle-line', color: 'text-teal-600' },
     // 현물 통계 추가
     ...(spotStats ? [
-      { 
-        title: '현물 지갑 수', 
-        value: spotStats.totalWalletCount?.toLocaleString() || '0', 
-        icon: 'ri-wallet-line', 
-        color: 'text-yellow-600' 
-      },
+   
       { 
         title: '금 보유량', 
-        value: `${(spotStats.totalGoldBalance || 0).toLocaleString()}g`, 
+        value: (() => {
+          const grams = Number(spotStats.totalGoldBalance || 0);
+          const kg = grams / 1000;
+          return `${kg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}kg`;
+        })(), 
         icon: 'ri-money-dollar-circle-line', 
         color: 'text-yellow-600' 
       },
       { 
         title: '은 보유량', 
-        value: `${(spotStats.totalSilverBalance || 0).toLocaleString()}g`, 
+        value: (() => {
+          const grams = Number(spotStats.totalSilverBalance || 0);
+          const kg = grams / 1000;
+          return `${kg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}kg`;
+        })(), 
         icon: 'ri-money-dollar-circle-line', 
         color: 'text-gray-600' 
-      },
-      { 
-        title: '현물 총 자산', 
-        value: `₩${(spotStats.totalSpotAssets || 0).toLocaleString()}`, 
-        icon: 'ri-line-chart-line', 
-        color: 'text-green-600' 
       }
     ] : [])
   ];
