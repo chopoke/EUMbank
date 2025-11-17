@@ -1,20 +1,26 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Sidebar({ activeMenu, setActiveMenu }) {
+  const navigate = useNavigate();
 
   // 목적지 매핑
   const ADMIN_URL = "http://localhost:8081";
   const targets = {
     dashboard: `${ADMIN_URL}/admin/dashboard`,
     loan: `${ADMIN_URL}/admin/loan`,
+    deposit: "/admin/deposit",
     user: `${ADMIN_URL}/admin/user`,
     verification: `${ADMIN_URL}/admin/verification`,
   };
-  const reactMenus = new Set(["dashboard", "loan", "deposit", "spot"]);
-
   const handleClick = (id) => {
     setActiveMenu?.(id);
-    if (!reactMenus.has(id) && targets[id]) {
+
+    if (id === "deposit") {
+      // React 내부 라우팅
+      navigate(targets.deposit);
+    } else if (targets[id]) {
+      // 타임리프로 전체 페이지 이동
       window.location.href = targets[id];
     }
   };
