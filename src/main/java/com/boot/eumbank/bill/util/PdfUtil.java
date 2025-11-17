@@ -110,7 +110,7 @@ public final class PdfUtil {
                 y -= 14f;
                 cs.setNonStrokingColor(new Color(110, 114, 120));
                 textLeft(cs, font, 9.5f, margin,
-                        y, "본 영수증은 전자문서로 발행되었으며 위·변조 시 법적 책임이 따릅니다.  발행자: 이음은행  |  고객센터: 1588-0000  |  www.eumbank.co.kr");
+                        y, "본 영수증은 전자문서로 발행되었으며 위·변조 시 법적 책임이 따릅니다.  발행자: 이음은행  |  고객센터: 1588-0000");
             }
 
             doc.save(out);

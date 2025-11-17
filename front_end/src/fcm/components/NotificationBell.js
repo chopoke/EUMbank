@@ -9,22 +9,41 @@ const NotificationBell = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  /**
+   * 미읽음 알림 개수 조회 함수
+   */
+  const fetchUnreadCount = async () => {
+    try {
+      const count = await getUnreadCount();
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('미읽음 알림 개수 조회 실패:', error);
+    }
+  };
+
   // 미읽음 알림 개수 조회 (30초마다 자동 갱신)
   useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const count = await getUnreadCount();
-        setUnreadCount(count);
-      } catch (error) {
-        console.error('미읽음 알림 개수 조회 실패:', error);
-      }
-    };
-
     fetchUnreadCount();
     
     const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  /**
+   * 모달이 열릴 때 카운트를 즉시 0으로 설정 (모달에서 모두 읽음 처리하므로)
+   */
+  const handleModalOpen = () => {
+    setIsModalOpen(true);
+    setUnreadCount(0); // 즉시 카운트 제거
+  };
+
+  /**
+   * 모달이 닫힐 때 카운트를 다시 조회하여 최신 상태로 갱신
+   */
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    fetchUnreadCount(); // 모달 닫힐 때 즉시 카운트 갱신
+  };
 
   const displayCount = unreadCount > 9 ? '9+' : unreadCount;
 
@@ -32,7 +51,7 @@ const NotificationBell = () => {
     <div style={{ position: 'relative' }}>
       {/* 종 아이콘 버튼 */}
       <button
-        onClick={() => setIsModalOpen(true)}
+        onClick={handleModalOpen}
         style={{
           position: 'relative',
           background: 'none',
@@ -86,7 +105,7 @@ const NotificationBell = () => {
       {isModalOpen && (
         <NotificationModal 
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)} 
+          onClose={handleModalClose} 
         />
       )}
     </div>
