@@ -79,6 +79,7 @@ export function Header({ isLoggedIn, user, onLogout }) {
           {/* hidden lg:flex items-center gap-6 text-sm text-gray-700 */}
           <nav className="main-nav-links">
             <Link to="/accounts" className="nav-link">개인</Link>
+            <Link to="/asset" className="nav-link nav-link-active">자산관리</Link>
             <div className="nav-link group relative">상품
               <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-26 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-300 z-10">
                 <div className="bg-white rounded-lg shadow-xl py-2">
@@ -88,8 +89,6 @@ export function Header({ isLoggedIn, user, onLogout }) {
                 </div>
               </div>
             </div>
-
-            <Link to="/wealth" className="nav-link nav-link-active">자산관리</Link>
             <Link to="/foreign/rate" className="nav-link">외환/환율</Link>
             {/* 마이페이지 or 관리자페이지 이동 */}
             {/* <Link to={isAdmin ? "/admin" : "/mypage"} className="nav-link">
@@ -112,7 +111,7 @@ export function Header({ isLoggedIn, user, onLogout }) {
           {isLoggedIn && isAdmin && (
             <button
               className="login-button"
-              onClick={() => navigate("/admin")}
+              onClick={() => window.location.href = "http://localhost:8081/admin/enter"}
             >
               관리자
             </button>
