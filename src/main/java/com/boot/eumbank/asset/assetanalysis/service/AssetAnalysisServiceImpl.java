@@ -4,7 +4,6 @@ import com.boot.eumbank.asset.assetanalysis.dto.*;
 import com.boot.eumbank.asset.assetanalysis.entity.AssetGoal;
 import com.boot.eumbank.asset.assetanalysis.repository.AssetAnalysisRepositoryCustom;
 import com.boot.eumbank.asset.assetanalysis.repository.AssetGoalRepository;
-import com.boot.eumbank.asset.dashboard.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,7 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -30,7 +31,6 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
 
     private final AssetAnalysisRepositoryCustom analysisRepository;
     private final AssetGoalRepository goalRepository;
-    private final DashboardService dashboardService;
 
     private static final Map<String, String> EXECUTION_TYPE_LABELS = Map.ofEntries(
             Map.entry("AUTO", "자동이체"),
@@ -101,8 +101,7 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
         }
 
         // 각 기간의 순자산 계산 (현재 순자산에서 역순으로 순변동 누적)
-        // Dashboard에서 순자산 계산 로직을 가져옴
-        BigDecimal currentNetWorth = dashboardService.getDashboardSummary(customerNo).netWorth();
+        BigDecimal currentNetWorth = analysisRepository.calculateCurrentNetWorth(customerNo);
         for (int i = monthlyTrends.size() - 1; i >= 0; i--) {
             MonthlyTrendDto trend = monthlyTrends.get(i);
             // 순변동을 원 단위로 변환 (만원 -> 원)
@@ -130,8 +129,8 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
      * 목표 달성률 계산
      */
     private AssetGoalDto calculateGoalAchievement(Integer customerNo) {
-        // 현재 순자산 계산 (Dashboard에서 가져옴)
-        BigDecimal currentNetWorth = dashboardService.getDashboardSummary(customerNo).netWorth();
+        // 현재 순자산 계산
+        BigDecimal currentNetWorth = analysisRepository.calculateCurrentNetWorth(customerNo);
 
         // 목표 조회
         Optional<AssetGoal> goalOpt = goalRepository.findActiveGoalByCustomerNo(customerNo);
@@ -474,8 +473,8 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
         log.info("자산 목표 설정: customerNo={}, targetAmount={}, targetDate={}", 
                 customerNo, request.getTargetAmount(), request.getTargetDate());
 
-        // 현재 순자산 계산 (Dashboard에서 가져옴)
-        BigDecimal currentNetWorth = dashboardService.getDashboardSummary(customerNo).netWorth();
+        // 현재 순자산 계산
+        BigDecimal currentNetWorth = analysisRepository.calculateCurrentNetWorth(customerNo);
 
         // 기존 활성 목표 조회
         Optional<AssetGoal> existingGoalOpt = goalRepository.findActiveGoalByCustomerNo(customerNo);
