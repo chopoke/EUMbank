@@ -51,6 +51,12 @@ export default function LoanProductDetailPage() {
     return t.includes("자동차") || t.toUpperCase().includes("AUTO");
   }, [product]);
 
+  // 전세자금대출인지
+  const isJeonse = React.useMemo(()=>{
+    const j = String(product?.type  || "");
+    return j.includes("전세자금");
+  }, [product]);
+
   // 기간/기본금리 리스트
   const terms = React.useMemo(() => {
     if (!product) return [];
@@ -289,7 +295,7 @@ export default function LoanProductDetailPage() {
                   <span className="font-medium">{Math.max(...terms.map((t) => t.months))}개월</span>
                 </div>
               )}
-              {!isAuto && isSecured && product?.ltvMax != null && (
+              {!isAuto && isJeonse && product?.ltvMax != null && (
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">최대 LTV</span>
                   <span className="font-medium">{product.ltvMax}%</span>

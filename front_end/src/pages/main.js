@@ -5,6 +5,8 @@ import mainacc from '../resources/img/acc_fin.png'
 import { goToAccountOpenPage } from "./account/utils/navigations";
 import PriceWidget from "./spot/components/PriceWidget";
 import getdata from "./mypage/getdata";
+import AccountMainComp from "../pages/account/AccountMainComp";
+import { AiOutlineGold } from "react-icons/ai";
 
 
 // 데모용 아이콘 (간단한 SVG)
@@ -67,6 +69,7 @@ function formatWon(n) {
     return String(n);
   }
 }
+
 
 const Hero = ({ isLoggedIn, name }) => {
   const navigate = useNavigate();
@@ -198,139 +201,139 @@ const QuickActions = ({ isAdmin = false }) => {
   );
 };
 
-const AccountSnapshot = ({ summary, isLoggedIn, user }) => {
-  //const { isLoggedIn } = useAuth();
-  const total = useMemo(() => summary.accounts.reduce((a, b) => a + b.balance, 0), [summary.accounts]);
+// const AccountSnapshot = ({ summary, isLoggedIn, user }) => {
+//   //const { isLoggedIn } = useAuth();
+//   const total = useMemo(() => summary.accounts.reduce((a, b) => a + b.balance, 0), [summary.accounts]);
 
-  console.log('ckuser :', user);
-  if (!isLoggedIn) {
-    return <section className="account-snapshot-section">
-      <div className="content-container h-[300px] py-10"><h1 className="text-center text-2xl">로그인이 필요합니다.</h1></div></section>;
-  }
-  return (
-    <section className="account-snapshot-section">
-      {/* mx-auto max-w-screen-xl px-6 py-10 */}
-      <div className="content-container py-10">
-        {/* grid grid-cols-12 gap-6 */}
-        <div className="snapshot-grid">
-          {/* col-span-12 lg:col-span-8 */}
-          <div className="snapshot-main-col">
-            {/* rounded-2xl border bg-white p-5 shadow-sm */}
-            <div className="snapshot-card main-card">
-              {/* flex items-center justify-between */}
-              <div className="card-header">
-                <div>
-                  {/* text-lg font-semibold text-gray-900 */}
-                  <h4 className="card-title">자산 스냅샷</h4>
-                  {/* text-sm text-gray-500 */}
-                  <p className="card-subtitle">총자산 <b className="card-subtitle-highlight">₩{formatWon(total)}</b></p>
-                </div>
-                {/* text-sm text-blue-700 hover:underline */}
-                <button className="text-link">계좌관리</button>
-              </div>
-              {/* 계좌 탭(간단 표시) */}
-              {/* mt-5 grid grid-cols-1 md:grid-cols-2 gap-4 */}
-              <div className="account-list-grid">
-                {summary.accounts.map((acc) => (
-                  // rounded-xl border p-4
-                  <div key={acc.id} className="account-item">
-                    {/* text-sm text-gray-500 */}
-                    <div className="account-name">{acc.name}</div>
-                    {/* mt-1 text-xl font-semibold */}
-                    <div className="account-balance">₩{formatWon(acc.balance)}</div>
-                    {/* mt-3 inline-flex items-center gap-2 text-sm text-blue-700 hover:underline */}
-                    <button className="text-link with-icon">
-                      상세보기 <Icon path={paths.arrowR} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {/* 최근 거래 */}
-              {/* mt-6 */}
-              <div className="recent-transactions">
-                {/* flex items-center justify-between mb-2 */}
-                <div className="card-header small">
-                  {/* font-medium */}
-                  <h5 className="card-title-small">최근 입출내역</h5>
-                  {/* text-sm text-blue-700 hover:underline */}
-                  <a href="#tx" className="text-link">더보기</a>
-                </div>
-                {/* divide-y text-sm */}
-                <ul className="transaction-list">
-                  {summary.recentTx.map((t) => (
-                    // flex items-center justify-between py-2
-                    <li key={t.id} className="transaction-item">
-                      {/* flex items-center gap-3 */}
-                      <div className="transaction-detail">
-                        {/* text-gray-500 w-24 */}
-                        <span className="transaction-date">{t.date}</span>
-                        {/* text-gray-800 */}
-                        <span className="transaction-desc">{t.desc}</span>
-                      </div>
-                      <span className={"transaction-amount " + (t.amount < 0 ? "negative" : "positive")}>
-                        {t.amount < 0 ? "-" : "+"}₩{formatWon(Math.abs(t.amount))}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-          {/* col-span-12 lg:col-span-4 space-y-6 */}
-          <div className="snapshot-side-col">
-           {/* 현물 미니 시세 위젯 (오른쪽 사이드 카드 라인 정렬) */}
-            <div className="snapshot-card side-card">
-              <div className="card-header-icon small">
-                <div className="font-medium">현물 시세</div>
-                <Icon path={paths.chart} />
-              </div>
-              <div>
-                <PriceWidget size="small" showChart={false} className="w-full" />
-              </div>
-            </div>
+//   console.log('ckuser :', user);
+//   if (!isLoggedIn) {
+//     return <section className="account-snapshot-section">
+//       <div className="content-container h-[300px] py-10"><h1 className="text-center text-2xl">로그인이 필요합니다.</h1></div></section>;
+//   }
+//   return (
+//     <section className="account-snapshot-section">
+//       {/* mx-auto max-w-screen-xl px-6 py-10 */}
+//       <div className="content-container py-10">
+//         {/* grid grid-cols-12 gap-6 */}
+//         <div className="snapshot-grid">
+//           {/* col-span-12 lg:col-span-8 */}
+//           <div className="snapshot-main-col">
+//             {/* rounded-2xl border bg-white p-5 shadow-sm */}
+//             <div className="snapshot-card main-card">
+//               {/* flex items-center justify-between */}
+//               <div className="card-header">
+//                 <div>
+//                   {/* text-lg font-semibold text-gray-900 */}
+//                   <h4 className="card-title">간편 계좌 조회</h4>
+//                   {/* text-sm text-gray-500 */}
+//                   <p className="card-subtitle">총자산 <b className="card-subtitle-highlight">₩{formatWon(total)}</b></p>
+//                 </div>
+//                 {/* text-sm text-blue-700 hover:underline */}
+//                 <button className="text-link">계좌관리</button>
+//               </div>
+//               {/* 계좌 탭(간단 표시) */}
+//               {/* mt-5 grid grid-cols-1 md:grid-cols-2 gap-4 */}
+//               <div className="account-list-grid">
+//                 {summary.accounts.map((acc) => (
+//                   // rounded-xl border p-4
+//                   <div key={acc.id} className="account-item">
+//                     {/* text-sm text-gray-500 */}
+//                     <div className="account-name">{acc.name}</div>
+//                     {/* mt-1 text-xl font-semibold */}
+//                     <div className="account-balance">₩{formatWon(acc.balance)}</div>
+//                     {/* mt-3 inline-flex items-center gap-2 text-sm text-blue-700 hover:underline */}
+//                     <button className="text-link with-icon">
+//                       상세보기 <Icon path={paths.arrowR} />
+//                     </button>
+//                   </div>
+//                 ))}
+//               </div>
+//               {/* 최근 거래 */}
+//               {/* mt-6 */}
+//               <div className="recent-transactions">
+//                 {/* flex items-center justify-between mb-2 */}
+//                 <div className="card-header small">
+//                   {/* font-medium */}
+//                   <h5 className="card-title-small">최근 입출내역</h5>
+//                   {/* text-sm text-blue-700 hover:underline */}
+//                   <a href="#tx" className="text-link">더보기</a>
+//                 </div>
+//                 {/* divide-y text-sm */}
+//                 <ul className="transaction-list">
+//                   {summary.recentTx.map((t) => (
+//                     // flex items-center justify-between py-2
+//                     <li key={t.id} className="transaction-item">
+//                       {/* flex items-center gap-3 */}
+//                       <div className="transaction-detail">
+//                         {/* text-gray-500 w-24 */}
+//                         <span className="transaction-date">{t.date}</span>
+//                         {/* text-gray-800 */}
+//                         <span className="transaction-desc">{t.desc}</span>
+//                       </div>
+//                       <span className={"transaction-amount " + (t.amount < 0 ? "negative" : "positive")}>
+//                         {t.amount < 0 ? "-" : "+"}₩{formatWon(Math.abs(t.amount))}
+//                       </span>
+//                     </li>
+//                   ))}
+//                 </ul>
+//               </div>
+//             </div>
+//           </div>
+//           {/* col-span-12 lg:col-span-4 space-y-6 */}
+//           <div className="snapshot-side-col">
+//            {/* 현물 미니 시세 위젯 (오른쪽 사이드 카드 라인 정렬) */}
+//             <div className="snapshot-card side-card">
+//               <div className="card-header-icon small">
+//                 <div className="font-medium">현물 시세</div>
+//                 <Icon path={paths.chart} />
+//               </div>
+//               <div>
+//                 <PriceWidget size="small" showChart={false} className="w-full" />
+//               </div>
+//             </div>
 
 
-            {/* rounded-2xl border bg-white p-5 shadow-sm */}
-            <div className="snapshot-card side-card">
-              {/* flex items-center justify-between mb-2 */}
-              <div className="card-header-icon small">
-                <div className="font-medium">카드 결제 예정</div>
-                <Icon path={paths.card} />
-              </div>
-              {/* text-2xl font-semibold */}
-              <div className="side-card-value">₩{formatWon(summary.cards[0].amount)}</div>
-              {/* text-sm text-gray-500 */}
-              <div className="card-subtitle">결제일 {summary.cards[0].due}</div>
-            </div>
-            {/* rounded-2xl border bg-white p-5 shadow-sm */}
-            <div className="snapshot-card side-card">
-              {/* flex items-center justify-between mb-2 */}
-              <div className="card-header-icon small">
-                <div className="font-medium">대출 상환 예정</div>
-                <Icon path={paths.loan} />
-              </div>
-              {/* text-2xl font-semibold */}
-              <div className="side-card-value">₩{formatWon(summary.loans[0].amount)}</div>
-              {/* text-sm text-gray-500 */}
-              <div className="card-subtitle">상환일 {summary.loans[0].nextDue}</div>
-            </div>
-            {/* rounded-2xl border bg-white p-5 shadow-sm */}
-            {/* <div className="snapshot-card side-card">
-              <div className="card-header-icon small">
-                <div className="font-medium">이번달 지출 인사이트</div>
-                <Icon path={paths.chart} />
-              </div>
-              text-sm text-gray-600
-              <div className="insight-text">카테고리 Top3: 식비 · 교통 · 쇼핑</div>
-              mt-2 h-16 w-full rounded bg-gray-100
-              <div className="insight-chart-placeholder" aria-hidden="true" />
-            </div> */}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
+//             {/* rounded-2xl border bg-white p-5 shadow-sm */}
+//             <div className="snapshot-card side-card">
+//               {/* flex items-center justify-between mb-2 */}
+//               <div className="card-header-icon small">
+//                 <div className="font-medium">카드 결제 예정</div>
+//                 <Icon path={paths.card} />
+//               </div>
+//               {/* text-2xl font-semibold */}
+//               <div className="side-card-value">₩{formatWon(summary.cards[0].amount)}</div>
+//               {/* text-sm text-gray-500 */}
+//               <div className="card-subtitle">결제일 {summary.cards[0].due}</div>
+//             </div>
+//             {/* rounded-2xl border bg-white p-5 shadow-sm */}
+//             <div className="snapshot-card side-card">
+//               {/* flex items-center justify-between mb-2 */}
+//               <div className="card-header-icon small">
+//                 <div className="font-medium">대출 상환 예정</div>
+//                 <Icon path={paths.loan} />
+//               </div>
+//               {/* text-2xl font-semibold */}
+//               <div className="side-card-value">₩{formatWon(summary.loans[0].amount)}</div>
+//               {/* text-sm text-gray-500 */}
+//               <div className="card-subtitle">상환일 {summary.loans[0].nextDue}</div>
+//             </div>
+//             {/* rounded-2xl border bg-white p-5 shadow-sm */}
+//             {/* <div className="snapshot-card side-card">
+//               <div className="card-header-icon small">
+//                 <div className="font-medium">이번달 지출 인사이트</div>
+//                 <Icon path={paths.chart} />
+//               </div>
+//               text-sm text-gray-600
+//               <div className="insight-text">카테고리 Top3: 식비 · 교통 · 쇼핑</div>
+//               mt-2 h-16 w-full rounded bg-gray-100
+//               <div className="insight-chart-placeholder" aria-hidden="true" />
+//             </div> */}
+//           </div>
+//         </div>
+//       </div>
+//     </section>
+//   );
+// };
 
 function RateFxTicker (){
   const [topProducts, setTopProducts] = useState([]);
@@ -579,7 +582,8 @@ export default function BankHome({ user }) {
         <Hero name={user?.name || user?.id || user?.loginId} />
         <QuickActions isAdmin={isAdmin} />
 
-        <AccountSnapshot summary={summary} isLoggedIn={isLoggedIn} user={user} />
+        {/* <AccountSnapshot summary={summary} isLoggedIn={isLoggedIn} user={user} /> */}
+        <AccountMainComp summary={summary} isLoggedIn={isLoggedIn} user={user} />
         <FundSpotlight />
         <WealthHubSummary />
         <RateFxTicker fx={summary.fx} />
