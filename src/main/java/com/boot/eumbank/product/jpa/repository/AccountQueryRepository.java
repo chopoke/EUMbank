@@ -47,8 +47,8 @@ public class AccountQueryRepository {
         return queryFactory
                 .selectFrom(account)
                 .where(account.aNo.eq(accountNo)
-                    .and(account.status.eq("ACTIVE"))
-                    .and(account.accountType.notIn("외환")))
+                        .and(account.status.eq("ACTIVE"))
+                        .and(account.accountType.notIn("외환")))
                 .fetchOne();
 
     }

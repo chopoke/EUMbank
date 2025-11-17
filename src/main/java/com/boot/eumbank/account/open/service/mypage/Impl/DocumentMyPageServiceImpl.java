@@ -52,7 +52,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
     @Transactional
     public void saveDocument(MultipartFile file, FileType fileType) {
         logger.info("DocumentServiceImpl => saveDocument()");
-        
+
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("업로드된 파일이 없습니다.");
         }
@@ -76,7 +76,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
 
         String savedFilename = UUID.randomUUID().toString() + extension;
         Path filePath = Paths.get(uploadDir, savedFilename);
-        
+
         try {
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
             logger.info("파일 저장 완료: {}", filePath);
@@ -144,7 +144,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
         // 본인 서류인지 확인
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
-        
+
         if (!document.getCNo().equals(customer.getCustomerNo())) {
             throw new SecurityException("본인의 서류만 다운로드할 수 있습니다.");
         }
@@ -152,7 +152,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
         try {
             Path filePath = Paths.get(document.getPdfPath());
             Resource resource = new UrlResource(filePath.toUri());
-            
+
             if (resource.exists() && resource.isReadable()) {
                 return resource;
             } else {
@@ -171,7 +171,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
     public void updateDocumentStatus(Integer dNo, DocumentStatus status) {
         DocumentFile document = documentRepository.findById(dNo)
                 .orElseThrow(() -> new IllegalArgumentException("서류를 찾을 수 없습니다."));
-        
+
         document.setStatus(status);
         documentRepository.save(document);
         logger.info("서류 상태 변경 완료 - dNo: {}, status: {}", dNo, status);
@@ -189,7 +189,7 @@ public class DocumentMyPageServiceImpl implements DocumentMyPageService {
         // 본인 서류인지 확인
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Customer customer = (Customer) authentication.getPrincipal();
-        
+
         if (!document.getCNo().equals(customer.getCustomerNo())) {
             throw new SecurityException("본인의 서류만 삭제할 수 있습니다.");
         }

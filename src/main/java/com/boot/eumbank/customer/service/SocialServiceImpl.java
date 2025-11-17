@@ -62,7 +62,7 @@ public class SocialServiceImpl extends DefaultOAuth2UserService implements Socia
         String userId = "";
         String nameKr;
         String email;
-        String phone;
+        String phone = "000-0000-0000";
         String birthyear;
         String birthday;
         String fullDate;
@@ -79,7 +79,7 @@ public class SocialServiceImpl extends DefaultOAuth2UserService implements Socia
             userId = naverId.length() > 20 ? naverId.substring(0, 20) : naverId;
             nameKr = attributes.get("name").toString();
             email = attributes.get("email").toString();
-            phone = attributes.get("mobile").toString();
+            //phone = attributes.get("mobile").toString();
             birthyear = attributes.get("birthyear").toString();
             birthday = attributes.get("birthday").toString();
             fullDate = birthyear + "-" + birthday;
@@ -94,7 +94,6 @@ public class SocialServiceImpl extends DefaultOAuth2UserService implements Socia
             userId = googleId.length() > 20 ? googleId.substring(0, 20) : googleId;
             nameKr = attributes.get("name").toString();
             email = attributes.get("email").toString();
-            phone = "000-0000-0000";
 
         } else {
             throw new OAuth2AuthenticationException("지원하지 않은 소셜 로그인입니다.");
