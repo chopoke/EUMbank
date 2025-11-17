@@ -29,7 +29,7 @@ export default function AssetPeerComparison() {
     INSTALLMENT: "#fc7fd2",// 적금
     DEPOSIT: "#34dfa6",    // 예금
     FOREIGN: "#fac569",    // 외환
-    GOLD: "#ff6161",       // 현물
+    GOLD: "#92772e",       // 현물
     LIABILITIES: "#ef4444",// 총부채(대출)
     AVG: "#9ca3af",        // 평균(회색)
   };
@@ -41,6 +41,9 @@ export default function AssetPeerComparison() {
   const endLabelPlugin = {
     id: "endLabelPlugin",
     afterDatasetsDraw(chart, args, pluginOptions) {
+      const opts = chart?.options?.plugins?.endLabelPlugin;
+      if (!opts?.enabled) return;
+
       const { ctx, data } = chart;
       const formatter =
         pluginOptions?.formatter ||
@@ -51,29 +54,21 @@ export default function AssetPeerComparison() {
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#374151";
 
-      const meta = chart.getDatasetMeta(0);
-      if (!meta) return;
-
-      // dataset 0 기준으로 라벨 찍기(“나” 값)
-      meta.data.forEach((el, i) => {
-        const { x, y } = el.tooltipPosition();
-        const raw = data.datasets[0].data[i];
-        const label = formatter(raw, i);
-        // 막대 오른쪽 바깥 6px
-        ctx.fillText(label, x + 6, y);
+      // dataset 0,1 등 실제 '막대 끝'에만 라벨
+      const metas = chart.data.datasets.map((_, i)=>chart.getDatasetMeta(i));
+      metas.forEach((meta, di) => {
+        if (!meta) return;
+        ctx.fillStyle = di % 2 === 0 ? "#374151" : "#6B7280"; // 내 값/평균 값 색
+        meta.data.forEach((el, i) => {
+          const { x, y } = el.tooltipPosition();
+          const raw = data?.datasets?.[di]?.data?.[i];
+          const label = formatter(raw, i, di);
+          // 스택의 ‘마지막 세그먼트’에만 찍히도록: 마지막 세그먼트(막대 가장 오른쪽)만 표시
+          ctx.fillText(label, x + 6, y);
+        });
       });
-
-      const metaAvg = chart.getDatasetMeta(1);
-      metaAvg?.data.forEach((el, i) => {
-        const { x, y } = el.tooltipPosition();
-        const raw = data.datasets[1].data[i];
-        const label = formatter(raw, i);
-        ctx.fillStyle = "#6B7280";
-        ctx.fillText(label, x + 6, y + 12); // 평균은 한 줄 아래
-      });
-
       ctx.restore();
-    },
+      },
   };
   ChartJS.register(endLabelPlugin);
 
@@ -156,11 +151,6 @@ export default function AssetPeerComparison() {
           },
         },
       },
-      // 막대 끝에 금액 라벨 노출
-      endLabelPlugin: {
-        formatter: (v) =>
-          `${Math.trunc(Number(v ?? 0)).toLocaleString("ko-KR")}원`,
-      },
       scales: {
         x: {
           beginAtZero: true,
@@ -215,10 +205,11 @@ export default function AssetPeerComparison() {
           label: (ctx) => ` ${ctx.label}: ${Math.floor(ctx.parsed.x)}%`,
         },
       },
+      endLabelPlugin: {
+        enabled: true,
+        formatter: (v) => `${Math.floor(Number(v ?? 0))}%`,
+      },
     },
-    endLabelPlugin: {
-       formatter: (v) => `${Math.floor(Number(v ?? 0))}%`,
-     },
     scales: {
       x: {
         beginAtZero: true,
@@ -268,7 +259,7 @@ export default function AssetPeerComparison() {
     () =>
       compare
         ? buildAssetCompareData(compare.myDeposit, compare.avgDeposit, compare.myTotalAssets, compare.avgTotalAssets, COLOR_MAP.DEPOSIT)
-        : null
+        : null,
     [compare]
   );
   const foreignData = useMemo(

@@ -56,9 +56,9 @@ public class DashboardServiceImpl implements DashboardService{
 
         List<AssetCompositionDto> composition = List.of(
                 new AssetCompositionDto("입출금",    cash),
-                new AssetCompositionDto("외환",       foreign),
                 new AssetCompositionDto("적금", installment),
                 new AssetCompositionDto("예금",     deposit),
+                new AssetCompositionDto("외환",       foreign),
                 new AssetCompositionDto("현물", gold)
         );
 
@@ -123,58 +123,11 @@ public class DashboardServiceImpl implements DashboardService{
     }
 
     /**
-     * 최근 30일 순자산 추이
+     * 최근 30일 자산 추이
      * @param cNo 고객번호
+     * @param metric 자산타입
      * @return AssetTrendDto
      */
-    @Override
-    public AssetTrendDto getNetWorthTrend(int cNo){
-        logger.info("<<< DashboardService getNetWorthTrend >>>");
-
-        LocalDate end  = LocalDate.now();
-        LocalDate start = end.minusDays(30);
-
-        List<AssetDailySnapshot> assetTrendDto = dashboardRepository.getSnapshots(cNo, start, end);
-
-        if(assetTrendDto.isEmpty()){
-            return new AssetTrendDto(List.of(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
-        }
-
-        List<AssetTrendPoint> points = assetTrendDto.stream()
-                .sorted(Comparator.comparing(AssetDailySnapshot::getAdsYmd))
-                .map(r -> new AssetTrendPoint(r.getAdsYmd(), r.getAdsNetWorth()))
-                .toList();
-
-        BigDecimal first = points.get(0).netWorth();
-        BigDecimal last = points.get(points.size() - 1).netWorth();
-
-        BigDecimal dayDelta = BigDecimal.ZERO;
-        if (points.size() > 1){
-            BigDecimal prev =  points.get(points.size() - 2).netWorth();
-            dayDelta = last.subtract(prev);
-        }
-
-        BigDecimal change30 = last.subtract(first);
-
-        BigDecimal max = points.stream()
-                .map(AssetTrendPoint::netWorth)
-                .max(naturalOrder())
-                .orElse(last);
-
-        BigDecimal min = points.stream()
-                .map(AssetTrendPoint::netWorth)
-                .min(naturalOrder())
-                .orElse(last);
-
-        BigDecimal changePct = BigDecimal.ZERO;
-        if(first != null && first.signum() != 0) {
-            changePct = change30.divide(first, 6, RoundingMode.HALF_UP)
-                    .multiply(new BigDecimal(100));
-        }
-
-        return new AssetTrendDto(points, dayDelta, change30, max, min, changePct);
-    }
-
     public AssetTrendDto getTrend(int cNo, TrendMetric metric) {
         logger.info("<<< DashboardService getTrend >>>");
 
@@ -213,7 +166,7 @@ public class DashboardServiceImpl implements DashboardService{
         BigDecimal min = points.stream().map(AssetTrendPoint::netWorth).min(naturalOrder()).orElse(last);
         BigDecimal changePct = (first.signum()!=0)
                 ? change30.divide(first, 6, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
-                : BigDecimal.ZERO;
+                : null;
 
         return new AssetTrendDto(points, dayDelta, change30, max, min, changePct);
     }

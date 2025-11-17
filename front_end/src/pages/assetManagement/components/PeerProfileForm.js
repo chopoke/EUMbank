@@ -40,12 +40,12 @@ const REGIONS = [
 
 const LS_KEY = "peerProfileDraft";
 
-export default function PeerProfileForm({ 
+export default function PeerProfileForm({
   onSaved,
-  onCancel,                  // ← 선택: 수정모드에서 취소 버튼
-  initialValues = null,      // ← 선택: { gender, ageBand, incomeCd, jobCd, regionCd }
+  onCancel,
+  initialValues = null,
   submitLabel = "저장",
-  useDraft = true,           // ← 초깃값 작성(true), 수정(false)
+  useDraft = true,
 }) {
   const [form, setForm] = useState({
     gender: "", ageBand: "", jobCd: "", incomeCd: "", regionCd: "",
@@ -57,23 +57,21 @@ export default function PeerProfileForm({
     [form]
   );
 
-  // initialValues → 폼에 주입 (수정 모드)
   useEffect(() => {
     if (initialValues) {
       setForm({
-        gender:     initialValues.gender ?? "",
-        ageBand:    String(initialValues.ageBand ?? ""),
-        jobCd:   initialValues.jobCd ?? "",
+        gender: initialValues.gender ?? "",
+        ageBand: String(initialValues.ageBand ?? ""),
+        jobCd: initialValues.jobCd ?? "",
         incomeCd: initialValues.incomeCd ?? "",
-        regionCd:     initialValues.regionCd ?? initialValues.region ?? "",
+        regionCd: initialValues.regionCd ?? initialValues.region ?? "",
       });
-    } else if(useDraft) {
+    } else if (useDraft) {
       const draft = localStorage.getItem(LS_KEY);
       if (draft) try { setForm(JSON.parse(draft)); } catch {}
     }
-  }, [initialValues]);
+  }, [initialValues, useDraft]);
 
-   //초깃값 모드에서만 draft 저장
   useEffect(() => {
     if (!useDraft || initialValues) return;
     window.localStorage.setItem(LS_KEY, JSON.stringify(form));
@@ -87,17 +85,16 @@ export default function PeerProfileForm({
     setSaving(true);
     try {
       const payload = {
-        gender : form.gender,
+        gender: form.gender,
         ageBand: Number(form.ageBand),
         incomeCd: form.incomeCd,
         jobCd: form.jobCd,
         regionCd: form.regionCd,
       };
       const res = await api.post("/api/asset/peer/profile", payload);
-
       if (useDraft && !initialValues) window.localStorage.removeItem(LS_KEY);
       onSaved?.({ ...payload, ...(res?.data || {}) });
-    } catch (err) {
+    } catch {
       alert("저장에 실패했습니다. 다시 시도해 주세요.");
     } finally {
       setSaving(false);
@@ -105,41 +102,92 @@ export default function PeerProfileForm({
   };
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white shadow-sm p-6">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h2 className="text-base font-semibold text-gray-900">또래 비교 시작하기</h2>
-          <p className="text-[12px] text-gray-500 mt-1">
-            아래 항목을 선택하면 그룹 평균과 비교해 순자산/비중을 보여드려요.
-          </p>
+    <section className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      {/* 헤더 스트립 */}
+      <div className="bg-gradient-to-r from-blue-50 via-blue-100 to-blue-50 border-b border-blue-100">
+        <div className="px-6 py-5 flex items-start justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-semibold">i</span>
+              <h2 className="text-base font-semibold text-gray-900">또래 비교 시작하기</h2>
+            </div>
+            <p className="text-[12px] text-blue-700 mt-1">
+              선택한 기준으로 그룹 평균과 비교해 드립니다.
+            </p>
+          </div>
+          <span className="rounded-full px-2 py-0.5 text-[11px] border border-blue-200 text-blue-700 bg-white">
+            약 1분 소요
+          </span>
         </div>
-        <span className="rounded-full px-2 py-0.5 text-[11px] border text-gray-600 bg-gray-50">
-          1분 소요
-        </span>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      {/* 본문 */}
+      <form onSubmit={handleSubmit} className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <SelectField label="성별" value={form.gender} onChange={onChange("gender")} options={GENDERS} />
-          <SelectField label="연령대" value={form.ageBand} onChange={onChange("ageBand")} options={AGE_BANDS} />
-          <SelectField label="직업" value={form.jobCd} onChange={onChange("jobCd")} options={JOB_GROUPS} />
-          <SelectField label="월 소득(세전)" value={form.incomeCd} onChange={onChange("incomeCd")} options={INCOME_BANDS} />
-          <SelectField label="거주 지역" value={form.regionCd} onChange={onChange("regionCd")} options={REGIONS} />
+          <FieldCard
+            icon="🙋‍♀️"
+            caption="성별"
+            helper="통계 비교용"
+          >
+            <SelectField value={form.gender} onChange={onChange("gender")} options={GENDERS} />
+          </FieldCard>
+
+          <FieldCard
+            icon="🎂"
+            caption="연령대"
+            helper="10년 단위 구간"
+          >
+            <SelectField value={form.ageBand} onChange={onChange("ageBand")} options={AGE_BANDS} />
+          </FieldCard>
+
+          <FieldCard
+            icon="💼"
+            caption="직업"
+            helper="가까운 군을 선택"
+          >
+            <SelectField value={form.jobCd} onChange={onChange("jobCd")} options={JOB_GROUPS} />
+          </FieldCard>
+
+          <FieldCard
+            icon="💰"
+            caption="월 소득(세전)"
+            helper="개인정보는 저장되지 않아요"
+          >
+            <SelectField value={form.incomeCd} onChange={onChange("incomeCd")} options={INCOME_BANDS} />
+          </FieldCard>
+
+          <FieldCard
+            icon="📍"
+            caption="거주 지역"
+            helper="광역 구분"
+          >
+            <SelectField value={form.regionCd} onChange={onChange("regionCd")} options={REGIONS} />
+          </FieldCard>
         </div>
 
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-[12px] text-amber-800">
+        {/* 안내 배지 */}
+        <div className="mt-5 rounded-md border border-blue-200 bg-blue-50 p-3 text-[12px] text-blue-800">
           또래 비교는 통계값만 사용하며, 개인 식별 정보는 저장하지 않습니다.
         </div>
 
-        <div className="flex justify-end gap-3">
+        {/* 액션 바 */}
+        <div className="mt-6 flex justify-end gap-3">
           {!!onCancel && (
-            <button type="button"
+            <button
+              type="button"
               className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50"
               onClick={onCancel}
-            >취소</button>
+            >
+              취소
+            </button>
           )}
-          <button type="submit" disabled={!valid || saving}
-            className={`rounded-md px-4 py-2 text-sm text-white ${valid ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-300 cursor-not-allowed"}`}>
+          <button
+            type="submit"
+            disabled={!valid || saving}
+            className={`rounded-md px-4 py-2 text-sm text-white transition-colors ${
+              valid ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-300 cursor-not-allowed"
+            }`}
+          >
             {saving ? "저장 중…" : submitLabel}
           </button>
         </div>
@@ -148,21 +196,37 @@ export default function PeerProfileForm({
   );
 }
 
-function SelectField({ label, value, onChange, options }) {
+/* ————— 보조 컴포넌트 ————— */
+
+function FieldCard({ icon, caption, helper, children }) {
   return (
-    <label className="block">
-      <span className="text-sm font-medium text-gray-900">{label}</span>
-      <select
-        className="mt-1 block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm"
-        value={value}
-        onChange={onChange}
-        required
-      >
-        <option value="">선택하세요</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-    </label>
+    <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm hover:shadow transition-shadow focus-within:border-blue-400 focus-within:shadow-md">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-[13px]">{icon}</span>
+        <div className="flex flex-col">
+          <span className="text-[12px] text-gray-500">{caption}</span>
+          {helper && <span className="text-[11px] text-gray-400 -mt-0.5">{helper}</span>}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function SelectField({ value, onChange, options }) {
+  return (
+    <select
+      className="mt-1 block w-full rounded-md border-gray-300 text-sm
+                 focus:border-blue-500 focus:ring-blue-500
+                 hover:border-gray-400 transition-colors"
+      value={value}
+      onChange={onChange}
+      required
+    >
+      <option value="">선택하세요</option>
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
   );
 }

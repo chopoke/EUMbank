@@ -21,7 +21,7 @@ const COLOR_MAP = {
   "외환":   "#fac569",
   "적금":   "#fc7fd2",
   "예금":   "#34dfa6",
-  "현물":   "#ff6161",
+  "현물":   "#92772e",
 };
 
 const METRICS = [
@@ -32,7 +32,7 @@ const METRICS = [
   { key: "INSTALLMENT",       label: "적금",     color: "#fc7fd2" },
   { key: "DEPOSIT",           label: "예금",     color: "#34dfa6" },
   { key: "FOREIGN",           label: "외환",     color: "#fac569" },
-  { key: "GOLD",              label: "현물",     color: "#ff6161" },
+  { key: "GOLD",              label: "현물",     color: "#92772e" },
 ];
 
 const UNITS = [
@@ -55,17 +55,22 @@ function formatKrwSigned(n) {
   const sign = (n ?? 0) >= 0 ? "+" : "-";
   return `${sign}${formatKrwAuto(Math.abs(n))}`;
 }
+
 function formatPct(n, digits = 2) {
-  const v = typeof n === "number" ? n : Number(n || 0);
+  if (n == null) return "—";                    // ← 표시 숨김
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "—";
   const sign = v >= 0 ? "+" : "-";
   return `${sign}${Math.abs(v).toFixed(digits)}%`;
 }
+
 function formatKrw(n) {
   if (n == null) return "-";
   const num = typeof n === "number" ? n : Number(n);
   if (Number.isNaN(num)) return String(n);
   return num.toLocaleString("ko-KR") + "원";
 }
+
 function hexToRgba(hex, a = 0.14) {
   const clean = hex.replace("#", "");
   const bigint = parseInt(clean, 16);
@@ -148,8 +153,8 @@ export default function AssetDashboard() {
   const change30  = Number(trend?.change30  || 0);
   const maxNW     = Number(trend?.max       || 0);
   const minNW     = Number(trend?.min       || 0);
-  const changePct = Number(trend?.changePct || 0);
-
+  const changePct = trend?.changePct ?? null;
+  
   const tpts   = trend?.points ?? [];
   const labels = tpts.map(p => p.ymd?.slice(5)); // 'MM-DD'
   const values = tpts.map(p => Number(p.netWorth || 0));
@@ -193,6 +198,10 @@ export default function AssetDashboard() {
   const donutOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
+    animation: { duration: 900, easing: 'easeOutQuart' },
+    animations: {                                          // ← 도넛 반경 그로우
+      radius: { from: 0, duration: 800, easing: 'easeOutQuad' }
+    },
     plugins: {
       legend: {
         position: "bottom",
@@ -244,6 +253,14 @@ export default function AssetDashboard() {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
+    animation: { duration: 800, easing: 'easeOutQuart' },
+    animations: {
+      y: {
+        from: (ctx) => ctx.chart.scales.y.getPixelForValue(0),
+        duration: 800,
+        easing: 'easeOutQuad'
+      }
+    },
     plugins: {
       legend: { display: false },
       tooltip: {

@@ -11,7 +11,6 @@ public interface DashboardService {
 
     AssetSummaryDto getDashboardSummary(int cNo);
     void takeDailySnapshot(LocalDate ymd);
-    AssetTrendDto getNetWorthTrend(int cNo);
-    public AssetTrendDto getTrend(int cNo, TrendMetric metric);
+    AssetTrendDto getTrend(int cNo, TrendMetric metric);
     TopSavingsDto getTopSavings(int cNo);
 }
