@@ -13,7 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -101,7 +103,6 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
         }
 
         // 각 기간의 순자산 계산 (현재 순자산에서 역순으로 순변동 누적)
-        // Dashboard의 순자산 계산 메서드 재사용
         BigDecimal currentNetWorth = dashboardService.getDashboardSummary(customerNo).netWorth();
         for (int i = monthlyTrends.size() - 1; i >= 0; i--) {
             MonthlyTrendDto trend = monthlyTrends.get(i);
@@ -130,7 +131,7 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
      * 목표 달성률 계산
      */
     private AssetGoalDto calculateGoalAchievement(Integer customerNo) {
-        // 현재 순자산 계산 (Dashboard의 순자산 계산 메서드 재사용)
+        // 현재 순자산 계산
         BigDecimal currentNetWorth = dashboardService.getDashboardSummary(customerNo).netWorth();
 
         // 목표 조회
@@ -474,7 +475,7 @@ public class AssetAnalysisServiceImpl implements AssetAnalysisService {
         log.info("자산 목표 설정: customerNo={}, targetAmount={}, targetDate={}", 
                 customerNo, request.getTargetAmount(), request.getTargetDate());
 
-        // 현재 순자산 계산 (Dashboard의 순자산 계산 메서드 재사용)
+        // 현재 순자산 계산
         BigDecimal currentNetWorth = dashboardService.getDashboardSummary(customerNo).netWorth();
 
         // 기존 활성 목표 조회
