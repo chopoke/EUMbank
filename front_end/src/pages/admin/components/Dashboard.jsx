@@ -1,9 +1,50 @@
+import { useState, useEffect } from 'react';
+import api from '../../../api/axios';
 
 export default function Dashboard() {
+  const [spotStats, setSpotStats] = useState(null);
+
+  useEffect(() => {
+    const fetchSpotStatistics = async () => {
+      try {
+        const response = await api.get('/api/admin/spot/statistics');
+        setSpotStats(response.data);
+      } catch (error) {
+        console.error('현물 통계 조회 실패:', error);
+      }
+    };
+
+    fetchSpotStatistics();
+  }, []);
+
   const stats = [
     { title: 'Total Users', value: '1,200', icon: 'ri-user-line', color: 'text-blue-600' },
     { title: 'Active Loans', value: '350', icon: 'ri-file-list-line', color: 'text-green-600' },
-    { title: 'Inquiry Resolution Rate', value: '80%', icon: 'ri-checkbox-circle-line', color: 'text-teal-600' }
+    { title: 'Inquiry Resolution Rate', value: '80%', icon: 'ri-checkbox-circle-line', color: 'text-teal-600' },
+    // 현물 통계 추가
+    ...(spotStats ? [
+   
+      { 
+        title: '금 보유량', 
+        value: (() => {
+          const grams = Number(spotStats.totalGoldBalance || 0);
+          const kg = grams / 1000;
+          return `${kg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}kg`;
+        })(), 
+        icon: 'ri-money-dollar-circle-line', 
+        color: 'text-yellow-600' 
+      },
+      { 
+        title: '은 보유량', 
+        value: (() => {
+          const grams = Number(spotStats.totalSilverBalance || 0);
+          const kg = grams / 1000;
+          return `${kg.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}kg`;
+        })(), 
+        icon: 'ri-money-dollar-circle-line', 
+        color: 'text-gray-600' 
+      }
+    ] : [])
   ];
 
   const recentLoans = [
@@ -21,7 +62,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <div key={index} className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center">
