@@ -91,6 +91,7 @@ export const AccountMainComp = ({ user, cards = [], loans = [] }) => {
             accountType: d.a_account_type || "입출금",
             balance: Number(d.a_balance || 0),
             currency: d.a_currency || "KRW",
+            status : d.a_status || 'ACTIVE' ,
           };
         });
 
@@ -114,7 +115,9 @@ export const AccountMainComp = ({ user, cards = [], loans = [] }) => {
   const total = useMemo(
     () =>
       accounts
-        .filter((a) => (a.currency || "KRW").toUpperCase() === "KRW")
+        .filter(
+          (a) => (a.currency || "KRW").toUpperCase() === "KRW" && (a.status || "").toUpperCase() === "ACTIVE"
+        )
         .reduce((sum, a) => sum + a.balance, 0),
     [accounts]
   );
@@ -123,7 +126,8 @@ export const AccountMainComp = ({ user, cards = [], loans = [] }) => {
   const top2Accounts = useMemo(
     () =>
       [...accounts]
-        .filter((a) => (a.currency || "KRW").toUpperCase() === "KRW")
+        .filter((a) => (a.currency || "KRW").toUpperCase() === "KRW" 
+          && (a.status || "").toUpperCase() === "ACTIVE")
         .sort((a, b) => b.balance - a.balance)
         .slice(0, 2),
     [accounts]
@@ -133,7 +137,7 @@ export const AccountMainComp = ({ user, cards = [], loans = [] }) => {
   const fxAccounts = useMemo(
     () =>
       accounts.filter(
-        (a) => (a.currency || "KRW").toUpperCase() !== "KRW"
+        (a) => (a.currency || "KRW").toUpperCase() !== "KRW" && (a.status || "").toUpperCase() === "ACTIVE"
       ),
     [accounts]
   );
@@ -165,12 +169,11 @@ export const AccountMainComp = ({ user, cards = [], loans = [] }) => {
     <section className="account-snapshot-section">
       <div className="content-container py-10">
         <div className="snapshot-grid">
-          {/* ==== 왼쪽: 자산 스냅샷 카드 ==== */}
           <div className="snapshot-main-col">
             <div className="snapshot-card main-card">
               <div className="card-header">
                 <div>
-                  <h4 className="card-title">자산 스냅샷</h4>
+                  <h4 className="card-title">간편 계좌 조회</h4>
                   <p className="card-subtitle">
                     총자산{" "}
                     <b className="card-subtitle-highlight">

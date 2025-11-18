@@ -1,4 +1,3 @@
-// src/main/java/com/boot/eumbank/loan/service/FinlifeSaveSync.java
 package com.boot.eumbank.loan.service;
 
 import com.boot.eumbank.loan.dto.FinlifeJeonseResponseDTO;
@@ -22,7 +21,7 @@ import java.util.Optional;
 @Slf4j
 public class FinlifeSaveSync {
 
-    private final FssFinlifeService fss; // FSS API 호출 서비스
+    private final FssFinlifeService fss; // FSS API 원본 json 호출
     private final FinlifeUpsert upsertTx;
 
     // 매핑을 위함
@@ -41,7 +40,7 @@ public class FinlifeSaveSync {
 
     // ===== 페이지 루프 공통 =====
 
-    @FunctionalInterface
+    @FunctionalInterface            // 함수용인터페이스 정의(람다 사용하기 위해 컴파일러 체크)
     private interface PageWorker {
         FinlifeUpsert.PageResult work(String topFinGrpNo, int pageNo);
     }

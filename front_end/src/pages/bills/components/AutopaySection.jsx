@@ -3,8 +3,12 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import api from "../../../api/axios";
 import PinVerifyModal from "./PinVerifyModal";
 
-/** 계좌 마스킹: ***-***-1234 형태 */
-const maskAccount = (n) => String(n || "").replace(/\d(?=(?:\D*\d){4})/g, "*");
+/** 계좌 마스킹: 123-456*** 형태 (앞 6글자 노출) */
+const maskAccount = (n = "") => {
+  const s = String(n || "");
+  if (s.length <= 8) return s;
+  return s.slice(0, 8) + "*".repeat(s.length - 8);
+};
 
 /**
  * UI 자동이체 섹션
