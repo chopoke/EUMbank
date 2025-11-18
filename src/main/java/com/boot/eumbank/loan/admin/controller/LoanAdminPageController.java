@@ -7,17 +7,16 @@ import com.boot.eumbank.loan.admin.dto.LoanApproveComDTO;
 import com.boot.eumbank.loan.admin.dto.LoanRejectComDTO;
 import com.boot.eumbank.loan.admin.service.LoanAdminService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-@Slf4j
 @Controller
 @RequestMapping("/admin/loan")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class LoanAdminPageController {
 
     private final LoanAdminService service;
@@ -85,7 +84,6 @@ public class LoanAdminPageController {
     // 신청 상세페이지 - 심사 시작 (UNDER_REVIEW)
     @PostMapping("/applications/{laId}/start-review")
     public String startReview(@PathVariable String laId) {
-        log.info("[ADMIN] startReview called laId={}", laId);
         service.startReview(laId); // 내부에서 현재 SUBMITTED일 때만 UNDER_REVIEW로
         return "redirect:/admin/loan/applications/" + laId;
     }
