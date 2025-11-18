@@ -142,7 +142,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
         Integer usedLtv;
         if (isAuto) {
             usedLtv = 80;  // 자동차는 차량가의 80%까지만
-        } else {
+        } else {        // DB에 적용된 LTV 없으면 기본 80%(주담대, 전세자금은 70%)
             usedLtv = (product.getLtvMax() != null && product.getLtvMax() > 0) ? product.getLtvMax()
                     : (ltvMaxFromAll != null ? ltvMaxFromAll
                     : (ltvPctFromRaw != null ? ltvPctFromRaw : 70));

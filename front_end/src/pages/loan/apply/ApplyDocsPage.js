@@ -120,7 +120,7 @@ export default function ApplyDocsPage(){
 
       if (backendMode) {
         // --- 실서버 업로드 모드 (준비되면 이쪽 사용) ---
-        // 각 파일 업로드 → fileId/url 메타로 치환
+        // 각 파일 업로드 -> fileId/url 메타로 치환
         const results = await Promise.all(toUpload.map(async ([k,f]) => {
           const r = await uploadLoanDoc(code, f); // 서버가 {fileId,url} 반환한다고 가정
           return [k, { fileId: r?.data?.fileId || r.fileId, url: r?.data?.url || r.url, name: f.name, size: f.size, type: f.type }];

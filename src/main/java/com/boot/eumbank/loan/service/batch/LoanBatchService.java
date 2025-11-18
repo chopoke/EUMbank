@@ -94,8 +94,7 @@ public class LoanBatchService {
                 LocalDateTime payTime = LocalDateTime.now(ZONE);        // 상환타임 지정
 
                 String idem = "AUTO-" + loan.getLNo()
-                        + "-" + ls.getInstallmentNo()
-                        + "-" + today;
+                       + "-" + ls.getLsNo() + "-" + ls.getInstallmentNo() + "-" + today.toLocalDate();
 
                 // 상환정보 담기
                 RepaymentRequestDTO req = RepaymentRequestDTO.builder()
@@ -160,8 +159,7 @@ public class LoanBatchService {
                 LocalDateTime payTime = LocalDateTime.now(ZONE);
                 // 각시도에 대한 구분이 피룡함 ( 여러건의 재시도가 일어날 수 있기 때문에!)
                 String idem = "RETRY-" + loan.getLNo()
-                        + "-" + ls.getInstallmentNo()
-                        + "-" + payTime.toLocalTime();
+                        + "-" + ls.getLsNo() + "-" + ls.getInstallmentNo() + "-" + today.toLocalDate();
 
                 RepaymentRequestDTO req = RepaymentRequestDTO.builder()
                         .amount(remaining)

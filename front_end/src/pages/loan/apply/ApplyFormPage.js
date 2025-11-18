@@ -594,7 +594,7 @@ export default function ApplyFormPage() {
                   canRequote={canRequote}
                   quoting={quoting}
                   totalAtMaturityAppr={totalAtMaturityAppr}
-                  showLtvBadge={isMortgage}
+                  showLtvBadge={isMortgage || isJeonse || isAuto}
                 />
 
                 <div className="rounded-2xl border border-gray-100 shadow-sm bg-white p-5">

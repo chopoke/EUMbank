@@ -71,6 +71,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
     @Transactional
     public RepaymentResponseDTO repay(Long loanNo, RepaymentRequestDTO req) {
 
+        log.info("@@@@@@@@@@@@@@  [상환시작 RepaymentServiceImpl- repay] start loanNo={}, req={} @@@@@@@@@@@@@@", loanNo, req);
 
         // (1) 동시성 락  설정 !!! -> 동일 대출에 대해 상환이 들어와도 꼬이지 않게 유지하기 위해 DB에서부터 락
         scheduleRepo.lockLoanRow(loanNo);
@@ -277,6 +278,7 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
 
             scheduleRepo.save(s);
 
+
             // payment row (회차별)
             if (payInterest.compareTo(ZERO) > 0 || payPrincipal.compareTo(ZERO) > 0) {
                 seq++;
@@ -295,6 +297,9 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
                         .scheduleId(s.getLsNo())
                         .build();
                 paymentRepo.save(p);
+                log.info("@@@@@@@@@@@@@@ [상환테이블저장 - RepaymentServiceImpl-repay] saved payment lpId={}, inst={}, prin={}, int={} @@@@@@@@@@@@@@",
+                        lpId, s != null ? s.getInstallmentNo() : null,
+                        payPrincipal, payInterest);
 
                 appliedInterestTotal = appliedInterestTotal.add(payInterest);
                 appliedPrincipalTotal = appliedPrincipalTotal.add(payPrincipal);
@@ -323,14 +328,6 @@ public class LoanRepaymentServiceImpl implements LoanRepaymentService {
         }
 
         // 최근 납부시간 갱신
-        loan.setLastPaidAt(payTime);
-
-        if (curBal.compareTo(ZERO) <= 0) {
-            curBal = curBal.subtract(appliedPrincipalTotal);
-            if (curBal.compareTo(ZERO) < 0) curBal = ZERO;
-            loan.setBalance(curBal);
-        }
-        // 최근 납부 시각 업데이트
         loan.setLastPaidAt(payTime);
 
         if (curBal.compareTo(ZERO) <= 0) {
