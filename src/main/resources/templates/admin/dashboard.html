@@ -20,9 +20,6 @@
                         <!-- RemixIcon 아이콘 -->
                         <i th:if="${stat.icon != null and stat.icon != '' and stat.icon.startsWith('ri-')}" 
                            th:class="${stat.icon} + ' stat-icon'"></i>
-
-                        <img th:if="${stat.img != null and stat.img != ''}"
-                             th:src="@{__${stat.img}__}" class="stat-test" alt="admin">
                     </div>
                     <div class="stat-info">
                         <p class="stat-title" th:text="${stat.title}">Title</p>

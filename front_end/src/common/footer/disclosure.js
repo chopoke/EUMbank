@@ -1,3 +1,4 @@
+import React, { useState, useRef, useEffect } from 'react';
 // import './AgreementPage.css'; // 별도 CSS 파일이 필요합니다.
 
 // --- 약관 내용 (필요에 따라 내용을 채우고, 탭을 추가/삭제하세요) ---

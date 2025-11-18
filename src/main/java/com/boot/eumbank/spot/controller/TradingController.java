@@ -10,8 +10,6 @@ import com.boot.eumbank.account.open.entity.account.Account;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -223,29 +221,6 @@ public class TradingController {
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("error", "고객 정보 조회 중 오류가 발생했습니다: " + e.getMessage());
             return ResponseEntity.status(500).body(errorResult);
-        }
-    }
-
-    /**
-     * 로그인한 사용자의 현물 보유량 요약
-     */
-    @GetMapping("/me/spot-summary")
-    public ResponseEntity<?> getMySpotSummary(@AuthenticationPrincipal com.boot.eumbank.customer.entity.Customer customer) {
-        if (customer == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "로그인이 필요합니다."));
-        }
-        try {
-            Map<String, Object> balance = tradingService.getCustomerBalance(customer.getCustomerNo().longValue(), null);
-            Map<String, Object> result = new HashMap<>();
-            result.put("gold", balance.getOrDefault("gold", BigDecimal.ZERO));
-            result.put("silver", balance.getOrDefault("silver", BigDecimal.ZERO));
-            result.put("wallet", balance.getOrDefault("wallet", BigDecimal.ZERO));
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            log.error("내 현물 요약 조회 실패: customerNo={}, error={}", customer.getCustomerNo(), e.getMessage());
-            return ResponseEntity.status(500)
-                    .body(Map.of("error", "현물 보유량을 조회할 수 없습니다.", "message", e.getMessage()));
         }
     }
     

@@ -35,7 +35,7 @@ export default function Sidebar({ activeMenu, setActiveMenu }) {
   ];
 
   return (
-    <div className="w-64 bg-white ">
+    <div className="w-64 bg-white shadow-lg">
       <div className="p-6">
         <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
       </div>

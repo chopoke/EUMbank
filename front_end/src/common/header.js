@@ -89,6 +89,7 @@ export function Header({ isLoggedIn, user, onLogout }) {
                 </div>
               </div>
             </div>
+
             <Link to="/foreign/rate" className="nav-link">외환/환율</Link>
             {/* 마이페이지 or 관리자페이지 이동 */}
             {/* <Link to={isAdmin ? "/admin" : "/mypage"} className="nav-link">

@@ -71,8 +71,4 @@ public interface GoldWalletRepository extends JpaRepository<GoldWallet, Integer>
     // 계좌번호 존재 여부 확인
     @Query("SELECT COUNT(gw) > 0 FROM GoldWallet gw WHERE gw.gwAccountNo = :accountNo")
     boolean existsByGwAccountNo(@Param("accountNo") String accountNo);
-
-    // 고객별 금/은 집계를 위한 조회 (서비스 레이어에서 처리)
-    @Query("SELECT gw FROM GoldWallet gw WHERE gw.customer IS NOT NULL")
-    List<GoldWallet> findAllWithCustomer();
 }
