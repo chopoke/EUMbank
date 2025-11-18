@@ -91,7 +91,9 @@ public class MypageProductService {
         return depositRepo.findMyDeposits(cNo);
     }
 
-    public List<SavingItemDto> mySavings(int cNo) {              // 적금
+    public List<SavingItemDto> mySavings(int cNo) {
+
+        // 적금
         return repo.findMySavings(cNo).stream()
                 .map(this::toSavingDtoWithHistory)
                 .toList();

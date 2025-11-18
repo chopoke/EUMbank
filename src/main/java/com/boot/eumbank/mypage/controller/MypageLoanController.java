@@ -17,7 +17,6 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/mypage-jwt")
-@Deprecated // 참고용/테스트용으로만 사용
 public class MypageLoanController {
 
     private final MypageLoanService service;

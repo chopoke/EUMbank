@@ -1,17 +1,14 @@
 // src/main/java/com/boot/eumbank/mypage/dto/SavingItemDto.java
 package com.boot.eumbank.mypage.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString
 public class SavingItemDto {
 
     private String id;

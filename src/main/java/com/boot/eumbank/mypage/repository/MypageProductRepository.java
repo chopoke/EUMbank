@@ -85,7 +85,7 @@ public interface MypageProductRepository extends JpaRepository<ProductDeposit, I
            ip.ip_early_termination_rate                  AS ipEarlyTerminationRate,
            ip.ip_interest_payment_type                   AS ipInterestPaymentType,
            ip.ip_rate                                    AS ipRate,
-           COALESCE(ip.ip_feature, ip.ip_featue)         AS ipFeature,
+           ip.ip_feature         AS ipFeature,
            ip.ip_button_text                             AS ipButtonText,
            ip.ip_href                                    AS ipHref
         FROM INSTALLMENT_TBL i
