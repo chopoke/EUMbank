@@ -42,7 +42,7 @@ function TabNavigation({ activeTab, onTabChange }) {
     { id: 'overview', label: '개요', icon: 'ri-dashboard-line' },
     { id: 'profile', label: '프로필', icon: 'ri-user-line' },
     { id: 'security', label: '보안', icon: 'ri-shield-line' },
-    { id: 'limit', label: '한도 관리', icon: 'ri-wallet-line' },
+    // { id: 'limit', label: '한도 관리', icon: 'ri-wallet-line' },
     { id: 'document', label: '증빙 서류', icon: 'ri-file-text-line' },
     { id: 'tax', label: '세금/공과금 계산', icon: 'ri-calculator-line' }
   ];
@@ -539,7 +539,7 @@ function ProfileTab({initialData}) {
                 <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.address}</div>
               )}
             </div>
-            <div className="md:col-span-2">
+            {/* <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">직업</label>
               {isEditing ? (
                 <input
@@ -551,7 +551,7 @@ function ProfileTab({initialData}) {
               ) : (
                 <div className="px-3 py-2 bg-gray-50 rounded-lg">{profileData.occupation}</div>
               )}
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -812,6 +812,7 @@ function SecurityTab() {
         </h3>
         <div className="flex items-center justify-between">
             <>
+                <div>핀번호를 6개월에 한번씩 변경해주세요.</div>
                 <div className="flex space-x-2">
                     <button
                         onClick={() => setShowPinModal(true)}
@@ -833,8 +834,8 @@ function SecurityTab() {
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div>
-                  <p className="font-medium text-gray-800">거래 비밀번호</p>
-                  <p className="text-sm text-gray-600">마지막 변경: 2024년 1월 10일</p>
+                  <p className="font-medium text-gray-800">로그인 비밀번호</p>
+                  {/* <p className="text-sm text-gray-600">마지막 변경: 2024년 1월 10일</p> */}
               </div>
             <button
               onClick={() => setShowPasswordModal(true)}
@@ -883,7 +884,7 @@ function SecurityTab() {
       </div> */}
 
       {/* 로그인 기록 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <i className="ri-history-line text-indigo-600 mr-2"></i>
           최근 로그인 기록
@@ -935,7 +936,7 @@ function SecurityTab() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
         {/* PIN 재설정 모달 */}
         {showOTPModal && (
@@ -1087,224 +1088,224 @@ function SecurityTab() {
 }
 
 // LimitTab Component
-function LimitTab() {
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedLimit, setSelectedLimit] = useState('');
+// function LimitTab() {
+//   const [showEditModal, setShowEditModal] = useState(false);
+//   const [selectedLimit, setSelectedLimit] = useState('');
 
-  const limits = [
-    {
-      type: '일일 이체한도',
-      current: '500만원',
-      max: '1,000만원',
-      icon: 'ri-exchange-line',
-      color: 'blue'
-    },
-    {
-      type: '월간 이체한도',
-      current: '3,000만원',
-      max: '5,000만원',
-      icon: 'ri-calendar-line',
-      color: 'green'
-    },
-    {
-      type: '카드 결제한도',
-      current: '300만원',
-      max: '500만원',
-      icon: 'ri-bank-card-line',
-      color: 'purple'
-    },
-    {
-      type: '해외송금 한도',
-      current: '$5,000',
-      max: '$10,000',
-      icon: 'ri-global-line',
-      color: 'orange'
-    }
-  ];
+//   const limits = [
+//     {
+//       type: '일일 이체한도',
+//       current: '500만원',
+//       max: '1,000만원',
+//       icon: 'ri-exchange-line',
+//       color: 'blue'
+//     },
+//     {
+//       type: '월간 이체한도',
+//       current: '3,000만원',
+//       max: '5,000만원',
+//       icon: 'ri-calendar-line',
+//       color: 'green'
+//     },
+//     {
+//       type: '카드 결제한도',
+//       current: '300만원',
+//       max: '500만원',
+//       icon: 'ri-bank-card-line',
+//       color: 'purple'
+//     },
+//     {
+//       type: '해외송금 한도',
+//       current: '$5,000',
+//       max: '$10,000',
+//       icon: 'ri-global-line',
+//       color: 'orange'
+//     }
+//   ];
 
-  const handleEditLimit = (limitType) => {
-    setSelectedLimit(limitType);
-    setShowEditModal(true);
-  };
+//   const handleEditLimit = (limitType) => {
+//     setSelectedLimit(limitType);
+//     setShowEditModal(true);
+//   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-          <i className="ri-wallet-line text-green-600"></i>
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800">한도 관리</h2>
-      </div>
+//   return (
+//     <div className="space-y-6">
+//       <div className="flex items-center space-x-3">
+//         <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+//           <i className="ri-wallet-line text-green-600"></i>
+//         </div>
+//         <h2 className="text-2xl font-bold text-gray-800">한도 관리</h2>
+//       </div>
 
-      {/* 한도 현황 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {limits.map((limit, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className={`w-10 h-10 bg-${limit.color}-100 rounded-lg flex items-center justify-center`}>
-                  <i className={`${limit.icon} text-${limit.color}-600`}></i>
-                </div>
-                <h3 className="font-semibold text-gray-800">{limit.type}</h3>
-              </div>
-              <button
-                onClick={() => handleEditLimit(limit.type)}
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-              >
-                수정
-              </button>
-            </div>
+//       {/* 한도 현황 */}
+//       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+//         {limits.map((limit, index) => (
+//           <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+//             <div className="flex items-center justify-between mb-4">
+//               <div className="flex items-center space-x-3">
+//                 <div className={`w-10 h-10 bg-${limit.color}-100 rounded-lg flex items-center justify-center`}>
+//                   <i className={`${limit.icon} text-${limit.color}-600`}></i>
+//                 </div>
+//                 <h3 className="font-semibold text-gray-800">{limit.type}</h3>
+//               </div>
+//               <button
+//                 onClick={() => handleEditLimit(limit.type)}
+//                 className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+//               >
+//                 수정
+//               </button>
+//             </div>
             
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">현재 한도</span>
-                <span className="font-semibold text-gray-800">{limit.current}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">최대 한도</span>
-                <span className="text-sm text-gray-500">{limit.max}</span>
-              </div>
+//             <div className="space-y-2">
+//               <div className="flex justify-between items-center">
+//                 <span className="text-sm text-gray-600">현재 한도</span>
+//                 <span className="font-semibold text-gray-800">{limit.current}</span>
+//               </div>
+//               <div className="flex justify-between items-center">
+//                 <span className="text-sm text-gray-600">최대 한도</span>
+//                 <span className="text-sm text-gray-500">{limit.max}</span>
+//               </div>
               
-              <div className="mt-3">
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
-                  <span>사용률</span>
-                  <span>60%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div className={`h-2 bg-${limit.color}-500 rounded-full`} style={{ width: '60%' }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+//               <div className="mt-3">
+//                 <div className="flex justify-between text-xs text-gray-500 mb-1">
+//                   <span>사용률</span>
+//                   <span>60%</span>
+//                 </div>
+//                 <div className="w-full bg-gray-200 rounded-full h-2">
+//                   <div className={`h-2 bg-${limit.color}-500 rounded-full`} style={{ width: '60%' }}></div>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+//         ))}
+//       </div>
 
-      {/* 한도 변경 내역 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <i className="ri-history-line text-indigo-600 mr-2"></i>
-          최근 한도 변경 내역
-        </h3>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <i className="ri-exchange-line text-blue-600 text-sm"></i>
-              </div>
-              <div>
-                <p className="text-sm font-medium">일일 이체한도 변경</p>
-                <p className="text-xs text-gray-500">300만원 → 500만원</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-800">2024.01.15</p>
-              <p className="text-xs text-green-600">승인완료</p>
-            </div>
-          </div>
+//       {/* 한도 변경 내역 */}
+//       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+//         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+//           <i className="ri-history-line text-indigo-600 mr-2"></i>
+//           최근 한도 변경 내역
+//         </h3>
+//         <div className="space-y-3">
+//           <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
+//             <div className="flex items-center space-x-3">
+//               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+//                 <i className="ri-exchange-line text-blue-600 text-sm"></i>
+//               </div>
+//               <div>
+//                 <p className="text-sm font-medium">일일 이체한도 변경</p>
+//                 <p className="text-xs text-gray-500">300만원 → 500만원</p>
+//               </div>
+//             </div>
+//             <div className="text-right">
+//               <p className="text-sm text-gray-800">2024.01.15</p>
+//               <p className="text-xs text-green-600">승인완료</p>
+//             </div>
+//           </div>
           
-          <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <i className="ri-bank-card-line text-purple-600 text-sm"></i>
-              </div>
-              <div>
-                <p className="text-sm font-medium">카드 결제한도 변경</p>
-                <p className="text-xs text-gray-500">200만원 → 300만원</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-800">2024.01.10</p>
-              <p className="text-xs text-green-600">승인완료</p>
-            </div>
-          </div>
+//           <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
+//             <div className="flex items-center space-x-3">
+//               <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+//                 <i className="ri-bank-card-line text-purple-600 text-sm"></i>
+//               </div>
+//               <div>
+//                 <p className="text-sm font-medium">카드 결제한도 변경</p>
+//                 <p className="text-xs text-gray-500">200만원 → 300만원</p>
+//               </div>
+//             </div>
+//             <div className="text-right">
+//               <p className="text-sm text-gray-800">2024.01.10</p>
+//               <p className="text-xs text-green-600">승인완료</p>
+//             </div>
+//           </div>
           
-          <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                <i className="ri-global-line text-orange-600 text-sm"></i>
-              </div>
-              <div>
-                <p className="text-sm font-medium">해외송금 한도 신청</p>
-                <p className="text-xs text-gray-500">$3,000 → $5,000</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-800">2024.01.05</p>
-              <p className="text-xs text-orange-600">심사중</p>
-            </div>
-          </div>
-        </div>
-      </div>
+//           <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
+//             <div className="flex items-center space-x-3">
+//               <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+//                 <i className="ri-global-line text-orange-600 text-sm"></i>
+//               </div>
+//               <div>
+//                 <p className="text-sm font-medium">해외송금 한도 신청</p>
+//                 <p className="text-xs text-gray-500">$3,000 → $5,000</p>
+//               </div>
+//             </div>
+//             <div className="text-right">
+//               <p className="text-sm text-gray-800">2024.01.05</p>
+//               <p className="text-xs text-orange-600">심사중</p>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
 
-      {/* 한도 관리 안내 */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
-        <div className="flex items-start space-x-4">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-            <i className="ri-information-line text-blue-600 text-xl"></i>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">한도 관리 안내</h3>
-            <ul className="text-gray-600 space-y-1 text-sm">
-              <li>• 한도 증액 신청 시 심사가 진행되며, 영업일 기준 2-3일 소요됩니다.</li>
-              <li>• 해외송금 한도는 별도의 서류 제출이 필요할 수 있습니다.</li>
-              <li>• 한도 감액은 즉시 적용되며, 증액은 승인 후 적용됩니다.</li>
-              <li>• 보안 등급이 높을수록 더 높은 한도 설정이 가능합니다.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+//       {/* 한도 관리 안내 */}
+//       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
+//         <div className="flex items-start space-x-4">
+//           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+//             <i className="ri-information-line text-blue-600 text-xl"></i>
+//           </div>
+//           <div>
+//             <h3 className="text-lg font-semibold text-gray-800 mb-2">한도 관리 안내</h3>
+//             <ul className="text-gray-600 space-y-1 text-sm">
+//               <li>• 한도 증액 신청 시 심사가 진행되며, 영업일 기준 2-3일 소요됩니다.</li>
+//               <li>• 해외송금 한도는 별도의 서류 제출이 필요할 수 있습니다.</li>
+//               <li>• 한도 감액은 즉시 적용되며, 증액은 승인 후 적용됩니다.</li>
+//               <li>• 보안 등급이 높을수록 더 높은 한도 설정이 가능합니다.</li>
+//             </ul>
+//           </div>
+//         </div>
+//       </div>
 
-      {/* 한도 수정 모달 */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">{selectedLimit} 변경</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">새로운 한도</label>
-                <div className="relative">
-                  <input 
-                    type="text" 
-                    placeholder="한도를 입력하세요"
-                    className="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                  />
-                  <span className="absolute right-3 top-2 text-gray-500">만원</span>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">변경 사유</label>
-                <textarea 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                  rows={3}
-                  placeholder="한도 변경 사유를 입력해주세요"
-                ></textarea>
-              </div>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-xs text-yellow-800">
-                  한도 증액 신청 시 신용도 평가가 진행되며, 심사 결과에 따라 승인되지 않을 수 있습니다.
-                </p>
-              </div>
-            </div>
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
-              >
-                취소
-              </button>
-              <button
-                onClick={() => setShowEditModal(false)}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors whitespace-nowrap"
-              >
-                신청
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+//       {/* 한도 수정 모달 */}
+//       {showEditModal && (
+//         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+//           <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+//             <h3 className="text-lg font-semibold mb-4">{selectedLimit} 변경</h3>
+//             <div className="space-y-4">
+//               <div>
+//                 <label className="block text-sm font-medium text-gray-700 mb-1">새로운 한도</label>
+//                 <div className="relative">
+//                   <input 
+//                     type="text" 
+//                     placeholder="한도를 입력하세요"
+//                     className="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+//                   />
+//                   <span className="absolute right-3 top-2 text-gray-500">만원</span>
+//                 </div>
+//               </div>
+//               <div>
+//                 <label className="block text-sm font-medium text-gray-700 mb-1">변경 사유</label>
+//                 <textarea 
+//                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+//                   rows={3}
+//                   placeholder="한도 변경 사유를 입력해주세요"
+//                 ></textarea>
+//               </div>
+//               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+//                 <p className="text-xs text-yellow-800">
+//                   한도 증액 신청 시 신용도 평가가 진행되며, 심사 결과에 따라 승인되지 않을 수 있습니다.
+//                 </p>
+//               </div>
+//             </div>
+//             <div className="flex space-x-3 mt-6">
+//               <button
+//                 onClick={() => setShowEditModal(false)}
+//                 className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap"
+//               >
+//                 취소
+//               </button>
+//               <button
+//                 onClick={() => setShowEditModal(false)}
+//                 className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors whitespace-nowrap"
+//               >
+//                 신청
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
 
 /**
  * 서류 곤리 부분
@@ -2272,7 +2273,7 @@ function Sidebar({ customerName, customerPhone }) {
         </div>
 
         {/* 최근 활동 */}
-        <div className="bg-white rounded-xl p-4 shadow-sm">
+        {/* <div className="bg-white rounded-xl p-4 shadow-sm">
           <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
             <i className="ri-time-line text-purple-600 mr-2"></i>
             최근 활동
@@ -2291,7 +2292,7 @@ function Sidebar({ customerName, customerPhone }) {
               <div className="text-gray-400">1시간 전</div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </aside>
   );
@@ -2432,8 +2433,8 @@ function MyPage() {
                 return <ProfileTab initialData={customerProfile} />; 
             case 'security':
                 return <SecurityTab />;
-            case 'limit':
-                return <LimitTab />;
+            // case 'limit':
+            //     return <LimitTab />;
             case 'document':
                 return <DocumentTab />;
             case 'tax':
