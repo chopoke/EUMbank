@@ -288,7 +288,7 @@ public class FxRateService {
                     continue;
                 }
 
-                // ★ 람다 캡처용 불변 복사본
+                //  람다 캡처용 불변 복사본
                 final LocalDate obs = d;
 
                 List<ForeignRate> entities = rows.stream()

@@ -5,8 +5,11 @@ import com.querydsl.jpa.impl.JPAUpdateClause;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 
 import java.time.Instant;
+import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -35,4 +38,5 @@ public class AuthRefreshTokenRepoImpl implements AuthRefreshTokenRepoCustom {
                 .where(token.customerNo.eq(customerNo).and(token.deleteAt.isNull()))
                 .execute();
     }
+
 }

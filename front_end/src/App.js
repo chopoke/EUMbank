@@ -71,6 +71,8 @@ import AdminPage from "./pages/admin/page";
 // 공과금
 import BillsLanding from "./pages/bills/BillsLanding";
 
+// 마이페이지 - 상품 대시보드
+import MyProductsPage from "./pages/mypage/MyProductsPage";
 
 // 현물(Spot) 페이지들
 import SpotTradingPage from "./pages/spot/pages/SpotTradingPage";
@@ -380,6 +382,12 @@ function App() {
         <Route path='/ftagree' element={<Agree />} />
         <Route path='/ftprivacy' element={<Privacy />} />
         <Route path='/ftdisclosure' element={<Disclosure />} />
+
+        {/* 마이페이지 상품 대시보드 진입 */}
+        <Route path="/deposits" element={<MyProductsPage />} />
+
+        {/* 마이페이지 진입 */}
+        <Route path="/test" element={<Test />} />
 
       </Routes >
       <Footer />

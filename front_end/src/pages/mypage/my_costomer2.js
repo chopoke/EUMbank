@@ -82,13 +82,14 @@ function OverviewTab({onTabSwitch}) {
       href: "/accounts"
     },
     {
-      title: '대출',
-      description: '대출 관리',
-      icon: 'ri-bank-card-line',
-      color: 'from-blue-500 to-sky-400',
-      image: 'https://readdy.ai/api/search-image?query=elegant%20credit%20cards%20and%20loan%20management%20interface%2C%20modern%20banking%20cards%20display%2C%20clean%20white%20background%2C%20professional%20financial%20services%2C%20minimalist%20design%2C%20soft%20professional%20lighting&width=400&height=300&seq=card_loan&orientation=landscape',
-      targetTab: 'loanRepay'
-    },
+          title: "상품",
+          description: "상품 관리",
+          icon: "ri-bank-card-line",
+          color: "from-blue-500 to-sky-400",
+          image:
+            "https://readdy.ai/api/search-image?query=elegant%20credit%20cards%20and%20loan%20management%20interface%2C%20modern%20banking%20cards%20display%2C%20clean%20white%20background%2C%20professional%20financial%20services%2C%20minimalist%20design%2C%20soft%20professional%20lighting&width=400&height=300&seq=card_loan&orientation=landscape",
+          href: "/deposits",
+     },
     {
       title: '자산관리',
       description: '투자 포트폴리오 및 자산 현황',
@@ -2437,8 +2438,6 @@ function MyPage() {
                 return <DocumentTab />;
             case 'tax':
                 return <TaxTab />;
-            case 'loanRepay':                       // 대출상환내역
-                return <LoanRepaymentTab />;
             default:
                 return <OverviewTab />;
         }
