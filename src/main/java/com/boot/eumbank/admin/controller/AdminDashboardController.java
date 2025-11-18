@@ -1,8 +1,14 @@
 package com.boot.eumbank.admin.controller;
 
+import com.boot.eumbank.spot.admin.dto.SpotAdminStatisticsDTO;
+import com.boot.eumbank.spot.admin.service.SpotAdminService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,7 +18,10 @@ import java.util.Map;
  * @author Admin Team
  */
 @Controller
+@RequiredArgsConstructor
 public class AdminDashboardController {
+    
+    private final SpotAdminService spotAdminService;
     
     /**
      * 관리자 대시보드 페이지를 렌더링합니다.
@@ -30,13 +39,14 @@ public class AdminDashboardController {
         // TODO: 백엔드 개발자 작업 필요
         // 아래 더미 데이터를 실제 데이터베이스 조회 결과로 교체해야 합니다.
         
-        var stats = List.of(
+        var stats = new ArrayList<>(List.of(
                 // 1. 회원 수
                 // TODO: CustomerRepo.count() 또는 CustomerRepository.count() 사용
                 // 예: long memberCount = customerRepo.count();
                 //     String formattedCount = String.format("%,d", memberCount);
                 Map.of("title", "회원 수", 
-                       "value", "1,200", 
+                       "value", "1,200",
+                        "img", "",
                        "icon", "ri-group-line", 
                        "color", "text-blue-600",
                        "iconColor", ""),
@@ -48,7 +58,8 @@ public class AdminDashboardController {
                 //     String formattedValue = formatCurrency(krwTotal, "KRW");
                 //     // 또는 "1,500억원" 형식으로 포맷팅
                 Map.of("title", "원화 자산 총액", 
-                       "value", "1,500억원", 
+                       "value", "1,500억원",
+                        "img", "",
                        "icon", "fa-solid fa-won-sign", 
                        "color", "text-green-600",
                        "iconColor", ""),
@@ -62,7 +73,8 @@ public class AdminDashboardController {
                 //     String formattedValue = formatCurrency(foreignTotal, "FOREIGN");
                 //     // 또는 "300억원" 형식으로 포맷팅 (원화 환산 기준)
                 Map.of("title", "외화 자산 총액", 
-                       "value", "300억원", 
+                       "value", "300억원",
+                        "img", "",
                        "icon", "ri-exchange-dollar-line", 
                        "color", "text-emerald-600",
                        "iconColor", ""),
@@ -73,7 +85,8 @@ public class AdminDashboardController {
                 //     String formattedCount = String.format("%,d", depositProductCount);
                 // 참고: ProductDeposit 엔티티 또는 DepositProduct 엔티티 확인 필요
                 Map.of("title", "예금 상품 수", 
-                       "value", "15", 
+                       "value", "15",
+                        "img", "",
                        "icon", "ri-bank-card-line", 
                        "color", "text-indigo-600",
                        "iconColor", ""),
@@ -84,7 +97,8 @@ public class AdminDashboardController {
                 //     String formattedCount = String.format("%,d", installmentProductCount);
                 // 참고: ProductInstallment 엔티티 또는 InstallmentProduct 엔티티 확인 필요
                 Map.of("title", "적금 상품 수", 
-                       "value", "12", 
+                       "value", "12",
+                        "img", "",
                        "icon", "ri-safe-line", 
                        "color", "text-purple-600",
                        "iconColor", ""),
@@ -94,33 +108,53 @@ public class AdminDashboardController {
                 // 예: long loanProductCount = loanProductRepository.count();
                 //     String formattedCount = String.format("%,d", loanProductCount);
                 Map.of("title", "대출 상품 수", 
-                       "value", "8", 
+                       "value", "8",
+                        "img", "",
                        "icon", "ri-bank-card-2-line", 
                        "color", "text-orange-600",
-                       "iconColor", ""),
-                
-                // 7. 금 보유량
-                // TODO: 금 보유량 관련 엔티티/Repository 확인 필요
-                // 예: spot 관련 엔티티나 별도 테이블에서 조회
-                //     BigDecimal goldAmount = goldRepository.sumGoldAmount();
-                //     String formattedValue = String.format("%,.2f kg", goldAmount);
-                Map.of("title", "금 보유량", 
-                       "value", "1,250.50 kg", 
-                       "icon", "ri-stack-line", 
+                       "iconColor", "")
+        ));
+        
+        // 7. 금 보유량
+        // 현물 통계 데이터 조회 및 변환
+        // TODO: 금 보유량 관련 엔티티/Repository 확인 필요
+        // 예: spot 관련 엔티티나 별도 테이블에서 조회
+        //     BigDecimal goldAmount = goldRepository.sumGoldAmount();
+        //     String formattedValue = String.format("%,.2f kg", goldAmount);
+        // 실제 데이터 사용: SpotAdminService를 통해 조회
+        SpotAdminStatisticsDTO spotStats = spotAdminService.getSpotStatistics();
+        String goldFormatted = "0.00 kg";
+        if (spotStats != null && spotStats.getTotalGoldBalance() != null) {
+            BigDecimal goldInKg = spotStats.getTotalGoldBalance()
+                    .divide(new BigDecimal("1000"), 2, RoundingMode.HALF_UP);
+            goldFormatted = String.format("%,.2f kg", goldInKg);
+        }
+        stats.add(Map.of("title", "금 보유량",
+                       "value", goldFormatted,
+                       "img", "/img/goldbar.png",
+                       "icon", "",
                        "color", "text-yellow-600",
-                       "iconColor", "gold"),
-                
-                // 8. 은 보유량
-                // TODO: 은 보유량 관련 엔티티/Repository 확인 필요
-                // 예: spot 관련 엔티티나 별도 테이블에서 조회
-                //     BigDecimal silverAmount = silverRepository.sumSilverAmount();
-                //     String formattedValue = String.format("%,.2f kg", silverAmount);
-                Map.of("title", "은 보유량", 
-                       "value", "5,430.75 kg", 
-                       "icon", "ri-stack-line", 
+                       "iconColor", "gold"));
+        
+        // 8. 은 보유량
+        // 현물 통계 데이터 조회 및 변환
+        // TODO: 은 보유량 관련 엔티티/Repository 확인 필요
+        // 예: spot 관련 엔티티나 별도 테이블에서 조회
+        //     BigDecimal silverAmount = silverRepository.sumSilverAmount();
+        //     String formattedValue = String.format("%,.2f kg", silverAmount);
+        // 실제 데이터 사용: SpotAdminService를 통해 조회
+        String silverFormatted = "0.00 kg";
+        if (spotStats != null && spotStats.getTotalSilverBalance() != null) {
+            BigDecimal silverInKg = spotStats.getTotalSilverBalance()
+                    .divide(new BigDecimal("1000"), 2, RoundingMode.HALF_UP);
+            silverFormatted = String.format("%,.2f kg", silverInKg);
+        }
+        stats.add(Map.of("title", "은 보유량",
+                       "value", silverFormatted,
+                       "img", "/img/silverbar.png",
+                       "icon", "",
                        "color", "text-gray-600",
-                       "iconColor", "silver")
-        );
+                       "iconColor", "silver"));
         
         model.addAttribute("stats", stats);
         return "admin/dashboard";
