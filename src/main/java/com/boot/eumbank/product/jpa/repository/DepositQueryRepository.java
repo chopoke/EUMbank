@@ -94,7 +94,8 @@ public class DepositQueryRepository {
      * @param requestDto
      * @return
      */
-    public void depositSave(DepositSubscriptionRequestDto requestDto, Customer customer, ProductDto depositProducts, Account oneAccount, String signedPdfFilePath) {
+    public void depositSave(DepositSubscriptionRequestDto requestDto, Customer customer,
+                            ProductDto depositProducts, Account oneAccount, String signedPdfFilePath) {
 
         logger.info("DepositQueryRepository => findOneDepositProducts()");
 
@@ -134,17 +135,17 @@ public class DepositQueryRepository {
                         oneAccount.getANo(),
                         depositProducts.getId(), // deposit_product_tbl dpId
                         requestDto.getDepositAccount(),
-                        LocalDateTime.now(),                        // 6. dJoinDate - 가입일 (현재시간)
-                        LocalDateTime.now().plusMonths(requestDto.getPeriod()), // 7. dMaturityDate - 만기일 (가입일 + 개월수)
-                        0,                     // 8. dAmount - 예금액
-                        new BigDecimal(depositProducts.getRate()),  // 9. dInterestRate - 이자율
-                        "ACTIVE",                                   // 10. dStatus - 상태 (초기값: ACTIVE)
-                        LocalDateTime.now(),                        // 11. dUpdatedAt - 수정일시
-                        "N",                                        // 12. dFreezeYn - 동결여부 (초기값: N)
-                        "N",                                        // 13. dDormantYn - 휴면여부 (초기값: N)
-                        new BigDecimal(depositProducts.getRate()),  // 14. dApy - 연이율 (이자율과 동일하게 설정)
-                        BigDecimal.ZERO,                            // 15. dAccrInt - 경과이자 (초기값: 0)
-                        new BigDecimal(requestDto.getAmount()),      // 16. dPrincipalBal - 원금잔액 (초기 예금액)
+                        LocalDateTime.now(),                        // 가입일 (현재시간)
+                        LocalDateTime.now().plusMonths(requestDto.getPeriod()), // 만기일
+                        0,
+                        new BigDecimal(depositProducts.getRate()),
+                        "ACTIVE",
+                        LocalDateTime.now(),
+                        "N",
+                        "N",
+                        new BigDecimal(depositProducts.getRate()),
+                        BigDecimal.ZERO,
+                        new BigDecimal(requestDto.getAmount()),
                         oneAccount.getAccountNo(),
                         requestDto.getPeriod(),
                         requestDto.getExpectedMaturityAmount(),
@@ -162,8 +163,19 @@ public class DepositQueryRepository {
 
         return queryFactory
                 .selectFrom(account)
-                .where(account.cNo.eq(customer.getCustomerNo()).and(account.aNo.eq(Math.toIntExact(requestDto.getLinkedAccountAno()))))
+                .where(account.cNo.eq(customer.getCustomerNo())
+                        .and(account.aNo.eq(Math.toIntExact(requestDto.getLinkedAccountAno()))))
+                .fetchOne();
+    }
+
+    /** ✅ 활성화된 예금 상품 개수 */
+    public long countActiveDepositProducts() {
+        Long count = queryFactory
+                .select(productDepositList.count())
+                .from(productDepositList)
+                .where(productDepositList.dpIsActive.eq("Y"))
                 .fetchOne();
 
+        return (count != null) ? count : 0L;
     }
 }

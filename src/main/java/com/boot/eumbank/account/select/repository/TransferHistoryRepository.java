@@ -7,6 +7,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import java.sql.Timestamp;
 
 public interface TransferHistoryRepository extends JpaRepository<TransferHistory, Integer> {
@@ -27,6 +30,13 @@ public interface TransferHistoryRepository extends JpaRepository<TransferHistory
             Pageable pageable
     );
 
+    // 해당 계좌의 기간 내 트랜잭션 전부(입·출금 포함)
+    List<TransferHistory> findByAccountNoAndTransferAtBetweenOrderByTransferAtAsc(
+            Integer accountNo, LocalDateTime from, LocalDateTime to
+    );
+
+    //  진행률(납입 회차) 계산용
+    long countByAccountNoAndTransactionType(Integer accountNo, String transactionType);
     @Query("""
         select t from TransferHistory t
         where t.otherAccount = :otherAccount

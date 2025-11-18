@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login as apiLogin } from "../../api/authApi";
-import api from "../../api/axios";
 import naverlogo from "../../resources/img/네이버로고.png";
 import maintxt from '../../resources/img/e-um.png'
 
@@ -52,7 +51,7 @@ export default function Login() {
       const s = ex?.response?.status;
       const c = ex?.response?.data?.code;
       if (s === 423 || c === "ACCOUNT_STATUS_BLOCKED") {
-        alert("계정 상태로 로그인할 수 없습니다. 관리자에게 문의하세요.");
+        alert("사용할 수 없는 계정입니다. 관리자에게 문의하세요.");
         window.location.assign("/login");
         return;
       }

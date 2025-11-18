@@ -2,14 +2,26 @@
 import axios from "axios";
 
 const api = axios.create({
-  // baseURL: "",
   baseURL: import.meta.env?.VITE_API_BASE || "http://localhost:8081",
-  withCredentials: true, // 쿠키 전송 필수
+  withCredentials: true,
 });
 
-// ---- AccessToken: in-memory only ----
+// ---- AccessToken: in-memory + localStorage 복구 ----
 let accessToken = null;
-export function setAccessToken(token) { accessToken = token || null; }
+
+// ⬇ 새로고침해도 살도록 복구
+try {
+  const saved = localStorage.getItem("access_token");
+  if (saved) accessToken = saved;
+} catch { /* ignore */ }
+
+export function setAccessToken(token) {
+  accessToken = token || null;
+  try {
+    if (token) localStorage.setItem("access_token", token);
+    else localStorage.removeItem("access_token");
+  } catch { /* ignore */ }
+}
 export function getAccessToken() { return accessToken; }
 
 function isAuthPath(url = "") {
@@ -19,6 +31,7 @@ function isAuthPath(url = "") {
   } catch { return false; }
 }
 
+// Authorization 헤더만 주입
 api.interceptors.request.use((config) => {
   if (!isAuthPath(config.url || "") && accessToken) {
     config.headers = config.headers || {};

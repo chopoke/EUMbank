@@ -155,4 +155,5 @@ public class Customer {
     public String roleOrUser() {
         return (this.role == null || this.role.isBlank()) ? "USER" : this.role.toUpperCase();
     }
+
 }
