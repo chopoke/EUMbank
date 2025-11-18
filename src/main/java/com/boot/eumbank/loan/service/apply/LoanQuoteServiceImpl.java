@@ -249,7 +249,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
 //        }
 
         // 12) 로그
-        log.info("@@@@@@@@ [QUOTE] code={}, type={}, rate={}, rpay={}, raw='{}', absLimit={}, ltvPctRaw={}, usedLtvCap={}, desired={}, basis={}, productLimitMax={}, " +
+        log.info("@@@@@@@@ [대출계산산덩] code={}, type={}, rate={}, rpay={}, raw='{}', absLimit={}, ltvPctRaw={}, usedLtvCap={}, desired={}, basis={}, productLimitMax={}, " +
                         "appliedRate={}, approvedAmount={}, approvedTerm={}, monthly={}, totalInt={} @@@@@@@@@",
                 product.getLoanCode(), product.getLoanType(), rateKo, rpayTypeNorm, rawLimit, absLimit, ltvPctFromRaw, usedLtv,
                 req.getDesiredAmount(), basis, product.getLimitMax(),
@@ -308,7 +308,7 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
                     .toList();
         }
 
-        // 4) 평균 --> (미존재 시) min/max의 중간값 → min → max
+        // 4) 평균금리(avg) 없으면  min/max의 중간값 >없으면 min> 없으면 max
         BigDecimal avg = averageRate(pool);
         if (avg != null) return avg;
 
@@ -321,7 +321,8 @@ public class LoanQuoteServiceImpl implements LoanQuoteService {
         BigDecimal maxOnly = maxDec(pool, "getLroLendRateMax", "getLendRateMax");
         return maxOnly;
     }
-
+    
+    // 금리 타입 유틸
     private List<LoanRateOption> filterByRateKind(List<LoanRateOption> src, String rateKind) {
         if (src == null) return List.of();
         final String mustKo = "VARIABLE".equals(rateKind) ? "변동" : "고정";

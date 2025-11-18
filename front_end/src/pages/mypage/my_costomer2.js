@@ -43,6 +43,7 @@ function TabNavigation({ activeTab, onTabChange }) {
     { id: 'profile', label: '프로필', icon: 'ri-user-line' },
     { id: 'security', label: '보안', icon: 'ri-shield-line' },
     { id: 'limit', label: '한도 관리', icon: 'ri-wallet-line' },
+    { id: 'loanRepay', label: '대출 상환내역', icon: 'ri-file-list-3-line' },     // 대출상환내역!
     { id: 'document', label: '증빙 서류', icon: 'ri-file-text-line' },
     { id: 'tax', label: '세금/공과금 계산', icon: 'ri-calculator-line' }
   ];
@@ -85,7 +86,8 @@ function OverviewTab({onTabSwitch}) {
       description: '대출 관리',
       icon: 'ri-bank-card-line',
       color: 'from-blue-500 to-sky-400',
-      image: 'https://readdy.ai/api/search-image?query=elegant%20credit%20cards%20and%20loan%20management%20interface%2C%20modern%20banking%20cards%20display%2C%20clean%20white%20background%2C%20professional%20financial%20services%2C%20minimalist%20design%2C%20soft%20professional%20lighting&width=400&height=300&seq=card_loan&orientation=landscape'
+      image: 'https://readdy.ai/api/search-image?query=elegant%20credit%20cards%20and%20loan%20management%20interface%2C%20modern%20banking%20cards%20display%2C%20clean%20white%20background%2C%20professional%20financial%20services%2C%20minimalist%20design%2C%20soft%20professional%20lighting&width=400&height=300&seq=card_loan&orientation=landscape',
+      targetTab: 'loanRepay'
     },
     {
       title: '자산관리',
@@ -2435,6 +2437,8 @@ function MyPage() {
                 return <DocumentTab />;
             case 'tax':
                 return <TaxTab />;
+            case 'loanRepay':                       // 대출상환내역
+                return <LoanRepaymentTab />;
             default:
                 return <OverviewTab />;
         }
