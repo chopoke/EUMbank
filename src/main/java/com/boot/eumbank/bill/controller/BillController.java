@@ -1,5 +1,7 @@
 package com.boot.eumbank.bill.controller;
 
+import com.boot.eumbank.account.open.enums.FileType;
+import com.boot.eumbank.account.open.jpa.repository.mypage.DocumentRepository;
 import com.boot.eumbank.account.open.service.account.AccoutService;
 import com.boot.eumbank.bill.core.BillPaymentService;
 import com.boot.eumbank.bill.core.BillRateService;
@@ -8,26 +10,29 @@ import com.boot.eumbank.bill.entity.BillInvoice;
 import com.boot.eumbank.bill.entity.BillPayment;
 import com.boot.eumbank.bill.entity.ElectricAvg;
 import com.boot.eumbank.bill.infra.KepcoAdapter;
-import com.boot.eumbank.bill.infra.KepcoProps;
 import com.boot.eumbank.bill.repo.BillInvoiceRepo;
 import com.boot.eumbank.bill.repo.BillPaymentRepo;
 import com.boot.eumbank.bill.repo.ElectricAvgRepo;
 import com.boot.eumbank.bill.repo.UtilityBillRepo;
 import com.boot.eumbank.bill.util.PdfUtil;
 import com.boot.eumbank.customer.entity.Customer;
+import com.boot.eumbank.product.entity.product.DocumentFile;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.Year;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/bills")
@@ -42,6 +47,10 @@ public class BillController {
     private final KepcoAdapter kepco; // 실제 구현 주입
     private final JdbcTemplate jdbc;
     private final AccoutService accountService;
+    private final DocumentRepository documentRepository;
+
+    @Value("${file.upload-dir}")
+    private String uploadDir;
 
     // 청구서 목록: 상태 필터 + 페이지(단순 offset)
     @GetMapping("/{ubNo}/invoices")
@@ -150,7 +159,7 @@ public class BillController {
         WHERE wr_eff_from <= CURRENT_TIMESTAMP
         ORDER BY wr_eff_from DESC, wr_id DESC
         LIMIT 1
-    """);
+        """);
         return Map.of("rows", List.of(row));
     }
 
@@ -164,17 +173,22 @@ public class BillController {
         WHERE gr_eff_from <= CURRENT_TIMESTAMP
         ORDER BY gr_eff_from DESC, gr_id DESC
         LIMIT 1
-    """);
+        """);
         return Map.of("rows", List.of(row));
     }
 
-    // 영수증 텍스트 기반 PDF
-    @GetMapping(value="/invoices/{biNo}/receipt", produces="application/pdf")
-    public ResponseEntity<byte[]> invoiceReceiptPdf(@PathVariable Integer biNo) {
+    // 영수증 텍스트 기반 PDF + document_tbl 기록
+    @GetMapping(value = "/invoices/{biNo}/receipt", produces = "application/pdf")
+    public ResponseEntity<byte[]> invoiceReceiptPdf(@AuthenticationPrincipal Customer me,
+                                                    @PathVariable Integer biNo) {
+        if (me == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
         var inv = invRepo.findById(biNo).orElseThrow();
 
         // 1순위: COMPLETED 최신 결제
-        var p = paymentRepo
+        BillPayment p = paymentRepo
                 .findTopByBiNoAndBpStatusOrderByBpPaidAtDesc(biNo, "COMPLETED")
                 // 2순위: 결제 목록 중 가장 최근 1건
                 .orElseGet(() -> {
@@ -185,14 +199,14 @@ public class BillController {
 
         String title = "EUMBANK 공과금 납부 영수증";
         String body = """
-            납부ID: %s
-            영수증번호: %s
-            청구ID: %s
-            금액: %, .0f 원
-            납부일시: %s
-            상태: %s
-            비고: 공과금 납부 완료
-            """.formatted(
+                납부ID: %s
+                영수증번호: %s
+                청구ID: %s
+                금액: %, .0f 원
+                납부일시: %s
+                상태: %s
+                비고: 공과금 납부 완료
+                """.formatted(
                 p.getBpId(),
                 String.valueOf(p.getBpReceiptNo()),
                 String.valueOf(inv.getBiId()),
@@ -201,16 +215,64 @@ public class BillController {
                 String.valueOf(p.getBpStatus())
         );
 
+        // 1) PDF 바이트 생성
         byte[] pdf = PdfUtil.textReceipt(title, body);
 
-        // 파일명: receipt-YYYYMM.pdf
-        String yyyymm = String.format("%04d%02d", inv.getBiYear(), inv.getBiMonth());
-        String filename = "receipt-" + yyyymm + ".pdf";
+        // 2) 파일로 저장 + document_tbl 기록
+        try {
+            // 디렉터리 생성 보장
+            java.io.File dir = new java.io.File(uploadDir);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
 
-        String dispo = "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + java.net.URLEncoder.encode(filename, java.nio.charset.StandardCharsets.UTF_8);
+            String yyyymm = String.format("%04d%02d", inv.getBiYear(), inv.getBiMonth());
+
+            // 저장용 파일명 (중복 방지)
+            String storedFileName = String.format(
+                    "bill_receipt_%s_%d_%s.pdf",
+                    yyyymm,
+                    biNo,
+                    UUID.randomUUID().toString().substring(0, 8)
+            );
+            Path storedPath = Paths.get(uploadDir, storedFileName);
+            Files.write(storedPath, pdf);
+
+            // 계좌 / 고객 번호
+            Integer aNo = null;
+            try {
+                // BillPayment 엔티티에 aNo 필드가 있다고 가정 (필드명에 맞게 조정)
+                aNo = p.getANo();
+            } catch (Exception ignored) {
+            }
+
+            Integer cNo = me.getCustomerNo();
+
+            DocumentFile doc = DocumentFile.builder()
+                    .type(FileType.공과금영수증)
+                    .pdfPath(storedPath.toString())
+                    .pdfName(storedFileName)    // 저장된 파일명
+                    .aNo(aNo)
+                    .cNo(cNo)
+                    .build();
+
+            documentRepository.save(doc);
+
+        } catch (Exception e) {
+            // 저장 실패해도 다운로드는 계속 진행
+            e.printStackTrace();
+        }
+
+        // 3) 클라이언트 다운로드용 파일명 (화면에서 보일 이름)
+        String yyyymm = String.format("%04d%02d", inv.getBiYear(), inv.getBiMonth());
+        String downloadName = "receipt-" + yyyymm + ".pdf";
+
+        String dispo = "attachment; filename=\"" + downloadName + "\"; filename*=UTF-8''"
+                + URLEncoder.encode(downloadName, StandardCharsets.UTF_8);
+
         return ResponseEntity.ok()
-                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, dispo)
-                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, dispo)
+                .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
     }
 }
