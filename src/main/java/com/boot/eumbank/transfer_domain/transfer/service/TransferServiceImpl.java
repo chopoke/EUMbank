@@ -2026,31 +2026,4 @@ public class TransferServiceImpl implements TransferService {
             return List.of();
         }
     }
-    
-    @Override
-    public Map<String, Object> calculateTransferFee(TransferFeeRequestDto request) {
-        log.info("이체 수수료 계산 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
-                request.getFromAccountNo(), request.getToAccount(), request.getAmount());
-        
-        // 간단한 수수료 계산 로직
-        Long amount = request.getAmount();
-        Integer fee = 0;
-        
-        // 금액에 따른 수수료 계산
-        if (amount <= 100000) {
-            fee = 0; // 10만원 이하는 무료
-        } else if (amount <= 1000000) {
-            fee = 500; // 100만원 이하는 500원
-        } else {
-            fee = 1000; // 100만원 초과는 1000원
-        }
-        
-        Map<String, Object> result = new HashMap<>();
-        result.put("amount", amount);
-        result.put("fee", fee);
-        result.put("totalAmount", amount + fee);
-        result.put("feeType", "일반이체");
-        
-        return result;
-    }
 }
