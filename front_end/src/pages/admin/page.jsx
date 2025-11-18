@@ -7,6 +7,7 @@ import DepositManagement from './components/depositsaving/DepositManagement';
 import UserManagement from './components/UserManagement';
 import InquiryManagement from './components/InquiryManagement';
 import Verification from './components/Verification';
+import SpotManagement from './components/SpotManagement';
 
 export default function AdminPage() {
   const [activeMenu, setActiveMenu] = useState('deposit');
@@ -14,11 +15,20 @@ export default function AdminPage() {
   const renderContent = () => {
     switch (activeMenu) {
       case 'dashboard':
-        return <Dashboard />;
+        return (
+          <>
+            <Dashboard />
+            <div className="mt-10">
+              <SpotManagement />
+            </div>
+          </>
+        );
       case 'loan':
         return <LoanManagement />;
       case 'deposit':
         return <DepositManagement />;
+      case 'spot':
+        return <SpotManagement />;
       case 'user':
         return <UserManagement />;
       case 'inquiry':
