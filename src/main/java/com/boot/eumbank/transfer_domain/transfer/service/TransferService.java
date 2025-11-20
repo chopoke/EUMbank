@@ -56,9 +56,6 @@ public interface TransferService {
     // 즐겨찾기 계좌 조회
     List<Map<String, Object>> getFavoriteAccounts();
     
-    // 이체 수수료 계산
-    Map<String, Object> calculateTransferFee(TransferFeeRequestDto request);
-    
     // 실제 예금주명 조회
     String getActualAccountHolderName(String accountNumber, String bank);
 }

@@ -616,37 +616,4 @@ public class TransferController {
         }
     }
 
-    /**
-     * [이체 수수료 조회 API]
-     * - 이체 수수료 계산
-     * - POST /api/transfer/fee
-     */
-    @PostMapping("/fee")
-    public ResponseEntity<Map<String, Object>> getTransferFee(@Valid @RequestBody TransferFeeRequestDto request, @AuthenticationPrincipal Customer customer) {
-        log.info("이체 수수료 조회 요청 - 출금계좌: {}, 수취계좌: {}, 금액: {}", 
-                request.getFromAccountNo(), request.getToAccount(), request.getAmount());
-        
-        try {
-            if (customer == null) {
-                Map<String, Object> result = new HashMap<>();
-                result.put("success", false);
-                result.put("message", "인증이 필요합니다.");
-                return ResponseEntity.status(401).body(result);
-            }
-            
-            Map<String, Object> fee = transferService.calculateTransferFee(request);
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("data", fee);
-            result.put("message", "이체 수수료를 조회했습니다.");
-            result.put("timestamp", LocalDateTime.now().toString());
-            
-            return ResponseEntity.ok(result);
-            
-        } catch (Exception e) {
-            log.error("이체 수수료 조회 중 오류 발생", e);
-            throw e; // GlobalExceptionHandler에서 처리
-        }
-    }
 }
