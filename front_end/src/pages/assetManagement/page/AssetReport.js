@@ -306,6 +306,11 @@ export default function AssetReport() {
                       handleDayClick(e.date);
                     }
                   }}
+                  onMonthChange={(year, month) => {
+                    // FullCalendar의 네비게이션 버튼 클릭 시 부모 state 업데이트
+                    setCurrentYear(year);
+                    setCurrentMonth(month);
+                  }}
                   tagClassMap={{
                     income: "inline-flex items-center gap-1 text-xs font-medium text-emerald-600 cursor-pointer hover:underline",
                     expense: "inline-flex items-center gap-1 text-xs font-medium text-red-600 cursor-pointer hover:underline",

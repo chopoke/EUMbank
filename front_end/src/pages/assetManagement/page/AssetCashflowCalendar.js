@@ -1,5 +1,5 @@
 // AssetCashflowCalendar.js
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -9,6 +9,7 @@ export default function AssetCashflowCalendar({
   transactions = [],
   onDayClick,
   onEventClick,
+  onMonthChange,
   className = "",
   tagClassMap = {
     income:  "text-emerald-600",
@@ -16,10 +17,17 @@ export default function AssetCashflowCalendar({
     auto:    "text-blue-600",
   },
 }) {
+  const lastMonthRef = useRef(month);
+  
   useEffect(() => {
     const t = setTimeout(() => window.dispatchEvent(new Event("resize")), 0);
     return () => clearTimeout(t);
   }, []);
+  
+  // month prop이 변경되면 lastMonthRef 업데이트 (부모에서 변경된 경우)
+  useEffect(() => {
+    lastMonthRef.current = month;
+  }, [month]);
 
   // 23,000 같이 천단위 콤마
   const money = useMemo(() => new Intl.NumberFormat("ko-KR"), []);
@@ -79,6 +87,21 @@ export default function AssetCashflowCalendar({
         dateClick={(arg) => onDayClick?.(arg.dateStr)}
         eventClick={(arg) => onEventClick?.(arg.event.extendedProps)}
         events={events}
+        datesSet={(arg) => {
+          // FullCalendar의 네비게이션 버튼 클릭 시 날짜 변경 감지
+          if (onMonthChange && arg.view.type === 'dayGridMonth') {
+            const viewDate = arg.view.currentStart;
+            const year = viewDate.getFullYear();
+            const monthNum = viewDate.getMonth() + 1;
+            const currentMonthStr = `${year}-${String(monthNum).padStart(2, '0')}`;
+            
+            // 부모에서 prop으로 변경된 경우가 아닌, 사용자가 캘린더 네비게이션을 클릭한 경우만 처리
+            if (currentMonthStr !== lastMonthRef.current) {
+              lastMonthRef.current = currentMonthStr;
+              onMonthChange(year, monthNum);
+            }
+          }
+        }}
       />
     </div>
   );
