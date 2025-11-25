@@ -58,7 +58,7 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
 
             // 한글이 깨지지않게 전송
             String redirectUrl = String.format(
-                    "http://localhost:3000/social/link?userId=%s&email=%s&naverId=%s",
+                    "https://eumbank.co.kr/social/link?userId=%s&email=%s&naverId=%s",
                     URLEncoder.encode(userId, StandardCharsets.UTF_8),
                     URLEncoder.encode(email, StandardCharsets.UTF_8),
                     URLEncoder.encode(naverId, StandardCharsets.UTF_8)
@@ -111,7 +111,7 @@ public class SocialSuccessHandler implements AuthenticationSuccessHandler {
 
         cookieUtil.addHttpOnlyCookie(response,"rt", refresh, jwt.getRefreshTtlSec());
 
-        response.sendRedirect("http://localhost:3000/social/cookie");
+        response.sendRedirect("https://eumbank.co.kr/social/cookie");
 
     }
 }

@@ -17,6 +17,12 @@ export default function useLoanQuote({ code, product, form, invalidCollateral, i
   const [fieldErr, setFieldErr] = React.useState({});
   const lastReqRef = React.useRef("");
 
+  const loanTypeRaw = String(product?.type || "");
+  const loanType = loanTypeRaw.toUpperCase();
+  const isAuto =
+    loanType.includes("AUTO") ||
+    loanTypeRaw.includes("자동차");
+
   const canRequote =
     !!form.desiredAmount && !!form.desiredTerm &&
     (!invalidCollateral) && (!invalidJeonse);
@@ -88,8 +94,23 @@ export default function useLoanQuote({ code, product, form, invalidCollateral, i
         annualIncome: Number(form.incomeAnnual || 0),
         collateralValue: form.collateralValue != null ? Number(form.collateralValue || 0) : undefined,
         jeonseDeposit: form.jeonseDeposit != null ? Number(form.jeonseDeposit || 0) : undefined,
-        extra: form.creditScore != null && form.creditScore !== "" ? { creditScore: Number(form.creditScore) } : undefined,
+        
       };
+
+      // extra 구성: 신용점수 + 자동차 정보
+       const extra = {};
+       if (form.creditScore != null && form.creditScore !== "") {
+         extra.creditScore = Number(form.creditScore);
+       }
+       if (isAuto) {
+         extra.carType = form.carType === "USED" ? "USED" : "NEW";
+         if (form.collateralValue != null) {
+           extra.vehiclePrice = Number(form.collateralValue || 0);
+         }
+       }
+       if (Object.keys(extra).length > 0) {
+         req.extra = extra;
+       }
 
       const sig = JSON.stringify({ code, ...req });
       if (lastReqRef.current === sig) {
@@ -120,6 +141,7 @@ export default function useLoanQuote({ code, product, form, invalidCollateral, i
     form.rateType, form.rpayType,
     form.collateralValue, form.jeonseDeposit,
     form.incomeAnnual, form.creditScore,
+    form.carType,
   ], 300);
 
   // 파생 계산

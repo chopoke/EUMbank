@@ -78,7 +78,7 @@ public class MyScheduler {
      *   <li>잔액 부족 시 해당 예금은 건너뛰고 다음 예금 처리</li>
      * </ul>
      */
-    @Scheduled(cron = "*/30 * * * * ?")
+    @Scheduled(cron = "*/120 * * * * ?")
     @Transactional
     public void deductDepositWithLock() {
         LocalDateTime startTime = LocalDateTime.now();
@@ -87,7 +87,7 @@ public class MyScheduler {
         logger.info("║ [START] 예금 자동이체 스케줄러 실행");
         logger.info("╠═══════════════════════════════════════════════════════════════");
         logger.info("║ 실행 시각: {}", startTime.format(DATE_FORMATTER));
-        logger.info("║ 스케줄 주기: 30초");
+        logger.info("║ 스케줄 주기: 120초");
         logger.info("╚═══════════════════════════════════════════════════════════════");
 
         int totalCount = 0;
@@ -494,7 +494,7 @@ public class MyScheduler {
     /**
      * 적금 자동이체를 처리하는 스케줄러입니다.
      *
-     * <p>실행 주기: 20초마다 (cron = "* /20 * * * * ?")
+     * <p>실행 주기: 120초마다 (cron = "* /20 * * * * ?")
      *
      * <p>처리 프로세스:
      * <ol>
@@ -513,7 +513,7 @@ public class MyScheduler {
      *   <li>잔액 부족 시 실패 횟수를 기록하고 다음 적금 처리</li>
      * </ul>
      */
-    @Scheduled(cron = "*/20 * * * * ?")
+    @Scheduled(cron = "*/120 * * * * ?")
     @Transactional
     public void deductSavingWithLock() {
         LocalDateTime startTime = LocalDateTime.now();
@@ -522,7 +522,7 @@ public class MyScheduler {
         logger.info("║ [START] 적금 자동이체 스케줄러 실행");
         logger.info("╠═══════════════════════════════════════════════════════════════");
         logger.info("║ 실행 시각: {}", startTime.format(DATE_FORMATTER));
-        logger.info("║ 스케줄 주기: 20초");
+        logger.info("║ 스케줄 주기: 120초");
         logger.info("╚═══════════════════════════════════════════════════════════════");
 
         int totalCount = 0;

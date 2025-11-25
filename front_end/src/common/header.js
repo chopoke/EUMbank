@@ -92,7 +92,7 @@ export function Header({ isLoggedIn, user, onLogout }) {
 
             <Link to="/foreign/rate" className="nav-link">외환/환율</Link>
             {/* 마이페이지 or 관리자페이지 이동 */}
-            {/* <Link to={isAdmin ? "/admin" : "/mypage"} className="nav-link">
+            {/* <Link to={isAdmin ? "/admin/dashboard" : "/mypage"} className="nav-link">
               <img src={myp} className="mypage w-5" />
             </Link> */}
             {/* <Link to="/events" className="nav-link">이벤트</Link> */}
@@ -112,7 +112,7 @@ export function Header({ isLoggedIn, user, onLogout }) {
           {isLoggedIn && isAdmin && (
             <button
               className="login-button"
-              onClick={() => window.location.href = "http://localhost:8081/admin/enter"}
+              onClick={() => window.location.href = "https://eumbank.co.kr/admin/dashboard"}
             >
               관리자
             </button>

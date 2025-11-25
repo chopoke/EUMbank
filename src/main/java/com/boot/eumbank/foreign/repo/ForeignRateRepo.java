@@ -36,7 +36,7 @@ public interface ForeignRateRepo extends JpaRepository<ForeignRate, Integer> {
 
     @Modifying @Transactional
     @Query(value = """
-        INSERT INTO FOREIGN_RATE_TBL
+        INSERT INTO foreign_rate_tbl
           (fr_cur_unit, fr_cur_nm, fr_ttb, fr_tts, fr_deal_bas, fr_observed_date)
         VALUES
           (:unit, :name, :ttb, :tts, :base, :obs)
@@ -95,10 +95,10 @@ public interface ForeignRateRepo extends JpaRepository<ForeignRate, Integer> {
         SELECT fr_cur_unit     AS unit,
                fr_observed_date AS date,
                fr_deal_bas      AS rate
-          FROM FOREIGN_RATE_TBL
+          FROM foreign_rate_tbl
          WHERE fr_observed_date IN (
                 SELECT DISTINCT fr_observed_date
-                  FROM FOREIGN_RATE_TBL
+                  FROM foreign_rate_tbl
                  ORDER BY fr_observed_date DESC
                  LIMIT 2
                )

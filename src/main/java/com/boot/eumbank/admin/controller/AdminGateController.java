@@ -11,7 +11,7 @@ public class AdminGateController {
     public String enter(Authentication auth) {
         if (auth == null) {
             // 로그인 안 된 경우 → 프론트(3000) 로그인 페이지로
-            return "redirect:http://localhost:3000/login";
+            return "redirect:https://eumbank.co.kr/login";
         }
 
         boolean admin = auth.getAuthorities().stream()

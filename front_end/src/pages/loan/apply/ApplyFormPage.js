@@ -221,6 +221,7 @@ export default function ApplyFormPage() {
   // ====== 타입 가시성 & 담보 필요 여부 ======
   const loanTypeRaw = String(product?.type || "");
   const loanType = loanTypeRaw.toUpperCase();
+  
 
   const isMortgage =
     loanType.includes("MORTGAGE") ||
@@ -500,13 +501,34 @@ export default function ApplyFormPage() {
                     {isAuto && (
                       <div className="block text-sm md:col-span-2">
                         <span className="text-gray-600">차량 유형</span>
-                        <div className="mt-2">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-800">
-                            {form.carType === "USED" ? "중고차" : "신차"}
-                          </span>
+                        <div className="mt-2 inline-flex rounded-xl border border-gray-200 overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setForm((s) => ({ ...s, carType: "NEW" }))}
+                            className={
+                              "px-4 py-2 text-sm transition " +
+                              (form.carType === "NEW"
+                                ? "bg-gray-900 text-white"
+                                : "bg-white text-gray-700 hover:bg-gray-50")
+                            }
+                          >
+                            신차
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setForm((s) => ({ ...s, carType: "USED" }))}
+                            className={
+                              "px-4 py-2 text-sm transition border-l border-gray-200 " +
+                              (form.carType === "USED"
+                                ? "bg-gray-900 text-white"
+                                : "bg-white text-gray-700 hover:bg-gray-50")
+                            }
+                          >
+                            중고차 (+0.7%p)
+                          </button>
                         </div>
                         <div className="mt-1 text-xs text-gray-500">
-                          변경하려면 <b>한도/금리 조회</b> 화면에서 다시 선택하세요.
+                          * 차량 유형에 따라 적용금리가 달라질 수 있습니다.
                         </div>
                       </div>
                     )}
@@ -594,7 +616,7 @@ export default function ApplyFormPage() {
                   canRequote={canRequote}
                   quoting={quoting}
                   totalAtMaturityAppr={totalAtMaturityAppr}
-                  showLtvBadge={isMortgage}
+                  showLtvBadge={isMortgage || isJeonse || isAuto}
                 />
 
                 <div className="rounded-2xl border border-gray-100 shadow-sm bg-white p-5">

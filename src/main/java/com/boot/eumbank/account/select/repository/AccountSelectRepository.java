@@ -9,13 +9,13 @@ import java.math.BigDecimal;
 public interface AccountSelectRepository extends JpaRepository<Account, Integer>, AccountRepositoryCustom {
 
     /**
-     * 원화 자산 총액
+     * 원화 자산 총액 
      *  - a_account_type <> '외환' 인 계좌만
      *  - a_balance 합계
      */
     @Query(value = """
             SELECT COALESCE(SUM(a_balance), 0)
-            FROM ACCOUNT_TBL
+            FROM account_tbl
             WHERE a_account_type <> '외환'
             """, nativeQuery = true)
     BigDecimal sumKrwAssetsExcludingFx();
@@ -28,13 +28,13 @@ public interface AccountSelectRepository extends JpaRepository<Account, Integer>
      */
     @Query(value = """
             SELECT COALESCE(SUM(a.a_balance * r.fr_deal_bas), 0)
-            FROM ACCOUNT_TBL a
-            JOIN FOREIGN_RATE_TBL r
+            FROM account_tbl a
+            JOIN foreign_rate_tbl r
               ON a.a_currency = r.fr_cur_unit
             WHERE a.a_account_type = '외환'
               AND r.fr_observed_date = (
                     SELECT MAX(r2.fr_observed_date)
-                    FROM FOREIGN_RATE_TBL r2
+                    FROM foreign_rate_tbl r2
                     WHERE r2.fr_cur_unit = a.a_currency
               )
             """, nativeQuery = true)

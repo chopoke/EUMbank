@@ -13,7 +13,7 @@ public interface MypageProductRepository extends JpaRepository<ProductDeposit, I
 
     @Query(value = """
         SELECT c.c_no
-        FROM CUSTOMER_TBL c
+        FROM customer_tbl c
         WHERE c.c_user_id = :userId
         LIMIT 1
     """, nativeQuery = true)
@@ -88,9 +88,9 @@ public interface MypageProductRepository extends JpaRepository<ProductDeposit, I
            ip.ip_feature         AS ipFeature,
            ip.ip_button_text                             AS ipButtonText,
            ip.ip_href                                    AS ipHref
-        FROM INSTALLMENT_TBL i
-        JOIN INSTALLMENT_PRODUCT_TBL ip ON ip.ip_no = i.ip_no
-        JOIN ACCOUNT_TBL a               ON a.a_no = i.a_no
+        FROM installment_tbl i
+        JOIN installment_product_tbl ip ON ip.ip_no = i.ip_no
+        JOIN account_tbl a               ON a.a_no = i.a_no
         WHERE i.c_no = :cNo
         ORDER BY i.i_join_date DESC
     """, nativeQuery = true)
@@ -115,8 +115,8 @@ public interface MypageProductRepository extends JpaRepository<ProductDeposit, I
            l.l_repay_method       AS repayMethod,
            l.l_rate_type          AS rateType,
            lp.lpd_bank_name       AS lender
-        FROM LOAN_TBL l
-        JOIN LOAN_PRODUCT_TBL lp ON lp.lpd_no = l.lpd_no
+        FROM loan_tbl l
+        JOIN loan_product_tbl lp ON lp.lpd_no = l.lpd_no
         WHERE l.c_no = :cNo
         ORDER BY l.l_start_date DESC
     """, nativeQuery = true)

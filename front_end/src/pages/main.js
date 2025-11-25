@@ -172,7 +172,7 @@ const QuickActions = ({ isAdmin = false }) => {
     if (!href) return alert("준비 중");
     if (href === "__ADMIN__") {
       // 타임리프 관리자 진입: 8081로 정식 네비게이션
-      window.location.assign("http://localhost:8081/admin/enter");
+      window.location.assign("https://eumbank.co.kr/admin/dashboard");
       return;
     }
     navigate(href);
@@ -464,7 +464,7 @@ function FundSpotlight() {
     return <div>오류: {error}</div>;
   }
   return (
-    <section id="fund" className="fund-spotlight-section">
+    <section id="fund" className="wealth-hub-section">
       {/* mx-auto max-w-screen-xl px-6 py-10 */}
       <div className="content-container py-10">
         {/* flex items-center justify-between */}
@@ -493,48 +493,48 @@ function FundSpotlight() {
   );
 }
 
-function WealthHubSummary() {
-  // bg-gray-50
-  return (
-    <section id="wealth" className="wealth-hub-section">
-      {/* mx-auto max-w-screen-xl px-6 py-10 */}
-      <div className="content-container py-10">
-        <h4 className="card-title">자산관리 허브</h4>
-        {/* mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 */}
-        <div className="wealth-grid">
-          {/* rounded-2xl border bg-white p-5 */}
-          <div className="wealth-card">
-            {/* text-sm text-gray-500 */}
-            <div className="card-subtitle">포트폴리오 요약</div>
-            {/* mt-1 text-2xl font-semibold */}
-            <div className="wealth-value">₩48,230,000</div>
-            {/* text-sm text-gray-600 */}
-            <div className="wealth-change">전일 대비 <span className="wealth-change-positive">+0.6%</span></div>
-          </div>
-          {/* rounded-2xl border bg-white p-5 */}
-          <div className="wealth-card">
-            <div className="card-subtitle">목표 달성도</div>
-            {/* mt-2 h-3 w-full rounded bg-gray-100 */}
-            <div className="progress-bar-bg">
-              {/* h-3 w-2/3 rounded bg-blue-600 */}
-              <div className="progress-bar-fill" style={{ width: '66%' }} aria-label="66%"></div>
-            </div>
-            <div className="mt-2 text-sm text-gray-600">내집 마련 66%</div>
-          </div>
-          {/* rounded-2xl border bg-white p-5 */}
-          <div className="wealth-card">
-            <div className="card-subtitle">리밸런싱 제안</div>
-            {/* mt-2 list-disc pl-5 text-sm text-gray-700 */}
-            <ul className="rebalance-list">
-              <li>국내채권 +10% 확대</li>
-              <li>현금성 -5% 축소</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
+// function WealthHubSummary() {
+//   // bg-gray-50
+//   return (
+//     <section id="wealth" className="wealth-hub-section">
+//       {/* mx-auto max-w-screen-xl px-6 py-10 */}
+//       <div className="content-container py-10">
+//         <h4 className="card-title">자산관리 허브</h4>
+//         {/* mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 */}
+//         <div className="wealth-grid">
+//           {/* rounded-2xl border bg-white p-5 */}
+//           <div className="wealth-card">
+//             {/* text-sm text-gray-500 */}
+//             <div className="card-subtitle">포트폴리오 요약</div>
+//             {/* mt-1 text-2xl font-semibold */}
+//             <div className="wealth-value">₩48,230,000</div>
+//             {/* text-sm text-gray-600 */}
+//             <div className="wealth-change">전일 대비 <span className="wealth-change-positive">+0.6%</span></div>
+//           </div>
+//           {/* rounded-2xl border bg-white p-5 */}
+//           <div className="wealth-card">
+//             <div className="card-subtitle">목표 달성도</div>
+//             {/* mt-2 h-3 w-full rounded bg-gray-100 */}
+//             <div className="progress-bar-bg">
+//               {/* h-3 w-2/3 rounded bg-blue-600 */}
+//               <div className="progress-bar-fill" style={{ width: '66%' }} aria-label="66%"></div>
+//             </div>
+//             <div className="mt-2 text-sm text-gray-600">내집 마련 66%</div>
+//           </div>
+//           {/* rounded-2xl border bg-white p-5 */}
+//           <div className="wealth-card">
+//             <div className="card-subtitle">리밸런싱 제안</div>
+//             {/* mt-2 list-disc pl-5 text-sm text-gray-700 */}
+//             <ul className="rebalance-list">
+//               <li>국내채권 +10% 확대</li>
+//               <li>현금성 -5% 축소</li>
+//             </ul>
+//           </div>
+//         </div>
+//       </div>
+//     </section>
+//   );
+// }
 
 
 
@@ -585,7 +585,7 @@ export default function BankHome({ user }) {
         {/* <AccountSnapshot summary={summary} isLoggedIn={isLoggedIn} user={user} /> */}
         <AccountMainComp summary={summary} isLoggedIn={isLoggedIn} user={user} />
         <FundSpotlight />
-        <WealthHubSummary />
+        {/*<WealthHubSummary />*/}
         <RateFxTicker fx={summary.fx} />
         <SecurityBanner notices={summary.notices} />
 

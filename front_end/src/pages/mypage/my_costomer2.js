@@ -44,7 +44,7 @@ function TabNavigation({ activeTab, onTabChange }) {
     { id: 'security', label: '보안', icon: 'ri-shield-line' },
     // { id: 'limit', label: '한도 관리', icon: 'ri-wallet-line' },
     { id: 'document', label: '증빙 서류', icon: 'ri-file-text-line' },
-    { id: 'tax', label: '세금/공과금 계산', icon: 'ri-calculator-line' }
+    // { id: 'tax', label: '세금/공과금 계산', icon: 'ri-calculator-line' }
   ];
 
   return (
@@ -95,7 +95,8 @@ function OverviewTab({onTabSwitch}) {
       description: '투자 포트폴리오 및 자산 현황',
       icon: 'ri-line-chart-line',
       color: 'from-blue-300 to-sky-400',
-      image: 'https://readdy.ai/api/search-image?query=investment%20portfolio%20dashboard%20with%20growing%20charts%20and%20financial%20assets%2C%20clean%20white%20background%2C%20professional%20wealth%20management%20interface%2C%20minimalist%20design%2C%20modern%20financial%20graphics&width=400&height=300&seq=investment_wealth&orientation=landscape'
+      image: 'https://readdy.ai/api/search-image?query=investment%20portfolio%20dashboard%20with%20growing%20charts%20and%20financial%20assets%2C%20clean%20white%20background%2C%20professional%20wealth%20management%20interface%2C%20minimalist%20design%2C%20modern%20financial%20graphics&width=400&height=300&seq=investment_wealth&orientation=landscape',
+      href: "/asset"
     },
     {
       title: '보안 설정',
@@ -401,14 +402,14 @@ function ProfileTab({initialData}) {
               <h3 className="text-xl font-semibold text-gray-800">{profileData.name}</h3>
               {/* <p className="text-gray-600">프리미엄 회원</p> */}
               {profileData.naverid != null || profileData.loginty === 'NAVER' ? (<p className="text-gray-600">통합아이디 로그인 중</p>) : (profileData.loginty === 'NAVER' ? '네이버로그인 중' : '이음은행로그인 중')}
-              <div className="flex items-center mt-2">
+              {/* <div className="flex items-center mt-2">
                 <div className="flex text-yellow-400">
                   {[...Array(5)].map((_, i) => (
                     <i key={i} className="ri-star-fill text-sm"></i>
                   ))}
                 </div>
                 <span className="text-sm text-gray-500 ml-2">등급: VIP</span>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
@@ -1881,311 +1882,311 @@ function DocumentTab() {
 }
 
 // TaxTab Component
-function TaxTab() {
-  const [selectedYear, setSelectedYear] = useState('2024');
-  const [showCalculator, setShowCalculator] = useState(false);
+// function TaxTab() {
+//   const [selectedYear, setSelectedYear] = useState('2024');
+//   const [showCalculator, setShowCalculator] = useState(false);
 
-  const taxData = [
-    {
-      type: '소득세',
-      amount: '1,250,000',
-      status: '납부완료',
-      dueDate: '2024.05.31',
-      icon: 'ri-money-dollar-circle-line',
-      color: 'green'
-    },
-    {
-      type: '지방소득세',
-      amount: '125,000',
-      status: '납부완료',
-      dueDate: '2024.05.31',
-      icon: 'ri-building-line',
-      color: 'blue'
-    },
-    {
-      type: '주민세',
-      amount: '100,000',
-      status: '납부예정',
-      dueDate: '2024.08.31',
-      icon: 'ri-home-line',
-      color: 'orange'
-    },
-    {
-      type: '재산세',
-      amount: '450,000',
-      status: '납부완료',
-      dueDate: '2024.07.16',
-      icon: 'ri-building-2-line',
-      color: 'purple'
-    }
-  ];
+//   const taxData = [
+//     {
+//       type: '소득세',
+//       amount: '1,250,000',
+//       status: '납부완료',
+//       dueDate: '2024.05.31',
+//       icon: 'ri-money-dollar-circle-line',
+//       color: 'green'
+//     },
+//     {
+//       type: '지방소득세',
+//       amount: '125,000',
+//       status: '납부완료',
+//       dueDate: '2024.05.31',
+//       icon: 'ri-building-line',
+//       color: 'blue'
+//     },
+//     {
+//       type: '주민세',
+//       amount: '100,000',
+//       status: '납부예정',
+//       dueDate: '2024.08.31',
+//       icon: 'ri-home-line',
+//       color: 'orange'
+//     },
+//     {
+//       type: '재산세',
+//       amount: '450,000',
+//       status: '납부완료',
+//       dueDate: '2024.07.16',
+//       icon: 'ri-building-2-line',
+//       color: 'purple'
+//     }
+//   ];
 
-  const publicBills = [
-    {
-      type: '전기요금',
-      amount: '85,400',
-      month: '2024년 1월',
-      status: '납부완료',
-      icon: 'ri-flashlight-line',
-      color: 'yellow'
-    },
-    {
-      type: '가스요금',
-      amount: '127,500',
-      month: '2024년 1월',
-      status: '납부완료',
-      icon: 'ri-fire-line',
-      color: 'red'
-    },
-    {
-      type: '수도요금',
-      amount: '42,300',
-      month: '2024년 1월',
-      status: '납부완료',
-      icon: 'ri-drop-line',
-      color: 'blue'
-    },
-    {
-      type: '통신요금',
-      amount: '89,000',
-      month: '2024년 1월',
-      status: '미납부',
-      icon: 'ri-smartphone-line',
-      color: 'purple'
-    }
-  ];
+//   const publicBills = [
+//     {
+//       type: '전기요금',
+//       amount: '85,400',
+//       month: '2024년 1월',
+//       status: '납부완료',
+//       icon: 'ri-flashlight-line',
+//       color: 'yellow'
+//     },
+//     {
+//       type: '가스요금',
+//       amount: '127,500',
+//       month: '2024년 1월',
+//       status: '납부완료',
+//       icon: 'ri-fire-line',
+//       color: 'red'
+//     },
+//     {
+//       type: '수도요금',
+//       amount: '42,300',
+//       month: '2024년 1월',
+//       status: '납부완료',
+//       icon: 'ri-drop-line',
+//       color: 'blue'
+//     },
+//     {
+//       type: '통신요금',
+//       amount: '89,000',
+//       month: '2024년 1월',
+//       status: '미납부',
+//       icon: 'ri-smartphone-line',
+//       color: 'purple'
+//     }
+//   ];
 
-  const deductions = [
-    { category: '건강보험료', amount: '180,000', rate: '15%' },
-    { category: '국민연금', amount: '540,000', rate: '30%' },
-    { category: '신용카드', amount: '1,200,000', rate: '10%' },
-    { category: '교육비', amount: '450,000', rate: '20%' },
-    { category: '의료비', amount: '320,000', rate: '18%' },
-    { category: '기부금', amount: '200,000', rate: '12%' }
-  ];
+//   const deductions = [
+//     { category: '건강보험료', amount: '180,000', rate: '15%' },
+//     { category: '국민연금', amount: '540,000', rate: '30%' },
+//     { category: '신용카드', amount: '1,200,000', rate: '10%' },
+//     { category: '교육비', amount: '450,000', rate: '20%' },
+//     { category: '의료비', amount: '320,000', rate: '18%' },
+//     { category: '기부금', amount: '200,000', rate: '12%' }
+//   ];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-            <i className="ri-calculator-line text-orange-600"></i>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">세금/공과금 계산</h2>
-        </div>
-        <div className="flex items-center space-x-3">
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-          >
-            <option value="2024">2024년</option>
-            <option value="2023">2023년</option>
-            <option value="2022">2022년</option>
-          </select>
-          <button
-            onClick={() => setShowCalculator(true)}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm whitespace-nowrap"
-          >
-            세금 계산기
-          </button>
-        </div>
-      </div>
+//   return (
+//     <div className="space-y-6">
+//       <div className="flex items-center justify-between">
+//         <div className="flex items-center space-x-3">
+//           <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+//             <i className="ri-calculator-line text-orange-600"></i>
+//           </div>
+//           <h2 className="text-2xl font-bold text-gray-800">세금/공과금 계산</h2>
+//         </div>
+//         <div className="flex items-center space-x-3">
+//           <select
+//             value={selectedYear}
+//             onChange={(e) => setSelectedYear(e.target.value)}
+//             className="px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+//           >
+//             <option value="2024">2024년</option>
+//             <option value="2023">2023년</option>
+//             <option value="2022">2022년</option>
+//           </select>
+//           <button
+//             onClick={() => setShowCalculator(true)}
+//             className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm whitespace-nowrap"
+//           >
+//             세금 계산기
+//           </button>
+//         </div>
+//       </div>
 
-      {/* 연간 세금 요약 */}
-      <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">2024년 세금 요약</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">₩1,925,000</div>
-            <div className="text-sm text-gray-600">총 납부세액</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">₩1,825,000</div>
-            <div className="text-sm text-gray-600">납부완료</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">₩100,000</div>
-            <div className="text-sm text-gray-600">납부예정</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">₩2,890,000</div>
-            <div className="text-sm text-gray-600">소득공제</div>
-          </div>
-        </div>
-      </div>
+//       {/* 연간 세금 요약 */}
+//       <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6">
+//         <h3 className="text-lg font-semibold text-gray-800 mb-4">2024년 세금 요약</h3>
+//         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+//           <div className="text-center">
+//             <div className="text-2xl font-bold text-orange-600">₩1,925,000</div>
+//             <div className="text-sm text-gray-600">총 납부세액</div>
+//           </div>
+//           <div className="text-center">
+//             <div className="text-2xl font-bold text-green-600">₩1,825,000</div>
+//             <div className="text-sm text-gray-600">납부완료</div>
+//           </div>
+//           <div className="text-center">
+//             <div className="text-2xl font-bold text-red-600">₩100,000</div>
+//             <div className="text-sm text-gray-600">납부예정</div>
+//           </div>
+//           <div className="text-center">
+//             <div className="text-2xl font-bold text-blue-600">₩2,890,000</div>
+//             <div className="text-sm text-gray-600">소득공제</div>
+//           </div>
+//         </div>
+//       </div>
 
-      {/* 세금 납부 현황 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-            <i className="ri-tax-line text-green-600 mr-2"></i>
-            세금 납부 현황
-          </h3>
-        </div>
-        <div className="divide-y divide-gray-100">
-          {taxData.map((tax, index) => (
-            <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-10 h-10 bg-${tax.color}-100 rounded-lg flex items-center justify-center`}>
-                    <i className={`${tax.icon} text-${tax.color}-600`}></i>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-800">{tax.type}</h4>
-                    <p className="text-sm text-gray-600">납부기한: {tax.dueDate}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-gray-800">₩{tax.amount}</div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    tax.status === '납부완료'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-orange-100 text-orange-800'
-                  }`}>
-                    {tax.status}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+//       {/* 세금 납부 현황 */}
+//       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+//         <div className="p-6 border-b border-gray-100">
+//           <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+//             <i className="ri-tax-line text-green-600 mr-2"></i>
+//             세금 납부 현황
+//           </h3>
+//         </div>
+//         <div className="divide-y divide-gray-100">
+//           {taxData.map((tax, index) => (
+//             <div key={index} className="p-4 hover:bg-gray-50 transition-colors">
+//               <div className="flex items-center justify-between">
+//                 <div className="flex items-center space-x-4">
+//                   <div className={`w-10 h-10 bg-${tax.color}-100 rounded-lg flex items-center justify-center`}>
+//                     <i className={`${tax.icon} text-${tax.color}-600`}></i>
+//                   </div>
+//                   <div>
+//                     <h4 className="font-medium text-gray-800">{tax.type}</h4>
+//                     <p className="text-sm text-gray-600">납부기한: {tax.dueDate}</p>
+//                   </div>
+//                 </div>
+//                 <div className="text-right">
+//                   <div className="font-semibold text-gray-800">₩{tax.amount}</div>
+//                   <span className={`px-2 py-1 text-xs rounded-full ${
+//                     tax.status === '납부완료'
+//                       ? 'bg-green-100 text-green-800'
+//                       : 'bg-orange-100 text-orange-800'
+//                   }`}>
+//                     {tax.status}
+//                   </span>
+//                 </div>
+//               </div>
+//             </div>
+//           ))}
+//         </div>
+//       </div>
 
-      {/* 공과금 납부 현황 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-            <i className="ri-bill-line text-blue-600 mr-2"></i>
-            공과금 납부 현황
-          </h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
-          {publicBills.map((bill, index) => (
-            <div key={index} className="border border-gray-100 rounded-lg p-4 hover:shadow-sm transition-shadow">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-8 h-8 bg-${bill.color}-100 rounded-lg flex items-center justify-center`}>
-                    <i className={`${bill.icon} text-${bill.color}-600 text-sm`}></i>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-800">{bill.type}</h4>
-                    <p className="text-xs text-gray-500">{bill.month}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-gray-800">₩{bill.amount}</div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    bill.status === '납부완료'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {bill.status}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+//       {/* 공과금 납부 현황 */}
+//       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+//         <div className="p-6 border-b border-gray-100">
+//           <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+//             <i className="ri-bill-line text-blue-600 mr-2"></i>
+//             공과금 납부 현황
+//           </h3>
+//         </div>
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
+//           {publicBills.map((bill, index) => (
+//             <div key={index} className="border border-gray-100 rounded-lg p-4 hover:shadow-sm transition-shadow">
+//               <div className="flex items-center justify-between">
+//                 <div className="flex items-center space-x-3">
+//                   <div className={`w-8 h-8 bg-${bill.color}-100 rounded-lg flex items-center justify-center`}>
+//                     <i className={`${bill.icon} text-${bill.color}-600 text-sm`}></i>
+//                   </div>
+//                   <div>
+//                     <h4 className="font-medium text-gray-800">{bill.type}</h4>
+//                     <p className="text-xs text-gray-500">{bill.month}</p>
+//                   </div>
+//                 </div>
+//                 <div className="text-right">
+//                   <div className="font-semibold text-gray-800">₩{bill.amount}</div>
+//                   <span className={`px-2 py-1 text-xs rounded-full ${
+//                     bill.status === '납부완료'
+//                       ? 'bg-green-100 text-green-800'
+//                       : 'bg-red-100 text-red-800'
+//                   }`}>
+//                     {bill.status}
+//                   </span>
+//                 </div>
+//               </div>
+//             </div>
+//           ))}
+//         </div>
+//       </div>
 
-      {/* 소득공제 현황 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-          <i className="ri-discount-percent-line text-purple-600 mr-2"></i>
-          소득공제 현황
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {deductions.map((deduction, index) => (
-            <div key={index} className="border border-gray-100 rounded-lg p-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-medium text-gray-800">{deduction.category}</span>
-                <span className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
-                  {deduction.rate}
-                </span>
-              </div>
-              <div className="text-lg font-semibold text-gray-800">₩{deduction.amount}</div>
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                <div
-                  className="h-2 bg-purple-500 rounded-full"
-                  style={{ width: deduction.rate }}
-                ></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+//       {/* 소득공제 현황 */}
+//       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+//         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+//           <i className="ri-discount-percent-line text-purple-600 mr-2"></i>
+//           소득공제 현황
+//         </h3>
+//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+//           {deductions.map((deduction, index) => (
+//             <div key={index} className="border border-gray-100 rounded-lg p-4">
+//               <div className="flex justify-between items-center mb-2">
+//                 <span className="font-medium text-gray-800">{deduction.category}</span>
+//                 <span className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+//                   {deduction.rate}
+//                 </span>
+//               </div>
+//               <div className="text-lg font-semibold text-gray-800">₩{deduction.amount}</div>
+//               <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+//                 <div
+//                   className="h-2 bg-purple-500 rounded-full"
+//                   style={{ width: deduction.rate }}
+//                 ></div>
+//               </div>
+//             </div>
+//           ))}
+//         </div>
+//       </div>
 
-      {/* 세금 계산기 모달 */}
-      {showCalculator && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">간단 세금 계산기</h3>
-              <button
-                onClick={() => setShowCalculator(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <i className="ri-close-line text-xl"></i>
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">연간 총소득</label>
-                <input
-                  type="text"
-                  placeholder="소득을 입력하세요"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">부양가족 수</label>
-                <select className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                  <option value="0">0명</option>
-                  <option value="1">1명</option>
-                  <option value="2">2명</option>
-                  <option value="3">3명</option>
-                  <option value="4">4명 이상</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">신용카드 사용액</label>
-                <input
-                  type="text"
-                  placeholder="연간 신용카드 사용액"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                <h4 className="font-semibold text-orange-800 mb-2">예상 세액</h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>소득세</span>
-                    <span className="font-medium">₩1,250,000</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>지방소득세</span>
-                    <span className="font-medium">₩125,000</span>
-                  </div>
-                  <div className="border-t border-orange-200 pt-1 flex justify-between font-semibold">
-                    <span>총 세액</span>
-                    <span>₩1,375,000</span>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowCalculator(false)}
-                className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors whitespace-nowrap"
-              >
-                계산하기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+//       {/* 세금 계산기 모달 */}
+//       {showCalculator && (
+//         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+//           <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+//             <div className="flex justify-between items-center mb-4">
+//               <h3 className="text-lg font-semibold">간단 세금 계산기</h3>
+//               <button
+//                 onClick={() => setShowCalculator(false)}
+//                 className="text-gray-400 hover:text-gray-600"
+//               >
+//                 <i className="ri-close-line text-xl"></i>
+//               </button>
+//             </div>
+//             <div className="space-y-4">
+//               <div>
+//                 <label className="block text-sm font-medium text-gray-700 mb-1">연간 총소득</label>
+//                 <input
+//                   type="text"
+//                   placeholder="소득을 입력하세요"
+//                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+//                 />
+//               </div>
+//               <div>
+//                 <label className="block text-sm font-medium text-gray-700 mb-1">부양가족 수</label>
+//                 <select className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+//                   <option value="0">0명</option>
+//                   <option value="1">1명</option>
+//                   <option value="2">2명</option>
+//                   <option value="3">3명</option>
+//                   <option value="4">4명 이상</option>
+//                 </select>
+//               </div>
+//               <div>
+//                 <label className="block text-sm font-medium text-gray-700 mb-1">신용카드 사용액</label>
+//                 <input
+//                   type="text"
+//                   placeholder="연간 신용카드 사용액"
+//                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+//                 />
+//               </div>
+//               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+//                 <h4 className="font-semibold text-orange-800 mb-2">예상 세액</h4>
+//                 <div className="space-y-1 text-sm">
+//                   <div className="flex justify-between">
+//                     <span>소득세</span>
+//                     <span className="font-medium">₩1,250,000</span>
+//                   </div>
+//                   <div className="flex justify-between">
+//                     <span>지방소득세</span>
+//                     <span className="font-medium">₩125,000</span>
+//                   </div>
+//                   <div className="border-t border-orange-200 pt-1 flex justify-between font-semibold">
+//                     <span>총 세액</span>
+//                     <span>₩1,375,000</span>
+//                   </div>
+//                 </div>
+//               </div>
+//               <button
+//                 onClick={() => setShowCalculator(false)}
+//                 className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors whitespace-nowrap"
+//               >
+//                 계산하기
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
 
 // Sidebar Component
 function Sidebar({ customerName, customerPhone }) {
@@ -2437,8 +2438,8 @@ function MyPage() {
             //     return <LimitTab />;
             case 'document':
                 return <DocumentTab />;
-            case 'tax':
-                return <TaxTab />;
+            // case 'tax':
+            //     return <TaxTab />;
             default:
                 return <OverviewTab />;
         }

@@ -5,7 +5,7 @@ export default function Sidebar({ activeMenu, setActiveMenu }) {
   const navigate = useNavigate();
 
   // 목적지 매핑
-  const ADMIN_URL = "http://localhost:8081";
+  const ADMIN_URL = "https://eumbank.co.kr";
   const targets = {
     dashboard: `${ADMIN_URL}/admin/dashboard`,
     loan:      `${ADMIN_URL}/admin/loan`,
@@ -36,9 +36,6 @@ export default function Sidebar({ activeMenu, setActiveMenu }) {
 
   return (
     <div className="w-64 bg-white ">
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-      </div>
       <nav className="mt-6">
         {menuItems.map((item) => (
           <button

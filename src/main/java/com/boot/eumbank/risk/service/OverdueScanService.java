@@ -60,8 +60,8 @@ public class OverdueScanService {
                         "       d.d_status, " +          // 3
                         "       d.d_principal_bal, " +   // 4
                         "       a.a_balance " +          // 5
-                        "  FROM DEPOSIT_TBL d " +
-                        "  JOIN ACCOUNT_TBL a ON d.a_no = a.a_no " +
+                        "  FROM deposit_tbl d " +
+                        "  JOIN account_tbl a ON d.a_no = a.a_no " +
                         " WHERE d.d_status IN (" + inQs + ")";
 
         var q = em.createNativeQuery(selectSql);
@@ -108,7 +108,7 @@ public class OverdueScanService {
 
             // 예금 상태 OVERDUE로 변경
             em.createNativeQuery(
-                            "UPDATE DEPOSIT_TBL " +
+                            "UPDATE deposit_tbl " +
                                     "   SET d_status = ?, d_updated_at = CURRENT_TIMESTAMP " +
                                     " WHERE d_no = ?")
                     .setParameter(1, STATUS_OVERDUE)
@@ -141,8 +141,8 @@ public class OverdueScanService {
                         "       i.i_arrears_amt, " +      // 6
                         "       i.i_fail, " +             // 7
                         "       a.a_balance " +           // 8
-                        "  FROM INSTALLMENT_TBL i " +
-                        "  JOIN ACCOUNT_TBL a ON i.a_no = a.a_no " +
+                        "  FROM installment_tbl i " +
+                        "  JOIN account_tbl a ON i.a_no = a.a_no " +
                         " WHERE i.i_status IN (" + inQs + ")";
 
         var q = em.createNativeQuery(selectSql);
@@ -198,7 +198,7 @@ public class OverdueScanService {
             risk.recordDelinquency(cNo, "SAVING", reason.toString());
 
             em.createNativeQuery(
-                            "UPDATE INSTALLMENT_TBL " +
+                            "UPDATE installment_tbl " +
                                     "   SET i_status = ?, i_updated_at = CURRENT_TIMESTAMP " +
                                     " WHERE i_no = ?")
                     .setParameter(1, STATUS_OVERDUE)
@@ -234,8 +234,8 @@ public class OverdueScanService {
                         "       l.l_status, " +           // 3
                         "       l.l_balance, " +          // 4
                         "       a.a_balance " +           // 5
-                        "  FROM LOAN_TBL l " +
-                        "  JOIN ACCOUNT_TBL a ON l.l_repay_a_no = a.a_no " +
+                        "  FROM loan_tbl l " +
+                        "  JOIN account_tbl a ON l.l_repay_a_no = a.a_no " +
                         " WHERE l.l_status IN (" + inQs + ")";
 
         var q = em.createNativeQuery(selectSql);

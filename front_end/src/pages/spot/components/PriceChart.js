@@ -24,7 +24,7 @@ const PriceChart = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_BASE_URL = 'http://localhost:8081/api/prices';
+  const API_BASE_URL = 'https://eumbank.co.kr/api/prices';
 
   const fetchPriceData = useCallback(async () => {
     try {

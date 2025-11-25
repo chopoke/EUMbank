@@ -79,7 +79,7 @@ public class SocialServiceImpl extends DefaultOAuth2UserService implements Socia
             userId = naverId.length() > 20 ? naverId.substring(0, 20) : naverId;
             nameKr = attributes.get("name").toString();
             email = attributes.get("email").toString();
-            //phone = attributes.get("mobile").toString();
+            phone = attributes.get("mobile").toString();
             birthyear = attributes.get("birthyear").toString();
             birthday = attributes.get("birthday").toString();
             fullDate = birthyear + "-" + birthday;
